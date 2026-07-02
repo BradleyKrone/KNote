@@ -1,0 +1,1 @@
+$(cat /tmp/claude-0/-home-user/0a9eb815-0a50-5a45-bc4d-8ed6e425a544/scratchpad/REQUIREMENTS.md)
