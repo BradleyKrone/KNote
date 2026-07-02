@@ -1,0 +1,6 @@
+node_modules/
+out/
+dist/
+test-vault/
+*.log
+.DS_Store

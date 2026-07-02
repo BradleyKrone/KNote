@@ -2,13 +2,14 @@
 
 ## 1. Overview
 
-KNote is a personal knowledge-base and note-taking application modeled closely
-on [Obsidian](https://obsidian.md/). It stores notes as local Markdown files
-in a user-owned "vault" (a folder on disk), links notes together, and
-visualizes the relationships between them. KNote adds one capability
-Obsidian does not have natively: a **Kanban board that is automatically
-populated from checkbox items (tasks) found anywhere in the vault**, with
-two-way sync between the board and the source note.
+KNote is a personal note-taking application modeled closely on
+[Obsidian](https://obsidian.md/). It stores notes as local Markdown files in
+a user-owned "vault" (a folder on disk) and links notes together. It runs
+entirely on the local machine — no server, no cloud, no network calls of
+any kind. KNote adds one capability Obsidian does not have natively: a
+**Kanban board that is automatically populated from checkbox items (tasks)
+found anywhere in the vault**, with two-way sync between the board and the
+source note.
 
 This document defines the scope, features, and behavior required to build
 KNote. It is intended to guide implementation, not to prescribe a specific
@@ -21,19 +22,23 @@ recommendations.
   Obsidian for anyone who already uses it: same core interaction model,
   same file format, same keyboard-driven workflow.
 - Store everything as plain local Markdown files — no proprietary format,
-  no forced cloud account, no lock-in. The vault is just a folder.
+  no cloud account, no lock-in. The vault is just a folder.
 - Add a first-class Kanban board that stays in sync with checkboxes
   (`- [ ]` / `- [x]`) written in any note.
-- Be a single-user, local-first desktop application (like Obsidian).
+- Be a single-user, fully local desktop application. KNote makes no network
+  calls and has no server component — everything it does happens on the
+  user's machine against files on disk.
 
-## 3. Non-Goals (v1)
+## 3. Non-Goals
 
 - Real-time multi-user collaboration.
-- Mobile apps (desktop only for v1).
-- A plugin marketplace / plugin API (may be considered post-v1).
+- Mobile apps.
+- A plugin marketplace or plugin API.
 - Publishing/sharing notes to the web.
-- Built-in sync service (users may sync the vault folder with their own
-  tool — Syncthing, Dropbox, git, etc., same as Obsidian).
+- A graph view or any knowledge-graph visualization of note relationships.
+- Any built-in sync, telemetry, analytics, or cloud/network service of any
+  kind. Users who want to sync a vault do so with their own external tool
+  (Syncthing, Dropbox, git, etc.), entirely outside KNote.
 
 ## 4. Core Concepts
 
@@ -79,7 +84,7 @@ recommendations.
 - Auto-save on edit (no explicit save step required), consistent with
   Obsidian's behavior.
 
-### 5.3 Linking & Knowledge Graph
+### 5.3 Linking
 - `[[Note Name]]` wiki-link syntax that creates a link to another note,
   auto-creating the target note on click if it doesn't exist yet.
 - `[[Note Name#Heading]]` and `[[Note Name#^block-id]]` linking to a specific
@@ -91,9 +96,6 @@ recommendations.
   that links to it, with context snippet.
 - **Unlinked mentions panel**: notes that mention this note's title as
   plain text but haven't linked to it, with a one-click "link it" action.
-- **Graph view**: interactive node-and-edge visualization of the whole
-  vault's link structure, plus a "local graph" scoped to the current note's
-  immediate neighbors. Pan/zoom, click a node to open that note.
 - Embeds: `![[Note Name]]` transcludes another note's content inline;
   `![[image.png]]` embeds an image.
 
@@ -205,6 +207,8 @@ This is KNote's signature addition beyond Obsidian.
   the task/board index) to avoid full-vault rescans on every action, but
   this cache must be derivable/rebuildable entirely from the Markdown files
   — never the sole source of truth.
+- All storage — vault content, cache/index, and any app settings — lives
+  on the local filesystem. Nothing is ever transmitted off the machine.
 - All Kanban board state (columns, task status) must be representable and
   persisted as plain Markdown so notes remain fully readable/editable in
   any other Markdown editor, with no loss of board fidelity.
@@ -218,8 +222,6 @@ This is KNote's signature addition beyond Obsidian.
 - **Markdown parsing**: `remark`/`unified` (or `markdown-it`) with a custom
   plugin to extract checkbox lines with source position info for the board
   sync.
-- **Graph view rendering**: a force-directed graph library (e.g. `d3-force`
-  or `react-force-graph`).
 - **Kanban board**: a drag-and-drop library such as `dnd-kit` or
   `react-beautiful-dnd`/`@hello-pangea/dnd`.
 - **File watching**: `chokidar` for detecting external filesystem changes.
@@ -236,15 +238,13 @@ This is KNote's signature addition beyond Obsidian.
 - Should there be one global inbox note for cards created directly on the
   global board, or should the user be prompted to pick a target note each
   time?
-- Priority for a plugin API: out of scope for v1, but worth flagging if
-  future extensibility is a goal.
 
 ## 10. Acceptance Criteria Summary
 
 - [ ] A vault (folder) can be opened, and notes within it created, edited,
       renamed, moved, and deleted.
-- [ ] `[[wiki-links]]`, backlinks, unlinked mentions, and graph view all
-      function against a multi-note test vault.
+- [ ] `[[wiki-links]]`, backlinks, and unlinked mentions all function
+      against a multi-note test vault.
 - [ ] Tags and frontmatter are parsed and browsable.
 - [ ] Full-text search returns correct, ranked results with operators.
 - [ ] Any checkbox line in any note appears as a card on the Kanban board.
