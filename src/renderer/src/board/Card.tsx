@@ -3,6 +3,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { Archive, CalendarDays, Pencil, X } from 'lucide-react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useUiStore } from '@/stores/uiStore'
+import { confirm } from '@/stores/confirmStore'
 import { archiveCard, deleteCard, updateCardText } from './boardActions'
 import type { BoardCard } from './boardSelectors'
 import { TaskMetaToolbar, blurTargetIsPicker } from './TaskMetaToolbar'
@@ -166,7 +167,11 @@ export function Card({ card, showNote }: { card: BoardCard; showNote: boolean })
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
-                if (window.confirm('Delete this task line from its note?')) void deleteCard(card)
+                void confirm('Delete this task line from its note?', { danger: true }).then(
+                  (ok) => {
+                    if (ok) void deleteCard(card)
+                  }
+                )
               }}
             >
               <X size={12} />

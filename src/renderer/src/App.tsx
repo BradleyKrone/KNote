@@ -22,6 +22,7 @@ import { QuickSwitcher } from './components/palette/QuickSwitcher'
 import { CommandPalette } from './components/palette/CommandPalette'
 import { TemplatePicker } from './components/palette/TemplatePicker'
 import { SettingsModal } from './components/SettingsModal'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import { registerCoreCommands } from './commands/coreCommands'
 import { runCommand } from './commands/registry'
 import { openThisWeekNote } from './commands/weeklyNotes'
@@ -230,6 +231,7 @@ export default function App(): React.JSX.Element {
       <CommandPalette />
       <TemplatePicker />
       <SettingsModal />
+      <ConfirmDialog />
       {toast && <div className="toast">{toast}</div>}
     </div>
   )

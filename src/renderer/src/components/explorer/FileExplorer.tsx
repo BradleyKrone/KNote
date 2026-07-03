@@ -5,6 +5,7 @@ import { isMarkdown, joinRel, parentOf, samePath, titleOf } from '@shared/pathUt
 import { useVaultStore } from '@/stores/vaultStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useUiStore } from '@/stores/uiStore'
+import { confirm } from '@/stores/confirmStore'
 import { ContextMenu, type MenuItem } from '../ContextMenu'
 
 interface MenuState {
@@ -85,7 +86,7 @@ export function FileExplorer(): React.JSX.Element {
 
   const doDelete = async (entry: FileEntry): Promise<void> => {
     const label = entry.kind === 'folder' ? `folder "${entry.name}" and its contents` : `"${entry.name}"`
-    if (!window.confirm(`Move ${label} to the system trash?`)) return
+    if (!(await confirm(`Move ${label} to the system trash?`, { danger: true }))) return
     await window.knote.deleteEntry(entry.path)
     const open = useWorkspaceStore.getState().note
     if (open && (samePath(open.path, entry.path) || open.path.startsWith(entry.path + '/'))) {

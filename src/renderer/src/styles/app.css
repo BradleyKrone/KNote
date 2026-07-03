@@ -801,6 +801,35 @@ button {
   overflow: hidden;
 }
 
+.confirm-panel {
+  width: 380px;
+  padding: 18px 20px;
+}
+
+.confirm-message {
+  font-size: 13.5px;
+  color: var(--text-normal);
+  margin-bottom: 16px;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.confirm-btn {
+  width: auto;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+}
+
+.confirm-btn-danger {
+  background: var(--text-error, #e05252);
+  border-color: transparent;
+  color: #fff;
+}
+
 .modal-input {
   width: 100%;
   padding: 12px 14px;
