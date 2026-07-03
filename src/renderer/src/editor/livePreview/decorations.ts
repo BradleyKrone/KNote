@@ -7,7 +7,7 @@ import {
   WidgetType
 } from '@codemirror/view'
 import { type EditorState, type Extension, type Range } from '@codemirror/state'
-import { syntaxTree } from '@codemirror/language'
+import { foldedRanges, foldEffect, syntaxTree, unfoldEffect } from '@codemirror/language'
 import type { SyntaxNode } from '@lezer/common'
 import { isImage, parentOf } from '@shared/pathUtils'
 import { ARCHIVED_CHAR, TAG_RE, WIKI_LINK_RE } from '@shared/parser/patterns'
@@ -71,6 +71,40 @@ class CheckboxWidget extends WidgetType {
       wrap.appendChild(pill)
     }
     return wrap
+  }
+
+  override ignoreEvent(): boolean {
+    return true
+  }
+}
+
+class NoteTwistyWidget extends WidgetType {
+  constructor(
+    readonly folded: boolean,
+    readonly from: number,
+    readonly to: number
+  ) {
+    super()
+  }
+
+  override eq(other: NoteTwistyWidget): boolean {
+    return other.folded === this.folded && other.from === this.from && other.to === this.to
+  }
+
+  override toDOM(view: EditorView): HTMLElement {
+    const span = document.createElement('span')
+    span.className = 'knote-note-twisty'
+    span.textContent = this.folded ? '▸' : '▾'
+    span.title = this.folded ? 'Expand note' : 'Collapse note'
+    span.addEventListener('mousedown', (e) => e.preventDefault())
+    span.addEventListener('click', (e) => {
+      e.preventDefault()
+      const effect = this.folded
+        ? unfoldEffect.of({ from: this.from, to: this.to })
+        : foldEffect.of({ from: this.from, to: this.to })
+      view.dispatch({ effects: effect })
+    })
+    return span
   }
 
   override ignoreEvent(): boolean {
@@ -148,6 +182,37 @@ function toImgSrc(vaultPath: string): string {
 }
 
 const TASK_LINE_RE = /^(\s*)([-*+]|\d+[.)])\s\[(.)\](\s|$)/
+
+/**
+ * A task's attached "note" is the contiguous run of lines below it that are
+ * either blank or indented deeper than the task itself (standard markdown
+ * nesting). Blank runs don't end the block by themselves — only a following
+ * line at or above the task's indent does — so trailing blanks are trimmed
+ * automatically by tracking the last qualifying non-blank line.
+ */
+function findNoteBlockEnd(state: EditorState, taskLineNumber: number, indentLen: number): number | null {
+  let lastNonBlank: number | null = null
+  for (let ln = taskLineNumber + 1; ln <= state.doc.lines; ln++) {
+    const text = state.doc.line(ln).text
+    if (/^\s*$/.test(text)) continue
+    const lineIndent = /^[ \t]*/.exec(text)?.[0].length ?? 0
+    if (lineIndent <= indentLen) break
+    lastNonBlank = ln
+  }
+  return lastNonBlank
+}
+
+function isRangeFolded(state: EditorState, from: number, to: number): boolean {
+  let found = false
+  foldedRanges(state).between(from, to, (foldFrom, foldTo) => {
+    if (foldFrom === from && foldTo === to) {
+      found = true
+      return false
+    }
+    return undefined
+  })
+  return found
+}
 
 /** Decorate one line's [[wiki-links]]: hide syntax, style the display text. */
 function decorateWikiLinks(
@@ -399,10 +464,32 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
             )
           )
         }
-        if (/^[xX]$/.test(m[3])) {
+        const isDone = /^[xX]$/.test(m[3])
+        const isArchived = m[3] === ARCHIVED_CHAR
+        if (isDone) {
           decos.push(Decoration.line({ class: 'cm-task-done' }).range(line.from))
-        } else if (m[3] === ARCHIVED_CHAR) {
+        } else if (isArchived) {
           decos.push(Decoration.line({ class: 'cm-task-archived' }).range(line.from))
+        }
+
+        const noteBlockEnd = findNoteBlockEnd(state, line.number, m[1].length)
+        if (noteBlockEnd !== null) {
+          const blockFrom = line.to
+          const blockTo = state.doc.line(noteBlockEnd).to
+          decos.push(
+            Decoration.widget({
+              widget: new NoteTwistyWidget(isRangeFolded(state, blockFrom, blockTo), blockFrom, blockTo),
+              side: -1
+            }).range(bracketFrom)
+          )
+          if (isDone || isArchived) {
+            const cascadeClass = isDone ? 'cm-task-done' : 'cm-task-archived'
+            for (let ln = line.number + 1; ln <= noteBlockEnd; ln++) {
+              const childLine = state.doc.line(ln)
+              if (TASK_LINE_RE.test(childLine.text)) continue
+              decos.push(Decoration.line({ class: cascadeClass }).range(childLine.from))
+            }
+          }
         }
       }
 

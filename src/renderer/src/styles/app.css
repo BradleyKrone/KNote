@@ -481,6 +481,26 @@ button {
   text-decoration: line-through;
 }
 
+.knote-note-twisty {
+  display: inline-block;
+  width: 12px;
+  text-align: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.85em;
+}
+
+.knote-note-twisty:hover {
+  color: var(--text-normal);
+}
+
+.cm-foldPlaceholder {
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 0 4px;
+}
+
 /* Task checkboxes */
 
 .knote-task-checkbox {
