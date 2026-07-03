@@ -64,3 +64,34 @@ export function isInside(rel: string, folder: string): boolean {
 export function samePath(a: string, b: string): boolean {
   return normalizeRel(a).toLowerCase() === normalizeRel(b).toLowerCase()
 }
+
+/**
+ * Resolve a (possibly percent-encoded) markdown/wiki image target against the
+ * folder of the note that references it. A leading "/" means vault-root-
+ * relative regardless of that folder. Returns null if the target's "../"
+ * segments would escape the vault root.
+ */
+export function resolveEmbedPath(baseFolder: string, target: string): string | null {
+  let decoded: string
+  try {
+    decoded = decodeURIComponent(target)
+  } catch {
+    decoded = target
+  }
+  const raw = decoded.startsWith('/')
+    ? decoded.slice(1)
+    : baseFolder
+      ? `${baseFolder}/${decoded}`
+      : decoded
+  const out: string[] = []
+  for (const part of raw.replace(/\\/g, '/').split('/')) {
+    if (part === '' || part === '.') continue
+    if (part === '..') {
+      if (out.length === 0) return null
+      out.pop()
+    } else {
+      out.push(part)
+    }
+  }
+  return out.join('/')
+}

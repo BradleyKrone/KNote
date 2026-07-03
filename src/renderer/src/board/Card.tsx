@@ -11,11 +11,42 @@ export function cardId(card: BoardCard): string {
   return `${card.path} ${card.line} ${card.rawLine}`
 }
 
+/** Static clone rendered in the DragOverlay so it floats above column scroll clipping. */
+export function CardPreview({ card }: { card: BoardCard }): React.JSX.Element {
+  return (
+    <div className="board-card dragging board-card-overlay">
+      <div className="board-card-text">
+        {card.priority > 0 && (
+          <span className={`prio prio-${card.priority}`}>{'!'.repeat(card.priority)}</span>
+        )}
+        {card.displayText}
+      </div>
+      <div className="board-card-meta">
+        <span className="board-card-note" title={card.path}>
+          {card.noteTitle}
+        </span>
+        {card.due && (
+          <span className="board-card-due">
+            <CalendarDays size={11} /> {card.due}
+          </span>
+        )}
+        {card.tags.map((t) => (
+          <span key={t} className="board-card-tag">
+            #{t}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function Card({ card, showNote }: { card: BoardCard; showNote: boolean }): React.JSX.Element {
   const id = cardId(card)
   const drag = useDraggable({ id, data: { card } })
   // Cards are also drop targets so same-note reordering can insert before them
-  const drop = useDroppable({ id: `over:${id}`, data: { card } })
+  // Disabled while this card is the one being dragged, so it can't be dropped onto itself
+  // once the live column preview inserts it into the column under the pointer.
+  const drop = useDroppable({ id: `over:${id}`, data: { card }, disabled: drag.isDragging })
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(card.text)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -48,11 +79,6 @@ export function Card({ card, showNote }: { card: BoardCard; showNote: boolean })
       ]
         .filter(Boolean)
         .join(' ')}
-      style={
-        drag.transform
-          ? { transform: `translate(${drag.transform.x}px, ${drag.transform.y}px)`, zIndex: 50 }
-          : undefined
-      }
       {...(editing ? {} : { ...drag.listeners, ...drag.attributes })}
     >
       {editing ? (

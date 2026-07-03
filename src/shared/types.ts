@@ -155,6 +155,8 @@ export interface VaultConfig {
   templatesFolder: string
   /** Note that receives cards created on the global board */
   inboxNote: string
+  /** Vault-relative folder pasted/dropped images are saved into */
+  attachmentsFolder: string
   columns: BoardColumn[]
 }
 
@@ -164,6 +166,7 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   weeklyTemplate: '',
   templatesFolder: 'Templates',
   inboxNote: 'Inbox.md',
+  attachmentsFolder: 'Attachments',
   columns: [
     { name: 'To Do', char: ' ' },
     { name: 'Ready to Work', char: 'r' },

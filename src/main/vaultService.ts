@@ -185,6 +185,15 @@ export async function createFile(rel: VaultPath, content = ''): Promise<VaultPat
   return target
 }
 
+export async function createBinaryFile(rel: VaultPath, data: Buffer): Promise<VaultPath> {
+  const target = await uniquify(rel)
+  const abs = toAbs(target)
+  await fs.mkdir(dirname(abs), { recursive: true })
+  ownWriteMarker(abs)
+  await fs.writeFile(abs, data, { flag: 'wx' })
+  return target
+}
+
 export async function createFolder(rel: VaultPath): Promise<VaultPath> {
   const target = await uniquify(rel)
   const abs = toAbs(target)

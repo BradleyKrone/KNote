@@ -48,6 +48,8 @@ const api: KnoteApi = {
   ) => ipcRenderer.invoke(IpcChannels.lineMove, path, fromLine, expectedText, beforeLine, beforeExpectedText),
   appendToNote: (path: VaultPath, text: string) =>
     ipcRenderer.invoke(IpcChannels.noteAppend, path, text),
+  saveAttachment: (fileName: string, data: ArrayBuffer) =>
+    ipcRenderer.invoke(IpcChannels.attachmentSave, fileName, data),
 
   spellcheck: {
     addWord: (word: string) => ipcRenderer.invoke(IpcChannels.spellcheckAddWord, word)

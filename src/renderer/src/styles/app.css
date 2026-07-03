@@ -1239,9 +1239,12 @@ button {
   border-color: var(--text-faint);
 }
 .board-card.dragging {
-  opacity: 0.85;
+  opacity: 0.4;
+}
+.board-card-overlay {
+  opacity: 1;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
-  position: relative;
+  cursor: grabbing;
 }
 .board-card.drop-before {
   box-shadow: 0 -2px 0 0 var(--interactive-accent);

@@ -82,6 +82,9 @@ export function SettingsModal(): React.JSX.Element | null {
           <div className="settings-section">Templates</div>
           {field('Templates folder', 'templatesFolder')}
 
+          <div className="settings-section">Attachments</div>
+          {field('Attachments folder', 'attachmentsFolder', 'where pasted images are saved')}
+
           <div className="settings-section">Kanban board</div>
           {field('Inbox note', 'inboxNote', 'receives cards added on the global board')}
           <div className="settings-field">

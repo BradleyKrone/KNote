@@ -38,6 +38,7 @@ export const IpcChannels = {
   lineDelete: 'line:delete',
   lineMove: 'line:move',
   noteAppend: 'note:append',
+  attachmentSave: 'attachment:save',
   spellcheckAddWord: 'spellcheck:addWord',
   // main -> renderer events
   evExternalChange: 'ev:externalChange',
@@ -102,6 +103,12 @@ export interface KnoteApi {
   ): Promise<void>
   /** Append a line to a note, creating the note if needed. */
   appendToNote(path: VaultPath, text: string): Promise<void>
+  /**
+   * Save pasted/dropped image bytes into the vault's configured attachments
+   * folder, uniquifying the name if it's taken. Returns the vault-relative
+   * path the file was actually saved at.
+   */
+  saveAttachment(fileName: string, data: ArrayBuffer): Promise<VaultPath>
 
   spellcheck: {
     /** Add a word to the user's personal spellchecker dictionary. */

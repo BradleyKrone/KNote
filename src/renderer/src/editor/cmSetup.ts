@@ -21,6 +21,7 @@ import { classHighlighter, tags as t } from '@lezer/highlight'
 import { TASK_LINE_RE } from '@shared/parser/patterns'
 import { livePreviewExtension } from './livePreview/decorations'
 import { toggleBold, toggleInlineCode, toggleItalic, toggleStrikethrough } from './formatting'
+import { handleImagePaste } from './pasteImage'
 import { noteCandidates, tagCounts, useIndexStore } from '@/stores/indexStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 
@@ -131,6 +132,7 @@ export function createEditor(
     syntaxHighlighting(classHighlighter),
     highlightSelectionMatches(),
     autocompletion({ override: [wikiLinkCompletions, tagCompletions], icons: false }),
+    EditorView.domEventHandlers({ paste: handleImagePaste }),
     keymap.of([
       ...formatKeymap,
       ...defaultKeymap,

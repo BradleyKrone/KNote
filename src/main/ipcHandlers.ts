@@ -2,7 +2,8 @@ import { BrowserWindow, dialog, ipcMain, session } from 'electron'
 import { promises as fs } from 'fs'
 import { IpcChannels } from '@shared/ipc'
 import type { ThemeName, VaultInfo, VaultPath } from '@shared/types'
-import { isMarkdown } from '@shared/pathUtils'
+import { isMarkdown, joinRel } from '@shared/pathUtils'
+import { cleanupAttachmentsForDeletedNote, cleanupRemovedAttachments } from './attachmentCleanup'
 import * as vault from './vaultService'
 import * as vaultIndex from './indexer/vaultIndex'
 import * as searchIndex from './indexer/searchIndex'
@@ -55,8 +56,10 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
   ipcMain.handle(
     IpcChannels.fileWrite,
     async (_e, path: VaultPath, content: string, expectedMtimeMs?: number) => {
+      const oldContent = vaultIndex.getContent(path)
       const result = await vault.writeFileAtomic(path, content, expectedMtimeMs)
       void vaultIndex.indexFile(path)
+      void cleanupRemovedAttachments(path, oldContent, content)
       return result
     }
   )
@@ -85,9 +88,11 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
 
   ipcMain.handle(IpcChannels.entryDelete, async (_e, path: VaultPath) => {
     const wasFolder = await vaultIndex.statIsDir(path)
+    const oldContent = !wasFolder && isMarkdown(path) ? vaultIndex.getContent(path) : undefined
     await vault.deleteEntry(path)
     if (wasFolder) vaultIndex.removeFolder(path)
     else vaultIndex.removeFile(path)
+    if (oldContent !== undefined) void cleanupAttachmentsForDeletedNote(path, oldContent)
   })
 
   ipcMain.handle(IpcChannels.indexSnapshot, () => vaultIndex.getSnapshot())
@@ -132,6 +137,12 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
   ipcMain.handle(IpcChannels.noteAppend, async (_e, path: VaultPath, text: string) => {
     await appendLine(path, text)
     void vaultIndex.indexFile(path)
+  })
+
+  ipcMain.handle(IpcChannels.attachmentSave, async (_e, fileName: string, data: ArrayBuffer) => {
+    const config = await getVaultConfig()
+    const target = joinRel(config.attachmentsFolder, fileName)
+    return vault.createBinaryFile(target, Buffer.from(data))
   })
 
   ipcMain.handle(IpcChannels.settingsGet, () => getSettings())
