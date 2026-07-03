@@ -147,6 +147,11 @@ button {
   background: var(--bg-hover);
   color: var(--text-normal);
 }
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
 
 /* ---------- Vault picker ---------- */
 
@@ -310,6 +315,11 @@ button {
 .context-menu-item.danger {
   color: var(--danger);
 }
+.context-menu-separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border-color);
+}
 
 /* ---------- Empty state ---------- */
 
@@ -459,6 +469,11 @@ button {
 
 .cm-task-done {
   color: var(--text-faint);
+}
+
+.cm-task-archived {
+  color: var(--text-faint);
+  text-decoration: line-through;
 }
 
 /* Task checkboxes */

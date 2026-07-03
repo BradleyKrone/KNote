@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react'
 import type { VaultConfig } from '@shared/types'
 import { useSettingsStore } from '@/stores/settingsStore'
 
@@ -29,6 +29,14 @@ export function SettingsModal(): React.JSX.Element | null {
   }, [open])
 
   if (!open) return null
+
+  const moveColumn = (i: number, dir: -1 | 1): void => {
+    const j = i + dir
+    if (j < 0 || j >= draft.columns.length) return
+    const columns = [...draft.columns]
+    ;[columns[i], columns[j]] = [columns[j], columns[i]]
+    setDraft({ ...draft, columns })
+  }
 
   const commit = (): void => {
     setOpen(false)
@@ -83,6 +91,22 @@ export function SettingsModal(): React.JSX.Element | null {
             </label>
             {draft.columns.map((col, i) => (
               <div key={i} className="settings-column-row">
+                <button
+                  className="icon-btn"
+                  title="Move up"
+                  disabled={i === 0}
+                  onClick={() => moveColumn(i, -1)}
+                >
+                  <ArrowUp size={13} />
+                </button>
+                <button
+                  className="icon-btn"
+                  title="Move down"
+                  disabled={i === draft.columns.length - 1}
+                  onClick={() => moveColumn(i, 1)}
+                >
+                  <ArrowDown size={13} />
+                </button>
                 <input
                   className="panel-input small"
                   value={col.name}

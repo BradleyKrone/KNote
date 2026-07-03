@@ -21,3 +21,10 @@ export const PRIORITY_RE = /(?:^|\s)(!{1,3})(?=\s|$)/
 
 /** 🏁 milestone line — a standalone dated timeline entry, deliberately not a checkbox so it never becomes a Kanban card */
 export const MILESTONE_LINE_RE = /^\s*🏁\s+(.*)$/
+
+/**
+ * Reserved checkbox status char for archived tasks — `- [a] ...`. Archived
+ * tasks stay in their note as a struck-through line but never appear on the
+ * Kanban board, regardless of the vault's configured columns.
+ */
+export const ARCHIVED_CHAR = 'a'

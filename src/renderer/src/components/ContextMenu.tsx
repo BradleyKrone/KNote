@@ -6,10 +6,16 @@ export interface MenuItem {
   onClick: () => void
 }
 
+export interface MenuSeparator {
+  separator: true
+}
+
+export type MenuEntry = MenuItem | MenuSeparator
+
 interface Props {
   x: number
   y: number
-  items: MenuItem[]
+  items: MenuEntry[]
   onClose: () => void
 }
 
@@ -34,25 +40,31 @@ export function ContextMenu({ x, y, items, onClose }: Props): React.JSX.Element 
   }, [onClose])
 
   // Keep the menu on screen
+  const estimatedHeight =
+    items.reduce((h, entry) => h + ('separator' in entry ? 9 : 30), 0) + 12
   const style: React.CSSProperties = {
     left: Math.min(x, window.innerWidth - 180),
-    top: Math.min(y, window.innerHeight - items.length * 30 - 12)
+    top: Math.min(y, window.innerHeight - estimatedHeight)
   }
 
   return (
     <div ref={ref} className="context-menu" style={style}>
-      {items.map((item) => (
-        <button
-          key={item.label}
-          className={`context-menu-item${item.danger ? ' danger' : ''}`}
-          onClick={() => {
-            onClose()
-            item.onClick()
-          }}
-        >
-          {item.label}
-        </button>
-      ))}
+      {items.map((entry, i) =>
+        'separator' in entry ? (
+          <div key={`sep-${i}`} className="context-menu-separator" />
+        ) : (
+          <button
+            key={entry.label}
+            className={`context-menu-item${entry.danger ? ' danger' : ''}`}
+            onClick={() => {
+              onClose()
+              entry.onClick()
+            }}
+          >
+            {entry.label}
+          </button>
+        )
+      )}
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useVaultStore } from '@/stores/vaultStore'
-import { formatActive, insertMilestoneAtCursor } from '@/editor/formatting'
+import { formatActive, insertCheckboxOnActive, insertMilestoneAtCursor } from '@/editor/formatting'
 
 /** Registered once at app start; the palette lists whatever is here. */
 export function registerCoreCommands(): void {
@@ -102,6 +102,12 @@ export function registerCoreCommands(): void {
     id: 'open-timeline',
     name: 'Open timeline',
     run: () => useUiStore.getState().setTimelineOpen(true)
+  })
+
+  registerCommand({
+    id: 'insert-checkbox',
+    name: 'Add checkbox',
+    run: () => insertCheckboxOnActive()
   })
 
   registerCommand({

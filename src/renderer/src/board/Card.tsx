@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { CalendarDays, Pencil, X } from 'lucide-react'
+import { Archive, CalendarDays, Pencil, X } from 'lucide-react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useUiStore } from '@/stores/uiStore'
-import { deleteCard, updateCardText } from './boardActions'
+import { archiveCard, deleteCard, updateCardText } from './boardActions'
 import type { BoardCard } from './boardSelectors'
 import { TaskMetaToolbar, blurTargetIsPicker } from './TaskMetaToolbar'
 
@@ -122,6 +122,17 @@ export function Card({ card, showNote }: { card: BoardCard; showNote: boolean })
               }}
             >
               <Pencil size={12} />
+            </button>
+            <button
+              className="board-card-action"
+              title="Archive task (strikes it through and removes it from the board)"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                void archiveCard(card)
+              }}
+            >
+              <Archive size={12} />
             </button>
             <button
               className="board-card-action danger"

@@ -1,6 +1,6 @@
 import type { BoardColumn, NoteMeta, VaultPath } from '@shared/types'
 import { isInside, samePath, titleOf } from '@shared/pathUtils'
-import { DUE_RE, PRIORITY_RE } from '@shared/parser/patterns'
+import { ARCHIVED_CHAR, DUE_RE, PRIORITY_RE } from '@shared/parser/patterns'
 
 export type BoardScope =
   | { kind: 'global' }
@@ -70,6 +70,7 @@ export function collectCards(
     if (scope.kind === 'note' && !samePath(meta.path, scope.path)) continue
     if (scope.kind === 'folder' && !isInside(meta.path, scope.path)) continue
     for (const task of meta.tasks) {
+      if (task.statusChar === ARCHIVED_CHAR) continue
       const card = toCard(meta, task)
       if (filters.tag && !card.tags.some((t) => t === filters.tag || t.startsWith(filters.tag + '/')))
         continue

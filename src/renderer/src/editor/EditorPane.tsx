@@ -1,11 +1,91 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { EditorSelection } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
+import { ARCHIVED_CHAR, DUE_RE, MILESTONE_LINE_RE, TASK_LINE_RE } from '@shared/parser/patterns'
+import type { BoardColumn } from '@shared/types'
 import { registerKeepMine, useWorkspaceStore } from '@/stores/workspaceStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { createEditor, type KnoteEditor } from './cmSetup'
 import { setActiveEditorView } from './activeView'
+import {
+  insertCheckboxAtCursor,
+  insertMilestoneAtCursor,
+  insertTagAtCursor,
+  setDueDateAtCursor,
+  setPriorityAtCursor,
+  setTaskStatusAtCursor,
+  toggleBold,
+  toggleInlineCode,
+  toggleItalic,
+  toggleStrikethrough
+} from './formatting'
 import { ReadingView } from '@/components/reading/ReadingView'
+import { ContextMenu, type MenuEntry } from '@/components/ContextMenu'
+import { Popover } from '@/components/popover/Popover'
+import { TagPickerContent } from '@/components/popover/TagPickerContent'
+import { PriorityPickerContent } from '@/components/popover/PriorityPickerContent'
+import { DatePickerContent } from '@/components/popover/DatePickerContent'
 
 const AUTOSAVE_DELAY_MS = 500
+
+interface ContextMenuState {
+  x: number
+  y: number
+  isTask: boolean
+  isMilestone: boolean
+  isCheckbox: boolean
+}
+
+type PickerKind = 'tag' | 'priority' | 'date'
+
+interface ActivePicker {
+  kind: PickerKind
+  x: number
+  y: number
+}
+
+/** Right-click landed on a task's checkbox glyph: offer a quick status switch instead of formatting. */
+function buildCheckboxMenuItems(view: EditorView, columns: BoardColumn[]): MenuEntry[] {
+  const line = view.state.doc.lineAt(view.state.selection.main.head)
+  const currentChar = TASK_LINE_RE.exec(line.text)?.[3] ?? null
+  const items: MenuEntry[] = columns.map((col) => ({
+    label: col.char === currentChar ? `✓ ${col.name}` : col.name,
+    onClick: () => setTaskStatusAtCursor(view, col.char)
+  }))
+  items.push(
+    { separator: true },
+    {
+      label: currentChar === ARCHIVED_CHAR ? '✓ Archived' : 'Archived',
+      onClick: () => setTaskStatusAtCursor(view, ARCHIVED_CHAR)
+    }
+  )
+  return items
+}
+
+function buildContextMenuItems(
+  view: EditorView,
+  ctx: ContextMenuState,
+  openPicker: (kind: PickerKind) => void
+): MenuEntry[] {
+  const items: MenuEntry[] = [
+    { label: 'Bold', onClick: () => toggleBold(view) },
+    { label: 'Italic', onClick: () => toggleItalic(view) },
+    { label: 'Strikethrough', onClick: () => toggleStrikethrough(view) },
+    { label: 'Inline code', onClick: () => toggleInlineCode(view) },
+    { separator: true },
+    { label: 'Add checkbox', onClick: () => insertCheckboxAtCursor(view) },
+    { label: 'Add milestone', onClick: () => insertMilestoneAtCursor(false) }
+  ]
+  if (ctx.isTask || ctx.isMilestone) {
+    items.push(
+      { separator: true },
+      { label: 'Add tag…', onClick: () => openPicker('tag') },
+      { label: 'Set priority…', onClick: () => openPicker('priority') },
+      { label: 'Set due date…', onClick: () => openPicker('date') }
+    )
+  }
+  return items
+}
 
 /**
  * Hosts the CodeMirror view for the currently open note. The component is
@@ -17,6 +97,7 @@ export function EditorPane(): React.JSX.Element {
   const mode = useWorkspaceStore((s) => s.mode)
   const conflict = useWorkspaceStore((s) => s.conflict)
   const resolveConflict = useWorkspaceStore((s) => s.resolveConflict)
+  const columns = useSettingsStore((s) => s.vaultConfig.columns)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<KnoteEditor | null>(null)
@@ -24,6 +105,8 @@ export function EditorPane(): React.JSX.Element {
   const saveInFlight = useRef(false)
   const savePending = useRef(false)
   const lastSaved = useRef<string | null>(null)
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const [activePicker, setActivePicker] = useState<ActivePicker | null>(null)
 
   // Refs so callbacks always see the latest path/eol even after a rename
   const pathRef = useRef(note?.path ?? '')
@@ -105,6 +188,8 @@ export function EditorPane(): React.JSX.Element {
     editorRef.current = editor
     editor.view.focus()
     setActiveEditorView(editor.view)
+    setContextMenu(null)
+    setActivePicker(null)
 
     // Heading links request a scroll-to-line on open
     const scrollLine = useWorkspaceStore.getState().consumeScrollRequest()
@@ -169,6 +254,37 @@ export function EditorPane(): React.JSX.Element {
     return () => window.removeEventListener('beforeunload', flush)
   }, [save])
 
+  const handleContextMenu = useCallback((e: React.MouseEvent): void => {
+    const editor = editorRef.current
+    if (!editor) return
+    e.preventDefault()
+    const view = editor.view
+    const isCheckbox = !!(e.target as HTMLElement).closest?.('.knote-task-checkbox')
+    const pos = view.posAtCoords({ x: e.clientX, y: e.clientY })
+    if (pos !== null) {
+      const insideSelection = view.state.selection.ranges.some(
+        (r) => pos >= r.from && pos <= r.to
+      )
+      if (!insideSelection) view.dispatch({ selection: EditorSelection.cursor(pos) })
+    }
+    const line = view.state.doc.lineAt(pos ?? view.state.selection.main.head)
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      isTask: TASK_LINE_RE.test(line.text),
+      isMilestone: MILESTONE_LINE_RE.test(line.text),
+      isCheckbox
+    })
+  }, [])
+
+  const currentLineDue = (): string | null => {
+    const view = editorRef.current?.view
+    if (!view) return null
+    const line = view.state.doc.lineAt(view.state.selection.main.head)
+    const m = DUE_RE.exec(line.text)
+    return m ? (m[1] ?? m[2]) : null
+  }
+
   if (!note) return <></>
 
   return (
@@ -188,7 +304,57 @@ export function EditorPane(): React.JSX.Element {
           </div>
         </div>
       )}
-      {isReading ? <ReadingView /> : <div ref={containerRef} className="editor-host" />}
+      {isReading ? (
+        <ReadingView />
+      ) : (
+        <div ref={containerRef} className="editor-host" onContextMenu={handleContextMenu} />
+      )}
+      {contextMenu && editorRef.current && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={
+            contextMenu.isCheckbox
+              ? buildCheckboxMenuItems(editorRef.current.view, columns)
+              : buildContextMenuItems(editorRef.current.view, contextMenu, (kind) =>
+                  setActivePicker({ kind, x: contextMenu.x, y: contextMenu.y })
+                )
+          }
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+      {activePicker && (
+        <Popover anchorPoint={{ x: activePicker.x, y: activePicker.y }} onClose={() => setActivePicker(null)}>
+          {activePicker.kind === 'tag' && (
+            <TagPickerContent
+              onSelect={(tag) => {
+                const view = editorRef.current?.view
+                if (view) insertTagAtCursor(view, tag)
+                setActivePicker(null)
+              }}
+            />
+          )}
+          {activePicker.kind === 'priority' && (
+            <PriorityPickerContent
+              onSelect={(level) => {
+                const view = editorRef.current?.view
+                if (view) setPriorityAtCursor(view, level)
+                setActivePicker(null)
+              }}
+            />
+          )}
+          {activePicker.kind === 'date' && (
+            <DatePickerContent
+              currentDate={currentLineDue()}
+              onSelect={(date) => {
+                const view = editorRef.current?.view
+                if (view) setDueDateAtCursor(view, date)
+                setActivePicker(null)
+              }}
+            />
+          )}
+        </Popover>
+      )}
     </div>
   )
 }

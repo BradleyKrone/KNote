@@ -1,8 +1,12 @@
 import dayjs from 'dayjs'
 import { EditorSelection } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
+import { TASK_LINE_RE } from '@shared/parser/patterns'
 import { getActiveEditorView } from './activeView'
 import { insertTag, setDueDate, setPriority } from '@/taskMeta'
+
+/** A plain list line (`- `, `* `, `1. `) with no checkbox brackets yet. */
+const LIST_MARKER_RE = /^(\s*)([-*+]|\d+[.)])\s(.*)$/
 
 /**
  * Toggle an inline markdown wrapper (**bold**, *italic*, ~~strike~~, `code`)
@@ -126,19 +130,61 @@ export function setDueDateOnActive(date: string | null): void {
   if (view) setDueDateAtCursor(view, date)
 }
 
+/**
+ * Toggle the current line into/out of a `- [ ]` checkbox. Already-a-task
+ * lines are stripped back to a plain bullet; plain list lines get brackets
+ * inserted after their marker; anything else is prefixed with `- [ ] `.
+ */
+export function insertCheckboxAtCursor(view: EditorView): void {
+  replaceCurrentLine(view, (text) => {
+    const task = TASK_LINE_RE.exec(text)
+    if (task) {
+      const [, indent, marker, , rest] = task
+      return `${indent}${marker} ${rest ?? ''}`.trimEnd()
+    }
+    const list = LIST_MARKER_RE.exec(text)
+    if (list) {
+      const [, indent, marker, rest] = list
+      return `${indent}${marker} [ ] ${rest}`
+    }
+    const trimmed = text.trim()
+    return trimmed ? `- [ ] ${trimmed}` : '- [ ] '
+  })
+}
+
+/** Variant usable from the toolbar/palette (acts on the active editor). */
+export function insertCheckboxOnActive(): void {
+  const view = getActiveEditorView()
+  if (view) insertCheckboxAtCursor(view)
+}
+
+/** Rewrite the current line's checkbox status char (Kanban column or archive). */
+export function setTaskStatusAtCursor(view: EditorView, char: string): void {
+  replaceCurrentLine(view, (text) => {
+    const m = TASK_LINE_RE.exec(text)
+    if (!m) return text
+    const bracketOffset = m[1].length + m[2].length + 2
+    return text.slice(0, bracketOffset) + char + text.slice(bracketOffset + 1)
+  })
+}
+
 /** Insert a ready-to-edit 🏁 milestone line at the cursor, with the placeholder label selected. */
 export function insertMilestoneAtCursor(important: boolean): void {
   const view = getActiveEditorView()
   if (!view) return
   const pos = view.state.selection.main.head
   const line = view.state.doc.lineAt(pos)
-  const needsNewline = line.text.length > 0
+  // Split out onto its own line on either side that actually has content —
+  // a cursor mid-line (e.g. from a right-click) must not glue the milestone
+  // onto whatever text follows it.
+  const hasTextBefore = pos > line.from
+  const hasTextAfter = pos < line.to
   const label = 'Milestone'
   const date = dayjs().format('YYYY-MM-DD')
   // 🏁 is an astral-plane codepoint (surrogate pair) — derive the offset from the
   // actual prefix length rather than counting characters, so positions stay in sync.
-  const prefix = `${needsNewline ? '\n' : ''}🏁 `
-  const suffix = ` 📅 ${date}${important ? ' !!!' : ''}`
+  const prefix = `${hasTextBefore ? '\n' : ''}🏁 `
+  const suffix = ` 📅 ${date}${important ? ' !!!' : ''}${hasTextAfter ? '\n' : ''}`
   const insert = prefix + label + suffix
   const labelFrom = pos + prefix.length
   view.dispatch(

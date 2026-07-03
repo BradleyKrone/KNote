@@ -1,21 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
 
 interface Props {
-  anchorEl: HTMLElement | null
+  /** Anchor below this trigger element. Mutually exclusive with anchorPoint. */
+  anchorEl?: HTMLElement | null
+  /** Anchor at a raw viewport point (e.g. a right-click location) instead of an element. */
+  anchorPoint?: { x: number; y: number } | null
   onClose: () => void
   children: React.ReactNode
 }
 
-/** Small dropdown anchored below a trigger element. Closes on outside click / Escape. */
-export function Popover({ anchorEl, onClose, children }: Props): React.JSX.Element | null {
+/** Small dropdown anchored below a trigger element or at a point. Closes on outside click / Escape. */
+export function Popover({ anchorEl, anchorPoint, onClose, children }: Props): React.JSX.Element | null {
   const panelRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
 
   useEffect(() => {
+    if (anchorPoint) {
+      setPos({ top: anchorPoint.y, left: anchorPoint.x })
+      return
+    }
     if (!anchorEl) return
     const rect = anchorEl.getBoundingClientRect()
     setPos({ top: rect.bottom + 4, left: rect.left })
-  }, [anchorEl])
+  }, [anchorEl, anchorPoint])
 
   useEffect(() => {
     const onDown = (e: MouseEvent): void => {
@@ -34,7 +41,7 @@ export function Popover({ anchorEl, onClose, children }: Props): React.JSX.Eleme
     }
   }, [anchorEl, onClose])
 
-  if (!anchorEl || !pos) return null
+  if ((!anchorEl && !anchorPoint) || !pos) return null
 
   return (
     <div

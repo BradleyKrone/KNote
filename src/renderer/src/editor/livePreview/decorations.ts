@@ -10,7 +10,7 @@ import { type EditorState, type Extension, type Range } from '@codemirror/state'
 import { syntaxTree } from '@codemirror/language'
 import type { SyntaxNode } from '@lezer/common'
 import { isImage, parentOf } from '@shared/pathUtils'
-import { TAG_RE, WIKI_LINK_RE } from '@shared/parser/patterns'
+import { ARCHIVED_CHAR, TAG_RE, WIKI_LINK_RE } from '@shared/parser/patterns'
 import { openWikiTarget } from '@/stores/indexStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -40,8 +40,10 @@ class CheckboxWidget extends WidgetType {
     wrap.className = 'knote-task-checkbox'
     const input = document.createElement('input')
     input.type = 'checkbox'
-    input.checked = /^[xX]$/.test(this.char)
-    if (!input.checked && this.char !== ' ') {
+    input.checked = /^[xX]$/.test(this.char) || this.char === ARCHIVED_CHAR
+    if (this.char === ARCHIVED_CHAR) {
+      wrap.classList.add('archived')
+    } else if (!input.checked && this.char !== ' ') {
       // Custom status char (e.g. "/" = in progress): show as partially done
       wrap.classList.add('alt-state')
       wrap.dataset.status = this.char
@@ -356,7 +358,9 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
         if (!isInCode(tree, bracketFrom) && !touches(bracketFrom, bracketTo)) {
           const char = m[3]
           let statusName: string | null = null
-          if (char !== ' ' && !/^[xX]$/.test(char)) {
+          if (char === ARCHIVED_CHAR) {
+            statusName = 'Archived'
+          } else if (char !== ' ' && !/^[xX]$/.test(char)) {
             const columns = useSettingsStore.getState().vaultConfig.columns
             statusName = columns.find((c) => c.char === char)?.name ?? `[${char}]`
           }
@@ -369,6 +373,8 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
         }
         if (/^[xX]$/.test(m[3])) {
           decos.push(Decoration.line({ class: 'cm-task-done' }).range(line.from))
+        } else if (m[3] === ARCHIVED_CHAR) {
+          decos.push(Decoration.line({ class: 'cm-task-archived' }).range(line.from))
         }
       }
 

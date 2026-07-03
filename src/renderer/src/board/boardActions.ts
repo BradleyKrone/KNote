@@ -1,5 +1,5 @@
 import { samePath } from '@shared/pathUtils'
-import { TASK_LINE_RE } from '@shared/parser/patterns'
+import { ARCHIVED_CHAR, TASK_LINE_RE } from '@shared/parser/patterns'
 import { getActiveEditorView } from '@/editor/activeView'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -64,6 +64,11 @@ export async function setCardStatus(card: BoardCard, targetChar: string): Promis
     if (String(err).includes('KNOTE_STALE')) staleToast()
     else throw err
   }
+}
+
+/** Archive a card: strikes through its line in the note and drops it off the board. */
+export async function archiveCard(card: BoardCard): Promise<void> {
+  await setCardStatus(card, ARCHIVED_CHAR)
 }
 
 /** Same-note reorder: move the card's line before another card's line. */
