@@ -15,6 +15,16 @@ export interface FileEntry {
   children?: FileEntry[]
 }
 
+/**
+ * Spellcheck context delivered from the main process on right-click inside the
+ * editor. Chromium's spellchecker (native OS checker on Windows) fills these in;
+ * misspelledWord is '' when the click wasn't on a flagged word.
+ */
+export interface SpellContextInfo {
+  misspelledWord: string
+  dictionarySuggestions: string[]
+}
+
 export interface FileReadResult {
   path: VaultPath
   content: string

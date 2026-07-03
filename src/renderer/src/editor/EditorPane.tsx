@@ -35,6 +35,72 @@ interface ContextMenuState {
   isTask: boolean
   isMilestone: boolean
   isCheckbox: boolean
+  spelling: SpellingTarget | null
+}
+
+interface SpellingTarget {
+  word: string
+  from: number
+  to: number
+  suggestions: string[]
+}
+
+/** Editor state captured on right-click, paired with async spell data from main. */
+interface PendingContext {
+  x: number
+  y: number
+  isTask: boolean
+  isMilestone: boolean
+  isCheckbox: boolean
+  /** The word range under the cursor (null on a checkbox or blank spot). */
+  wordRange: { word: string; from: number; to: number } | null
+}
+
+const WORD_CHAR_RE = /[A-Za-z']/
+
+/** Finds the word (if any) touching `pos`, for spellcheck suggestions on right-click. */
+function wordAt(
+  view: EditorView,
+  pos: number
+): { word: string; from: number; to: number } | null {
+  const line = view.state.doc.lineAt(pos)
+  const offset = pos - line.from
+  if (!WORD_CHAR_RE.test(line.text[offset] ?? '') && !WORD_CHAR_RE.test(line.text[offset - 1] ?? '')) {
+    return null
+  }
+  let start = offset
+  while (start > 0 && WORD_CHAR_RE.test(line.text[start - 1])) start--
+  let end = offset
+  while (end < line.text.length && WORD_CHAR_RE.test(line.text[end])) end++
+  if (start === end) return null
+  return { word: line.text.slice(start, end), from: line.from + start, to: line.from + end }
+}
+
+function replaceWordWith(
+  view: EditorView,
+  target: { from: number; to: number },
+  replacement: string
+): void {
+  view.dispatch({
+    changes: { from: target.from, to: target.to, insert: replacement },
+    selection: { anchor: target.from + replacement.length }
+  })
+  view.focus()
+}
+
+/** Spelling-suggestion entries shown above the regular formatting menu. */
+function buildSpellingMenuItems(view: EditorView, target: SpellingTarget): MenuEntry[] {
+  const items: MenuEntry[] = target.suggestions.slice(0, 5).map((s) => ({
+    label: s,
+    onClick: () => replaceWordWith(view, target, s)
+  }))
+  if (items.length === 0) items.push({ label: 'No suggestions', onClick: () => {} })
+  items.push({
+    label: 'Add to dictionary',
+    onClick: () => void window.knote.spellcheck.addWord(target.word)
+  })
+  items.push({ separator: true })
+  return items
 }
 
 type PickerKind = 'tag' | 'priority' | 'date'
@@ -68,7 +134,8 @@ function buildContextMenuItems(
   ctx: ContextMenuState,
   openPicker: (kind: PickerKind) => void
 ): MenuEntry[] {
-  const items: MenuEntry[] = [
+  const items: MenuEntry[] = ctx.spelling ? buildSpellingMenuItems(view, ctx.spelling) : []
+  items.push(
     { label: 'Bold', onClick: () => toggleBold(view) },
     { label: 'Italic', onClick: () => toggleItalic(view) },
     { label: 'Strikethrough', onClick: () => toggleStrikethrough(view) },
@@ -76,7 +143,7 @@ function buildContextMenuItems(
     { separator: true },
     { label: 'Add checkbox', onClick: () => insertCheckboxAtCursor(view) },
     { label: 'Add milestone', onClick: () => insertMilestoneAtCursor(false) }
-  ]
+  )
   if (ctx.isTask || ctx.isMilestone) {
     items.push(
       { separator: true },
@@ -113,6 +180,9 @@ export function EditorPane(): React.JSX.Element {
   const lastSaved = useRef<string | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [activePicker, setActivePicker] = useState<ActivePicker | null>(null)
+  // Editor state captured on right-click (DOM event), consumed when the main
+  // process delivers the matching spellcheck data a moment later.
+  const pendingContext = useRef<PendingContext | null>(null)
 
   // Refs so callbacks always see the latest path/eol even after a rename
   const pathRef = useRef(note?.path ?? '')
@@ -260,10 +330,13 @@ export function EditorPane(): React.JSX.Element {
     return () => window.removeEventListener('beforeunload', flush)
   }, [save])
 
+  // Right-click records where/what was clicked but does NOT open the menu or
+  // preventDefault — letting the event through is what lets Chromium fire its
+  // main-process context-menu event (with spellcheck data). The menu opens when
+  // that data arrives, in the effect below.
   const handleContextMenu = useCallback((e: React.MouseEvent): void => {
     const editor = editorRef.current
     if (!editor) return
-    e.preventDefault()
     const view = editor.view
     const isCheckbox = !!(e.target as HTMLElement).closest?.('.knote-task-checkbox')
     const pos = view.posAtCoords({ x: e.clientX, y: e.clientY })
@@ -274,12 +347,34 @@ export function EditorPane(): React.JSX.Element {
       if (!insideSelection) view.dispatch({ selection: EditorSelection.cursor(pos) })
     }
     const line = view.state.doc.lineAt(pos ?? view.state.selection.main.head)
-    setContextMenu({
+    pendingContext.current = {
       x: e.clientX,
       y: e.clientY,
       isTask: TASK_LINE_RE.test(line.text),
       isMilestone: MILESTONE_LINE_RE.test(line.text),
-      isCheckbox
+      isCheckbox,
+      wordRange: !isCheckbox && pos !== null ? wordAt(view, pos) : null
+    }
+  }, [])
+
+  // Main process delivers the spellcheck result for the last right-click; pair
+  // it with the editor context captured above and open the styled menu.
+  useEffect(() => {
+    return window.knote.onSpellContextMenu((info) => {
+      const ctx = pendingContext.current
+      if (!ctx || !editorRef.current) return
+      const spelling: SpellingTarget | null =
+        info.misspelledWord && ctx.wordRange
+          ? { ...ctx.wordRange, word: info.misspelledWord, suggestions: info.dictionarySuggestions }
+          : null
+      setContextMenu({
+        x: ctx.x,
+        y: ctx.y,
+        isTask: ctx.isTask,
+        isMilestone: ctx.isMilestone,
+        isCheckbox: ctx.isCheckbox,
+        spelling
+      })
     })
   }, [])
 

@@ -124,6 +124,8 @@ export function createEditor(
     codeFolding({ placeholderText: '⋯' }),
     EditorState.allowMultipleSelections.of(true),
     EditorView.lineWrapping,
+    // CM6 sets spellcheck="false" by default; opt back into the OS/Chromium spellchecker
+    EditorView.contentAttributes.of({ spellcheck: 'true', autocorrect: 'on' }),
     markdown({ base: markdownLanguage, codeLanguages: languages }),
     syntaxHighlighting(mdHighlight),
     syntaxHighlighting(classHighlighter),

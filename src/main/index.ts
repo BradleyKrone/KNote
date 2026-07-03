@@ -1,6 +1,7 @@
 import { app, BrowserWindow, net, protocol, session } from 'electron'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
+import { IpcChannels } from '@shared/ipc'
 import { registerIpcHandlers } from './ipcHandlers'
 import { getSettings } from './settings'
 import * as vault from './vaultService'
@@ -37,7 +38,8 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
-      webSecurity: true
+      webSecurity: true,
+      spellcheck: true
     }
   })
 
@@ -46,6 +48,19 @@ function createWindow(): void {
   // KNote never navigates away from its own UI and never opens child windows.
   mainWindow.webContents.on('will-navigate', (e) => e.preventDefault())
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+
+  // The renderer-side webFrame spellcheck APIs don't work with the native
+  // Windows checker, so the misspelled word + suggestions are only available
+  // here, on Chromium's context-menu event. Forward them to the editor, which
+  // renders its own styled menu. Gated on isEditable — the CodeMirror content
+  // is the only editable surface, so this never fires for the file tree etc.
+  mainWindow.webContents.on('context-menu', (_e, params) => {
+    if (!params.isEditable) return
+    mainWindow?.webContents.send(IpcChannels.evSpellContextMenu, {
+      misspelledWord: params.misspelledWord,
+      dictionarySuggestions: params.dictionarySuggestions
+    })
+  })
 
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (devUrl) {
@@ -71,6 +86,12 @@ app.whenReady().then(async () => {
         (url.startsWith(devUrl) || url.startsWith(devUrl.replace(/^http/, 'ws'))))
     callback({ cancel: !local })
   })
+
+  // Spell checking uses the OS-native checker on Windows/macOS (no dictionary
+  // download, so the zero-network policy above is untouched). Enable it and set
+  // the language explicitly; suggestions surface via the context-menu event.
+  session.defaultSession.setSpellCheckerEnabled(true)
+  session.defaultSession.setSpellCheckerLanguages(['en-US'])
 
   protocol.handle('knote', async (request) => {
     const prefix = 'knote://img/'

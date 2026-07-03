@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IpcChannels, type KnoteApi } from '@shared/ipc'
-import type { ExternalChange, IndexDelta, ThemeName, VaultPath } from '@shared/types'
+import type {
+  ExternalChange,
+  IndexDelta,
+  SpellContextInfo,
+  ThemeName,
+  VaultPath
+} from '@shared/types'
 
 const api: KnoteApi = {
   pickVault: () => ipcRenderer.invoke(IpcChannels.vaultPick),
@@ -42,6 +48,16 @@ const api: KnoteApi = {
   ) => ipcRenderer.invoke(IpcChannels.lineMove, path, fromLine, expectedText, beforeLine, beforeExpectedText),
   appendToNote: (path: VaultPath, text: string) =>
     ipcRenderer.invoke(IpcChannels.noteAppend, path, text),
+
+  spellcheck: {
+    addWord: (word: string) => ipcRenderer.invoke(IpcChannels.spellcheckAddWord, word)
+  },
+
+  onSpellContextMenu: (cb: (info: SpellContextInfo) => void) => {
+    const listener = (_e: Electron.IpcRendererEvent, info: SpellContextInfo): void => cb(info)
+    ipcRenderer.on(IpcChannels.evSpellContextMenu, listener)
+    return () => ipcRenderer.removeListener(IpcChannels.evSpellContextMenu, listener)
+  },
 
   onExternalChange: (cb: (change: ExternalChange) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, change: ExternalChange): void => cb(change)

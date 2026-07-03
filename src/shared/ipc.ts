@@ -8,6 +8,7 @@ import type {
   Mention,
   NoteMeta,
   SearchResult,
+  SpellContextInfo,
   ThemeName,
   VaultConfig,
   VaultInfo,
@@ -37,9 +38,11 @@ export const IpcChannels = {
   lineDelete: 'line:delete',
   lineMove: 'line:move',
   noteAppend: 'note:append',
+  spellcheckAddWord: 'spellcheck:addWord',
   // main -> renderer events
   evExternalChange: 'ev:externalChange',
-  evIndexDelta: 'ev:indexDelta'
+  evIndexDelta: 'ev:indexDelta',
+  evSpellContextMenu: 'ev:spellContextMenu'
 } as const
 
 /**
@@ -99,6 +102,19 @@ export interface KnoteApi {
   ): Promise<void>
   /** Append a line to a note, creating the note if needed. */
   appendToNote(path: VaultPath, text: string): Promise<void>
+
+  spellcheck: {
+    /** Add a word to the user's personal spellchecker dictionary. */
+    addWord(word: string): Promise<void>
+  }
+
+  /**
+   * Subscribe to spellcheck context (misspelled word + suggestions) emitted by
+   * the main process whenever the user right-clicks inside the editor. This is
+   * the only reliable source — the renderer-side webFrame spellcheck APIs are
+   * non-functional with the native Windows checker. Returns unsubscribe.
+   */
+  onSpellContextMenu(cb: (info: SpellContextInfo) => void): () => void
 
   /** Subscribe to filesystem changes made outside KNote. Returns unsubscribe. */
   onExternalChange(cb: (change: ExternalChange) => void): () => void

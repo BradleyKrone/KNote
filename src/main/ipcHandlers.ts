@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain, session } from 'electron'
 import { promises as fs } from 'fs'
 import { IpcChannels } from '@shared/ipc'
 import type { ThemeName, VaultInfo, VaultPath } from '@shared/types'
@@ -141,4 +141,8 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
   ipcMain.handle(IpcChannels.vaultConfigGet, () => getVaultConfig())
 
   ipcMain.handle(IpcChannels.vaultConfigSet, (_e, config: VaultConfig) => setVaultConfig(config))
+
+  ipcMain.handle(IpcChannels.spellcheckAddWord, (_e, word: string) => {
+    session.defaultSession.addWordToSpellCheckerDictionary(word)
+  })
 }
