@@ -19,7 +19,14 @@ import { DUE_RE } from '@shared/parser/patterns'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useUiStore } from '@/stores/uiStore'
-import { formatActive, insertTagOnActive, setDueDateOnActive, setPriorityOnActive } from '@/editor/formatting'
+import {
+  decreaseFontSizeActive,
+  formatActive,
+  increaseFontSizeActive,
+  insertTagOnActive,
+  setDueDateOnActive,
+  setPriorityOnActive
+} from '@/editor/formatting'
 import { getActiveEditorView } from '@/editor/activeView'
 import { Popover } from '@/components/popover/Popover'
 import { TagPickerContent } from '@/components/popover/TagPickerContent'
@@ -98,6 +105,22 @@ export function TopBar({ onToggleSidebar }: Props): React.JSX.Element {
             onClick={() => formatActive('code')}
           >
             <Code size={15} />
+          </button>
+          <button
+            className="icon-btn"
+            title="Decrease font size of selection"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => decreaseFontSizeActive()}
+          >
+            <span className="format-fontsize-btn">A-</span>
+          </button>
+          <button
+            className="icon-btn"
+            title="Increase font size of selection"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => increaseFontSizeActive()}
+          >
+            <span className="format-fontsize-btn">A+</span>
           </button>
           <button
             className="icon-btn"

@@ -8,6 +8,7 @@ import { useSettingsStore } from '@/stores/settingsStore'
 import { createEditor, type KnoteEditor } from './cmSetup'
 import { setActiveEditorView } from './activeView'
 import {
+  adjustFontSize,
   insertCheckboxAtCursor,
   insertMilestoneAtCursor,
   insertTagAtCursor,
@@ -84,6 +85,11 @@ function buildContextMenuItems(
       { label: 'Set due date…', onClick: () => openPicker('date') }
     )
   }
+  items.push(
+    { separator: true },
+    { label: 'Increase font size', onClick: () => adjustFontSize(view, 1) },
+    { label: 'Decrease font size', onClick: () => adjustFontSize(view, -1) }
+  )
   return items
 }
 

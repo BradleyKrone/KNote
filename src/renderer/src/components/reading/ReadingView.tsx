@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeRaw from 'rehype-raw'
 import { visit } from 'unist-util-visit'
 import { isImage, parentOf } from '@shared/pathUtils'
 import { TASK_LINE_RE, WIKI_LINK_RE } from '@shared/parser/patterns'
@@ -78,6 +79,50 @@ function rehypeTaskLines() {
   }
 }
 
+const FONT_SIZE_STYLE_RE = /^font-size:\d{2}px$/
+
+/**
+ * rehype-raw turns any raw HTML written in a note into real elements — the
+ * only raw HTML KNote itself ever writes is the font-size span from
+ * formatting.ts's adjustFontSize. Strip everything else a pasted/foreign
+ * note might smuggle in: dangerous tags outright, event handlers on any
+ * element, and any `style` value that isn't exactly our font-size pattern
+ * (CSS can still fetch remote resources via url(), so it's not passed
+ * through unchecked even on an allowed tag).
+ */
+const DANGEROUS_TAGS = new Set([
+  'script',
+  'style',
+  'iframe',
+  'object',
+  'embed',
+  'link',
+  'meta',
+  'base',
+  'form'
+])
+
+function rehypeSanitizeRawHtml() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (tree: any): void => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    visit(tree, 'element', (node: any, index: any, parent: any) => {
+      if (DANGEROUS_TAGS.has(node.tagName) && parent && typeof index === 'number') {
+        parent.children.splice(index, 1, ...(node.children ?? []))
+        return index
+      }
+      const props = node.properties ?? {}
+      for (const key of Object.keys(props)) {
+        if (/^on/i.test(key)) delete props[key]
+      }
+      if ('style' in props && !(node.tagName === 'span' && FONT_SIZE_STYLE_RE.test(props.style))) {
+        delete props.style
+      }
+      return undefined
+    })
+  }
+}
+
 interface MdProps {
   content: string
   path: string
@@ -89,7 +134,7 @@ function Md({ content, path, depth, onToggleTask }: MdProps): React.JSX.Element 
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
-      rehypePlugins={[rehypeTaskLines]}
+      rehypePlugins={[rehypeRaw, rehypeSanitizeRawHtml, rehypeTaskLines]}
       urlTransform={urlTransform}
       components={{
         a: ({ href, children }) => {

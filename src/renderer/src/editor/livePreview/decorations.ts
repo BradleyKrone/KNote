@@ -215,6 +215,34 @@ function decorateTags(
   }
 }
 
+/** `<span style="font-size:NNpx">text</span>` — hide the tags, scale the text. */
+const FONT_SIZE_SPAN_RE = /<span style="font-size:(\d{2})px">(.*?)<\/span>/g
+
+function decorateFontSize(
+  decos: Range<Decoration>[],
+  lineFrom: number,
+  lineText: string,
+  touches: (from: number, to: number) => boolean
+): void {
+  FONT_SIZE_SPAN_RE.lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = FONT_SIZE_SPAN_RE.exec(lineText)) !== null) {
+    const start = lineFrom + m.index
+    const end = start + m[0].length
+    if (touches(start, end)) continue
+
+    const size = m[1]
+    const openLen = m[0].length - m[2].length - '</span>'.length
+    const displayFrom = start + openLen
+    const displayTo = end - '</span>'.length
+    decos.push(Decoration.replace({}).range(start, displayFrom))
+    decos.push(
+      Decoration.mark({ attributes: { style: `font-size:${size}px` } }).range(displayFrom, displayTo)
+    )
+    decos.push(Decoration.replace({}).range(displayTo, end))
+  }
+}
+
 function isInCode(tree: ReturnType<typeof syntaxTree>, pos: number): boolean {
   for (
     let node: SyntaxNode | null = tree.resolveInner(pos, 1);
@@ -381,6 +409,7 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
       if (!inCodeBlock && !frontmatterLineStarts.has(line.from)) {
         decorateWikiLinks(decos, line.from, line.text, touches, getPath)
         decorateTags(decos, line.from, line.text)
+        decorateFontSize(decos, line.from, line.text, touches)
       }
 
       if (line.to >= to) break

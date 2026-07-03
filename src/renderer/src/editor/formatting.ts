@@ -1,5 +1,5 @@
 import dayjs from 'dayjs'
-import { EditorSelection } from '@codemirror/state'
+import { EditorSelection, type Text } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import { TASK_LINE_RE } from '@shared/parser/patterns'
 import { getActiveEditorView } from './activeView'
@@ -8,13 +8,49 @@ import { insertTag, setDueDate, setPriority } from '@/taskMeta'
 /** A plain list line (`- `, `* `, `1. `) with no checkbox brackets yet. */
 const LIST_MARKER_RE = /^(\s*)([-*+]|\d+[.)])\s(.*)$/
 
+/** Mutually-exclusive inline emphasis wrappers, longest first so `**` is
+ *  never mistaken for a `*` italic marker. */
+const EMPHASIS_MARKERS = ['**', '~~', '*']
+
+/** True when the char(s) at `pos` going backwards are exactly `marker`,
+ *  guarding against mistaking the tail of `**` for a lone `*`. */
+function markerBefore(doc: Text, pos: number, marker: string): boolean {
+  const len = marker.length
+  if (doc.sliceString(Math.max(0, pos - len), pos) !== marker) return false
+  if (marker !== '*') return true
+  return doc.sliceString(Math.max(0, pos - 2), pos - 1) !== '*'
+}
+
+/** True when the char(s) at `pos` going forwards are exactly `marker`,
+ *  guarding against mistaking the head of `**` for a lone `*`. */
+function markerAfter(doc: Text, pos: number, marker: string): boolean {
+  const len = marker.length
+  if (doc.sliceString(pos, Math.min(doc.length, pos + len)) !== marker) return false
+  if (marker !== '*') return true
+  return doc.sliceString(pos + 1, Math.min(doc.length, pos + 2)) !== '*'
+}
+
+/** True when `inner` is wrapped edge-to-edge by exactly `marker` (not a
+ *  longer marker that happens to share a leading/trailing char). */
+function innerWrappedBy(inner: string, marker: string): boolean {
+  if (inner.length < 2 * marker.length) return false
+  if (!inner.startsWith(marker) || !inner.endsWith(marker)) return false
+  if (marker === '*' && (inner.startsWith('**') || inner.endsWith('**'))) return false
+  return true
+}
+
 /**
  * Toggle an inline markdown wrapper (**bold**, *italic*, ~~strike~~, `code`)
  * around each selection range. Empty selections expand to the word at the
- * cursor. Already-wrapped text is unwrapped.
+ * cursor. Leading/trailing whitespace in the selection is left outside the
+ * wrapper. Re-applying the same marker unwraps it; applying a different
+ * emphasis marker over an existing one swaps it out instead of stacking.
  */
 export function toggleInline(view: EditorView, marker: string): boolean {
   const len = marker.length
+  const otherMarkers = EMPHASIS_MARKERS.includes(marker)
+    ? EMPHASIS_MARKERS.filter((m) => m !== marker)
+    : []
   const spec = view.state.changeByRange((range) => {
     let { from, to } = range
     const doc = view.state.doc
@@ -25,44 +61,72 @@ export function toggleInline(view: EditorView, marker: string): boolean {
         to = word.to
       }
     }
-    const before = doc.sliceString(Math.max(0, from - len), from)
-    const after = doc.sliceString(to, Math.min(doc.length, to + len))
+    const wholeFrom = from
+    const wholeTo = to
+
+    // Hug the markers to the non-whitespace text, keeping any surrounding
+    // spaces in the original selection outside the wrapper.
+    const raw = doc.sliceString(from, to)
+    const leading = raw.length - raw.trimStart().length
+    const trailing = raw.length - raw.trimEnd().length
+    if (leading + trailing < raw.length) {
+      from += leading
+      to -= trailing
+    }
+
     const inner = doc.sliceString(from, to)
 
-    // For single-* italic, don't mistake the tail of a ** bold marker
-    const beforeIsMarker =
-      before === marker &&
-      (marker !== '*' || doc.sliceString(Math.max(0, from - 2), from - 1) !== '*')
-    const afterIsMarker =
-      after === marker &&
-      (marker !== '*' || doc.sliceString(to + 1, Math.min(doc.length, to + 2)) !== '*')
-
-    if (beforeIsMarker && afterIsMarker) {
+    if (markerBefore(doc, from, marker) && markerAfter(doc, to, marker)) {
       // unwrap markers that sit just outside the selection
       return {
         changes: [
           { from: from - len, to: from },
           { from: to, to: to + len }
         ],
-        range: EditorSelection.range(from - len, to - len)
+        range: EditorSelection.range(wholeFrom - len, wholeTo - len)
       }
     }
-    if (inner.startsWith(marker) && inner.endsWith(marker) && inner.length >= 2 * len) {
+    if (innerWrappedBy(inner, marker)) {
       // unwrap markers included in the selection
       return {
         changes: [
           { from, to: from + len },
           { from: to - len, to }
         ],
-        range: EditorSelection.range(from, to - 2 * len)
+        range: EditorSelection.range(wholeFrom, wholeTo - 2 * len)
       }
     }
+
+    // Already wrapped in a different (mutually-exclusive) emphasis marker?
+    // Swap it for this one instead of stacking markers.
+    for (const other of otherMarkers) {
+      const oLen = other.length
+      if (markerBefore(doc, from, other) && markerAfter(doc, to, other)) {
+        return {
+          changes: [
+            { from: from - oLen, to: from, insert: marker },
+            { from: to, to: to + oLen, insert: marker }
+          ],
+          range: EditorSelection.range(wholeFrom - oLen + len, wholeTo - oLen + len)
+        }
+      }
+      if (innerWrappedBy(inner, other)) {
+        return {
+          changes: [
+            { from, to: from + oLen, insert: marker },
+            { from: to - oLen, to, insert: marker }
+          ],
+          range: EditorSelection.range(wholeFrom, wholeTo - 2 * oLen + 2 * len)
+        }
+      }
+    }
+
     return {
       changes: [
         { from, insert: marker },
         { from: to, insert: marker }
       ],
-      range: EditorSelection.range(from + len, to + len)
+      range: EditorSelection.range(wholeFrom + len, wholeTo + len)
     }
   })
   view.dispatch(view.state.update(spec, { userEvent: 'input.format', scrollIntoView: true }))
@@ -74,6 +138,106 @@ export const toggleBold = (view: EditorView): boolean => toggleInline(view, '**'
 export const toggleItalic = (view: EditorView): boolean => toggleInline(view, '*')
 export const toggleStrikethrough = (view: EditorView): boolean => toggleInline(view, '~~')
 export const toggleInlineCode = (view: EditorView): boolean => toggleInline(view, '`')
+
+// ---------- Per-selection font size ----------
+// Stored as a raw HTML span, e.g. <span style="font-size:20px">text</span>.
+// Sizes are kept to exactly two digits (10-36) so the open tag has a fixed
+// length, which keeps the wrap/unwrap arithmetic below as simple as the
+// emphasis-marker logic above.
+const FONT_SIZE_BASE = 16
+const FONT_SIZE_STEP = 2
+const FONT_SIZE_MIN = 10
+const FONT_SIZE_MAX = 36
+const FONT_SIZE_CLOSE = '</span>'
+const FONT_SIZE_OPEN_RE = /^<span style="font-size:(\d{2})px">$/
+const FONT_SIZE_FULL_RE = /^<span style="font-size:(\d{2})px">([\s\S]*)<\/span>$/
+const FONT_SIZE_OPEN_LEN = `<span style="font-size:${FONT_SIZE_MIN}px">`.length
+
+function fontSizeOpenTag(px: number): string {
+  return `<span style="font-size:${px}px">`
+}
+
+/**
+ * Grow/shrink the font size of each selection range by one step, wrapping it
+ * in (or rewriting/removing) a `<span style="font-size:...">` tag. Empty
+ * selections expand to the word at the cursor; leading/trailing whitespace
+ * is left outside the wrapper, matching toggleInline's behavior. Reaching
+ * the base size again removes the wrapper entirely.
+ */
+export function adjustFontSize(view: EditorView, direction: 1 | -1): boolean {
+  const step = FONT_SIZE_STEP * direction
+  const spec = view.state.changeByRange((range) => {
+    let { from, to } = range
+    const doc = view.state.doc
+    if (from === to) {
+      const word = view.state.wordAt(from)
+      if (word) {
+        from = word.from
+        to = word.to
+      }
+    }
+    const wholeFrom = from
+    const wholeTo = to
+
+    const raw = doc.sliceString(from, to)
+    const leading = raw.length - raw.trimStart().length
+    const trailing = raw.length - raw.trimEnd().length
+    if (leading + trailing < raw.length) {
+      from += leading
+      to -= trailing
+    }
+    if (from >= to) {
+      from = wholeFrom
+      to = wholeTo
+    }
+
+    let removeFrom = from
+    let removeTo = to
+    let innerText = doc.sliceString(from, to)
+    let currentSize = FONT_SIZE_BASE
+
+    const before = doc.sliceString(Math.max(0, from - FONT_SIZE_OPEN_LEN), from)
+    const openMatch = FONT_SIZE_OPEN_RE.exec(before)
+    const after = doc.sliceString(to, Math.min(doc.length, to + FONT_SIZE_CLOSE.length))
+    if (openMatch && after === FONT_SIZE_CLOSE) {
+      currentSize = parseInt(openMatch[1], 10)
+      removeFrom = from - FONT_SIZE_OPEN_LEN
+      removeTo = to + FONT_SIZE_CLOSE.length
+    } else {
+      const fullMatch = FONT_SIZE_FULL_RE.exec(innerText)
+      if (fullMatch) {
+        currentSize = parseInt(fullMatch[1], 10)
+        innerText = fullMatch[2]
+      }
+    }
+
+    const newSize = Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, currentSize + step))
+    const backToBase = newSize === FONT_SIZE_BASE
+    const replacement = backToBase
+      ? innerText
+      : fontSizeOpenTag(newSize) + innerText + FONT_SIZE_CLOSE
+    const innerFrom = removeFrom + (backToBase ? 0 : FONT_SIZE_OPEN_LEN)
+
+    return {
+      changes: [{ from: removeFrom, to: removeTo, insert: replacement }],
+      range: EditorSelection.range(innerFrom, innerFrom + innerText.length)
+    }
+  })
+  view.dispatch(view.state.update(spec, { userEvent: 'input.format', scrollIntoView: true }))
+  view.focus()
+  return true
+}
+
+/** Variants usable from the toolbar/context menu (act on the active editor). */
+export function increaseFontSizeActive(): void {
+  const view = getActiveEditorView()
+  if (view) adjustFontSize(view, 1)
+}
+
+export function decreaseFontSizeActive(): void {
+  const view = getActiveEditorView()
+  if (view) adjustFontSize(view, -1)
+}
 
 /** Variants usable from the toolbar/palette (act on the active editor). */
 export function formatActive(kind: 'bold' | 'italic' | 'strike' | 'code'): void {
