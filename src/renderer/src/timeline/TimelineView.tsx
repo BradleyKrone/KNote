@@ -1,0 +1,116 @@
+import { useEffect, useMemo, useRef } from 'react'
+import dayjs from 'dayjs'
+import { CheckCircle2, Circle, FileText, X } from 'lucide-react'
+import { useIndexStore } from '@/stores/indexStore'
+import { useUiStore } from '@/stores/uiStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { collectTimelineItems, type TimelineItem } from './timelineSelectors'
+
+export function TimelineView(): React.JSX.Element {
+  const notes = useIndexStore((s) => s.notes)
+  const setTimelineOpen = useUiStore((s) => s.setTimelineOpen)
+  const todayRef = useRef<HTMLDivElement>(null)
+
+  const today = dayjs().format('YYYY-MM-DD')
+
+  const groups = useMemo(() => {
+    const byDate = collectTimelineItems(notes)
+    // Always show today, even with nothing due
+    if (!byDate.has(today)) byDate.set(today, [])
+    return [...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  }, [notes, today])
+
+  const hasItems = groups.some(([, items]) => items.length > 0)
+
+  useEffect(() => {
+    todayRef.current?.scrollIntoView({ block: 'center' })
+  }, [])
+
+  const open = (item: TimelineItem): void => {
+    setTimelineOpen(false)
+    void useWorkspaceStore.getState().openFile(item.path, item.kind === 'task' ? item.line : undefined)
+  }
+
+  return (
+    <div className="timeline-view">
+      <div className="board-header">
+        <div className="board-title">
+          Timeline
+          <span className="board-scope">
+            {today} · {dayjs().format('dddd')}
+          </span>
+        </div>
+        <div className="board-controls">
+          <button className="icon-btn" title="Close timeline" onClick={() => setTimelineOpen(false)}>
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+      <div className="timeline-scroll">
+        <div className="timeline-track">
+          {!hasItems && (
+            <div className="panel-empty timeline-empty">
+              Nothing dated yet. Add <code>📅 2026-07-15</code> to a task, or a{' '}
+              <code>date: 2026-07-15</code> frontmatter property to a note, and it will appear here.
+            </div>
+          )}
+          {groups.map(([date, items]) => {
+            const isToday = date === today
+            const isPast = date < today
+            return (
+              <div
+                key={date}
+                ref={isToday ? todayRef : undefined}
+                className={['timeline-group', isToday ? 'today' : '', isPast ? 'past' : '']
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <div className="timeline-date">
+                  <span className="timeline-dot" />
+                  <span className="timeline-date-label">
+                    {dayjs(date).format('ddd, MMM D YYYY')}
+                    {isToday && <span className="timeline-today-badge">TODAY</span>}
+                    {isPast && items.some((i) => !i.done) && (
+                      <span className="timeline-overdue-badge">overdue</span>
+                    )}
+                  </span>
+                </div>
+                <div className="timeline-items">
+                  {isToday && items.length === 0 && (
+                    <div className="timeline-nothing">Nothing due today</div>
+                  )}
+                  {items.map((item, i) => (
+                    <div
+                      key={`${item.path}-${item.line}-${i}`}
+                      className={`timeline-item${item.done ? ' done' : ''}`}
+                      onClick={() => open(item)}
+                    >
+                      <span className="timeline-item-icon">
+                        {item.kind === 'note' ? (
+                          <FileText size={14} />
+                        ) : item.done ? (
+                          <CheckCircle2 size={14} />
+                        ) : (
+                          <Circle size={14} />
+                        )}
+                      </span>
+                      <span className="timeline-item-text">{item.text}</span>
+                      {item.kind === 'task' && (
+                        <span className="timeline-item-note">{item.noteTitle}</span>
+                      )}
+                      {item.tags.map((t) => (
+                        <span key={t} className="board-card-tag">
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}

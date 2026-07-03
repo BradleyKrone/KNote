@@ -118,6 +118,34 @@ export async function reorderCard(card: BoardCard, before: BoardCard | null): Pr
   }
 }
 
+/** Replace a card's task text (status char and indentation preserved). */
+export async function updateCardText(card: BoardCard, newText: string): Promise<void> {
+  const m = TASK_LINE_RE.exec(card.rawLine)
+  if (!m) return
+  const clean = newText.trim().replace(/\s*\n\s*/g, ' ')
+  if (!clean || clean === card.text) return
+  // indent + bullet + " [c]" ends at m[1].len + m[2].len + 4
+  const prefix = card.rawLine.slice(0, m[1].length + m[2].length + 4)
+  const newLine = `${prefix} ${clean}`
+
+  const applied = tryBufferRewrite(card, (lineFrom, lineText) => {
+    const view = getActiveEditorView()!
+    view.dispatch({
+      changes: { from: lineFrom, to: lineFrom + lineText.length, insert: newLine },
+      userEvent: 'input.knote.editTask'
+    })
+    return true
+  })
+  if (applied) return
+
+  try {
+    await window.knote.replaceLine(card.path, card.line, card.rawLine, newLine)
+  } catch (err) {
+    if (String(err).includes('KNOTE_STALE')) staleToast()
+    else throw err
+  }
+}
+
 export async function deleteCard(card: BoardCard): Promise<void> {
   const applied = tryBufferRewrite(card, (lineFrom) => {
     const view = getActiveEditorView()!

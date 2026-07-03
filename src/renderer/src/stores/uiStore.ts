@@ -24,6 +24,9 @@ interface UiState {
   setBoardOpen: (open: boolean) => void
   openBoard: (scope: BoardScope) => void
 
+  timelineOpen: boolean
+  setTimelineOpen: (open: boolean) => void
+
   toast: string | null
   showToast: (message: string) => void
 }
@@ -47,7 +50,11 @@ export const useUiStore = create<UiState>((set) => ({
   boardOpen: false,
   boardScope: { kind: 'global' },
   setBoardOpen: (boardOpen) => set({ boardOpen }),
-  openBoard: (boardScope) => set({ boardScope, boardOpen: true }),
+  openBoard: (boardScope) => set({ boardScope, boardOpen: true, timelineOpen: false }),
+
+  timelineOpen: false,
+  setTimelineOpen: (timelineOpen) =>
+    set(timelineOpen ? { timelineOpen, boardOpen: false } : { timelineOpen }),
 
   toast: null,
   showToast: (message) => {

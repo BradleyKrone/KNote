@@ -1198,9 +1198,6 @@ button {
 .board-card:hover {
   border-color: var(--text-faint);
 }
-.board-card:hover .board-card-delete {
-  opacity: 1;
-}
 .board-card.dragging {
   opacity: 0.85;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
@@ -1263,11 +1260,19 @@ button {
   padding: 1px 7px;
 }
 
-.board-card-delete {
+.board-card-actions {
   position: absolute;
   top: 5px;
   right: 5px;
+  display: flex;
+  gap: 3px;
   opacity: 0;
+}
+.board-card:hover .board-card-actions {
+  opacity: 1;
+}
+
+.board-card-action {
   border: none;
   background: var(--bg-surface);
   color: var(--text-muted);
@@ -1279,7 +1284,11 @@ button {
   justify-content: center;
   cursor: pointer;
 }
-.board-card-delete:hover {
+.board-card-action:hover {
+  color: var(--text-normal);
+  background: var(--bg-hover);
+}
+.board-card-action.danger:hover {
   color: var(--danger);
 }
 
@@ -1312,6 +1321,180 @@ button {
   font-size: 13px;
   padding: 6px 8px;
   outline: none;
+}
+
+/* ---------- Task status pill (live preview) ---------- */
+
+.knote-task-status-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-accent);
+  background: color-mix(in srgb, var(--text-accent) 14%, transparent);
+  border-radius: 8px;
+  padding: 1px 7px;
+  margin-left: 5px;
+  vertical-align: 1px;
+  user-select: none;
+}
+
+/* ---------- Timeline ---------- */
+
+.timeline-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.timeline-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.timeline-track {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 32px 40vh;
+  border-left: 2px solid var(--border-color);
+  margin-left: max(48px, calc(50% - 380px));
+}
+
+.timeline-empty {
+  font-size: 13.5px;
+  padding: 12px;
+}
+.timeline-empty code {
+  background: var(--code-bg);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.timeline-group {
+  position: relative;
+  margin-bottom: 26px;
+}
+
+.timeline-group.past {
+  opacity: 0.55;
+}
+
+.timeline-date {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -39px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  border: 2px solid var(--bg-primary);
+}
+
+.timeline-group.today .timeline-dot {
+  background: var(--interactive-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--interactive-accent) 30%, transparent);
+}
+
+.timeline-date-label {
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-group.today .timeline-date-label {
+  color: var(--text-accent);
+}
+
+.timeline-today-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  border-radius: 8px;
+  padding: 1px 8px;
+}
+
+.timeline-overdue-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 0 7px;
+}
+
+.timeline-group.today {
+  background: color-mix(in srgb, var(--interactive-accent) 6%, transparent);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-left: -12px;
+}
+.timeline-group.today .timeline-dot {
+  left: -51px;
+}
+
+.timeline-items {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.timeline-nothing {
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13.5px;
+}
+.timeline-item:hover {
+  border-color: var(--text-faint);
+}
+.timeline-item.done {
+  opacity: 0.6;
+}
+.timeline-item.done .timeline-item-text {
+  text-decoration: line-through;
+}
+
+.timeline-item-icon {
+  display: inline-flex;
+  color: var(--text-accent);
+  flex-shrink: 0;
+}
+
+.timeline-item-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-item-note {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  flex-shrink: 0;
 }
 
 /* ---------- Toast ---------- */

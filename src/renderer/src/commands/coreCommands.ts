@@ -99,6 +99,12 @@ export function registerCoreCommands(): void {
   })
 
   registerCommand({
+    id: 'open-timeline',
+    name: 'Open timeline',
+    run: () => useUiStore.getState().setTimelineOpen(true)
+  })
+
+  registerCommand({
     id: 'open-vault',
     name: 'Open another vault…',
     run: async () => {

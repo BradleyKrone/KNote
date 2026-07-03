@@ -57,6 +57,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     // Opening a note always returns to the editor view
     const { useUiStore } = await import('./uiStore')
     useUiStore.getState().setBoardOpen(false)
+    useUiStore.getState().setTimelineOpen(false)
     const prev = get().note
     set({
       note: {

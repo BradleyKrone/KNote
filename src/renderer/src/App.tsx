@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { CalendarDays, Files, FolderOpen, Hash, Search, Settings, Trello } from 'lucide-react'
+import {
+  CalendarDays,
+  CalendarRange,
+  Files,
+  FolderOpen,
+  Hash,
+  Search,
+  Settings,
+  Trello
+} from 'lucide-react'
 import { initVault, scheduleTreeRefresh, useVaultStore } from './stores/vaultStore'
 import { initSettings } from './stores/settingsStore'
 import { useWorkspaceStore } from './stores/workspaceStore'
@@ -19,6 +28,7 @@ import { openTodayNote } from './commands/dailyNotes'
 import { useSettingsStore } from './stores/settingsStore'
 import { SearchPanel } from './components/panels/SearchPanel'
 import { BoardView } from './board/BoardView'
+import { TimelineView } from './timeline/TimelineView'
 import { TagPane } from './components/panels/TagPane'
 import { BacklinksPanel } from './components/panels/BacklinksPanel'
 import { PropertiesPanel } from './components/panels/PropertiesPanel'
@@ -35,8 +45,15 @@ const SIDEBAR_TABS: Array<{ id: SidebarTab; icon: React.JSX.Element; title: stri
 export default function App(): React.JSX.Element {
   const { vault, loading } = useVaultStore()
   const note = useWorkspaceStore((s) => s.note)
-  const { sidebarTab, setSidebarTab, rightPanelOpen, setQuickSwitcherOpen, boardOpen, toast } =
-    useUiStore()
+  const {
+    sidebarTab,
+    setSidebarTab,
+    rightPanelOpen,
+    setQuickSwitcherOpen,
+    boardOpen,
+    timelineOpen,
+    toast
+  } = useUiStore()
   const [sidebarWidth, setSidebarWidth] = useState(260)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const dragging = useRef(false)
@@ -141,6 +158,13 @@ export default function App(): React.JSX.Element {
         >
           <Trello size={16} />
         </button>
+        <button
+          className={`icon-btn ribbon-btn${timelineOpen ? ' active' : ''}`}
+          title={timelineOpen ? 'Back to notes' : 'Open timeline'}
+          onClick={() => useUiStore.getState().setTimelineOpen(!timelineOpen)}
+        >
+          <CalendarRange size={16} />
+        </button>
         <div className="ribbon-spacer" />
         <button
           className="icon-btn ribbon-btn"
@@ -177,6 +201,8 @@ export default function App(): React.JSX.Element {
         <TopBar sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((v) => !v)} />
         {boardOpen ? (
           <BoardView />
+        ) : timelineOpen ? (
+          <TimelineView />
         ) : (
           <div className="content-row">
             <div className="editor-column">

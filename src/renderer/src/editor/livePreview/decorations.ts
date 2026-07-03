@@ -13,6 +13,7 @@ import { isImage, parentOf } from '@shared/pathUtils'
 import { TAG_RE, WIKI_LINK_RE } from '@shared/parser/patterns'
 import { openWikiTarget } from '@/stores/indexStore'
 import { useUiStore } from '@/stores/uiStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 /**
  * Obsidian-style live preview: formatting marks are hidden unless the
@@ -22,12 +23,16 @@ import { useUiStore } from '@/stores/uiStore'
  */
 
 class CheckboxWidget extends WidgetType {
-  constructor(readonly char: string) {
+  constructor(
+    readonly char: string,
+    /** Board column name for custom status chars (shown as a pill) */
+    readonly statusName: string | null
+  ) {
     super()
   }
 
   override eq(other: CheckboxWidget): boolean {
-    return other.char === this.char
+    return other.char === this.char && other.statusName === this.statusName
   }
 
   override toDOM(view: EditorView): HTMLElement {
@@ -56,6 +61,13 @@ class CheckboxWidget extends WidgetType {
       })
     })
     wrap.appendChild(input)
+    if (this.statusName) {
+      const pill = document.createElement('span')
+      pill.className = 'knote-task-status-pill'
+      pill.textContent = this.statusName
+      pill.title = `Kanban status: ${this.statusName} ([${this.char}])`
+      wrap.appendChild(pill)
+    }
     return wrap
   }
 
@@ -342,8 +354,17 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
         const bracketFrom = line.from + m[1].length + m[2].length + 1
         const bracketTo = bracketFrom + 3
         if (!isInCode(tree, bracketFrom) && !touches(bracketFrom, bracketTo)) {
+          const char = m[3]
+          let statusName: string | null = null
+          if (char !== ' ' && !/^[xX]$/.test(char)) {
+            const columns = useSettingsStore.getState().vaultConfig.columns
+            statusName = columns.find((c) => c.char === char)?.name ?? `[${char}]`
+          }
           decos.push(
-            Decoration.replace({ widget: new CheckboxWidget(m[3]) }).range(bracketFrom, bracketTo)
+            Decoration.replace({ widget: new CheckboxWidget(char, statusName) }).range(
+              bracketFrom,
+              bracketTo
+            )
           )
         }
         if (/^[xX]$/.test(m[3])) {

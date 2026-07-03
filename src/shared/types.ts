@@ -146,6 +146,7 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   inboxNote: 'Inbox.md',
   columns: [
     { name: 'To Do', char: ' ' },
+    { name: 'Ready to Work', char: 'r' },
     { name: 'In Progress', char: '/' },
     { name: 'Done', char: 'x' }
   ]
