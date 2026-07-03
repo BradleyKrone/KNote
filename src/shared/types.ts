@@ -72,6 +72,15 @@ export interface TaskItem {
   rawLine: string
 }
 
+export interface MilestoneItem {
+  line: number
+  /** Milestone text after the 🏁 marker, still carrying any 📅/!!!/#tag markers */
+  text: string
+  tags: string[]
+  /** Exact full line text, used to verify targeted rewrites */
+  rawLine: string
+}
+
 export interface NoteMeta {
   path: VaultPath
   /** File name without .md */
@@ -83,6 +92,7 @@ export interface NoteMeta {
   links: LinkRef[]
   tags: TagRef[]
   tasks: TaskItem[]
+  milestones: MilestoneItem[]
   mtimeMs: number
 }
 
@@ -127,11 +137,11 @@ export interface BoardColumn {
 }
 
 export interface VaultConfig {
-  dailyFolder: string
-  /** dayjs format string for daily note file names */
-  dailyFormat: string
-  /** Vault path of the template note used for new daily notes ('' = none) */
-  dailyTemplate: string
+  weeklyFolder: string
+  /** dayjs format string (with isoWeek tokens) for weekly note file names */
+  weeklyFormat: string
+  /** Vault path of the template note used for new weekly notes ('' = none) */
+  weeklyTemplate: string
   templatesFolder: string
   /** Note that receives cards created on the global board */
   inboxNote: string
@@ -139,9 +149,9 @@ export interface VaultConfig {
 }
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
-  dailyFolder: 'Daily',
-  dailyFormat: 'YYYY-MM-DD',
-  dailyTemplate: '',
+  weeklyFolder: 'Weekly',
+  weeklyFormat: 'GGGG-[W]WW',
+  weeklyTemplate: '',
   templatesFolder: 'Templates',
   inboxNote: 'Inbox.md',
   columns: [

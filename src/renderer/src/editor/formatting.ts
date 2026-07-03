@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { EditorSelection } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import { getActiveEditorView } from './activeView'
@@ -123,4 +124,30 @@ export function setPriorityOnActive(level: 0 | 1 | 2 | 3): void {
 export function setDueDateOnActive(date: string | null): void {
   const view = getActiveEditorView()
   if (view) setDueDateAtCursor(view, date)
+}
+
+/** Insert a ready-to-edit 🏁 milestone line at the cursor, with the placeholder label selected. */
+export function insertMilestoneAtCursor(important: boolean): void {
+  const view = getActiveEditorView()
+  if (!view) return
+  const pos = view.state.selection.main.head
+  const line = view.state.doc.lineAt(pos)
+  const needsNewline = line.text.length > 0
+  const label = 'Milestone'
+  const date = dayjs().format('YYYY-MM-DD')
+  // 🏁 is an astral-plane codepoint (surrogate pair) — derive the offset from the
+  // actual prefix length rather than counting characters, so positions stay in sync.
+  const prefix = `${needsNewline ? '\n' : ''}🏁 `
+  const suffix = ` 📅 ${date}${important ? ' !!!' : ''}`
+  const insert = prefix + label + suffix
+  const labelFrom = pos + prefix.length
+  view.dispatch(
+    view.state.update({
+      changes: { from: pos, insert },
+      selection: EditorSelection.range(labelFrom, labelFrom + label.length),
+      userEvent: 'input.knote.milestone',
+      scrollIntoView: true
+    })
+  )
+  view.focus()
 }

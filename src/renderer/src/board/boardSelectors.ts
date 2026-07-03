@@ -27,15 +27,20 @@ export function scopeLabel(scope: BoardScope): string {
   return titleOf(scope.path)
 }
 
-export function toCard(meta: NoteMeta, task: NoteMeta['tasks'][number]): BoardCard {
-  const due = DUE_RE.exec(task.text)
-  const prio = PRIORITY_RE.exec(task.text)
-  const displayText = task.text
+/** Strip due-date/priority/tag markers out of raw task-or-milestone text, for display. */
+export function stripInlineMarkers(text: string): string {
+  return text
     .replace(DUE_RE, '')
     .replace(PRIORITY_RE, ' ')
     .replace(/(^|[\s([{])#[A-Za-z0-9_][A-Za-z0-9_/-]*/g, '$1')
     .replace(/\s{2,}/g, ' ')
     .trim()
+}
+
+export function toCard(meta: NoteMeta, task: NoteMeta['tasks'][number]): BoardCard {
+  const due = DUE_RE.exec(task.text)
+  const prio = PRIORITY_RE.exec(task.text)
+  const displayText = stripInlineMarkers(task.text)
   return {
     path: meta.path,
     noteTitle: meta.title,

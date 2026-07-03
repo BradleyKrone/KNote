@@ -1572,6 +1572,15 @@ button {
   text-decoration: line-through;
 }
 
+.timeline-item.important {
+  border-left: 3px solid var(--danger);
+  background: color-mix(in srgb, var(--danger) 6%, var(--bg-secondary));
+}
+.timeline-item.important .timeline-item-text {
+  font-size: 16.5px;
+  font-weight: 700;
+}
+
 .timeline-item-icon {
   display: inline-flex;
   color: var(--text-accent);

@@ -18,3 +18,6 @@ export const DUE_RE = /(?:@due\((\d{4}-\d{2}-\d{2})\)|📅\s*(\d{4}-\d{2}-\d{2})
 
 /** !, !!, or !!! priority marker — must stand alone (whitespace/line boundaries) */
 export const PRIORITY_RE = /(?:^|\s)(!{1,3})(?=\s|$)/
+
+/** 🏁 milestone line — a standalone dated timeline entry, deliberately not a checkbox so it never becomes a Kanban card */
+export const MILESTONE_LINE_RE = /^\s*🏁\s+(.*)$/

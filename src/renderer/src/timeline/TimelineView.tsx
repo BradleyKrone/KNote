@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import dayjs from 'dayjs'
-import { CheckCircle2, Circle, FileText, X } from 'lucide-react'
+import { CheckCircle2, Circle, FileText, Flag, X } from 'lucide-react'
 import { useIndexStore } from '@/stores/indexStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -37,7 +37,9 @@ export function TimelineView(): React.JSX.Element {
 
   const open = (item: TimelineItem): void => {
     setTimelineOpen(false)
-    void useWorkspaceStore.getState().openFile(item.path, item.kind === 'task' ? item.line : undefined)
+    void useWorkspaceStore
+      .getState()
+      .openFile(item.path, item.kind !== 'note' ? item.line : undefined)
   }
 
   return (
@@ -77,8 +79,11 @@ export function TimelineView(): React.JSX.Element {
         <div className="timeline-track">
           {!hasItems && (
             <div className="panel-empty timeline-empty">
-              Nothing dated yet. Add <code>📅 2026-07-15</code> to a task, or a{' '}
-              <code>date: 2026-07-15</code> frontmatter property to a note, and it will appear here.
+              Nothing dated yet. Add <code>📅 2026-07-15</code> to a task, a{' '}
+              <code>date: 2026-07-15</code> frontmatter property to a note, or{' '}
+              <code>🏁 Milestone 📅 2026-07-15</code> anywhere in a note for a standalone timeline
+              entry (append <code>!!!</code> for a big important milestone) — and it will appear
+              here.
             </div>
           )}
           {groups.map(([date, items]) => {
@@ -109,12 +114,20 @@ export function TimelineView(): React.JSX.Element {
                   {items.map((item, i) => (
                     <div
                       key={`${item.path}-${item.line}-${i}`}
-                      className={`timeline-item${item.done ? ' done' : ''}`}
+                      className={[
+                        'timeline-item',
+                        item.done ? 'done' : '',
+                        item.important ? 'important' : ''
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
                       onClick={() => open(item)}
                     >
                       <span className="timeline-item-icon">
                         {item.kind === 'note' ? (
                           <FileText size={14} />
+                        ) : item.kind === 'milestone' ? (
+                          <Flag size={14} />
                         ) : item.done ? (
                           <CheckCircle2 size={14} />
                         ) : (
@@ -122,7 +135,7 @@ export function TimelineView(): React.JSX.Element {
                         )}
                       </span>
                       <span className="timeline-item-text">{item.text}</span>
-                      {item.kind === 'task' && (
+                      {item.kind !== 'note' && (
                         <span className="timeline-item-note">{item.noteTitle}</span>
                       )}
                       {!item.done && (

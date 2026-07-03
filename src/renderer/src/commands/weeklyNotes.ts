@@ -1,9 +1,12 @@
 import dayjs from 'dayjs'
+import isoWeek from 'dayjs/plugin/isoWeek'
 import { joinRel, titleOf } from '@shared/pathUtils'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useVaultStore } from '@/stores/vaultStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { resolveTarget } from '@/stores/indexStore'
+
+dayjs.extend(isoWeek)
 
 export function fillTemplate(template: string, title: string): string {
   return template
@@ -12,14 +15,14 @@ export function fillTemplate(template: string, title: string): string {
     .replace(/\{\{title\}\}/g, title)
 }
 
-/** Open today's daily note, creating it from the configured template if needed. */
-export async function openTodayNote(): Promise<void> {
+/** Open this week's note, creating it from the configured template if needed. */
+export async function openThisWeekNote(): Promise<void> {
   // Config lives on disk (.knote/config.json) and may have been edited
   // externally — read it fresh rather than trusting the cached copy
   await useSettingsStore.getState().loadVaultConfig()
   const config = useSettingsStore.getState().vaultConfig
-  const name = dayjs().format(config.dailyFormat)
-  const path = joinRel(config.dailyFolder, name + '.md')
+  const name = dayjs().format(config.weeklyFormat)
+  const path = joinRel(config.weeklyFolder, name + '.md')
 
   const existing = resolveTarget(path)
   if (existing) {
@@ -28,8 +31,8 @@ export async function openTodayNote(): Promise<void> {
   }
 
   let content = ''
-  if (config.dailyTemplate) {
-    const templatePath = resolveTarget(config.dailyTemplate)
+  if (config.weeklyTemplate) {
+    const templatePath = resolveTarget(config.weeklyTemplate)
     if (templatePath) {
       const t = await window.knote.readFile(templatePath)
       content = fillTemplate(t.content, name)

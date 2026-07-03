@@ -24,7 +24,7 @@ import { TemplatePicker } from './components/palette/TemplatePicker'
 import { SettingsModal } from './components/SettingsModal'
 import { registerCoreCommands } from './commands/coreCommands'
 import { runCommand } from './commands/registry'
-import { openTodayNote } from './commands/dailyNotes'
+import { openThisWeekNote } from './commands/weeklyNotes'
 import { useSettingsStore } from './stores/settingsStore'
 import { SearchPanel } from './components/panels/SearchPanel'
 import { BoardView } from './board/BoardView'
@@ -143,8 +143,8 @@ export default function App(): React.JSX.Element {
         ))}
         <button
           className="icon-btn ribbon-btn"
-          title="Open today's daily note"
-          onClick={() => void openTodayNote()}
+          title="Open this week's note"
+          onClick={() => void openThisWeekNote()}
         >
           <CalendarDays size={16} />
         </button>

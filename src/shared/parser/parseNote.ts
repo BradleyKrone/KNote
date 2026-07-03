@@ -5,7 +5,7 @@ import remarkFrontmatter from 'remark-frontmatter'
 import { visit } from 'unist-util-visit'
 import type { Node } from 'unist'
 import { parse as parseYaml } from 'yaml'
-import type { HeadingRef, LinkRef, NoteMeta, TagRef, TaskItem, VaultPath } from '../types'
+import type { HeadingRef, LinkRef, MilestoneItem, NoteMeta, TagRef, TaskItem, VaultPath } from '../types'
 import { titleOf } from '../pathUtils'
 
 /**
@@ -22,7 +22,7 @@ import { titleOf } from '../pathUtils'
 const processor = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml'])
 
 export { TAG_RE, TASK_LINE_RE, WIKI_LINK_RE } from './patterns'
-import { TAG_RE, TASK_LINE_RE, WIKI_LINK_RE } from './patterns'
+import { MILESTONE_LINE_RE, TAG_RE, TASK_LINE_RE, WIKI_LINK_RE } from './patterns'
 
 interface PositionedNode extends Node {
   value?: string
@@ -60,6 +60,7 @@ export function parseNote(path: VaultPath, content: string, mtimeMs = 0): NoteMe
     links: [],
     tags: [],
     tasks: [],
+    milestones: [],
     mtimeMs
   }
 
@@ -168,6 +169,29 @@ export function parseNote(path: VaultPath, content: string, mtimeMs = 0): NoteMe
       tags: taskTags,
       rawLine
     } as TaskItem)
+  }
+
+  // --- Milestones: 🏁 lines, deliberately excluded from the task scan above
+  // (no checkbox brackets) so they never surface on the Kanban board.
+  for (let i = 0; i < maskedLines.length; i++) {
+    const mm = MILESTONE_LINE_RE.exec(maskedLines[i].replace(/\r$/, ''))
+    if (!mm) continue
+    const rawLine = rawLines[i].replace(/\r$/, '')
+    const rawMatch = MILESTONE_LINE_RE.exec(rawLine)
+    if (!rawMatch) continue
+    const text = rawMatch[1].trim()
+    const milestoneTags: string[] = []
+    TAG_RE.lastIndex = 0
+    let milestoneTagMatch: RegExpExecArray | null
+    while ((milestoneTagMatch = TAG_RE.exec(' ' + text)) !== null) {
+      if (!/^\d+$/.test(milestoneTagMatch[2])) milestoneTags.push(milestoneTagMatch[2])
+    }
+    meta.milestones.push({
+      line: i,
+      text,
+      tags: milestoneTags,
+      rawLine
+    } as MilestoneItem)
   }
 
   return meta

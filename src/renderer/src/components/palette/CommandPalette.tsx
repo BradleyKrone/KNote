@@ -52,6 +52,7 @@ export function CommandPalette(): React.JSX.Element | null {
               e.preventDefault()
               setSelected((s) => Math.max(s - 1, 0))
             } else if (e.key === 'Enter' && rows[selected]) {
+              e.preventDefault()
               pick(rows[selected])
             }
           }}

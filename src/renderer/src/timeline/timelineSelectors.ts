@@ -1,23 +1,26 @@
 import dayjs from 'dayjs'
 import type { NoteMeta, VaultPath } from '@shared/types'
-import { DUE_RE } from '@shared/parser/patterns'
-import { toCard } from '@/board/boardSelectors'
+import { DUE_RE, PRIORITY_RE } from '@shared/parser/patterns'
+import { stripInlineMarkers, toCard } from '@/board/boardSelectors'
 
 /**
- * Timeline items come from two sources:
+ * Timeline items come from three sources:
  *  - tasks with a due date (`📅 2026-07-15` or `@due(2026-07-15)`)
  *  - notes with a `date:` (or `due:`/`deadline:`) frontmatter property
+ *  - 🏁 milestone lines with a due date (never become Kanban cards)
  */
 
 export interface TimelineItem {
   date: string // YYYY-MM-DD
-  kind: 'task' | 'note'
+  kind: 'task' | 'note' | 'milestone'
   path: VaultPath
   noteTitle: string
   line: number
   text: string
   done: boolean
   tags: string[]
+  /** Milestone marked with a priority marker (!/!!/!!!) — renders larger on the timeline */
+  important: boolean
 }
 
 function frontmatterDate(meta: NoteMeta): string | null {
@@ -70,7 +73,8 @@ export function collectTimelineItems(
         line: 0,
         text: meta.title,
         done: false,
-        tags: meta.tags.map((t) => t.tag)
+        tags: meta.tags.map((t) => t.tag),
+        important: false
       })
     }
     for (const task of meta.tasks) {
@@ -85,7 +89,23 @@ export function collectTimelineItems(
         line: task.line,
         text: card.displayText,
         done: /^[xX]$/.test(task.statusChar),
-        tags: task.tags
+        tags: task.tags,
+        important: false
+      })
+    }
+    for (const milestone of meta.milestones) {
+      const m = DUE_RE.exec(milestone.text)
+      if (!m) continue
+      push({
+        date: m[1] ?? m[2],
+        kind: 'milestone',
+        path: meta.path,
+        noteTitle: meta.title,
+        line: milestone.line,
+        text: stripInlineMarkers(milestone.text),
+        done: false,
+        tags: milestone.tags,
+        important: PRIORITY_RE.test(milestone.text)
       })
     }
   }

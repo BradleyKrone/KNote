@@ -125,10 +125,10 @@ recommendations.
 - Command palette extensible list of built-in commands (create note, open
   graph, toggle preview, etc.).
 
-### 5.8 Daily Notes (Obsidian core-plugin parity)
-- One-click "open today's note," auto-created from a configurable template
-  and stored in a configurable folder, using a configurable date-based
-  filename format.
+### 5.8 Weekly Notes (Obsidian core-plugin parity, weekly instead of daily)
+- One-click "open this week's note," auto-created from a configurable template
+  and stored in a configurable folder, using a configurable week-based
+  filename format (default: ISO week, e.g. `2026-W27.md`).
 
 ### 5.9 Templates
 - A templates folder; inserting a template stamps its contents (with basic

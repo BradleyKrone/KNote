@@ -1,17 +1,17 @@
 import { registerCommand } from './registry'
-import { openTodayNote } from './dailyNotes'
+import { openThisWeekNote } from './weeklyNotes'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useVaultStore } from '@/stores/vaultStore'
-import { formatActive } from '@/editor/formatting'
+import { formatActive, insertMilestoneAtCursor } from '@/editor/formatting'
 
 /** Registered once at app start; the palette lists whatever is here. */
 export function registerCoreCommands(): void {
   registerCommand({
-    id: 'daily-note',
-    name: "Open today's daily note",
-    run: () => openTodayNote()
+    id: 'weekly-note',
+    name: "Open this week's note",
+    run: () => openThisWeekNote()
   })
 
   registerCommand({
@@ -102,6 +102,18 @@ export function registerCoreCommands(): void {
     id: 'open-timeline',
     name: 'Open timeline',
     run: () => useUiStore.getState().setTimelineOpen(true)
+  })
+
+  registerCommand({
+    id: 'insert-milestone',
+    name: 'Insert timeline milestone',
+    run: () => insertMilestoneAtCursor(false)
+  })
+
+  registerCommand({
+    id: 'insert-milestone-important',
+    name: 'Insert important timeline milestone',
+    run: () => insertMilestoneAtCursor(true)
   })
 
   registerCommand({

@@ -3,7 +3,7 @@ import { isInside } from '@shared/pathUtils'
 import { useIndexStore } from '@/stores/indexStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
-import { insertTemplate } from '@/commands/dailyNotes'
+import { insertTemplate } from '@/commands/weeklyNotes'
 
 export function TemplatePicker(): React.JSX.Element | null {
   const open = useUiStore((s) => s.templatePickerOpen)
