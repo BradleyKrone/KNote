@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { CalendarDays, Pencil, X } from 'lucide-react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useUiStore } from '@/stores/uiStore'
 import { deleteCard, updateCardText } from './boardActions'
 import type { BoardCard } from './boardSelectors'
+import { TaskMetaToolbar, blurTargetIsPicker } from './TaskMetaToolbar'
 
 export function cardId(card: BoardCard): string {
   return `${card.path} ${card.line} ${card.rawLine}`
@@ -17,6 +18,7 @@ export function Card({ card, showNote }: { card: BoardCard; showNote: boolean })
   const drop = useDroppable({ id: `over:${id}`, data: { card } })
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(card.text)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const openSource = (): void => {
     useUiStore.getState().setBoardOpen(false)
@@ -54,23 +56,28 @@ export function Card({ card, showNote }: { card: BoardCard; showNote: boolean })
       {...(editing ? {} : { ...drag.listeners, ...drag.attributes })}
     >
       {editing ? (
-        <textarea
-          className="board-add-input"
-          autoFocus
-          rows={3}
-          value={draft}
-          placeholder="Task text — add #tags, 📅 2026-07-15, !! priority…"
-          onChange={(e) => setDraft(e.target.value)}
-          onPointerDown={(e) => e.stopPropagation()}
-          onBlur={submitEdit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              submitEdit()
-            }
-            if (e.key === 'Escape') setEditing(false)
-          }}
-        />
+        <div className="board-card-edit" onPointerDown={(e) => e.stopPropagation()}>
+          <TaskMetaToolbar value={draft} onChange={setDraft} textareaRef={textareaRef} />
+          <textarea
+            ref={textareaRef}
+            className="board-add-input"
+            autoFocus
+            rows={3}
+            value={draft}
+            placeholder="Task text — add #tags, 📅 2026-07-15, !! priority…"
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={(e) => {
+              if (!blurTargetIsPicker(e)) submitEdit()
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                submitEdit()
+              }
+              if (e.key === 'Escape') setEditing(false)
+            }}
+          />
+        </div>
       ) : (
         <>
           <div className="board-card-text">

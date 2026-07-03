@@ -1,6 +1,7 @@
 import { EditorSelection } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import { getActiveEditorView } from './activeView'
+import { insertTag, setDueDate, setPriority } from '@/taskMeta'
 
 /**
  * Toggle an inline markdown wrapper (**bold**, *italic*, ~~strike~~, `code`)
@@ -77,4 +78,49 @@ export function formatActive(kind: 'bold' | 'italic' | 'strike' | 'code'): void 
   else if (kind === 'italic') toggleItalic(view)
   else if (kind === 'strike') toggleStrikethrough(view)
   else toggleInlineCode(view)
+}
+
+/** Rewrite the line the cursor is on and land the cursor at its new end. */
+function replaceCurrentLine(view: EditorView, transform: (lineText: string) => string): void {
+  const line = view.state.doc.lineAt(view.state.selection.main.head)
+  const next = transform(line.text)
+  if (next === line.text) return
+  view.dispatch(
+    view.state.update(
+      {
+        changes: { from: line.from, to: line.to, insert: next },
+        selection: EditorSelection.cursor(line.from + next.length)
+      },
+      { userEvent: 'input.taskMeta', scrollIntoView: true }
+    )
+  )
+  view.focus()
+}
+
+export function insertTagAtCursor(view: EditorView, tag: string): void {
+  replaceCurrentLine(view, (text) => insertTag(text, tag))
+}
+
+export function setPriorityAtCursor(view: EditorView, level: 0 | 1 | 2 | 3): void {
+  replaceCurrentLine(view, (text) => setPriority(text, level))
+}
+
+export function setDueDateAtCursor(view: EditorView, date: string | null): void {
+  replaceCurrentLine(view, (text) => setDueDate(text, date))
+}
+
+/** Variants usable from the toolbar (act on the active editor). */
+export function insertTagOnActive(tag: string): void {
+  const view = getActiveEditorView()
+  if (view) insertTagAtCursor(view, tag)
+}
+
+export function setPriorityOnActive(level: 0 | 1 | 2 | 3): void {
+  const view = getActiveEditorView()
+  if (view) setPriorityAtCursor(view, level)
+}
+
+export function setDueDateOnActive(date: string | null): void {
+  const view = getActiveEditorView()
+  if (view) setDueDateAtCursor(view, date)
 }

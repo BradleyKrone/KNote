@@ -1,24 +1,33 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import dayjs from 'dayjs'
 import { CheckCircle2, Circle, FileText, X } from 'lucide-react'
 import { useIndexStore } from '@/stores/indexStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
-import { collectTimelineItems, type TimelineItem } from './timelineSelectors'
+import {
+  collectTimelineItems,
+  formatTimeUntil,
+  timelineTags,
+  type TimelineItem
+} from './timelineSelectors'
 
 export function TimelineView(): React.JSX.Element {
   const notes = useIndexStore((s) => s.notes)
   const setTimelineOpen = useUiStore((s) => s.setTimelineOpen)
   const todayRef = useRef<HTMLDivElement>(null)
+  const [tagFilter, setTagFilter] = useState<string | null>(null)
+  const [textFilter, setTextFilter] = useState('')
 
   const today = dayjs().format('YYYY-MM-DD')
 
+  const tags = useMemo(() => timelineTags(notes), [notes])
+
   const groups = useMemo(() => {
-    const byDate = collectTimelineItems(notes)
+    const byDate = collectTimelineItems(notes, { tag: tagFilter, text: textFilter })
     // Always show today, even with nothing due
     if (!byDate.has(today)) byDate.set(today, [])
     return [...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-  }, [notes, today])
+  }, [notes, today, tagFilter, textFilter])
 
   const hasItems = groups.some(([, items]) => items.length > 0)
 
@@ -41,6 +50,24 @@ export function TimelineView(): React.JSX.Element {
           </span>
         </div>
         <div className="board-controls">
+          <input
+            className="panel-input small board-filter"
+            placeholder="Filter timeline…"
+            value={textFilter}
+            onChange={(e) => setTextFilter(e.target.value)}
+          />
+          <select
+            className="board-tag-select"
+            value={tagFilter ?? ''}
+            onChange={(e) => setTagFilter(e.target.value || null)}
+          >
+            <option value="">All tags</option>
+            {tags.map((t) => (
+              <option key={t} value={t}>
+                #{t}
+              </option>
+            ))}
+          </select>
           <button className="icon-btn" title="Close timeline" onClick={() => setTimelineOpen(false)}>
             <X size={16} />
           </button>
@@ -97,6 +124,11 @@ export function TimelineView(): React.JSX.Element {
                       <span className="timeline-item-text">{item.text}</span>
                       {item.kind === 'task' && (
                         <span className="timeline-item-note">{item.noteTitle}</span>
+                      )}
+                      {!item.done && (
+                        <span className={`timeline-item-countdown${isPast ? ' overdue' : ''}`}>
+                          {formatTimeUntil(item.date, today)}
+                        </span>
                       )}
                       {item.tags.map((t) => (
                         <span key={t} className="board-card-tag">

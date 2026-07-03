@@ -26,11 +26,14 @@ interface WorkspaceState {
   mode: EditorMode
   /** 0-based line to scroll to once the editor (re)mounts (heading links). */
   scrollRequest: number | null
+  /** Whether the cursor currently sits on a `- [ ]` task line (for toolbar gating). */
+  activeLineIsTask: boolean
 
   openFile: (path: VaultPath, scrollToLine?: number) => Promise<void>
   consumeScrollRequest: () => number | null
   closeFile: () => void
   setMode: (mode: EditorMode) => void
+  setActiveLineIsTask: (isTask: boolean) => void
   markDirty: () => void
   setConflict: (conflict: 'modified' | 'deleted' | null) => void
   markSaved: (mtimeMs: number) => void
@@ -51,6 +54,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   conflict: null,
   mode: 'live',
   scrollRequest: null,
+  activeLineIsTask: false,
 
   openFile: async (path, scrollToLine) => {
     const result = await window.knote.readFile(path)
@@ -82,6 +86,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   closeFile: () => set({ note: null, dirty: false, conflict: null }),
 
   setMode: (mode) => set({ mode }),
+
+  setActiveLineIsTask: (isTask) => {
+    if (get().activeLineIsTask !== isTask) set({ activeLineIsTask: isTask })
+  },
 
   markDirty: () => {
     if (!get().dirty) set({ dirty: true })

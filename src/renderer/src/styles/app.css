@@ -1323,6 +1323,101 @@ button {
   outline: none;
 }
 
+.board-card-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-meta-toolbar {
+  display: flex;
+  gap: 1px;
+}
+
+/* ---------- Tag / priority / due-date pickers ---------- */
+
+.popover-panel {
+  position: fixed;
+  z-index: 600;
+  width: 220px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.picker-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 13px;
+  outline: none;
+}
+
+.picker-list {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.picker-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.picker-row:hover {
+  background: var(--bg-hover);
+}
+
+.picker-row-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.picker-row-detail {
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.picker-empty {
+  padding: 10px;
+  font-size: 12px;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+.picker-date-custom {
+  padding: 4px 8px 6px;
+  border-top: 1px solid var(--border-color);
+}
+
+.picker-date-input {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--bg-primary);
+  color: var(--text-normal);
+  font-size: 12.5px;
+  padding: 4px 6px;
+}
+
+.picker-clear {
+  border-top: 1px solid var(--border-color);
+  color: var(--text-faint);
+  border-radius: 0;
+}
+
 /* ---------- Task status pill (live preview) ---------- */
 
 .knote-task-status-pill {
@@ -1495,6 +1590,22 @@ button {
   font-size: 11.5px;
   color: var(--text-faint);
   flex-shrink: 0;
+}
+
+.timeline-item-countdown {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+  border-radius: 8px;
+  padding: 1px 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.timeline-item-countdown.overdue {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 
 /* ---------- Toast ---------- */

@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { Plus } from 'lucide-react'
 import type { BoardColumn } from '@shared/types'
 import { addCard } from './boardActions'
 import type { BoardCard, BoardScope } from './boardSelectors'
 import { Card } from './Card'
+import { TaskMetaToolbar, blurTargetIsPicker } from './TaskMetaToolbar'
 import { titleOf } from '@shared/pathUtils'
 
 interface Props {
@@ -21,6 +22,7 @@ export function Column({ column, cards, scope, groupByNote }: Props): React.JSX.
   })
   const [adding, setAdding] = useState(false)
   const [text, setText] = useState('')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const submit = (): void => {
     const value = text.trim()
@@ -58,25 +60,31 @@ export function Column({ column, cards, scope, groupByNote }: Props): React.JSX.
           </div>
         ))}
         {adding ? (
-          <textarea
-            className="board-add-input"
-            autoFocus
-            rows={2}
-            placeholder="Task text…"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onBlur={submit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                submit()
-              }
-              if (e.key === 'Escape') {
-                setAdding(false)
-                setText('')
-              }
-            }}
-          />
+          <div className="board-card-edit">
+            <TaskMetaToolbar value={text} onChange={setText} textareaRef={textareaRef} />
+            <textarea
+              ref={textareaRef}
+              className="board-add-input"
+              autoFocus
+              rows={2}
+              placeholder="Task text…"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onBlur={(e) => {
+                if (!blurTargetIsPicker(e)) submit()
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  submit()
+                }
+                if (e.key === 'Escape') {
+                  setAdding(false)
+                  setText('')
+                }
+              }}
+            />
+          </div>
         ) : (
           <button className="board-add-btn" onClick={() => setAdding(true)}>
             <Plus size={14} /> Add card

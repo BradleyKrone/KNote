@@ -1,5 +1,7 @@
+import dayjs from 'dayjs'
 import type { NoteMeta, VaultPath } from '@shared/types'
-import { DUE_RE, toCard } from '@/board/boardSelectors'
+import { DUE_RE } from '@shared/parser/patterns'
+import { toCard } from '@/board/boardSelectors'
 
 /**
  * Timeline items come from two sources:
@@ -29,10 +31,29 @@ function frontmatterDate(meta: NoteMeta): string | null {
   return null
 }
 
+export interface TimelineFilters {
+  tag: string | null
+  text: string
+}
+
+function matchesFilters(item: TimelineItem, filters: TimelineFilters): boolean {
+  if (filters.tag && !item.tags.some((t) => t === filters.tag || t.startsWith(filters.tag + '/')))
+    return false
+  if (filters.text) {
+    const q = filters.text.toLowerCase()
+    if (!item.text.toLowerCase().includes(q) && !item.noteTitle.toLowerCase().includes(q)) return false
+  }
+  return true
+}
+
 /** All dated items grouped by date, dates sorted ascending. */
-export function collectTimelineItems(notes: Map<string, NoteMeta>): Map<string, TimelineItem[]> {
+export function collectTimelineItems(
+  notes: Map<string, NoteMeta>,
+  filters: TimelineFilters = { tag: null, text: '' }
+): Map<string, TimelineItem[]> {
   const byDate = new Map<string, TimelineItem[]>()
   const push = (item: TimelineItem): void => {
+    if (!matchesFilters(item, filters)) return
     const list = byDate.get(item.date) ?? []
     list.push(item)
     byDate.set(item.date, list)
@@ -73,4 +94,37 @@ export function collectTimelineItems(notes: Map<string, NoteMeta>): Map<string, 
     list.sort((a, b) => Number(a.done) - Number(b.done) || a.text.localeCompare(b.text))
   }
   return new Map([...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0])))
+}
+
+/** All tags present on the (unfiltered) timeline items, for the filter dropdown. */
+export function timelineTags(notes: Map<string, NoteMeta>): string[] {
+  const tags = new Set<string>()
+  for (const list of collectTimelineItems(notes).values()) {
+    for (const item of list) for (const t of item.tags) tags.add(t)
+  }
+  return [...tags].sort()
+}
+
+/** Human countdown/countup label for a YYYY-MM-DD date relative to today, tiered by magnitude. */
+export function formatTimeUntil(date: string, today: string): string {
+  const days = dayjs(date).diff(dayjs(today), 'day')
+  if (days === 0) return 'today'
+  if (days === 1) return 'tomorrow'
+  if (days === -1) return 'yesterday'
+
+  const ago = days < 0
+  const n = Math.abs(days)
+  let amount: number
+  let unit: string
+  if (n >= 30) {
+    amount = Math.round(n / 30)
+    unit = amount === 1 ? 'month' : 'months'
+  } else if (n >= 7) {
+    amount = Math.round(n / 7)
+    unit = amount === 1 ? 'week' : 'weeks'
+  } else {
+    amount = n
+    unit = amount === 1 ? 'day' : 'days'
+  }
+  return ago ? `${amount} ${unit} ago` : `in ${amount} ${unit}`
 }

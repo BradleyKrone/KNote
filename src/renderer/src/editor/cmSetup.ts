@@ -18,9 +18,11 @@ import {
   type CompletionResult
 } from '@codemirror/autocomplete'
 import { classHighlighter, tags as t } from '@lezer/highlight'
+import { TASK_LINE_RE } from '@shared/parser/patterns'
 import { livePreviewExtension } from './livePreview/decorations'
 import { toggleBold, toggleInlineCode, toggleItalic, toggleStrikethrough } from './formatting'
 import { noteCandidates, tagCounts, useIndexStore } from '@/stores/indexStore'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 
 const formatKeymap = [
   { key: 'Mod-b', run: toggleBold },
@@ -141,6 +143,11 @@ export function createEditor(
       // flushes the save immediately so the index/board stay snappy
       const flushNow = update.transactions.some((tr) => tr.isUserEvent('input.knote'))
       callbacks.onDocChanged(flushNow)
+    }),
+    EditorView.updateListener.of((update) => {
+      if (!update.docChanged && !update.selectionSet) return
+      const line = update.state.doc.lineAt(update.state.selection.main.head)
+      useWorkspaceStore.getState().setActiveLineIsTask(TASK_LINE_RE.test(line.text))
     })
   ]
 
@@ -148,6 +155,8 @@ export function createEditor(
     parent,
     state: EditorState.create({ doc, extensions })
   })
+  const initialLine = view.state.doc.lineAt(view.state.selection.main.head)
+  useWorkspaceStore.getState().setActiveLineIsTask(TASK_LINE_RE.test(initialLine.text))
 
   return {
     view,

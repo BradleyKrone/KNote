@@ -1,5 +1,6 @@
 import type { BoardColumn, NoteMeta, VaultPath } from '@shared/types'
 import { isInside, samePath, titleOf } from '@shared/pathUtils'
+import { DUE_RE, PRIORITY_RE } from '@shared/parser/patterns'
 
 export type BoardScope =
   | { kind: 'global' }
@@ -25,9 +26,6 @@ export function scopeLabel(scope: BoardScope): string {
   if (scope.kind === 'folder') return scope.path + '/'
   return titleOf(scope.path)
 }
-
-export const DUE_RE = /(?:@due\((\d{4}-\d{2}-\d{2})\)|📅\s*(\d{4}-\d{2}-\d{2}))/
-const PRIORITY_RE = /(?:^|\s)(!{1,3})(?=\s|$)/
 
 export function toCard(meta: NoteMeta, task: NoteMeta['tasks'][number]): BoardCard {
   const due = DUE_RE.exec(task.text)
