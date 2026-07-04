@@ -75,4 +75,4 @@ list, rendered read-only via `WelcomeDialog.tsx`). It's shipped with the
 app itself, not stored in any vault, so it always reflects the app's
 current feature set regardless of which vault is open. Match its existing
 terse, table/bullet style. Do this as part of the same change, not as a
-follow-up.
+follow-up. 
