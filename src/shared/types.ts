@@ -170,7 +170,7 @@ export interface BoardColumn {
 
 export interface VaultConfig {
   weeklyFolder: string
-  /** dayjs format string (with isoWeek tokens) for weekly note file names */
+  /** dayjs format string applied to the Monday of the week for weekly note file names */
   weeklyFormat: string
   /** Vault path of the template note used for new weekly notes ('' = none) */
   weeklyTemplate: string
@@ -186,7 +186,7 @@ export interface VaultConfig {
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   weeklyFolder: 'Weekly',
-  weeklyFormat: 'GGGG-[W]WW',
+  weeklyFormat: 'YYYY-M-D',
   weeklyTemplate: '',
   templatesFolder: 'Templates',
   inboxNote: 'Inbox.md',

@@ -21,7 +21,7 @@ export async function openThisWeekNote(): Promise<void> {
   // externally — read it fresh rather than trusting the cached copy
   await useSettingsStore.getState().loadVaultConfig()
   const config = useSettingsStore.getState().vaultConfig
-  const name = dayjs().format(config.weeklyFormat)
+  const name = dayjs().startOf('isoWeek').format(config.weeklyFormat)
   const path = joinRel(config.weeklyFolder, name + '.md')
 
   const existing = resolveTarget(path)

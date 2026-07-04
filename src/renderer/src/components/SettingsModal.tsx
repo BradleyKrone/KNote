@@ -95,7 +95,7 @@ export function SettingsModal(): React.JSX.Element | null {
         <div className="settings-body">
           <div className="settings-section">Weekly notes</div>
           {field('Folder', 'weeklyFolder')}
-          {field('Filename format', 'weeklyFormat', 'dayjs tokens, e.g. GGGG-[W]WW')}
+          {field('Filename format', 'weeklyFormat', 'dayjs tokens applied to the Monday of the week, e.g. YYYY-M-D')}
           {field('Template note', 'weeklyTemplate', 'note name or path, empty = none')}
 
           <div className="settings-section">Templates</div>
