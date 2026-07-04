@@ -84,7 +84,9 @@ note (default `Inbox.md`, changeable in **Settings**).
 Board getting cluttered with finished work? Click a card's **archive**
 button to strike it through in the note (`- [a] ...`) and drop it off the
 board — nothing is deleted, and un-archiving is as simple as editing the
-`a` back to a space, `x`, or `/`.
+`a` back to a space, `x`, or `/`. The **Done** column's header has an
+**Archive all** button to clear out finished cards in one click, instead of
+archiving each one individually.
 
 ## Timeline
 

@@ -1355,7 +1355,7 @@ button {
 .board-column-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
   padding: 10px 12px 6px;
 }
 
@@ -1370,6 +1370,25 @@ button {
   background: var(--bg-surface);
   border-radius: 8px;
   padding: 0 7px;
+}
+
+.board-column-archive-all {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-faint);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 2px 7px;
+  cursor: pointer;
+}
+
+.board-column-archive-all:hover {
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
 }
 
 .board-column-body {
