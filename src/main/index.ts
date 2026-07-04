@@ -1,7 +1,8 @@
-import { app, BrowserWindow, net, protocol, session } from 'electron'
+import { app, BrowserWindow, nativeTheme, net, protocol, session } from 'electron'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 import { IpcChannels } from '@shared/ipc'
+import type { ThemeName } from '@shared/types'
 import { registerIpcHandlers } from './ipcHandlers'
 import { getSettings } from './settings'
 import * as vault from './vaultService'
@@ -24,14 +25,14 @@ if (!app.isPackaged && process.env['KNOTE_USER_DATA']) {
 
 let mainWindow: BrowserWindow | null = null
 
-function createWindow(): void {
+function createWindow(theme: ThemeName): void {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 840,
     minWidth: 640,
     minHeight: 400,
     show: false,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: theme === 'light' ? '#ffffff' : '#1e1e1e',
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -111,11 +112,12 @@ app.whenReady().then(async () => {
     return mainWindow
   })
 
-  await getSettings() // warm the settings cache
-  createWindow()
+  const settings = await getSettings() // warm the settings cache
+  nativeTheme.themeSource = settings.theme
+  createWindow(settings.theme)
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) createWindow(settings.theme)
   })
 })
 

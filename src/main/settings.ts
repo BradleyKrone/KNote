@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app, nativeTheme } from 'electron'
 import { promises as fs } from 'fs'
 import { join } from 'path'
 import { DEFAULT_VAULT_CONFIG, type AppSettings, type ThemeName, type VaultConfig } from '@shared/types'
@@ -44,6 +44,7 @@ export async function setTheme(theme: ThemeName): Promise<void> {
   const s = await getSettings()
   s.theme = theme
   await save()
+  nativeTheme.themeSource = theme
 }
 
 // ---------- Per-vault config (<vault>/.knote/config.json) ----------

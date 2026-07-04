@@ -194,6 +194,27 @@ export async function createBinaryFile(rel: VaultPath, data: Buffer): Promise<Va
   return target
 }
 
+const DEFAULT_TEMPLATE_NOTE = `# {{title}}
+
+Created: {{date}}
+
+## Tasks
+
+## Notes
+`
+
+/**
+ * New/empty vaults have no Templates folder yet — seed one with a starter
+ * note so "Insert template" has something to show. No-ops if the folder
+ * already exists, so this never clobbers a vault the user has customized.
+ * Returns the seeded note's path, or null if nothing was created.
+ */
+export async function ensureDefaultTemplate(templatesFolder: string): Promise<VaultPath | null> {
+  if (await exists(toAbs(templatesFolder))) return null
+  await fs.mkdir(toAbs(templatesFolder), { recursive: true })
+  return createFile(joinRel(templatesFolder, 'Note Template.md'), DEFAULT_TEMPLATE_NOTE)
+}
+
 export async function createFolder(rel: VaultPath): Promise<VaultPath> {
   const target = await uniquify(rel)
   const abs = toAbs(target)

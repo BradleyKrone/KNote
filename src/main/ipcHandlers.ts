@@ -19,6 +19,13 @@ async function openVault(root: string, win: BrowserWindow): Promise<VaultInfo> {
   const info = vault.setVault(root)
   await setLastVault(info.root)
 
+  const config = await getVaultConfig()
+  const seededTemplate = await vault.ensureDefaultTemplate(config.templatesFolder)
+  if (seededTemplate && !config.weeklyTemplate) {
+    config.weeklyTemplate = seededTemplate
+    await setVaultConfig(config)
+  }
+
   vaultIndex.onDelta((delta) => {
     if (!win.isDestroyed()) win.webContents.send(IpcChannels.evIndexDelta, delta)
   })

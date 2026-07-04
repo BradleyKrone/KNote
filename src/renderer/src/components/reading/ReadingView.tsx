@@ -130,7 +130,7 @@ interface MdProps {
   onToggleTask?: (line1: number) => void
 }
 
-function Md({ content, path, depth, onToggleTask }: MdProps): React.JSX.Element {
+export function Md({ content, path, depth, onToggleTask }: MdProps): React.JSX.Element {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}

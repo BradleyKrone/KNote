@@ -819,6 +819,22 @@ button {
   padding: 18px 20px;
 }
 
+.welcome-panel {
+  width: 680px;
+}
+
+.welcome-body {
+  padding: 6px 20px 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.welcome-body .reading-content {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  font-size: 14.5px;
+}
+
 .confirm-message {
   font-size: 13.5px;
   color: var(--text-normal);
@@ -1103,6 +1119,19 @@ button {
 }
 .settings-section:first-child {
   margin-top: 0;
+}
+
+.settings-welcome-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--text-normal);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
 }
 
 .settings-field {

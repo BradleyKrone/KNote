@@ -156,7 +156,11 @@ export function Card({ card, showNote }: { card: BoardCard; showNote: boolean })
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
-                void archiveCard(card)
+                void confirm(
+                  'Archive this task? It will be struck through and removed from the board.'
+                ).then((ok) => {
+                  if (ok) void archiveCard(card)
+                })
               }}
             >
               <Archive size={12} />

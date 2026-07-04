@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, BookOpen, Plus, X } from 'lucide-react'
 import type { VaultConfig } from '@shared/types'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { useWelcomeStore } from '@/stores/welcomeStore'
 
 export function SettingsModal(): React.JSX.Element | null {
   const open = useSettingsStore((s) => s.settingsOpen)
@@ -93,16 +94,30 @@ export function SettingsModal(): React.JSX.Element | null {
           </button>
         </div>
         <div className="settings-body">
+          <button
+            className="icon-btn settings-welcome-btn"
+            onClick={() => {
+              setOpen(false)
+              useWelcomeStore.getState().setOpen(true)
+            }}
+          >
+            <BookOpen size={14} /> Welcome & feature guide
+          </button>
+
           <div className="settings-section">Weekly notes</div>
           {field('Folder', 'weeklyFolder')}
           {field('Filename format', 'weeklyFormat', 'dayjs tokens applied to the Monday of the week, e.g. YYYY-M-D')}
           {field('Template note', 'weeklyTemplate', 'note name or path, empty = none')}
 
           <div className="settings-section">Templates</div>
-          {field('Templates folder', 'templatesFolder')}
+          {field('Templates folder', 'templatesFolder', 'can be a nested path, e.g. "Knote Resources/Templates"')}
 
           <div className="settings-section">Attachments</div>
-          {field('Attachments folder', 'attachmentsFolder', 'where pasted images are saved')}
+          {field(
+            'Attachments folder',
+            'attachmentsFolder',
+            'where pasted images are saved; can be a nested path'
+          )}
 
           <div className="settings-section">Kanban board</div>
           {field('Inbox note', 'inboxNote', 'receives cards added on the global board')}

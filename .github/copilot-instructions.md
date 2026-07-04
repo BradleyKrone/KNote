@@ -69,6 +69,10 @@ Key invariants:
 ## Documenting new features
 
 Whenever a new **major user-facing feature** is added, add a short section
-about it to `test-vault/Welcome.md` — the in-app "getting started" note that
-doubles as the running feature guide. Match its existing terse,
-table/bullet style. Do this as part of the same change, not as a follow-up.
+about it to `resources/welcome.md` — the bundled "Welcome & feature guide"
+doc, opened from **Settings → Welcome & feature guide** (first item in the
+list, rendered read-only via `WelcomeDialog.tsx`). It's shipped with the
+app itself, not stored in any vault, so it always reflects the app's
+current feature set regardless of which vault is open. Match its existing
+terse, table/bullet style. Do this as part of the same change, not as a
+follow-up.

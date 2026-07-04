@@ -188,9 +188,9 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   weeklyFolder: 'Weekly',
   weeklyFormat: 'YYYY-M-D',
   weeklyTemplate: '',
-  templatesFolder: 'Templates',
+  templatesFolder: 'Knote Resources/Templates',
   inboxNote: 'Inbox.md',
-  attachmentsFolder: 'Attachments',
+  attachmentsFolder: 'Knote Resources/Attachments',
   columns: [
     { name: 'To Do', char: ' ' },
     { name: 'Ready to Work', char: 'r' },
