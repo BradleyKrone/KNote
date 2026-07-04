@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { ArrowDown, ArrowUp, BookOpen, Plus, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, BookOpen, Plus, ScrollText, X } from 'lucide-react'
 import type { VaultConfig } from '@shared/types'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useWelcomeStore } from '@/stores/welcomeStore'
+import { useReleaseNotesStore } from '@/stores/releaseNotesStore'
 
 export function SettingsModal(): React.JSX.Element | null {
   const open = useSettingsStore((s) => s.settingsOpen)
@@ -88,7 +89,9 @@ export function SettingsModal(): React.JSX.Element | null {
     <div className="modal-overlay" onMouseDown={commit}>
       <div className="modal-panel settings-panel" onMouseDown={(e) => e.stopPropagation()}>
         <div className="settings-title">
-          Settings
+          <span>
+            Settings <span className="settings-version">v{__APP_VERSION__}</span>
+          </span>
           <button className="icon-btn" onClick={commit}>
             <X size={16} />
           </button>
@@ -102,6 +105,15 @@ export function SettingsModal(): React.JSX.Element | null {
             }}
           >
             <BookOpen size={14} /> Welcome & feature guide
+          </button>
+          <button
+            className="icon-btn settings-welcome-btn"
+            onClick={() => {
+              setOpen(false)
+              useReleaseNotesStore.getState().setOpen(true)
+            }}
+          >
+            <ScrollText size={14} /> Release notes
           </button>
 
           <div className="settings-section">Weekly notes</div>

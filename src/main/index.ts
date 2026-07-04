@@ -46,6 +46,12 @@ function createWindow(theme: ThemeName): void {
 
   mainWindow.on('ready-to-show', () => mainWindow?.show())
 
+  // Show the app version in the OS title bar next to the app name. The
+  // loaded page's <title>KNote</title> would otherwise reassert itself
+  // over our version-qualified title, so we lock it down here.
+  mainWindow.setTitle(`KNote ${app.getVersion()}`)
+  mainWindow.on('page-title-updated', (e) => e.preventDefault())
+
   // KNote never navigates away from its own UI and never opens child windows.
   mainWindow.webContents.on('will-navigate', (e) => e.preventDefault())
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))

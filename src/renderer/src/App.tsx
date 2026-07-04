@@ -24,6 +24,7 @@ import { CommandPalette } from './components/palette/CommandPalette'
 import { TemplatePicker } from './components/palette/TemplatePicker'
 import { SettingsModal } from './components/SettingsModal'
 import { WelcomeDialog } from './components/WelcomeDialog'
+import { ReleaseNotesDialog } from './components/ReleaseNotesDialog'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { registerCoreCommands } from './commands/coreCommands'
 import { runCommand } from './commands/registry'
@@ -246,6 +247,7 @@ export default function App(): React.JSX.Element {
       <TemplatePicker />
       <SettingsModal />
       <WelcomeDialog />
+      <ReleaseNotesDialog />
       <ConfirmDialog />
       {toast && <div className="toast">{toast}</div>}
     </div>

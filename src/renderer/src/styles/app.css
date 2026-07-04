@@ -1103,6 +1103,12 @@ button {
   border-bottom: 1px solid var(--border-color);
 }
 
+.settings-version {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
 .settings-body {
   padding: 14px 16px 20px;
   max-height: 60vh;
