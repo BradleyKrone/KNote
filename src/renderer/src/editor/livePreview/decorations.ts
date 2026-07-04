@@ -482,11 +482,20 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
               side: -1
             }).range(bracketFrom)
           )
-          if (isDone || isArchived) {
-            const cascadeClass = isDone ? 'cm-task-done' : 'cm-task-archived'
-            for (let ln = line.number + 1; ln <= noteBlockEnd; ln++) {
-              const childLine = state.doc.line(ln)
-              if (TASK_LINE_RE.test(childLine.text)) continue
+          const cascadeClass = isDone ? 'cm-task-done' : isArchived ? 'cm-task-archived' : null
+          for (let ln = line.number + 1; ln <= noteBlockEnd; ln++) {
+            const childLine = state.doc.line(ln)
+            const childIndent = /^[ \t]*/.exec(childLine.text)?.[0].length ?? 0
+            // Hanging indent: wrapped continuation lines stay tabbed in under the
+            // note's own text instead of falling back to the editor's left edge.
+            if (childIndent > 0) {
+              decos.push(
+                Decoration.line({
+                  attributes: { style: `padding-left:${childIndent}ch;text-indent:-${childIndent}ch` }
+                }).range(childLine.from)
+              )
+            }
+            if (cascadeClass && !TASK_LINE_RE.test(childLine.text)) {
               decos.push(Decoration.line({ class: cascadeClass }).range(childLine.from))
             }
           }
