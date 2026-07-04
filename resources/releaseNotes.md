@@ -17,3 +17,5 @@ Initial feature set:
 - Machine log for tracking work against registered machines
 - Spell check with a personal dictionary
 - Version number in the title bar and this release notes viewer
+- Automated build: merging to `main` now runs typecheck/tests and publishes a
+  built Windows installer as a GitHub Release
