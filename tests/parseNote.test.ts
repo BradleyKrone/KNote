@@ -85,4 +85,27 @@ describe('parseNote', () => {
     const meta = parseNote('a.md', '- [ ] émojis 🎉 und Ümlaute\n')
     expect(meta.tasks[0].text).toBe('émojis 🎉 und Ümlaute')
   })
+
+  it('extracts 🚜 machine log entries with serial, text, tags, and date', () => {
+    const meta = parseNote('a.md', '🚜 Z6A00101 Replaced final drive #maintenance 📅 2026-07-03\n')
+    expect(meta.machineLog).toHaveLength(1)
+    expect(meta.machineLog[0]).toMatchObject({
+      serial: 'Z6A00101',
+      text: 'Replaced final drive #maintenance 📅 2026-07-03',
+      tags: ['maintenance'],
+      line: 0
+    })
+  })
+
+  it('does not surface 🚜 lines as tasks or milestones', () => {
+    const meta = parseNote('a.md', '🚜 Z6A00101 did work 📅 2026-07-03\n')
+    expect(meta.tasks).toHaveLength(0)
+    expect(meta.milestones).toHaveLength(0)
+    expect(meta.machineLog).toHaveLength(1)
+  })
+
+  it('ignores 🚜 lines inside code fences', () => {
+    const meta = parseNote('a.md', '```\n🚜 Z6A00101 fake 📅 2026-07-03\n```\n')
+    expect(meta.machineLog).toHaveLength(0)
+  })
 })

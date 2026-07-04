@@ -4,7 +4,12 @@ import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useVaultStore } from '@/stores/vaultStore'
-import { formatActive, insertCheckboxOnActive, insertMilestoneAtCursor } from '@/editor/formatting'
+import {
+  formatActive,
+  insertCheckboxOnActive,
+  insertMachineEntryOnActive,
+  insertMilestoneAtCursor
+} from '@/editor/formatting'
 
 /** Registered once at app start; the palette lists whatever is here. */
 export function registerCoreCommands(): void {
@@ -102,6 +107,18 @@ export function registerCoreCommands(): void {
     id: 'open-timeline',
     name: 'Open timeline',
     run: () => useUiStore.getState().setTimelineOpen(true)
+  })
+
+  registerCommand({
+    id: 'open-machine-log',
+    name: 'Open machine log',
+    run: () => useUiStore.getState().setMachineLogOpen(true)
+  })
+
+  registerCommand({
+    id: 'insert-machine-entry',
+    name: 'Log machine work',
+    run: () => insertMachineEntryOnActive()
   })
 
   registerCommand({

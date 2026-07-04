@@ -91,6 +91,27 @@ export interface MilestoneItem {
   rawLine: string
 }
 
+/** A 🚜 machine work-log entry: a dated record of work done on one machine. */
+export interface MachineLogItem {
+  line: number
+  /** Serial number identifying the machine (first token after the 🚜 marker) */
+  serial: string
+  /** Activity text after the serial, still carrying any 📅/#tag markers */
+  text: string
+  tags: string[]
+  /** Exact full line text, used to verify targeted rewrites */
+  rawLine: string
+}
+
+/** A registered machine: maps a serial number to its configuration. Defined in Settings, not parsed from notes. */
+export interface MachineDef {
+  serial: string
+  /** Model, e.g. "D6" ('' if none given) */
+  model: string
+  /** Config attributes, e.g. ["LGP", "VP", "EX"] */
+  attributes: string[]
+}
+
 export interface NoteMeta {
   path: VaultPath
   /** File name without .md */
@@ -103,6 +124,7 @@ export interface NoteMeta {
   tags: TagRef[]
   tasks: TaskItem[]
   milestones: MilestoneItem[]
+  machineLog: MachineLogItem[]
   mtimeMs: number
 }
 
@@ -158,6 +180,8 @@ export interface VaultConfig {
   /** Vault-relative folder pasted/dropped images are saved into */
   attachmentsFolder: string
   columns: BoardColumn[]
+  /** Registered machines for the Machine Log (serial → model + config attributes) */
+  machines: MachineDef[]
 }
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
@@ -172,5 +196,6 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
     { name: 'Ready to Work', char: 'r' },
     { name: 'In Progress', char: '/' },
     { name: 'Done', char: 'x' }
-  ]
+  ],
+  machines: []
 }

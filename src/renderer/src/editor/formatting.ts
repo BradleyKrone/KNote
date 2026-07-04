@@ -361,3 +361,44 @@ export function insertMilestoneAtCursor(important: boolean): void {
   )
   view.focus()
 }
+
+/**
+ * Insert a 🚜 machine work-log entry (`🚜 <serial> #tag… 📅 <date>`) at the
+ * cursor, leaving the caret at the end of the line (after the date) so the
+ * user immediately types what they did.
+ */
+export function insertMachineEntryAtCursor(
+  view: EditorView,
+  serial: string,
+  date: string,
+  tags: string[] = []
+): void {
+  const pos = view.state.selection.main.head
+  const line = view.state.doc.lineAt(pos)
+  // Split onto its own line on either side that has content, so a mid-line
+  // cursor never glues the entry onto surrounding text (mirrors milestones).
+  const hasTextBefore = pos > line.from
+  const hasTextAfter = pos < line.to
+  // 🚜 is an astral-plane codepoint (surrogate pair) — use string length (UTF-16
+  // code units, which is what CodeMirror positions count) for the caret offset.
+  const tagText = tags.length ? ' ' + tags.map((t) => `#${t}`).join(' ') : ''
+  const prefix = `${hasTextBefore ? '\n' : ''}🚜 ${serial}${tagText} 📅 ${date} `
+  const suffix = hasTextAfter ? '\n' : ''
+  const insert = prefix + suffix
+  const caret = pos + prefix.length
+  view.dispatch(
+    view.state.update({
+      changes: { from: pos, insert },
+      selection: EditorSelection.cursor(caret),
+      userEvent: 'input.knote.machine',
+      scrollIntoView: true
+    })
+  )
+  view.focus()
+}
+
+/** Variant usable from the palette (acts on the active editor, dates today). */
+export function insertMachineEntryOnActive(): void {
+  const view = getActiveEditorView()
+  if (view) insertMachineEntryAtCursor(view, '', dayjs().format('YYYY-MM-DD'))
+}

@@ -1134,6 +1134,17 @@ button {
   color: var(--text-muted);
 }
 
+.settings-machine-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.settings-machine-row input {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ---------- Kanban board ---------- */
 
 .board-view {
@@ -1709,6 +1720,179 @@ button {
 .timeline-item-countdown.overdue {
   color: var(--danger);
   background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+/* ---------- Machine log ---------- */
+
+.machine-item-date {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.machine-serial-badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--text-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  border-radius: 6px;
+  padding: 1px 7px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.machine-serial-badge.lg {
+  font-size: 13px;
+  padding: 2px 9px;
+}
+
+.machine-item-note {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.machine-config-chip {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted, var(--text-faint));
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.machine-unregistered {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--text-faint);
+}
+
+.machine-group {
+  margin-bottom: 18px;
+}
+
+.machine-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px 8px;
+  color: var(--text-accent);
+  flex-wrap: wrap;
+}
+
+.machine-group-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0 8px;
+}
+
+.machine-separate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-muted, var(--text-faint));
+  cursor: pointer;
+  white-space: nowrap;
+}
+.machine-separate-toggle input {
+  cursor: pointer;
+}
+
+.machine-tag-filters {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.machine-tag-clear {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  text-decoration: underline;
+}
+.machine-tag-clear:hover {
+  color: var(--text-normal);
+}
+
+/* Machine-entry picker (right-click → Log machine work…) */
+.machine-entry-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+}
+
+.machine-picker-config {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.picker-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.picker-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.picker-quick-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.picker-quick {
+  font-size: 11.5px;
+  color: var(--text-normal);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.picker-quick:hover {
+  border-color: var(--text-faint);
+}
+.picker-quick.active {
+  color: var(--text-accent);
+  border-color: var(--interactive-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+}
+
+.picker-submit {
+  width: 100%;
+  justify-content: center;
+}
+.picker-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ---------- Toast ---------- */

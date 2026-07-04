@@ -5,7 +5,16 @@ import remarkFrontmatter from 'remark-frontmatter'
 import { visit } from 'unist-util-visit'
 import type { Node } from 'unist'
 import { parse as parseYaml } from 'yaml'
-import type { HeadingRef, LinkRef, MilestoneItem, NoteMeta, TagRef, TaskItem, VaultPath } from '../types'
+import type {
+  HeadingRef,
+  LinkRef,
+  MachineLogItem,
+  MilestoneItem,
+  NoteMeta,
+  TagRef,
+  TaskItem,
+  VaultPath
+} from '../types'
 import { titleOf } from '../pathUtils'
 
 /**
@@ -22,7 +31,7 @@ import { titleOf } from '../pathUtils'
 const processor = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml'])
 
 export { TAG_RE, TASK_LINE_RE, WIKI_LINK_RE } from './patterns'
-import { MILESTONE_LINE_RE, TAG_RE, TASK_LINE_RE, WIKI_LINK_RE } from './patterns'
+import { MACHINE_ENTRY_RE, MILESTONE_LINE_RE, TAG_RE, TASK_LINE_RE, WIKI_LINK_RE } from './patterns'
 
 interface PositionedNode extends Node {
   value?: string
@@ -61,6 +70,7 @@ export function parseNote(path: VaultPath, content: string, mtimeMs = 0): NoteMe
     tags: [],
     tasks: [],
     milestones: [],
+    machineLog: [],
     mtimeMs
   }
 
@@ -192,6 +202,31 @@ export function parseNote(path: VaultPath, content: string, mtimeMs = 0): NoteMe
       tags: milestoneTags,
       rawLine
     } as MilestoneItem)
+  }
+
+  // --- Machine work-log entries: 🚜 <serial> <activity…>. Like milestones,
+  // no checkbox brackets, so they never surface on the Kanban board.
+  for (let i = 0; i < maskedLines.length; i++) {
+    const em = MACHINE_ENTRY_RE.exec(maskedLines[i].replace(/\r$/, ''))
+    if (!em) continue
+    const rawLine = rawLines[i].replace(/\r$/, '')
+    const rawMatch = MACHINE_ENTRY_RE.exec(rawLine)
+    if (!rawMatch) continue
+    const serial = rawMatch[1]
+    const text = (rawMatch[2] ?? '').trim()
+    const entryTags: string[] = []
+    TAG_RE.lastIndex = 0
+    let entryTagMatch: RegExpExecArray | null
+    while ((entryTagMatch = TAG_RE.exec(' ' + text)) !== null) {
+      if (!/^\d+$/.test(entryTagMatch[2])) entryTags.push(entryTagMatch[2])
+    }
+    meta.machineLog.push({
+      line: i,
+      serial,
+      text,
+      tags: entryTags,
+      rawLine
+    } as MachineLogItem)
   }
 
   return meta

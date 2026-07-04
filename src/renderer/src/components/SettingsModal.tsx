@@ -9,19 +9,31 @@ export function SettingsModal(): React.JSX.Element | null {
   const vaultConfig = useSettingsStore((s) => s.vaultConfig)
   const saveVaultConfig = useSettingsStore((s) => s.saveVaultConfig)
   const [draft, setDraft] = useState<VaultConfig>(vaultConfig)
+  // Raw, as-typed text for each machine's attributes field. Kept separate from
+  // draft.machines[i].attributes (a string[]) so a keystroke never round-trips
+  // through split→join — that round-trip would silently eat a trailing space
+  // the instant it's typed, before the next word can be entered.
+  const [machineAttrText, setMachineAttrText] = useState<string[]>(
+    vaultConfig.machines.map((m) => m.attributes.join(' '))
+  )
 
   // On open: show the cached config immediately, then refresh once from
   // disk (it may have been edited outside KNote). Never reset the draft
   // after that — it would wipe the user's in-progress edits.
   useEffect(() => {
     if (!open) return
-    setDraft(useSettingsStore.getState().vaultConfig)
+    const cached = useSettingsStore.getState().vaultConfig
+    setDraft(cached)
+    setMachineAttrText(cached.machines.map((m) => m.attributes.join(' ')))
     let cancelled = false
     void useSettingsStore
       .getState()
       .loadVaultConfig()
       .then(() => {
-        if (!cancelled) setDraft(useSettingsStore.getState().vaultConfig)
+        if (cancelled) return
+        const loaded = useSettingsStore.getState().vaultConfig
+        setDraft(loaded)
+        setMachineAttrText(loaded.machines.map((m) => m.attributes.join(' ')))
       })
     return () => {
       cancelled = true
@@ -42,13 +54,20 @@ export function SettingsModal(): React.JSX.Element | null {
     setOpen(false)
     void saveVaultConfig({
       ...draft,
-      columns: draft.columns.filter((c) => c.name.trim() !== '' && c.char.length === 1)
+      columns: draft.columns.filter((c) => c.name.trim() !== '' && c.char.length === 1),
+      machines: draft.machines
+        .map((m, i) => ({
+          ...m,
+          serial: m.serial.trim(),
+          attributes: (machineAttrText[i] ?? '').trim().split(/\s+/).filter(Boolean)
+        }))
+        .filter((m) => m.serial !== '')
     })
   }
 
   const field = (
     label: string,
-    key: keyof Omit<VaultConfig, 'columns'>,
+    key: keyof Omit<VaultConfig, 'columns' | 'machines'>,
     hint?: string
   ): React.JSX.Element => (
     <div className="settings-field">
@@ -151,6 +170,73 @@ export function SettingsModal(): React.JSX.Element | null {
               }
             >
               <Plus size={14} /> Add column
+            </button>
+          </div>
+
+          <div className="settings-section">Machines</div>
+          <div className="settings-field">
+            <label>
+              <span className="settings-label">Registered machines</span>
+              <span className="settings-hint">
+                serial number → model + config attributes, for the Machine Log
+              </span>
+            </label>
+            {draft.machines.map((m, i) => (
+              <div key={i} className="settings-machine-row">
+                <input
+                  className="panel-input small"
+                  value={m.serial}
+                  placeholder="Serial (e.g. Z6A00101)"
+                  onChange={(e) => {
+                    const machines = [...draft.machines]
+                    machines[i] = { ...m, serial: e.target.value }
+                    setDraft({ ...draft, machines })
+                  }}
+                />
+                <input
+                  className="panel-input small"
+                  value={m.model}
+                  placeholder="Model (e.g. D6)"
+                  onChange={(e) => {
+                    const machines = [...draft.machines]
+                    machines[i] = { ...m, model: e.target.value }
+                    setDraft({ ...draft, machines })
+                  }}
+                />
+                <input
+                  className="panel-input small"
+                  value={machineAttrText[i] ?? ''}
+                  placeholder="Attributes (e.g. LGP VP EX)"
+                  onChange={(e) => {
+                    const next = [...machineAttrText]
+                    next[i] = e.target.value
+                    setMachineAttrText(next)
+                  }}
+                />
+                <button
+                  className="icon-btn"
+                  title="Remove machine"
+                  onClick={() => {
+                    setDraft({ ...draft, machines: draft.machines.filter((_, j) => j !== i) })
+                    setMachineAttrText(machineAttrText.filter((_, j) => j !== i))
+                  }}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+            <button
+              className="icon-btn add-column-btn"
+              title="Add machine"
+              onClick={() => {
+                setDraft({
+                  ...draft,
+                  machines: [...draft.machines, { serial: '', model: '', attributes: [] }]
+                })
+                setMachineAttrText([...machineAttrText, ''])
+              }}
+            >
+              <Plus size={14} /> Add machine
             </button>
           </div>
         </div>

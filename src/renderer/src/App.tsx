@@ -7,7 +7,8 @@ import {
   Hash,
   Search,
   Settings,
-  Trello
+  Trello,
+  Truck
 } from 'lucide-react'
 import { initVault, scheduleTreeRefresh, useVaultStore } from './stores/vaultStore'
 import { initSettings } from './stores/settingsStore'
@@ -30,6 +31,7 @@ import { useSettingsStore } from './stores/settingsStore'
 import { SearchPanel } from './components/panels/SearchPanel'
 import { BoardView } from './board/BoardView'
 import { TimelineView } from './timeline/TimelineView'
+import { MachineLogView } from './machineLog/MachineLogView'
 import { TagPane } from './components/panels/TagPane'
 import { BacklinksPanel } from './components/panels/BacklinksPanel'
 import { PropertiesPanel } from './components/panels/PropertiesPanel'
@@ -53,6 +55,7 @@ export default function App(): React.JSX.Element {
     setQuickSwitcherOpen,
     boardOpen,
     timelineOpen,
+    machineLogOpen,
     toast
   } = useUiStore()
   const [sidebarWidth, setSidebarWidth] = useState(260)
@@ -166,6 +169,13 @@ export default function App(): React.JSX.Element {
         >
           <CalendarRange size={16} />
         </button>
+        <button
+          className={`icon-btn ribbon-btn${machineLogOpen ? ' active' : ''}`}
+          title={machineLogOpen ? 'Back to notes' : 'Open machine log'}
+          onClick={() => useUiStore.getState().setMachineLogOpen(!machineLogOpen)}
+        >
+          <Truck size={16} />
+        </button>
         <div className="ribbon-spacer" />
         <button
           className="icon-btn ribbon-btn"
@@ -204,6 +214,8 @@ export default function App(): React.JSX.Element {
           <BoardView />
         ) : timelineOpen ? (
           <TimelineView />
+        ) : machineLogOpen ? (
+          <MachineLogView />
         ) : (
           <div className="content-row">
             <div className="editor-column">

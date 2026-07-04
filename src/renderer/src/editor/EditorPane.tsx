@@ -10,6 +10,7 @@ import { setActiveEditorView } from './activeView'
 import {
   adjustFontSize,
   insertCheckboxAtCursor,
+  insertMachineEntryAtCursor,
   insertMilestoneAtCursor,
   insertTagAtCursor,
   setDueDateAtCursor,
@@ -26,6 +27,7 @@ import { Popover } from '@/components/popover/Popover'
 import { TagPickerContent } from '@/components/popover/TagPickerContent'
 import { PriorityPickerContent } from '@/components/popover/PriorityPickerContent'
 import { DatePickerContent } from '@/components/popover/DatePickerContent'
+import { MachineEntryPickerContent } from '@/components/popover/MachineEntryPickerContent'
 
 const AUTOSAVE_DELAY_MS = 500
 
@@ -103,7 +105,7 @@ function buildSpellingMenuItems(view: EditorView, target: SpellingTarget): MenuE
   return items
 }
 
-type PickerKind = 'tag' | 'priority' | 'date'
+type PickerKind = 'tag' | 'priority' | 'date' | 'machine'
 
 interface ActivePicker {
   kind: PickerKind
@@ -142,7 +144,8 @@ function buildContextMenuItems(
     { label: 'Inline code', onClick: () => toggleInlineCode(view) },
     { separator: true },
     { label: 'Add checkbox', onClick: () => insertCheckboxAtCursor(view) },
-    { label: 'Add milestone', onClick: () => insertMilestoneAtCursor(false) }
+    { label: 'Add milestone', onClick: () => insertMilestoneAtCursor(false) },
+    { label: 'Log machine work…', onClick: () => openPicker('machine') }
   )
   if (ctx.isTask || ctx.isMilestone) {
     items.push(
@@ -450,6 +453,15 @@ export function EditorPane(): React.JSX.Element {
               onSelect={(date) => {
                 const view = editorRef.current?.view
                 if (view) setDueDateAtCursor(view, date)
+                setActivePicker(null)
+              }}
+            />
+          )}
+          {activePicker.kind === 'machine' && (
+            <MachineEntryPickerContent
+              onSubmit={(serial, date, tags) => {
+                const view = editorRef.current?.view
+                if (view) insertMachineEntryAtCursor(view, serial, date, tags)
                 setActivePicker(null)
               }}
             />

@@ -23,6 +23,14 @@ export const PRIORITY_RE = /(?:^|\s)(!{1,3})(?=\s|$)/
 export const MILESTONE_LINE_RE = /^\s*🏁\s+(.*)$/
 
 /**
+ * 🚜 machine work-log entry: `🚜 <serial> <activity…>`. Group 1 is the serial
+ * (first whitespace-delimited token); group 2 is the activity text, which may
+ * carry #tags and a 📅 date. Like milestones, deliberately not a checkbox so it
+ * never becomes a Kanban card.
+ */
+export const MACHINE_ENTRY_RE = /^\s*🚜\s+(\S+)\s*(.*)$/
+
+/**
  * Reserved checkbox status char for archived tasks — `- [a] ...`. Archived
  * tasks stay in their note as a struck-through line but never appear on the
  * Kanban board, regardless of the vault's configured columns.
