@@ -558,9 +558,22 @@ button {
   flex-shrink: 0;
 }
 
+.ribbon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+}
+
 .ribbon-btn.active {
   background: var(--bg-active);
   color: var(--text-normal);
+}
+
+.ribbon-divider {
+  height: 1px;
+  margin: 8px 4px;
+  background: var(--border-color);
+  flex-shrink: 0;
 }
 
 /* ---------- Content row: editor + right panel ---------- */

@@ -40,9 +40,9 @@ const MIN_SIDEBAR = 160
 const MAX_SIDEBAR = 480
 
 const SIDEBAR_TABS: Array<{ id: SidebarTab; icon: React.JSX.Element; title: string }> = [
-  { id: 'files', icon: <Files size={16} />, title: 'Files' },
-  { id: 'search', icon: <Search size={16} />, title: 'Search' },
-  { id: 'tags', icon: <Hash size={16} />, title: 'Tags' }
+  { id: 'files', icon: <Files size={22} />, title: 'Files' },
+  { id: 'search', icon: <Search size={22} />, title: 'Search' },
+  { id: 'tags', icon: <Hash size={22} />, title: 'Tags' }
 ]
 
 export default function App(): React.JSX.Element {
@@ -150,8 +150,9 @@ export default function App(): React.JSX.Element {
           title="Open this week's note"
           onClick={() => void openThisWeekNote()}
         >
-          <CalendarDays size={16} />
+          <CalendarDays size={22} />
         </button>
+        <div className="ribbon-divider" />
         <button
           className={`icon-btn ribbon-btn${boardOpen ? ' active' : ''}`}
           title={boardOpen ? 'Back to notes' : 'Open Kanban board'}
@@ -160,21 +161,21 @@ export default function App(): React.JSX.Element {
             else useUiStore.getState().openBoard({ kind: 'global' })
           }}
         >
-          <Trello size={16} />
+          <Trello size={22} />
         </button>
         <button
           className={`icon-btn ribbon-btn${timelineOpen ? ' active' : ''}`}
           title={timelineOpen ? 'Back to notes' : 'Open timeline'}
           onClick={() => useUiStore.getState().setTimelineOpen(!timelineOpen)}
         >
-          <CalendarRange size={16} />
+          <CalendarRange size={22} />
         </button>
         <button
           className={`icon-btn ribbon-btn${machineLogOpen ? ' active' : ''}`}
           title={machineLogOpen ? 'Back to notes' : 'Open machine log'}
           onClick={() => useUiStore.getState().setMachineLogOpen(!machineLogOpen)}
         >
-          <Truck size={16} />
+          <Truck size={22} />
         </button>
         <div className="ribbon-spacer" />
         <button
@@ -182,14 +183,14 @@ export default function App(): React.JSX.Element {
           title="Open another vault…"
           onClick={() => runCommand('open-vault')}
         >
-          <FolderOpen size={16} />
+          <FolderOpen size={22} />
         </button>
         <button
           className="icon-btn ribbon-btn"
           title="Settings"
           onClick={() => useSettingsStore.getState().setSettingsOpen(true)}
         >
-          <Settings size={16} />
+          <Settings size={22} />
         </button>
       </div>
       {sidebarOpen && (
