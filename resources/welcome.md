@@ -123,8 +123,9 @@ vault, nested or not.
 - `Ctrl+O` — **Quick switcher**: jump to any note by name.
 - **Search in all files** (command palette) — full-vault text search.
 - The **Tags** panel (sidebar) browses every tag in the vault.
-- The right panel (toggle from the command palette) shows **backlinks**
-  and **properties** (frontmatter) for the open note.
+- The right panel (toggle from the command palette) shows an **outline**
+  (click a heading to jump to it, collapsible), **backlinks**, and
+  **properties** (frontmatter) for the open note.
 
 ## Links, images, and embeds
 

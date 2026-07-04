@@ -613,8 +613,26 @@ button {
   margin: 6px 0 8px;
 }
 
-.mentions-title {
-  margin-top: 16px;
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.outline-row {
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.outline-row:hover {
+  background: var(--bg-hover);
+  color: var(--text-accent);
 }
 
 .backlink-row {

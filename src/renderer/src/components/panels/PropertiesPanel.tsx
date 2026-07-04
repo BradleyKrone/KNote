@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { stringify as yamlStringify } from 'yaml'
-import { Plus, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, X } from 'lucide-react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useUiStore } from '@/stores/uiStore'
 import { getActiveEditorView } from '@/editor/activeView'
 import { useOpenNoteMeta } from './BacklinksPanel'
 
@@ -55,6 +56,8 @@ export function PropertiesPanel(): React.JSX.Element {
   const note = useWorkspaceStore((s) => s.note)
   const meta = useOpenNoteMeta()
   const [newKey, setNewKey] = useState('')
+  const collapsed = useUiStore((s) => s.propertiesCollapsed)
+  const toggleProperties = useUiStore((s) => s.toggleProperties)
 
   if (!note || !meta) return <></>
 
@@ -79,27 +82,40 @@ export function PropertiesPanel(): React.JSX.Element {
 
   return (
     <div className="right-section">
-      <div className="right-section-title">Properties</div>
-      {meta.frontmatterError && (
-        <div className="panel-warning">Frontmatter YAML could not be parsed</div>
-      )}
-      {entries.map(([key, value]) => (
-        <PropertyRow key={key} name={key} value={displayValue(value)} onCommit={update} onRemove={remove} />
-      ))}
-      <div className="property-row add-row">
-        <input
-          className="panel-input small"
-          placeholder="Add property…"
-          value={newKey}
-          onChange={(e) => setNewKey(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') addKey()
-          }}
-        />
-        <button className="icon-btn" title="Add property" onClick={addKey}>
-          <Plus size={14} />
-        </button>
+      <div className="right-section-title section-header" onClick={toggleProperties}>
+        {collapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+        <span>Properties</span>
       </div>
+      {!collapsed && (
+        <>
+          {meta.frontmatterError && (
+            <div className="panel-warning">Frontmatter YAML could not be parsed</div>
+          )}
+          {entries.map(([key, value]) => (
+            <PropertyRow
+              key={key}
+              name={key}
+              value={displayValue(value)}
+              onCommit={update}
+              onRemove={remove}
+            />
+          ))}
+          <div className="property-row add-row">
+            <input
+              className="panel-input small"
+              placeholder="Add property…"
+              value={newKey}
+              onChange={(e) => setNewKey(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') addKey()
+              }}
+            />
+            <button className="icon-btn" title="Add property" onClick={addKey}>
+              <Plus size={14} />
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

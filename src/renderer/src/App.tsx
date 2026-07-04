@@ -37,6 +37,7 @@ import { MachineLogView } from './machineLog/MachineLogView'
 import { TagPane } from './components/panels/TagPane'
 import { BacklinksPanel } from './components/panels/BacklinksPanel'
 import { PropertiesPanel } from './components/panels/PropertiesPanel'
+import { OutlinePanel } from './components/panels/OutlinePanel'
 
 const MIN_SIDEBAR = 160
 const MAX_SIDEBAR = 480
@@ -235,6 +236,7 @@ export default function App(): React.JSX.Element {
             </div>
             {rightPanelOpen && note && (
               <div className="right-panel">
+                <OutlinePanel />
                 <PropertiesPanel />
                 <BacklinksPanel />
               </div>
