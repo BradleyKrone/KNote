@@ -3,6 +3,11 @@
 Reopen this any time from **Settings → Release notes**. The current version
 number is shown in the window's title bar, next to "KNote".
 
+## 0.2.0
+
+- Automated build: merging to `main` now runs typecheck/tests and publishes a
+  built Windows installer as a GitHub Release
+
 ## 0.1.0
 
 Initial feature set:
