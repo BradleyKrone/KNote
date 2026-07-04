@@ -1,0 +1,48 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  release-notes:
+    name: Release notes updated
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-release-notes') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check resources/releaseNotes.md was updated
+        run: |
+          git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1
+          if git diff --name-only "origin/${{ github.event.pull_request.base.ref }}...HEAD" | grep -qx 'resources/releaseNotes.md'; then
+            echo "resources/releaseNotes.md was updated."
+          else
+            echo "::error::resources/releaseNotes.md was not updated in this PR. Add a release notes entry, or add the 'skip-release-notes' label if this change doesn't warrant one."
+            exit 1
+          fi
+
+  build:
+    name: Build & verify (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run dist
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: knote-installer
+          path: release/*.exe
+          if-no-files-found: error

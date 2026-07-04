@@ -156,14 +156,15 @@ logged entry across the vault, grouped by machine.
 
 ## Settings
 
-Open **Settings** from the toolbar or command palette to configure weekly
-notes, templates, attachments folder, Kanban columns, and registered
-machines. This guide is always the first item there if you want to come
-back to it.
+Open **Settings** from the toolbar or command palette. It's laid out like
+Obsidian's — a category list on the left (General, Weekly notes,
+Templates, Attachments, Kanban board, Machines) and that category's
+options on the right. This guide is always reachable from **Settings →
+General**.
 
 ## Version & release notes
 
 The current app version is shown in the window's title bar (next to
-"KNote") and in the top-right of the **Settings** dialog. **Settings →
+"KNote") and on the **Settings → General** page. **Settings → General →
 Release notes** shows what changed in each version — bundled with the app
 itself, like this guide.
