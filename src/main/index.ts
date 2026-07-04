@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeTheme, net, protocol, session } from 'electron'
+import { app, BrowserWindow, dialog, nativeTheme, net, protocol, session } from 'electron'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 import { IpcChannels } from '@shared/ipc'
@@ -119,6 +119,10 @@ app.whenReady().then(async () => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow(settings.theme)
   })
+}).catch((err) => {
+  console.error('Failed to start KNote:', err)
+  dialog.showErrorBox('KNote failed to start', err instanceof Error ? err.message : String(err))
+  app.quit()
 })
 
 app.on('window-all-closed', () => {
