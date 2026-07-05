@@ -85,6 +85,13 @@ export function tagCounts(notes: Map<string, NoteMeta>): Map<string, number> {
   return counts
 }
 
+/** Count of notes with zero tags — surfaced as a review bucket in the Tag pane. */
+export function untaggedCount(notes: Map<string, NoteMeta>): number {
+  let n = 0
+  for (const meta of notes.values()) if (meta.tags.length === 0) n++
+  return n
+}
+
 /** Candidates for the quick switcher and [[ autocomplete. */
 export interface NoteCandidate {
   path: VaultPath

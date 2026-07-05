@@ -20,6 +20,13 @@ export function registerCoreCommands(): void {
   })
 
   registerCommand({
+    id: 'quick-capture',
+    name: 'Quick capture…',
+    hotkey: 'Ctrl+J',
+    run: () => useUiStore.getState().setQuickCaptureOpen(true)
+  })
+
+  registerCommand({
     id: 'insert-template',
     name: 'Insert template…',
     run: () => useUiStore.getState().setTemplatePickerOpen(true)

@@ -9,6 +9,7 @@ interface UiState {
   quickSwitcherOpen: boolean
   commandPaletteOpen: boolean
   templatePickerOpen: boolean
+  quickCaptureOpen: boolean
   rightPanelOpen: boolean
   /** Per-section collapse for the Outline section, independent of rightPanelOpen. */
   outlineCollapsed: boolean
@@ -25,6 +26,7 @@ interface UiState {
   setQuickSwitcherOpen: (open: boolean) => void
   setCommandPaletteOpen: (open: boolean) => void
   setTemplatePickerOpen: (open: boolean) => void
+  setQuickCaptureOpen: (open: boolean) => void
   toggleRightPanel: () => void
   toggleOutline: () => void
   toggleProperties: () => void
@@ -52,6 +54,7 @@ export const useUiStore = create<UiState>((set) => ({
   quickSwitcherOpen: false,
   commandPaletteOpen: false,
   templatePickerOpen: false,
+  quickCaptureOpen: false,
   rightPanelOpen: true,
   outlineCollapsed: false,
   propertiesCollapsed: false,
@@ -64,6 +67,7 @@ export const useUiStore = create<UiState>((set) => ({
   setQuickSwitcherOpen: (quickSwitcherOpen) => set({ quickSwitcherOpen }),
   setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
   setTemplatePickerOpen: (templatePickerOpen) => set({ templatePickerOpen }),
+  setQuickCaptureOpen: (quickCaptureOpen) => set({ quickCaptureOpen }),
   toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
   toggleOutline: () => set((s) => ({ outlineCollapsed: !s.outlineCollapsed })),
   toggleProperties: () => set((s) => ({ propertiesCollapsed: !s.propertiesCollapsed })),

@@ -63,6 +63,9 @@ function findSnippet(content: string, needles: string[]): { line: number; text: 
 
 function tagMatches(noteTags: string[], wanted: string): boolean {
   const w = wanted.toLowerCase()
+  // Sentinel: `tag:none` means "notes with zero tags" — this shadows a
+  // literal tag named "none", which becomes unsearchable via tag:none.
+  if (w === 'none') return noteTags.length === 0
   return noteTags.some((t) => {
     const lt = t.toLowerCase()
     return lt === w || lt.startsWith(w + '/')

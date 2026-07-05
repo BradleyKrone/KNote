@@ -51,6 +51,7 @@ Right-click a misspelled word (red squiggle) for spelling suggestions and
 | `Ctrl+P` | Command palette |
 | `Ctrl+O` | Quick switcher |
 | `Ctrl+N` | New note |
+| `Ctrl+J` | Quick capture |
 | `Ctrl+E` | Toggle reading mode |
 | `Ctrl+B` / `Ctrl+I` / `Ctrl+Shift+X` / `` Ctrl+` `` | Bold / italic / strikethrough / code |
 
@@ -104,6 +105,14 @@ today's date at your cursor.
   `Weekly/2026-W27.md`), optionally stamped from a template. The same note
   opens all week — no more starting a fresh page every day.
 - **Insert template…** drops a template's contents at your cursor.
+- **Quick capture** (`Ctrl+J`) — jot a thought from anywhere, even with no
+  note open. It appends a timestamped line to this week's note (creating
+  it from your weekly template if it doesn't exist yet) and leaves you
+  right where you were — no navigating away to write it down.
+
+Every new note is automatically stamped with a `created` date in its
+frontmatter, so notes carry a reliable timestamp even if a sync tool later
+resets the file's modified time.
 
 Templates support placeholders: `{{date}}`, `{{time}}`, `{{title}}`.
 Configure the weekly note folder/format/template and the templates folder
@@ -124,7 +133,9 @@ vault, nested or not.
 
 - `Ctrl+O` — **Quick switcher**: jump to any note by name.
 - **Search in all files** (command palette) — full-vault text search.
-- The **Tags** panel (sidebar) browses every tag in the vault.
+- The **Tags** panel (sidebar) browses every tag in the vault. A
+  **(no tags)** row at the top lists notes you haven't tagged yet — a
+  quick way to periodically review and process fleeting captures.
 - The right panel (toggle from the command palette) shows an **outline**
   (click a heading to jump to it, collapsible), **backlinks**, and
   **properties** (frontmatter) for the open note.
