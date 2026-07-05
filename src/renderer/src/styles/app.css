@@ -613,8 +613,26 @@ button {
   margin: 6px 0 8px;
 }
 
-.mentions-title {
-  margin-top: 16px;
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.outline-row {
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.outline-row:hover {
+  background: var(--bg-hover);
+  color: var(--text-accent);
 }
 
 .backlink-row {
@@ -1337,7 +1355,7 @@ button {
 .board-column-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
   padding: 10px 12px 6px;
 }
 
@@ -1352,6 +1370,25 @@ button {
   background: var(--bg-surface);
   border-radius: 8px;
   padding: 0 7px;
+}
+
+.board-column-archive-all {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-faint);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 2px 7px;
+  cursor: pointer;
+}
+
+.board-column-archive-all:hover {
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
 }
 
 .board-column-body {

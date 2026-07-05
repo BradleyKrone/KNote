@@ -3,6 +3,25 @@
 Reopen this any time from **Settings → Release notes**. The current version
 number is shown in the window's title bar, next to "KNote".
 
+## 0.4.0
+
+- **Outline panel**: the right sidebar now shows a collapsible outline of
+  the open note's headings — click one to jump to it
+- **Archive all**: the Kanban board's Done column has an "Archive all"
+  button to clear out finished cards in one click, instead of archiving
+  each one individually
+- Wrapped lines in a task's attached note now stay visually indented under
+  the note text instead of falling back flush-left
+- Every new note is automatically stamped with a `created` date in its
+  frontmatter, so notes carry a reliable timestamp even if a sync tool
+  later resets the file's modified time
+- **Quick capture** (`Ctrl+J`): jot a thought from anywhere, even with no
+  note open — it appends a timestamped line to this week's note (creating
+  it from your weekly template if needed) and leaves you right where you
+  were
+- The **Tags** panel has a new **(no tags)** row listing notes you haven't
+  tagged yet, for periodically reviewing and processing fleeting captures
+
 ## 0.3.0
 
 - Added a project README describing the app and its features on GitHub

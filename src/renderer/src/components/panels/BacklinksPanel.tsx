@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { Mention } from '@shared/types'
 import { samePath } from '@shared/pathUtils'
 import { backlinksFor, useIndexStore } from '@/stores/indexStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useUiStore } from '@/stores/uiStore'
 
 export function BacklinksPanel(): React.JSX.Element {
   const notePath = useWorkspaceStore((s) => s.note?.path ?? null)
   const notes = useIndexStore((s) => s.notes)
   const [mentions, setMentions] = useState<Mention[]>([])
+  const backlinksCollapsed = useUiStore((s) => s.backlinksCollapsed)
+  const toggleBacklinks = useUiStore((s) => s.toggleBacklinks)
+  const unlinkedCollapsed = useUiStore((s) => s.unlinkedMentionsCollapsed)
+  const toggleUnlinkedMentions = useUiStore((s) => s.toggleUnlinkedMentions)
 
   const backlinks = useMemo(
     () => (notePath ? backlinksFor(notePath) : []),
@@ -54,45 +60,61 @@ export function BacklinksPanel(): React.JSX.Element {
   if (!notePath) return <div className="panel-empty">Open a note to see its backlinks</div>
 
   return (
-    <div className="right-section">
-      <div className="right-section-title">Backlinks ({backlinks.length})</div>
-      {backlinks.length === 0 && <div className="panel-empty">No notes link here yet</div>}
-      {backlinks.map((b, i) => (
-        <div
-          key={`${b.path}-${b.line}-${i}`}
-          className="backlink-row"
-          onClick={() => void useWorkspaceStore.getState().openFile(b.path, b.line)}
-        >
-          <div className="backlink-title">{b.title}</div>
-          <div className="backlink-context">{b.context}</div>
+    <>
+      <div className="right-section">
+        <div className="right-section-title section-header" onClick={toggleBacklinks}>
+          {backlinksCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+          <span>Backlinks ({backlinks.length})</span>
         </div>
-      ))}
-
-      <div className="right-section-title mentions-title">
-        Unlinked mentions ({mentions.length})
+        {!backlinksCollapsed &&
+          (backlinks.length === 0 ? (
+            <div className="panel-empty">No notes link here yet</div>
+          ) : (
+            backlinks.map((b, i) => (
+              <div
+                key={`${b.path}-${b.line}-${i}`}
+                className="backlink-row"
+                onClick={() => void useWorkspaceStore.getState().openFile(b.path, b.line)}
+              >
+                <div className="backlink-title">{b.title}</div>
+                <div className="backlink-context">{b.context}</div>
+              </div>
+            ))
+          ))}
       </div>
-      {mentions.length === 0 && <div className="panel-empty">None found</div>}
-      {mentions.map((m, i) => (
-        <div key={`${m.path}-${m.line}-${m.col}-${i}`} className="backlink-row">
-          <div
-            className="backlink-title"
-            onClick={() => void useWorkspaceStore.getState().openFile(m.path, m.line)}
-          >
-            {m.path.replace(/\.md$/i, '')}
-          </div>
-          <div className="backlink-context">{m.text}</div>
-          <button
-            className="link-it-btn"
-            onClick={(e) => {
-              e.stopPropagation()
-              void linkIt(m)
-            }}
-          >
-            Link
-          </button>
+
+      <div className="right-section">
+        <div className="right-section-title section-header" onClick={toggleUnlinkedMentions}>
+          {unlinkedCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+          <span>Unlinked mentions ({mentions.length})</span>
         </div>
-      ))}
-    </div>
+        {!unlinkedCollapsed &&
+          (mentions.length === 0 ? (
+            <div className="panel-empty">None found</div>
+          ) : (
+            mentions.map((m, i) => (
+              <div key={`${m.path}-${m.line}-${m.col}-${i}`} className="backlink-row">
+                <div
+                  className="backlink-title"
+                  onClick={() => void useWorkspaceStore.getState().openFile(m.path, m.line)}
+                >
+                  {m.path.replace(/\.md$/i, '')}
+                </div>
+                <div className="backlink-context">{m.text}</div>
+                <button
+                  className="link-it-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void linkIt(m)
+                  }}
+                >
+                  Link
+                </button>
+              </div>
+            ))
+          ))}
+      </div>
+    </>
   )
 }
 

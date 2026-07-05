@@ -71,6 +71,18 @@ export async function archiveCard(card: BoardCard): Promise<void> {
   await setCardStatus(card, ARCHIVED_CHAR)
 }
 
+/**
+ * Archive every given card, one at a time. Sequential on purpose: each
+ * archive is a read-modify-write against its note file (buffer or disk), so
+ * archiving several cards from the same note in parallel would race and
+ * could silently drop one of the edits.
+ */
+export async function archiveCards(cards: BoardCard[]): Promise<void> {
+  for (const card of cards) {
+    await archiveCard(card)
+  }
+}
+
 /** Same-note reorder: move the card's line before another card's line. */
 export async function reorderCard(card: BoardCard, before: BoardCard | null): Promise<void> {
   if (before && !samePath(card.path, before.path)) {

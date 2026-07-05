@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import { dirname, join, resolve, sep } from 'path'
 import { shell } from 'electron'
+import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type { FileEntry, FileReadResult, FileWriteResult, VaultInfo, VaultPath } from '@shared/types'
 import { isImage, isMarkdown, joinRel, nameOf, normalizeRel, parentOf } from '@shared/pathUtils'
 
@@ -176,12 +177,42 @@ async function uniquify(rel: VaultPath): Promise<VaultPath> {
   }
 }
 
-export async function createFile(rel: VaultPath, content = ''): Promise<VaultPath> {
+const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/
+
+/**
+ * Stamp a `created` timestamp into a new note's frontmatter so every note
+ * carries a stable creation date that survives sync tools resetting file
+ * mtimes. Never overwrites an existing `created` value (e.g. from a
+ * template that already set one).
+ */
+export function stampCreatedFrontmatter(content: string): string {
+  const now = new Date().toISOString()
+  const m = content.match(FRONTMATTER_RE)
+  if (!m) return `---\ncreated: ${now}\n---\n${content}`
+  let fm: unknown
+  try {
+    fm = parseYaml(m[1])
+  } catch {
+    return content
+  }
+  if (!fm || typeof fm !== 'object' || Array.isArray(fm)) return content
+  if ('created' in (fm as Record<string, unknown>)) return content
+  const merged = { created: now, ...(fm as Record<string, unknown>) }
+  return `---\n${yamlStringify(merged).trimEnd()}\n---\n${content.slice(m[0].length)}`
+}
+
+export async function createFile(
+  rel: VaultPath,
+  content = '',
+  opts?: { skipCreatedStamp?: boolean }
+): Promise<VaultPath> {
   const target = await uniquify(rel)
   const abs = toAbs(target)
+  const finalContent =
+    isMarkdown(target) && !opts?.skipCreatedStamp ? stampCreatedFrontmatter(content) : content
   await fs.mkdir(dirname(abs), { recursive: true })
-  ownWriteMarker(abs, content)
-  await fs.writeFile(abs, content, { encoding: 'utf-8', flag: 'wx' })
+  ownWriteMarker(abs, finalContent)
+  await fs.writeFile(abs, finalContent, { encoding: 'utf-8', flag: 'wx' })
   return target
 }
 
@@ -212,7 +243,9 @@ Created: {{date}}
 export async function ensureDefaultTemplate(templatesFolder: string): Promise<VaultPath | null> {
   if (await exists(toAbs(templatesFolder))) return null
   await fs.mkdir(toAbs(templatesFolder), { recursive: true })
-  return createFile(joinRel(templatesFolder, 'Note Template.md'), DEFAULT_TEMPLATE_NOTE)
+  return createFile(joinRel(templatesFolder, 'Note Template.md'), DEFAULT_TEMPLATE_NOTE, {
+    skipCreatedStamp: true
+  })
 }
 
 export async function createFolder(rel: VaultPath): Promise<VaultPath> {

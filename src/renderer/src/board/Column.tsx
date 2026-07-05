@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { Plus } from 'lucide-react'
+import { Archive, Plus } from 'lucide-react'
 import type { BoardColumn } from '@shared/types'
-import { addCard } from './boardActions'
+import { confirm } from '@/stores/confirmStore'
+import { addCard, archiveCards } from './boardActions'
 import type { BoardCard, BoardScope } from './boardSelectors'
 import { Card } from './Card'
 import { TaskMetaToolbar, blurTargetIsPicker } from './TaskMetaToolbar'
@@ -49,6 +50,21 @@ export function Column({ column, cards, scope, groupByNote }: Props): React.JSX.
       <div className="board-column-header">
         <span className="board-column-name">{column.name}</span>
         <span className="board-column-count">{cards.length}</span>
+        {column.char === 'x' && cards.length > 0 && (
+          <button
+            className="board-column-archive-all"
+            title={`Archive all ${cards.length} task${cards.length === 1 ? '' : 's'} in ${column.name}`}
+            onClick={() => {
+              void confirm(
+                `Archive all ${cards.length} task${cards.length === 1 ? '' : 's'} in "${column.name}"? They will be struck through and removed from the board.`
+              ).then((ok) => {
+                if (ok) void archiveCards(cards)
+              })
+            }}
+          >
+            <Archive size={12} /> Archive all
+          </button>
+        )}
       </div>
       <div className="board-column-body">
         {groups.map((g) => (

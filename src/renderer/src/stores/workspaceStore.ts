@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { VaultPath } from '@shared/types'
+import type { HeadingRef, VaultPath } from '@shared/types'
 import { isInside, normalizeRel, samePath } from '@shared/pathUtils'
 
 export type EditorMode = 'live' | 'source' | 'reading'
@@ -28,12 +28,20 @@ interface WorkspaceState {
   scrollRequest: number | null
   /** Whether the cursor currently sits on a `- [ ]` task line (for toolbar gating). */
   activeLineIsTask: boolean
+  /**
+   * Headings of the live editor buffer, recomputed on every doc change (see
+   * cmSetup.ts). Like activeLineIsTask, this is derived from the live
+   * CodeMirror buffer, not the disk-snapshot `note` — and likewise isn't
+   * reset on closeFile(); the Outline panel guards on `note` being present.
+   */
+  outlineHeadings: HeadingRef[]
 
   openFile: (path: VaultPath, scrollToLine?: number) => Promise<void>
   consumeScrollRequest: () => number | null
   closeFile: () => void
   setMode: (mode: EditorMode) => void
   setActiveLineIsTask: (isTask: boolean) => void
+  setOutlineHeadings: (headings: HeadingRef[]) => void
   markDirty: () => void
   setConflict: (conflict: 'modified' | 'deleted' | null) => void
   markSaved: (mtimeMs: number) => void
@@ -55,6 +63,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   mode: 'live',
   scrollRequest: null,
   activeLineIsTask: false,
+  outlineHeadings: [],
 
   openFile: async (path, scrollToLine) => {
     const result = await window.knote.readFile(path)
@@ -90,6 +99,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   setActiveLineIsTask: (isTask) => {
     if (get().activeLineIsTask !== isTask) set({ activeLineIsTask: isTask })
   },
+
+  setOutlineHeadings: (outlineHeadings) => set({ outlineHeadings }),
 
   markDirty: () => {
     if (!get().dirty) set({ dirty: true })

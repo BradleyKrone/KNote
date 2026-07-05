@@ -22,6 +22,7 @@ import { TASK_LINE_RE } from '@shared/parser/patterns'
 import { livePreviewExtension } from './livePreview/decorations'
 import { toggleBold, toggleInlineCode, toggleItalic, toggleStrikethrough } from './formatting'
 import { handleImagePaste } from './pasteImage'
+import { scanHeadings } from './outlineHeadings'
 import { noteCandidates, tagCounts, useIndexStore } from '@/stores/indexStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 
@@ -153,6 +154,10 @@ export function createEditor(
       if (!update.docChanged && !update.selectionSet) return
       const line = update.state.doc.lineAt(update.state.selection.main.head)
       useWorkspaceStore.getState().setActiveLineIsTask(TASK_LINE_RE.test(line.text))
+    }),
+    EditorView.updateListener.of((update) => {
+      if (!update.docChanged) return
+      useWorkspaceStore.getState().setOutlineHeadings(scanHeadings(update.state.doc))
     })
   ]
 
@@ -162,6 +167,7 @@ export function createEditor(
   })
   const initialLine = view.state.doc.lineAt(view.state.selection.main.head)
   useWorkspaceStore.getState().setActiveLineIsTask(TASK_LINE_RE.test(initialLine.text))
+  useWorkspaceStore.getState().setOutlineHeadings(scanHeadings(view.state.doc))
 
   return {
     view,

@@ -2,7 +2,7 @@ import { BrowserWindow, dialog, ipcMain, session } from 'electron'
 import { promises as fs } from 'fs'
 import { IpcChannels } from '@shared/ipc'
 import type { ThemeName, VaultInfo, VaultPath } from '@shared/types'
-import { isMarkdown, joinRel } from '@shared/pathUtils'
+import { isInside, isMarkdown, joinRel } from '@shared/pathUtils'
 import { cleanupAttachmentsForDeletedNote, cleanupRemovedAttachments } from './attachmentCleanup'
 import * as vault from './vaultService'
 import * as vaultIndex from './indexer/vaultIndex'
@@ -72,7 +72,10 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
   )
 
   ipcMain.handle(IpcChannels.fileCreate, async (_e, path: VaultPath, content?: string) => {
-    const created = await vault.createFile(path, content ?? '')
+    const config = await getVaultConfig()
+    const created = await vault.createFile(path, content ?? '', {
+      skipCreatedStamp: isInside(path, config.templatesFolder)
+    })
     void vaultIndex.indexFile(created)
     return created
   })

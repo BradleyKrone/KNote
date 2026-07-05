@@ -22,6 +22,7 @@ import { EditorPane } from './editor/EditorPane'
 import { QuickSwitcher } from './components/palette/QuickSwitcher'
 import { CommandPalette } from './components/palette/CommandPalette'
 import { TemplatePicker } from './components/palette/TemplatePicker'
+import { QuickCapture } from './components/palette/QuickCapture'
 import { SettingsModal } from './components/SettingsModal'
 import { WelcomeDialog } from './components/WelcomeDialog'
 import { ReleaseNotesDialog } from './components/ReleaseNotesDialog'
@@ -37,6 +38,7 @@ import { MachineLogView } from './machineLog/MachineLogView'
 import { TagPane } from './components/panels/TagPane'
 import { BacklinksPanel } from './components/panels/BacklinksPanel'
 import { PropertiesPanel } from './components/panels/PropertiesPanel'
+import { OutlinePanel } from './components/panels/OutlinePanel'
 
 const MIN_SIDEBAR = 160
 const MAX_SIDEBAR = 480
@@ -102,6 +104,9 @@ export default function App(): React.JSX.Element {
       } else if (key === 'n') {
         e.preventDefault()
         runCommand('new-note')
+      } else if (key === 'j') {
+        e.preventDefault()
+        useUiStore.getState().setQuickCaptureOpen(true)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -235,6 +240,7 @@ export default function App(): React.JSX.Element {
             </div>
             {rightPanelOpen && note && (
               <div className="right-panel">
+                <OutlinePanel />
                 <PropertiesPanel />
                 <BacklinksPanel />
               </div>
@@ -245,6 +251,7 @@ export default function App(): React.JSX.Element {
       <QuickSwitcher />
       <CommandPalette />
       <TemplatePicker />
+      <QuickCapture />
       <SettingsModal />
       <WelcomeDialog />
       <ReleaseNotesDialog />
