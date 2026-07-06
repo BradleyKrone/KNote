@@ -2,6 +2,16 @@
   box-sizing: border-box;
 }
 
+/* Guarantee a visible native text-selection color everywhere (inputs,
+   textareas, plain text) regardless of theme/OS defaults — without this,
+   some platforms render the native selection in a muted color that's
+   indistinguishable from the app's dark background. CodeMirror draws its
+   own selection highlight instead of using this, so it's unaffected. */
+::selection {
+  background: rgba(124, 58, 237, 0.4);
+  color: inherit;
+}
+
 html,
 body,
 #root {
@@ -419,6 +429,16 @@ button {
 
 .cm-cursor {
   border-left-color: var(--text-normal) !important;
+}
+
+/* CodeMirror draws selection as an absolutely-positioned layer with
+   z-index: -1 by default, so it renders *behind* line content. That's
+   invisible wherever a line has its own opaque background (task/note-box
+   lines, code blocks), since the opaque background paints on top of it.
+   Raise the layer above line content — the highlight is translucent, so
+   text stays legible through it — and below the cursor layer (z-index 100). */
+.cm-selectionLayer {
+  z-index: 10;
 }
 
 .cm-selectionBackground,
