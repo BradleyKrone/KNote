@@ -89,6 +89,17 @@ board — nothing is deleted, and un-archiving is as simple as editing the
 **Archive all** button to clear out finished cards in one click, instead of
 archiving each one individually.
 
+Indent a checkbox under another one to make it a **subtask**:
+
+```
+- [ ] Main task
+  - [ ] Subtask
+```
+
+Subtasks still work as normal checkboxes in the editor, but they never get
+their own card — only the top-level task shows on the Kanban board, so
+breaking work into steps doesn't clutter it up.
+
 ## Timeline
 
 "Open timeline" in the command palette shows every dated task (`📅`/`@due`),

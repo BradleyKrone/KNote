@@ -478,7 +478,6 @@ button {
 
 .cm-task-archived {
   color: var(--text-faint);
-  text-decoration: line-through;
 }
 
 .knote-note-twisty {

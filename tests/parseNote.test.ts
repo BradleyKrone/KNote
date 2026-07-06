@@ -60,12 +60,19 @@ describe('parseNote', () => {
     const content = '- [ ] open\n- [x] done\n- [/] doing #urgent\n  - [ ] child\n1. [ ] numbered\n'
     const meta = parseNote('a.md', content)
     expect(meta.tasks).toHaveLength(5)
-    expect(meta.tasks[0]).toMatchObject({ statusChar: ' ', text: 'open', line: 0, indent: 0 })
-    expect(meta.tasks[1]).toMatchObject({ statusChar: 'x', text: 'done' })
-    expect(meta.tasks[2]).toMatchObject({ statusChar: '/', tags: ['urgent'] })
-    expect(meta.tasks[3]).toMatchObject({ indent: 2, text: 'child' })
-    expect(meta.tasks[4]).toMatchObject({ text: 'numbered' })
+    expect(meta.tasks[0]).toMatchObject({ statusChar: ' ', text: 'open', line: 0, indent: 0, isSubtask: false })
+    expect(meta.tasks[1]).toMatchObject({ statusChar: 'x', text: 'done', isSubtask: false })
+    expect(meta.tasks[2]).toMatchObject({ statusChar: '/', tags: ['urgent'], isSubtask: false })
+    expect(meta.tasks[3]).toMatchObject({ indent: 2, text: 'child', isSubtask: true })
+    expect(meta.tasks[4]).toMatchObject({ text: 'numbered', isSubtask: false })
     expect(meta.tasks[2].rawLine).toBe('- [/] doing #urgent')
+  })
+
+  it('marks tasks nested under a shallower task as subtasks, resetting after dedent', () => {
+    const content =
+      '- [ ] task A\n  - [ ] subtask A1\n  - [ ] subtask A2\n- [ ] task B\n  - [ ] subtask B1\n'
+    const meta = parseNote('a.md', content)
+    expect(meta.tasks.map((t) => t.isSubtask)).toEqual([false, true, true, false, true])
   })
 
   it('preserves rawLine for CRLF content without the \\r', () => {

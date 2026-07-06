@@ -71,6 +71,7 @@ export function collectCards(
     if (scope.kind === 'folder' && !isInside(meta.path, scope.path)) continue
     for (const task of meta.tasks) {
       if (task.statusChar === ARCHIVED_CHAR) continue
+      if (task.isSubtask) continue
       const card = toCard(meta, task)
       if (filters.tag && !card.tags.some((t) => t === filters.tag || t.startsWith(filters.tag + '/')))
         continue

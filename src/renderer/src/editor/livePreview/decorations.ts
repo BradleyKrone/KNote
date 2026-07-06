@@ -182,21 +182,29 @@ function toImgSrc(vaultPath: string): string {
 }
 
 const TASK_LINE_RE = /^(\s*)([-*+]|\d+[.)])\s\[(.)\](\s|$)/
+const LIST_ITEM_RE = /^(\s*)([-*+]|\d+[.)])\s/
 
 /**
  * A task's attached "note" is the contiguous run of lines below it that are
- * either blank or indented deeper than the task itself (standard markdown
- * nesting). Blank runs don't end the block by themselves — only a following
- * line at or above the task's indent does — so trailing blanks are trimmed
- * automatically by tracking the last qualifying non-blank line.
+ * either blank, indented deeper than the task itself (standard markdown
+ * nesting), or a plain (non-checkbox) list item at the *same* indent as the
+ * task — people often type notes as an unindented `-` line right under the
+ * task rather than nesting them, and that reads the same as a proper note.
+ * Any checkbox line always ends the block, regardless of its indent: a new
+ * task (sibling or a more-deeply-indented subtask) starts its own note scope
+ * rather than extending the previous one. Blank runs don't end the block by
+ * themselves — only a following disqualifying line does — so trailing blanks
+ * are trimmed automatically by tracking the last qualifying non-blank line.
  */
 function findNoteBlockEnd(state: EditorState, taskLineNumber: number, indentLen: number): number | null {
   let lastNonBlank: number | null = null
   for (let ln = taskLineNumber + 1; ln <= state.doc.lines; ln++) {
     const text = state.doc.line(ln).text
     if (/^\s*$/.test(text)) continue
+    if (TASK_LINE_RE.test(text)) break
     const lineIndent = /^[ \t]*/.exec(text)?.[0].length ?? 0
-    if (lineIndent <= indentLen) break
+    if (lineIndent < indentLen) break
+    if (lineIndent === indentLen && !LIST_ITEM_RE.test(text)) break
     lastNonBlank = ln
   }
   return lastNonBlank
@@ -495,7 +503,7 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
                 }).range(childLine.from)
               )
             }
-            if (cascadeClass && !TASK_LINE_RE.test(childLine.text)) {
+            if (cascadeClass) {
               decos.push(Decoration.line({ class: cascadeClass }).range(childLine.from))
             }
           }
