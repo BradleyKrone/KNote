@@ -4,6 +4,7 @@ import { shell } from 'electron'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type { FileEntry, FileReadResult, FileWriteResult, VaultInfo, VaultPath } from '@shared/types'
 import { isImage, isMarkdown, joinRel, nameOf, normalizeRel, parentOf } from '@shared/pathUtils'
+import { getVaultConfig } from './settings'
 
 let vaultRoot: string | null = null
 
@@ -68,6 +69,8 @@ function isVisibleFile(name: string): boolean {
 
 export async function buildTree(): Promise<FileEntry[]> {
   const root = getVaultRoot()
+  const config = await getVaultConfig()
+  const weeklyFolder = normalizeRel(config.weeklyFolder)
 
   async function walk(absDir: string, relDir: string): Promise<FileEntry[]> {
     let dirents
@@ -93,10 +96,14 @@ export async function buildTree(): Promise<FileEntry[]> {
         files.push({ path: rel, name: d.name, kind: 'file' })
       }
     }
+    // numeric: true makes embedded numbers compare by value (so "9" sorts
+    // before "12"), which is what keeps date-stamped file names like weekly
+    // notes in chronological order instead of plain lexicographic order.
     const byName = (a: FileEntry, b: FileEntry): number =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
     folders.sort(byName)
-    files.sort(byName)
+    // The weekly notes folder reads newest-first; every other folder stays A-Z.
+    files.sort(relDir === weeklyFolder ? (a, b) => byName(b, a) : byName)
     return [...folders, ...files]
   }
 
