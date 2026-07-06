@@ -123,7 +123,26 @@ export function createEditor(
     dropCursor(),
     rectangularSelection(),
     indentOnInput(),
-    codeFolding({ placeholderText: '⋯' }),
+    codeFolding({
+      preparePlaceholder: (state, range) => {
+        const fromLine = state.doc.lineAt(range.from).number
+        const toLine = state.doc.lineAt(range.to).number
+        return { lines: toLine - fromLine }
+      },
+      // The task's own line already shows a fold arrow and is styled as the note
+      // box (see NoteFoldToggleWidget/cm-task-notebox-* in livePreview/decorations.ts),
+      // so this placeholder is just a small "N lines" hint, not another bordered box.
+      placeholderDOM: (_view, onclick, prepared) => {
+        const label = document.createElement('span')
+        label.className = 'knote-notebox-foldinfo'
+        const n = (prepared as { lines: number } | null)?.lines ?? 1
+        label.textContent = `${n} ${n === 1 ? 'line' : 'lines'} hidden`
+        label.title = 'Expand note'
+        label.addEventListener('mousedown', (e) => e.preventDefault())
+        label.addEventListener('click', onclick)
+        return label
+      }
+    }),
     EditorState.allowMultipleSelections.of(true),
     EditorView.lineWrapping,
     // CM6 sets spellcheck="false" by default; opt back into the OS/Chromium spellchecker

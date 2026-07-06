@@ -158,6 +158,9 @@ export function parseNote(path: VaultPath, content: string, mtimeMs = 0): NoteMe
   // --- Tasks: line-scan of the masked source (code can't produce tasks)
   const maskedLines = masked.split('\n')
   const rawLines = content.split('\n')
+  // Open ancestor task indents, so a checkbox indented deeper than the
+  // nearest preceding task above it is treated as that task's subtask.
+  const taskIndentStack: number[] = []
   for (let i = 0; i < maskedLines.length; i++) {
     const tm = TASK_LINE_RE.exec(maskedLines[i].replace(/\r$/, ''))
     if (!tm) continue
@@ -165,6 +168,12 @@ export function parseNote(path: VaultPath, content: string, mtimeMs = 0): NoteMe
     const rawMatch = TASK_LINE_RE.exec(rawLine)
     if (!rawMatch) continue
     const text = (rawMatch[4] ?? '').trim()
+    const indent = rawMatch[1].length
+    while (taskIndentStack.length && taskIndentStack[taskIndentStack.length - 1] >= indent) {
+      taskIndentStack.pop()
+    }
+    const isSubtask = taskIndentStack.length > 0
+    taskIndentStack.push(indent)
     const taskTags: string[] = []
     TAG_RE.lastIndex = 0
     let tagMatch: RegExpExecArray | null
@@ -175,7 +184,8 @@ export function parseNote(path: VaultPath, content: string, mtimeMs = 0): NoteMe
       line: i,
       statusChar: rawMatch[3],
       text,
-      indent: rawMatch[1].length,
+      indent,
+      isSubtask,
       tags: taskTags,
       rawLine
     } as TaskItem)

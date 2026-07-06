@@ -3,6 +3,13 @@
 Reopen this any time from **Settings → Release notes**. The current version
 number is shown in the window's title bar, next to "KNote".
 
+## 0.5.0
+
+- A task's attached note (the indented lines under a `- [ ]` checkbox) now
+  renders as a bordered, collapsible box in the live-preview editor — click
+  the arrow on the task line to fold the note away and back. Every task gets
+  the same box outline for a consistent look, even ones with no note to fold
+
 ## 0.4.0
 
 - **Outline panel**: the right sidebar now shows a collapsible outline of

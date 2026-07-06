@@ -77,6 +77,8 @@ export interface TaskItem {
   /** Task text after the checkbox */
   text: string
   indent: number
+  /** Nested under a less-indented task above it — a subtask, kept off the Kanban board */
+  isSubtask: boolean
   tags: string[]
   /** Exact full line text, used to verify targeted rewrites */
   rawLine: string

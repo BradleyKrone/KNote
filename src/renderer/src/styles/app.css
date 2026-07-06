@@ -478,12 +478,16 @@ button {
 
 .cm-task-archived {
   color: var(--text-faint);
-  text-decoration: line-through;
 }
 
-.knote-note-twisty {
+/* Fold arrow on the task's own checkbox line (NoteFoldToggleWidget) — a fixed,
+   always-visible home for the toggle regardless of fold state. The task line
+   itself is styled as the top of the note box (cm-task-notebox-* below), so it
+   stays visible and part of the same box whether folded or not. */
+.knote-notebox-arrow {
   display: inline-block;
   width: 12px;
+  margin-right: 4px;
   text-align: center;
   color: var(--text-muted);
   cursor: pointer;
@@ -491,8 +495,46 @@ button {
   font-size: 0.85em;
 }
 
-.knote-note-twisty:hover {
+.knote-notebox-arrow:hover {
   color: var(--text-normal);
+}
+
+/* Small "N lines hidden" hint shown inline after a folded task's text (see
+   cmSetup.ts's codeFolding placeholderDOM) — plain text, no border of its own,
+   since the task line already carries the box border. */
+.knote-notebox-foldinfo {
+  margin-left: 6px;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.knote-notebox-foldinfo:hover {
+  color: var(--text-muted);
+}
+
+.cm-task-notebox-line {
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+}
+
+.cm-task-notebox-first {
+  border-top: 1px solid var(--border-color);
+  border-radius: 6px 6px 0 0;
+  padding-top: 2px;
+}
+
+.cm-task-notebox-last {
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 0 0 6px 6px;
+  padding-bottom: 2px;
+}
+
+/* Single-line note block: both edges round out fully instead of the
+   -first/-last rules fighting over opposite corners. */
+.cm-task-notebox-first.cm-task-notebox-last {
+  border-radius: 6px;
 }
 
 .cm-foldPlaceholder {
