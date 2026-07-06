@@ -78,7 +78,12 @@ class CheckboxWidget extends WidgetType {
   }
 }
 
-class NoteTwistyWidget extends WidgetType {
+/** Fold toggle prefixed to the task's own checkbox line — a fixed, always-visible
+ * home for the arrow regardless of fold state, rather than living on the (often
+ * dimmed, e.g. archived) note text below. The task line itself doubles as the top
+ * of the bordered note box (see `cm-task-notebox-*` classes below), so the task
+ * stays visible and part of the same box whether the note is folded or not. */
+class NoteFoldToggleWidget extends WidgetType {
   constructor(
     readonly folded: boolean,
     readonly from: number,
@@ -87,24 +92,24 @@ class NoteTwistyWidget extends WidgetType {
     super()
   }
 
-  override eq(other: NoteTwistyWidget): boolean {
+  override eq(other: NoteFoldToggleWidget): boolean {
     return other.folded === this.folded && other.from === this.from && other.to === this.to
   }
 
   override toDOM(view: EditorView): HTMLElement {
-    const span = document.createElement('span')
-    span.className = 'knote-note-twisty'
-    span.textContent = this.folded ? '▸' : '▾'
-    span.title = this.folded ? 'Expand note' : 'Collapse note'
-    span.addEventListener('mousedown', (e) => e.preventDefault())
-    span.addEventListener('click', (e) => {
+    const arrow = document.createElement('span')
+    arrow.className = 'knote-notebox-arrow'
+    arrow.textContent = this.folded ? '▸' : '▾'
+    arrow.title = this.folded ? 'Expand note' : 'Collapse note'
+    arrow.addEventListener('mousedown', (e) => e.preventDefault())
+    arrow.addEventListener('click', (e) => {
       e.preventDefault()
       const effect = this.folded
         ? unfoldEffect.of({ from: this.from, to: this.to })
         : foldEffect.of({ from: this.from, to: this.to })
       view.dispatch({ effects: effect })
     })
-    return span
+    return arrow
   }
 
   override ignoreEvent(): boolean {
@@ -484,13 +489,23 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
         if (noteBlockEnd !== null) {
           const blockFrom = line.to
           const blockTo = state.doc.line(noteBlockEnd).to
+          const folded = isRangeFolded(state, blockFrom, blockTo)
+          const cascadeClass = isDone ? 'cm-task-done' : isArchived ? 'cm-task-archived' : null
+
+          // The task's own line is always the top of the box (and, when folded,
+          // the whole box) so the task stays visible and the toggle has a fixed,
+          // easy-to-spot home instead of hiding among the (often dimmed) note text.
           decos.push(
             Decoration.widget({
-              widget: new NoteTwistyWidget(isRangeFolded(state, blockFrom, blockTo), blockFrom, blockTo),
+              widget: new NoteFoldToggleWidget(folded, blockFrom, blockTo),
               side: -1
             }).range(bracketFrom)
           )
-          const cascadeClass = isDone ? 'cm-task-done' : isArchived ? 'cm-task-archived' : null
+          const taskBoxClasses = folded
+            ? 'cm-task-notebox-line cm-task-notebox-first cm-task-notebox-last'
+            : 'cm-task-notebox-line cm-task-notebox-first'
+          decos.push(Decoration.line({ class: taskBoxClasses }).range(line.from))
+
           for (let ln = line.number + 1; ln <= noteBlockEnd; ln++) {
             const childLine = state.doc.line(ln)
             const childIndent = /^[ \t]*/.exec(childLine.text)?.[0].length ?? 0
@@ -506,7 +521,22 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
             if (cascadeClass) {
               decos.push(Decoration.line({ class: cascadeClass }).range(childLine.from))
             }
+            if (!folded) {
+              const boxClass =
+                ln === noteBlockEnd
+                  ? 'cm-task-notebox-line cm-task-notebox-last'
+                  : 'cm-task-notebox-line'
+              decos.push(Decoration.line({ class: boxClass }).range(childLine.from))
+            }
           }
+        } else {
+          // No attached note — still box the task on its own so every task
+          // looks the same, just without a fold arrow (nothing to expand).
+          decos.push(
+            Decoration.line({
+              class: 'cm-task-notebox-line cm-task-notebox-first cm-task-notebox-last'
+            }).range(line.from)
+          )
         }
       }
 

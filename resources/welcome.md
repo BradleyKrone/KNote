@@ -100,6 +100,20 @@ Subtasks still work as normal checkboxes in the editor, but they never get
 their own card — only the top-level task shows on the Kanban board, so
 breaking work into steps doesn't clutter it up.
 
+Plain (non-checkbox) indented lines under a task are treated as that task's
+**attached note** instead, and render as a bordered box right under it in
+the live-preview editor:
+
+```
+- [ ] Main task
+    a note about the task, wrapped and indented under it
+    - can include plain bullets too
+```
+
+Click the arrow on the task line to fold the note away, or unfold it again —
+the task itself always stays visible, box and all, whether or not it has a
+note to expand.
+
 ## Timeline
 
 "Open timeline" in the command palette shows every dated task (`📅`/`@due`),
