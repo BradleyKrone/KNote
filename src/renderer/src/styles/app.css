@@ -1004,6 +1004,25 @@ button {
   cursor: pointer;
 }
 
+.cm-priority {
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 0.9em;
+  font-weight: 700;
+}
+.cm-priority-1 {
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+}
+.cm-priority-2 {
+  color: #d19a66;
+  background: color-mix(in srgb, #d19a66 12%, transparent);
+}
+.cm-priority-3 {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
 .cm-frontmatter-line {
   color: var(--text-faint);
   font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
