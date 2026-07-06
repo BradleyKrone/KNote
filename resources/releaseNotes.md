@@ -3,6 +3,19 @@
 Reopen this any time from **Settings → Release notes**. The current version
 number is shown in the window's title bar, next to "KNote".
 
+## 0.6.0
+
+- Fixed selecting/highlighting text so it's actually visible — it was
+  hidden behind opaque backgrounds on task lines and code blocks in the
+  editor, and could blend into the background in the Kanban board's task
+  editor
+- Tag and `[[link` suggestions (in the editor and the tag picker popover)
+  can now be cycled with `Tab`/`Shift+Tab` and chosen with `Enter`, instead
+  of requiring a mouse click
+- Priority markers (`!`, `!!`, `!!!`) now render as a colored pill badge in
+  the live-preview editor, matching the look of `#tags`, instead of plain
+  exclamation marks
+
 ## 0.5.0
 
 - A task's attached note (the indented lines under a `- [ ]` checkbox) now

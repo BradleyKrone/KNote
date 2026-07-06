@@ -13,7 +13,11 @@ import { languages } from '@codemirror/language-data'
 import { codeFolding, HighlightStyle, indentOnInput, syntaxHighlighting } from '@codemirror/language'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import {
+  acceptCompletion,
   autocompletion,
+  closeCompletion,
+  moveCompletionSelection,
+  startCompletion,
   type CompletionContext,
   type CompletionResult
 } from '@codemirror/autocomplete'
@@ -31,6 +35,22 @@ const formatKeymap = [
   { key: 'Mod-i', run: toggleItalic },
   { key: 'Mod-Shift-x', run: toggleStrikethrough },
   { key: 'Mod-`', run: toggleInlineCode }
+]
+
+// @codemirror/autocomplete ships no key bindings of its own — without these, the
+// [[link and #tag suggestion popups only accept a choice via mouse click. Tab/Shift-Tab
+// cycle the highlighted suggestion (mirroring the tag picker popover) and fall through
+// to indentWithTab when no popup is open, since these commands return false then.
+const linkTagCompletionKeymap = [
+  { key: 'Tab', run: moveCompletionSelection(true) },
+  { key: 'Shift-Tab', run: moveCompletionSelection(false) },
+  { key: 'ArrowDown', run: moveCompletionSelection(true) },
+  { key: 'ArrowUp', run: moveCompletionSelection(false) },
+  { key: 'PageDown', run: moveCompletionSelection(true, 'page') },
+  { key: 'PageUp', run: moveCompletionSelection(false, 'page') },
+  { key: 'Enter', run: acceptCompletion },
+  { key: 'Escape', run: closeCompletion },
+  { key: 'Ctrl-Space', run: startCompletion }
 ]
 
 /** [[  →  fuzzy note-title/alias completion (Obsidian's link suggester). */
@@ -155,6 +175,7 @@ export function createEditor(
     EditorView.domEventHandlers({ paste: handleImagePaste }),
     keymap.of([
       ...formatKeymap,
+      ...linkTagCompletionKeymap,
       ...defaultKeymap,
       ...historyKeymap,
       ...searchKeymap,

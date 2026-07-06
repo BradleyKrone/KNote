@@ -9,6 +9,7 @@ interface Props {
 
 export function TagPickerContent({ onSelect }: Props): React.JSX.Element {
   const [query, setQuery] = useState('')
+  const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -28,6 +29,14 @@ export function TagPickerContent({ onSelect }: Props): React.JSX.Element {
     VALID_TAG.test(cleanQuery) &&
     !tags.some(([tag]) => tag.toLowerCase() === cleanQuery.toLowerCase())
 
+  // Combined, ordered list of everything Tab can cycle through and Enter can pick.
+  const options = useMemo(
+    () => [...tags.map(([tag]) => tag), ...(canCreate ? [cleanQuery] : [])],
+    [tags, canCreate, cleanQuery]
+  )
+
+  const clampedIndex = options.length === 0 ? -1 : Math.min(activeIndex, options.length - 1)
+
   return (
     <div className="picker">
       <input
@@ -35,19 +44,31 @@ export function TagPickerContent({ onSelect }: Props): React.JSX.Element {
         className="picker-input"
         placeholder="Search or create a tag…"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          setQuery(e.target.value)
+          setActiveIndex(0)
+        }}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            if (tags[0]) onSelect(tags[0][0])
-            else if (canCreate) onSelect(cleanQuery)
+          if (e.key === 'Tab') {
+            e.preventDefault()
+            if (options.length === 0) return
+            setActiveIndex((i) => {
+              const current = Math.min(i, options.length - 1)
+              return e.shiftKey
+                ? (current - 1 + options.length) % options.length
+                : (current + 1) % options.length
+            })
+          } else if (e.key === 'Enter') {
+            e.preventDefault()
+            if (clampedIndex >= 0) onSelect(options[clampedIndex])
           }
         }}
       />
       <div className="picker-list">
-        {tags.map(([tag, count]) => (
+        {tags.map(([tag, count], i) => (
           <div
             key={tag}
-            className="picker-row"
+            className={`picker-row${i === clampedIndex ? ' active' : ''}`}
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onSelect(tag)}
           >
@@ -57,7 +78,7 @@ export function TagPickerContent({ onSelect }: Props): React.JSX.Element {
         ))}
         {canCreate && (
           <div
-            className="picker-row"
+            className={`picker-row${tags.length === clampedIndex ? ' active' : ''}`}
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => onSelect(cleanQuery)}
           >

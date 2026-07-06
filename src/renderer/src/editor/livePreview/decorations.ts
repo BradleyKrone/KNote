@@ -10,7 +10,7 @@ import { type EditorState, type Extension, type Range } from '@codemirror/state'
 import { foldedRanges, foldEffect, syntaxTree, unfoldEffect } from '@codemirror/language'
 import type { SyntaxNode } from '@lezer/common'
 import { isImage, parentOf } from '@shared/pathUtils'
-import { ARCHIVED_CHAR, TAG_RE, WIKI_LINK_RE } from '@shared/parser/patterns'
+import { ARCHIVED_CHAR, PRIORITY_RE, TAG_RE, WIKI_LINK_RE } from '@shared/parser/patterns'
 import { openWikiTarget } from '@/stores/indexStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -293,6 +293,19 @@ function decorateTags(
   }
 }
 
+/** Style a task's !/!!/!!! priority marker as a pill badge, like #tags. */
+function decoratePriority(decos: Range<Decoration>[], lineFrom: number, lineText: string): void {
+  const m = PRIORITY_RE.exec(lineText)
+  if (!m) return
+  const start = lineFrom + m.index + (m[0].length - m[1].length)
+  decos.push(
+    Decoration.mark({ class: `cm-priority cm-priority-${m[1].length}` }).range(
+      start,
+      start + m[1].length
+    )
+  )
+}
+
 /** `<span style="font-size:NNpx">text</span>` — hide the tags, scale the text. */
 const FONT_SIZE_SPAN_RE = /<span style="font-size:(\d{2})px">(.*?)<\/span>/g
 
@@ -543,6 +556,7 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
       if (!inCodeBlock && !frontmatterLineStarts.has(line.from)) {
         decorateWikiLinks(decos, line.from, line.text, touches, getPath)
         decorateTags(decos, line.from, line.text)
+        decoratePriority(decos, line.from, line.text)
         decorateFontSize(decos, line.from, line.text, touches)
       }
 
