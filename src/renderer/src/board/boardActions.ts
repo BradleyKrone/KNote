@@ -1,5 +1,5 @@
 import { samePath } from '@shared/pathUtils'
-import { ARCHIVED_CHAR, TASK_LINE_RE } from '@shared/parser/patterns'
+import { ARCHIVED_CHAR, REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
 import { getActiveEditorView } from '@/editor/activeView'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -42,24 +42,49 @@ function tryBufferRewrite(card: BoardCard, mutate: (lineFrom: number, lineText: 
   return mutate(line.from, line.text)
 }
 
-export async function setCardStatus(card: BoardCard, targetChar: string): Promise<void> {
+/**
+ * Change a task's status char. `reasonLine`, when given (a `Reason for
+ * <Column>: ... 📅 <date>` line for a column that requires one), is
+ * inserted directly under the task in the same rewrite — replacing an
+ * existing reason line there, if any — so the status change and its reason
+ * land as a single edit/undo step.
+ */
+export async function setCardStatus(
+  card: BoardCard,
+  targetChar: string,
+  reasonLine?: string
+): Promise<void> {
   const m = TASK_LINE_RE.exec(card.rawLine)
   if (!m) return
   const bracketOffset = m[1].length + m[2].length + 2
-  const newLine =
-    card.rawLine.slice(0, bracketOffset) + targetChar + card.rawLine.slice(bracketOffset + 1)
+  const newLine = card.rawLine.slice(0, bracketOffset) + targetChar + card.rawLine.slice(bracketOffset + 1)
 
-  const applied = tryBufferRewrite(card, (lineFrom) => {
-    getActiveEditorView()!.dispatch({
-      changes: { from: lineFrom + bracketOffset, to: lineFrom + bracketOffset + 1, insert: targetChar },
-      userEvent: 'input.knote.toggleTask'
-    })
+  const applied = tryBufferRewrite(card, (lineFrom, lineText) => {
+    const view = getActiveEditorView()!
+    const changes: Array<{ from: number; to?: number; insert: string }> = [
+      { from: lineFrom + bracketOffset, to: lineFrom + bracketOffset + 1, insert: targetChar }
+    ]
+    if (reasonLine !== undefined) {
+      const doc = view.state.doc
+      const lineNo = doc.lineAt(lineFrom).number
+      const nextLine = lineNo + 1 <= doc.lines ? doc.line(lineNo + 1) : null
+      if (nextLine && REASON_FOR_RE.test(nextLine.text)) {
+        changes.push({ from: nextLine.from, to: nextLine.to, insert: reasonLine })
+      } else {
+        changes.push({ from: lineFrom + lineText.length, insert: '\n' + reasonLine })
+      }
+    }
+    view.dispatch({ changes, userEvent: 'input.knote.toggleTask' })
     return true
   })
   if (applied) return
 
   try {
-    await window.knote.replaceLine(card.path, card.line, card.rawLine, newLine)
+    if (reasonLine !== undefined) {
+      await window.knote.setTaskStatusReason(card.path, card.line, card.rawLine, targetChar, reasonLine)
+    } else {
+      await window.knote.replaceLine(card.path, card.line, card.rawLine, newLine)
+    }
   } catch (err) {
     if (String(err).includes('KNOTE_STALE')) staleToast()
     else throw err
@@ -182,12 +207,21 @@ export async function deleteCard(card: BoardCard): Promise<void> {
   }
 }
 
-/** "Add card": appends a checkbox line to the scoped note or the inbox. */
-export async function addCard(scope: BoardScope, statusChar: string, text: string): Promise<void> {
+/**
+ * "Add card": appends a checkbox line to the scoped note or the inbox.
+ * `reasonLine`, when given, is appended as a second (attached-note) line
+ * directly under the new task.
+ */
+export async function addCard(
+  scope: BoardScope,
+  statusChar: string,
+  text: string,
+  reasonLine?: string
+): Promise<void> {
   await useSettingsStore.getState().loadVaultConfig()
   const config = useSettingsStore.getState().vaultConfig
   const target = scope.kind === 'note' ? scope.path : config.inboxNote
-  const line = `- [${statusChar}] ${text.trim()}`
+  const line = `- [${statusChar}] ${text.trim()}` + (reasonLine !== undefined ? '\n' + reasonLine : '')
 
   // If the target note is open with unsaved edits, append via the buffer
   const ws = useWorkspaceStore.getState()

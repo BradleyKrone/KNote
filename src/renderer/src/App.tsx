@@ -27,6 +27,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { WelcomeDialog } from './components/WelcomeDialog'
 import { ReleaseNotesDialog } from './components/ReleaseNotesDialog'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { ReasonDialog } from './components/ReasonDialog'
 import { registerCoreCommands } from './commands/coreCommands'
 import { runCommand } from './commands/registry'
 import { openThisWeekNote } from './commands/weeklyNotes'
@@ -256,6 +257,7 @@ export default function App(): React.JSX.Element {
       <WelcomeDialog />
       <ReleaseNotesDialog />
       <ConfirmDialog />
+      <ReasonDialog />
       {toast && <div className="toast">{toast}</div>}
     </div>
   )

@@ -18,6 +18,8 @@ export interface BoardCard {
   tags: string[]
   due: string | null
   priority: number
+  waitingSince: string | null
+  waitingReason: string | null
   rawLine: string
 }
 
@@ -51,6 +53,8 @@ export function toCard(meta: NoteMeta, task: NoteMeta['tasks'][number]): BoardCa
     tags: task.tags,
     due: due ? (due[1] ?? due[2]) : null,
     priority: prio ? prio[1].length : 0,
+    waitingSince: task.waitingSince,
+    waitingReason: task.waitingReason,
     rawLine: task.rawLine
   }
 }

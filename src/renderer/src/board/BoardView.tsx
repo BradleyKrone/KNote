@@ -24,6 +24,8 @@ import {
 import { reorderCard, setCardStatus } from './boardActions'
 import { Column } from './Column'
 import { cardId, CardPreview } from './Card'
+import { promptReason } from '@/stores/reasonPromptStore'
+import { reasonLineForTask } from '@shared/parser/patterns'
 
 export function BoardView(): React.JSX.Element {
   const notes = useIndexStore((s) => s.notes)
@@ -102,15 +104,39 @@ export function BoardView(): React.JSX.Element {
   }
 
   /** Column change committed: keep the preview until `cards` confirms the move. */
-  const commitColumnChange = (card: BoardCard, targetChar: string): void => {
+  const commitColumnChange = (card: BoardCard, targetChar: string, appendText = ''): void => {
     const pending = { path: card.path, line: card.line, targetChar }
     pendingMoveRef.current = pending
-    void setCardStatus(card, targetChar).finally(() => {
+    void setCardStatus(card, targetChar, appendText).finally(() => {
       // Safety net: if the store never reflects the move (e.g. a stale-write
       // conflict that silently no-ops), don't leave the preview stuck forever.
       setTimeout(() => {
         if (pendingMoveRef.current === pending) clearPreview()
       }, 2000)
+    })
+  }
+
+  /**
+   * Gate a column change on a reason + date when the target column requires
+   * one (e.g. Waiting) — cancelling snaps the drag preview back instead of
+   * committing a bare status-char change.
+   */
+  const attemptColumnChange = (card: BoardCard, targetChar: string): void => {
+    const targetColumn = columns.find((c) => c.char === targetChar)
+    if (!targetColumn?.requireReason) {
+      commitColumnChange(card, targetChar)
+      return
+    }
+    void promptReason(targetColumn.name).then((result) => {
+      if (!result) {
+        clearPreview()
+        return
+      }
+      commitColumnChange(
+        card,
+        targetChar,
+        reasonLineForTask(card.rawLine, targetColumn.name, result.reason, result.date)
+      )
     })
   }
 
@@ -130,7 +156,7 @@ export function BoardView(): React.JSX.Element {
 
     if (overId.startsWith('col:')) {
       const targetChar = overId.slice(4)
-      if (targetChar !== card.statusChar) commitColumnChange(card, targetChar)
+      if (targetChar !== card.statusChar) attemptColumnChange(card, targetChar)
       else clearPreview()
       return
     }
@@ -142,7 +168,7 @@ export function BoardView(): React.JSX.Element {
     }
     const sameColumn = columnForChar(columns, overCard.statusChar) === columnForChar(columns, card.statusChar)
     if (!sameColumn) {
-      commitColumnChange(card, overCard.statusChar)
+      attemptColumnChange(card, overCard.statusChar)
     } else if (card.path === overCard.path && card.line !== overCard.line) {
       void reorderCard(card, overCard)
       clearPreview()

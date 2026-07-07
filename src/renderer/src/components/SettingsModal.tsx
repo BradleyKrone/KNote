@@ -256,6 +256,21 @@ export function SettingsModal(): React.JSX.Element | null {
                           setDraft({ ...draft, columns })
                         }}
                       />
+                      <label
+                        className="column-require-reason"
+                        title="Require a reason + date whenever a task moves into this column"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!col.requireReason}
+                          onChange={(e) => {
+                            const columns = [...draft.columns]
+                            columns[i] = { ...col, requireReason: e.target.checked }
+                            setDraft({ ...draft, columns })
+                          }}
+                        />
+                        Require reason
+                      </label>
                       <button
                         className="icon-btn"
                         title="Remove column"

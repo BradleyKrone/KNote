@@ -5,6 +5,10 @@ number is shown in the window's title bar, next to "KNote".
 
 ## 0.6.0
 
+- Fixed a Kanban board bug where clicking a task's note the first time
+  jumped to the top of the note instead of the task's line (a second click
+  landed correctly) — the editor was scrolling before it had measured its
+  layout on a fresh open
 - Fixed selecting/highlighting text so it's actually visible — it was
   hidden behind opaque backgrounds on task lines and code blocks in the
   editor, and could blend into the background in the Kanban board's task

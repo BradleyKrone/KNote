@@ -107,7 +107,10 @@ app.whenReady().then(async () => {
       const rel = decodeURIComponent(request.url.slice(prefix.length))
       if (!isImage(rel)) return new Response('Forbidden', { status: 403 })
       const abs = vault.toAbs(rel)
-      return net.fetch(pathToFileURL(abs).toString())
+      // Awaited so a missing/moved file's rejection is caught here instead
+      // of surfacing as an unhandled net::ERR_FILE_NOT_FOUND after this
+      // handler has already returned.
+      return await net.fetch(pathToFileURL(abs).toString())
     } catch {
       return new Response('Not found', { status: 404 })
     }

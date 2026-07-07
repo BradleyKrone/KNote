@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { EditorSelection } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { ARCHIVED_CHAR, DUE_RE, MILESTONE_LINE_RE, TASK_LINE_RE } from '@shared/parser/patterns'
+import { ARCHIVED_CHAR, DUE_RE, MILESTONE_LINE_RE, reasonLineForTask, TASK_LINE_RE } from '@shared/parser/patterns'
+import { promptReason } from '@/stores/reasonPromptStore'
 import type { BoardColumn } from '@shared/types'
 import { registerKeepMine, useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { createEditor, type KnoteEditor } from './cmSetup'
-import { setActiveEditorView } from './activeView'
+import { getActiveEditorView, setActiveEditorView } from './activeView'
 import {
   adjustFontSize,
   insertCheckboxAtCursor,
@@ -119,7 +120,23 @@ function buildCheckboxMenuItems(view: EditorView, columns: BoardColumn[]): MenuE
   const currentChar = TASK_LINE_RE.exec(line.text)?.[3] ?? null
   const items: MenuEntry[] = columns.map((col) => ({
     label: col.char === currentChar ? `✓ ${col.name}` : col.name,
-    onClick: () => setTaskStatusAtCursor(view, col.char)
+    onClick: () => {
+      if (col.char === currentChar) return
+      if (!col.requireReason) {
+        setTaskStatusAtCursor(view, col.char)
+        return
+      }
+      void promptReason(col.name).then((result) => {
+        if (!result) return
+        const target = getActiveEditorView() ?? view
+        const taskLine = target.state.doc.lineAt(target.state.selection.main.head).text
+        setTaskStatusAtCursor(
+          target,
+          col.char,
+          reasonLineForTask(taskLine, col.name, result.reason, result.date)
+        )
+      })
+    }
   }))
   items.push(
     { separator: true },
@@ -286,13 +303,38 @@ export function EditorPane(): React.JSX.Element {
     setContextMenu(null)
     setActivePicker(null)
 
-    // Heading links request a scroll-to-line on open
-    const scrollLine = useWorkspaceStore.getState().consumeScrollRequest()
-    if (scrollLine !== null && scrollLine < editor.view.state.doc.lines) {
-      const linePos = editor.view.state.doc.line(scrollLine + 1).from
-      editor.view.dispatch({
-        selection: { anchor: linePos },
-        effects: EditorView.scrollIntoView(linePos, { y: 'start', yMargin: 60 })
+    // Heading links / board cards request a scroll-to-line on open. Peek the
+    // request without clearing it: under React StrictMode this create effect
+    // runs twice on a fresh mount (create → destroy → create), and clearing
+    // in the first, discarded run would leave the second, live editor with
+    // nothing to scroll to. It's cleared below, only by the surviving editor.
+    const scrollLine = useWorkspaceStore.getState().scrollRequest
+    if (scrollLine !== null) {
+      const scrollToTarget = (): void => {
+        // Editor may have been torn down (StrictMode / fast re-nav) before this
+        // ran — only the currently-live editor should act on the request.
+        if (editorRef.current !== editor) return
+        if (scrollLine >= editor.view.state.doc.lines) return
+        const linePos = editor.view.state.doc.line(scrollLine + 1).from
+        editor.view.dispatch({
+          selection: { anchor: linePos },
+          effects: EditorView.scrollIntoView(linePos, { y: 'start', yMargin: 60 })
+        })
+      }
+      // Do it now for the warm case (editor already laid out — e.g. re-opening
+      // the note already behind the board). On a fresh remount the container
+      // was just inserted and CodeMirror hasn't measured line heights yet, so
+      // this first dispatch scrolls against *estimated* heights and lands at
+      // the top; re-issue on the next frame, once the browser has laid the
+      // container out for real, so the target line is exact. The surviving
+      // editor also clears the request so a later reading-mode toggle (which
+      // re-runs this effect) doesn't jump back to the same line.
+      scrollToTarget()
+      requestAnimationFrame(() => {
+        scrollToTarget()
+        if (editorRef.current === editor) {
+          useWorkspaceStore.getState().clearScrollRequest()
+        }
       })
     }
     return () => {

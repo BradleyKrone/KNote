@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs'
 import type { VaultPath } from '@shared/types'
+import { REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
 import { toAbs, writeFileAtomic } from './vaultService'
 
 export const STALE_ERROR = 'KNOTE_STALE'
@@ -49,6 +50,40 @@ function locateLine(lines: string[], lineNo: number, expectedText: string): numb
   }, [])
   if (matches.length === 1) return matches[0]
   return -1
+}
+
+/**
+ * Verified status-char rewrite that also attaches a `Reason for <Column>: ...`
+ * note line directly under the task (inserted, or replacing an existing
+ * reason line already sitting there) — one atomic write for both edits.
+ */
+export async function setTaskStatusReason(
+  rel: VaultPath,
+  lineNo: number,
+  expectedText: string,
+  targetChar: string,
+  reasonLine: string
+): Promise<void> {
+  const abs = toAbs(rel)
+  const content = await fs.readFile(abs, 'utf-8')
+  const eol = content.includes('\r\n') ? '\r\n' : '\n'
+  const lines = content.split(/\r?\n/)
+  const target = locateLine(lines, lineNo, expectedText)
+  if (target === -1) throw new Error(`${STALE_ERROR}: line changed on disk in ${rel}`)
+
+  const m = TASK_LINE_RE.exec(lines[target])
+  if (!m) throw new Error(`${STALE_ERROR}: line changed on disk in ${rel}`)
+  const bracketOffset = m[1].length + m[2].length + 2
+  lines[target] =
+    lines[target].slice(0, bracketOffset) + targetChar + lines[target].slice(bracketOffset + 1)
+
+  const nextLine = lines[target + 1]
+  if (nextLine !== undefined && REASON_FOR_RE.test(nextLine)) {
+    lines[target + 1] = reasonLine
+  } else {
+    lines.splice(target + 1, 0, reasonLine)
+  }
+  await writeFileAtomic(rel, lines.join(eol))
 }
 
 /** Verified line delete (Kanban "delete card"). */

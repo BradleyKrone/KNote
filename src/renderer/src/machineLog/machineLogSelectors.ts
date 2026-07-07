@@ -136,12 +136,21 @@ export function machineSerials(notes: Map<string, NoteMeta>, machines: MachineDe
   return [...serials].sort()
 }
 
-/** Distinct filterable tags/attributes: inline entry tags plus every registered config code. */
+/**
+ * Distinct filterable tags/attributes, models first: inline entry tags plus
+ * every registered config code, with registered models sorted ahead of
+ * everything else (attributes, inline tags).
+ */
 export function machineFilterTags(notes: Map<string, NoteMeta>, machines: MachineDef[]): string[] {
-  const tags = new Set<string>()
+  const models = new Set<string>()
+  for (const def of machines) if (def.model) models.add(def.model)
+
+  const others = new Set<string>()
   for (const meta of notes.values()) {
-    for (const item of meta.machineLog) for (const t of item.tags) tags.add(t)
+    for (const item of meta.machineLog) for (const t of item.tags) others.add(t)
   }
-  for (const def of machines) for (const c of configCodes(def)) tags.add(c)
-  return [...tags].sort()
+  for (const def of machines) for (const attr of def.attributes) if (attr) others.add(attr)
+  for (const m of models) others.delete(m)
+
+  return [...[...models].sort(), ...[...others].sort()]
 }
