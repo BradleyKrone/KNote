@@ -31,7 +31,7 @@ import { titleOf } from '../pathUtils'
 const processor = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml'])
 
 export { TAG_RE, TASK_LINE_RE, WIKI_LINK_RE } from './patterns'
-import { MACHINE_ENTRY_RE, MILESTONE_LINE_RE, TAG_RE, TASK_LINE_RE, WIKI_LINK_RE } from './patterns'
+import { MACHINE_ENTRY_RE, MILESTONE_LINE_RE, REASON_FOR_RE, TAG_RE, TASK_LINE_RE, WIKI_LINK_RE } from './patterns'
 
 interface PositionedNode extends Node {
   value?: string
@@ -180,6 +180,19 @@ export function parseNote(path: VaultPath, content: string, mtimeMs = 0): NoteMe
     while ((tagMatch = TAG_RE.exec(' ' + text)) !== null) {
       if (!/^\d+$/.test(tagMatch[2])) taskTags.push(tagMatch[2])
     }
+    // An immediately-following, more-indented `Reason for <Column>: ...` line
+    // is this task's attached waiting reason (same nesting as a task note).
+    let waitingSince: string | null = null
+    let waitingReason: string | null = null
+    const nextRaw = i + 1 < rawLines.length ? rawLines[i + 1].replace(/\r$/, '') : null
+    if (nextRaw !== null) {
+      const reasonMatch = REASON_FOR_RE.exec(nextRaw)
+      if (reasonMatch && reasonMatch[1].length > indent) {
+        waitingReason = reasonMatch[3]
+        waitingSince = reasonMatch[4]
+      }
+    }
+
     meta.tasks.push({
       line: i,
       statusChar: rawMatch[3],
@@ -187,7 +200,9 @@ export function parseNote(path: VaultPath, content: string, mtimeMs = 0): NoteMe
       indent,
       isSubtask,
       tags: taskTags,
-      rawLine
+      rawLine,
+      waitingSince,
+      waitingReason
     } as TaskItem)
   }
 

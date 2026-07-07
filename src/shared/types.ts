@@ -82,6 +82,10 @@ export interface TaskItem {
   tags: string[]
   /** Exact full line text, used to verify targeted rewrites */
   rawLine: string
+  /** Date from an attached `Reason for <Column>: ... 📅 <date>` note line, if present */
+  waitingSince: string | null
+  /** Reason text from an attached `Reason for <Column>: ...` note line, if present */
+  waitingReason: string | null
 }
 
 export interface MilestoneItem {
@@ -168,6 +172,8 @@ export interface BoardColumn {
   name: string
   /** The checkbox status char that maps to this column (' ', '/', 'x', ...) */
   char: string
+  /** Moving a card into this column prompts for a required reason + date (⏳), e.g. Waiting */
+  requireReason?: boolean
 }
 
 export interface VaultConfig {
@@ -196,7 +202,7 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   columns: [
     { name: 'To Do', char: ' ' },
     { name: 'Ready to Work', char: 'r' },
-    { name: 'Waiting', char: 'w' },
+    { name: 'Waiting', char: 'w', requireReason: true },
     { name: 'In Progress', char: '/' },
     { name: 'Done', char: 'x' }
   ],

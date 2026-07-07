@@ -37,14 +37,15 @@ interface WorkspaceState {
   outlineHeadings: HeadingRef[]
 
   openFile: (path: VaultPath, scrollToLine?: number) => Promise<void>
-  consumeScrollRequest: () => number | null
+  /** Clear a pending scroll target once the editor has applied it. */
+  clearScrollRequest: () => void
   closeFile: () => void
   setMode: (mode: EditorMode) => void
   setActiveLineIsTask: (isTask: boolean) => void
   setOutlineHeadings: (headings: HeadingRef[]) => void
   markDirty: () => void
   setConflict: (conflict: 'modified' | 'deleted' | null) => void
-  markSaved: (mtimeMs: number) => void
+  markSaved: (content: string, mtimeMs: number) => void
   /** A rename/move changed the open file's path. */
   pathChanged: (oldPath: VaultPath, newPath: VaultPath) => void
   /** Watcher reported an external change to some path. */
@@ -86,10 +87,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     })
   },
 
-  consumeScrollRequest: () => {
-    const line = get().scrollRequest
-    if (line !== null) set({ scrollRequest: null })
-    return line
+  clearScrollRequest: () => {
+    if (get().scrollRequest !== null) set({ scrollRequest: null })
   },
 
   closeFile: () => set({ note: null, dirty: false, conflict: null }),
@@ -108,9 +107,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   setConflict: (conflict) => set({ conflict }),
 
-  markSaved: (mtimeMs) => {
+  markSaved: (content, mtimeMs) => {
     const note = get().note
-    if (note) set({ dirty: false, note: { ...note, mtimeMs } })
+    // Keep the disk-snapshot content in sync with what was just written so a
+    // later remount (e.g. leaving and returning to the editor) re-seeds the
+    // buffer from the saved text, not the stale content from when the note
+    // was first opened. Deliberately doesn't bump `version` — that would
+    // force-recreate the live CodeMirror instance (losing cursor/undo/focus)
+    // on every autosave.
+    if (note) set({ dirty: false, note: { ...note, content, mtimeMs } })
   },
 
   pathChanged: (oldPath, newPath) => {
@@ -137,8 +142,25 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       if (dirty) {
         set({ conflict: 'modified' })
       } else {
-        // Clean buffer: silently reload from disk
-        await get().openFile(note.path)
+        // Clean buffer: reconcile with disk. This watcher event is often
+        // just an echo of our own autosave (e.g. triggered by an
+        // autosave-on-navigate write when leaving the editor for the
+        // board), arriving ~200ms late because of the watcher's write-
+        // stability delay. If the content already matches what's loaded,
+        // just refresh mtimeMs — deliberately not calling openFile()/
+        // bumping version, since that would force-recreate the live
+        // CodeMirror instance (destroying cursor/scroll/undo) for no
+        // reason, and could stomp a scroll-to-line request from an
+        // explicit navigation (e.g. a board-card jump) that raced with
+        // this same self-echoed event.
+        const result = await window.knote.readFile(path)
+        const current = get().note
+        if (!current || !samePath(current.path, path)) return
+        if (result.content === current.content) {
+          set({ note: { ...current, mtimeMs: result.mtimeMs } })
+        } else {
+          await get().openFile(note.path, get().scrollRequest ?? undefined)
+        }
       }
     }
   },

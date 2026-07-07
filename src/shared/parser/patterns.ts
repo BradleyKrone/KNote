@@ -16,6 +16,32 @@ export const TASK_LINE_RE = /^(\s*)([-*+]|\d+[.)])\s\[(.)\](?:\s(.*))?$/
 /** @due(2026-07-10) or 📅 2026-07-10 */
 export const DUE_RE = /(?:@due\((\d{4}-\d{2}-\d{2})\)|📅\s*(\d{4}-\d{2}-\d{2}))/
 
+/**
+ * `Reason for <Column>: <reason> 📅 <date>` — an indented line attached
+ * under a task (same nesting convention as a plain task note), written when
+ * the task moves into a column configured with `requireReason` (e.g.
+ * Waiting). Group 1 = indent, group 2 = column name, group 3 = reason,
+ * group 4 = date.
+ */
+export const REASON_FOR_RE = /^(\s+)Reason for (.+?):\s*(.*?)\s*📅\s*(\d{4}-\d{2}-\d{2})\s*$/
+
+/** Builds the indented `Reason for <Column>: <reason> 📅 <date>` line attached under a task. */
+export function formatReasonLine(indent: string, columnName: string, reason: string, date: string): string {
+  return `${indent}Reason for ${columnName}: ${reason} 📅 ${date}`
+}
+
+/** Builds a reason line nested one level deeper than the given task line's own indent. */
+export function reasonLineForTask(
+  taskLineText: string,
+  columnName: string,
+  reason: string,
+  date: string
+): string {
+  const m = TASK_LINE_RE.exec(taskLineText)
+  const indent = (m ? m[1] : '') + '  '
+  return formatReasonLine(indent, columnName, reason, date)
+}
+
 /** !, !!, or !!! priority marker — must stand alone (whitespace/line boundaries) */
 export const PRIORITY_RE = /(?:^|\s)(!{1,3})(?=\s|$)/
 

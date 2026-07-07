@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { EditorSelection } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { ARCHIVED_CHAR, DUE_RE, MILESTONE_LINE_RE, TASK_LINE_RE } from '@shared/parser/patterns'
+import { ARCHIVED_CHAR, DUE_RE, MILESTONE_LINE_RE, reasonLineForTask, TASK_LINE_RE } from '@shared/parser/patterns'
+import { promptReason } from '@/stores/reasonPromptStore'
 import type { BoardColumn } from '@shared/types'
 import { registerKeepMine, useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { createEditor, type KnoteEditor } from './cmSetup'
-import { setActiveEditorView } from './activeView'
+import { getActiveEditorView, setActiveEditorView } from './activeView'
 import {
   adjustFontSize,
   insertCheckboxAtCursor,
@@ -119,7 +120,23 @@ function buildCheckboxMenuItems(view: EditorView, columns: BoardColumn[]): MenuE
   const currentChar = TASK_LINE_RE.exec(line.text)?.[3] ?? null
   const items: MenuEntry[] = columns.map((col) => ({
     label: col.char === currentChar ? `✓ ${col.name}` : col.name,
-    onClick: () => setTaskStatusAtCursor(view, col.char)
+    onClick: () => {
+      if (col.char === currentChar) return
+      if (!col.requireReason) {
+        setTaskStatusAtCursor(view, col.char)
+        return
+      }
+      void promptReason(col.name).then((result) => {
+        if (!result) return
+        const target = getActiveEditorView() ?? view
+        const taskLine = target.state.doc.lineAt(target.state.selection.main.head).text
+        setTaskStatusAtCursor(
+          target,
+          col.char,
+          reasonLineForTask(taskLine, col.name, result.reason, result.date)
+        )
+      })
+    }
   }))
   items.push(
     { separator: true },
@@ -181,6 +198,11 @@ export function EditorPane(): React.JSX.Element {
   const saveInFlight = useRef(false)
   const savePending = useRef(false)
   const lastSaved = useRef<string | null>(null)
+  // Latest known buffer content, kept fresh on every doc change so a save
+  // retry queued while the editor is being torn down (e.g. switching to the
+  // Kanban board mid-save) still has content to write instead of silently
+  // no-op'ing once editorRef.current goes null.
+  const pendingContent = useRef<string | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [activePicker, setActivePicker] = useState<ActivePicker | null>(null)
   // Editor state captured on right-click (DOM event), consumed when the main
@@ -197,7 +219,19 @@ export function EditorPane(): React.JSX.Element {
 
   const save = useCallback(async (force = false): Promise<void> => {
     const editor = editorRef.current
-    if (!editor) return
+    let content: string
+    if (editor) {
+      content = editor.view.state.doc.toString()
+      if (eolRef.current === '\r\n') content = content.replace(/\n/g, '\r\n')
+      pendingContent.current = content
+    } else if (pendingContent.current !== null) {
+      // Editor already destroyed (e.g. this is a queued retry that fired
+      // after the user navigated away mid-save) — use the last buffer
+      // content captured before teardown instead of silently dropping it.
+      content = pendingContent.current
+    } else {
+      return
+    }
     // While a conflict is unresolved, never auto-write over the external edit
     if (!force && useWorkspaceStore.getState().conflict) return
     if (saveTimer.current) {
@@ -208,8 +242,6 @@ export function EditorPane(): React.JSX.Element {
       savePending.current = true
       return
     }
-    let content = editor.view.state.doc.toString()
-    if (eolRef.current === '\r\n') content = content.replace(/\n/g, '\r\n')
     if (!force && content === lastSaved.current) return
     saveInFlight.current = true
     try {
@@ -218,7 +250,8 @@ export function EditorPane(): React.JSX.Element {
       const expected = force ? undefined : useWorkspaceStore.getState().note?.mtimeMs
       const result = await window.knote.writeFile(pathRef.current, content, expected)
       lastSaved.current = content
-      useWorkspaceStore.getState().markSaved(result.mtimeMs)
+      pendingContent.current = null
+      useWorkspaceStore.getState().markSaved(content, result.mtimeMs)
     } catch (err) {
       if (String(err).includes('KNOTE_CONFLICT')) {
         useWorkspaceStore.getState().setConflict('modified')
@@ -270,13 +303,38 @@ export function EditorPane(): React.JSX.Element {
     setContextMenu(null)
     setActivePicker(null)
 
-    // Heading links request a scroll-to-line on open
-    const scrollLine = useWorkspaceStore.getState().consumeScrollRequest()
-    if (scrollLine !== null && scrollLine < editor.view.state.doc.lines) {
-      const linePos = editor.view.state.doc.line(scrollLine + 1).from
-      editor.view.dispatch({
-        selection: { anchor: linePos },
-        effects: EditorView.scrollIntoView(linePos, { y: 'start', yMargin: 60 })
+    // Heading links / board cards request a scroll-to-line on open. Peek the
+    // request without clearing it: under React StrictMode this create effect
+    // runs twice on a fresh mount (create → destroy → create), and clearing
+    // in the first, discarded run would leave the second, live editor with
+    // nothing to scroll to. It's cleared below, only by the surviving editor.
+    const scrollLine = useWorkspaceStore.getState().scrollRequest
+    if (scrollLine !== null) {
+      const scrollToTarget = (): void => {
+        // Editor may have been torn down (StrictMode / fast re-nav) before this
+        // ran — only the currently-live editor should act on the request.
+        if (editorRef.current !== editor) return
+        if (scrollLine >= editor.view.state.doc.lines) return
+        const linePos = editor.view.state.doc.line(scrollLine + 1).from
+        editor.view.dispatch({
+          selection: { anchor: linePos },
+          effects: EditorView.scrollIntoView(linePos, { y: 'start', yMargin: 60 })
+        })
+      }
+      // Do it now for the warm case (editor already laid out — e.g. re-opening
+      // the note already behind the board). On a fresh remount the container
+      // was just inserted and CodeMirror hasn't measured line heights yet, so
+      // this first dispatch scrolls against *estimated* heights and lands at
+      // the top; re-issue on the next frame, once the browser has laid the
+      // container out for real, so the target line is exact. The surviving
+      // editor also clears the request so a later reading-mode toggle (which
+      // re-runs this effect) doesn't jump back to the same line.
+      scrollToTarget()
+      requestAnimationFrame(() => {
+        scrollToTarget()
+        if (editorRef.current === editor) {
+          useWorkspaceStore.getState().clearScrollRequest()
+        }
       })
     }
     return () => {

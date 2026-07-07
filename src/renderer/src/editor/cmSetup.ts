@@ -24,7 +24,13 @@ import {
 import { classHighlighter, tags as t } from '@lezer/highlight'
 import { TASK_LINE_RE } from '@shared/parser/patterns'
 import { livePreviewExtension } from './livePreview/decorations'
-import { toggleBold, toggleInlineCode, toggleItalic, toggleStrikethrough } from './formatting'
+import {
+  insertTaskNoteLine,
+  toggleBold,
+  toggleInlineCode,
+  toggleItalic,
+  toggleStrikethrough
+} from './formatting'
 import { handleImagePaste } from './pasteImage'
 import { scanHeadings } from './outlineHeadings'
 import { noteCandidates, tagCounts, useIndexStore } from '@/stores/indexStore'
@@ -52,6 +58,12 @@ const linkTagCompletionKeymap = [
   { key: 'Escape', run: closeCompletion },
   { key: 'Ctrl-Space', run: startCompletion }
 ]
+
+// Enter on a task line starts an indented note underneath it rather than a
+// new sibling task — must come before defaultKeymap/markdownKeymap's own
+// Enter continuation, and after the completion popup's Enter (which only
+// fires while a popup is open, and otherwise falls through).
+const taskEnterKeymap = [{ key: 'Enter', run: insertTaskNoteLine }]
 
 /** [[  →  fuzzy note-title/alias completion (Obsidian's link suggester). */
 function wikiLinkCompletions(context: CompletionContext): CompletionResult | null {
@@ -167,7 +179,11 @@ export function createEditor(
     EditorView.lineWrapping,
     // CM6 sets spellcheck="false" by default; opt back into the OS/Chromium spellchecker
     EditorView.contentAttributes.of({ spellcheck: 'true', autocorrect: 'on' }),
-    markdown({ base: markdownLanguage, codeLanguages: languages }),
+    // addKeymap: false — markdown() otherwise bundles its own Enter/Backspace
+    // keymap at Prec.high, which would run before (and preempt) taskEnterKeymap
+    // below no matter where it's placed in our own keymap.of(). We re-add
+    // markdownKeymap ourselves at plain precedence so our ordering controls it.
+    markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: false }),
     syntaxHighlighting(mdHighlight),
     syntaxHighlighting(classHighlighter),
     highlightSelectionMatches(),
@@ -176,6 +192,7 @@ export function createEditor(
     keymap.of([
       ...formatKeymap,
       ...linkTagCompletionKeymap,
+      ...taskEnterKeymap,
       ...defaultKeymap,
       ...historyKeymap,
       ...searchKeymap,

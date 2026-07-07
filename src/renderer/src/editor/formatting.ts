@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import { EditorSelection, type Text } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
-import { TASK_LINE_RE } from '@shared/parser/patterns'
+import { REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
 import { getActiveEditorView } from './activeView'
 import { insertTag, setDueDate, setPriority } from '@/taskMeta'
 
@@ -316,20 +316,62 @@ export function insertCheckboxAtCursor(view: EditorView): void {
   })
 }
 
+/**
+ * Enter on a task line starts an indented note line underneath it (rendered
+ * folded as the task's attached note, see `findNoteBlockEnd` in
+ * livePreview/decorations.ts) instead of continuing with another `- [ ]`
+ * sibling task at the same level — task text is usually short, and further
+ * detail belongs in the note, not a new task.
+ */
+export function insertTaskNoteLine(view: EditorView): boolean {
+  const { state } = view
+  const range = state.selection.main
+  if (!range.empty) return false
+  const line = state.doc.lineAt(range.head)
+  const task = TASK_LINE_RE.exec(line.text)
+  if (!task) return false
+  const insert = '\n' + task[1] + '  '
+  view.dispatch(
+    state.update({
+      changes: { from: range.head, insert },
+      selection: EditorSelection.cursor(range.head + insert.length),
+      userEvent: 'input.knote.taskNote',
+      scrollIntoView: true
+    })
+  )
+  return true
+}
+
 /** Variant usable from the toolbar/palette (acts on the active editor). */
 export function insertCheckboxOnActive(): void {
   const view = getActiveEditorView()
   if (view) insertCheckboxAtCursor(view)
 }
 
-/** Rewrite the current line's checkbox status char (Kanban column or archive). */
-export function setTaskStatusAtCursor(view: EditorView, char: string): void {
-  replaceCurrentLine(view, (text) => {
-    const m = TASK_LINE_RE.exec(text)
-    if (!m) return text
-    const bracketOffset = m[1].length + m[2].length + 2
-    return text.slice(0, bracketOffset) + char + text.slice(bracketOffset + 1)
-  })
+/**
+ * Rewrite the current line's checkbox status char (Kanban column or
+ * archive). `reasonLine`, when given (a `Reason for <Column>: ... 📅 <date>`
+ * line for a column that requires one), is inserted directly under the task
+ * in the same transaction — replacing an existing reason line there, if any.
+ */
+export function setTaskStatusAtCursor(view: EditorView, char: string, reasonLine?: string): void {
+  const line = view.state.doc.lineAt(view.state.selection.main.head)
+  const m = TASK_LINE_RE.exec(line.text)
+  if (!m) return
+  const bracketOffset = m[1].length + m[2].length + 2
+  const changes: Array<{ from: number; to?: number; insert: string }> = [
+    { from: line.from + bracketOffset, to: line.from + bracketOffset + 1, insert: char }
+  ]
+  if (reasonLine !== undefined) {
+    const doc = view.state.doc
+    const nextLine = line.number + 1 <= doc.lines ? doc.line(line.number + 1) : null
+    if (nextLine && REASON_FOR_RE.test(nextLine.text)) {
+      changes.push({ from: nextLine.from, to: nextLine.to, insert: reasonLine })
+    } else {
+      changes.push({ from: line.to, insert: '\n' + reasonLine })
+    }
+  }
+  view.dispatch({ changes, userEvent: 'input.knote.toggleTask' })
 }
 
 /** Insert a ready-to-edit 🏁 milestone line at the cursor, with the placeholder label selected. */
@@ -362,10 +404,15 @@ export function insertMilestoneAtCursor(important: boolean): void {
   view.focus()
 }
 
+/** Detail lines auto-added below every new machine work-log entry, ready
+ *  to fill in after the label. */
+const MACHINE_ENTRY_TEMPLATE_LABELS = ['Base Machine Software', 'Testing Software', 'Notes']
+
 /**
  * Insert a 🚜 machine work-log entry (`🚜 <serial> #tag… 📅 <date>`) at the
- * cursor, leaving the caret at the end of the line (after the date) so the
- * user immediately types what they did.
+ * cursor, followed by a blank detail template (base machine software, testing
+ * software, notes), leaving the caret at the end of the entry line (after the
+ * date) so the user immediately types what they did.
  */
 export function insertMachineEntryAtCursor(
   view: EditorView,
@@ -383,8 +430,9 @@ export function insertMachineEntryAtCursor(
   // code units, which is what CodeMirror positions count) for the caret offset.
   const tagText = tags.length ? ' ' + tags.map((t) => `#${t}`).join(' ') : ''
   const prefix = `${hasTextBefore ? '\n' : ''}🚜 ${serial}${tagText} 📅 ${date} `
+  const template = MACHINE_ENTRY_TEMPLATE_LABELS.map((label) => `\n- ${label}: `).join('')
   const suffix = hasTextAfter ? '\n' : ''
-  const insert = prefix + suffix
+  const insert = prefix + template + suffix
   const caret = pos + prefix.length
   view.dispatch(
     view.state.update({

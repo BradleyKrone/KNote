@@ -53,6 +53,19 @@ function vaultConfigPath(): string {
   return join(getVaultRoot(), '.knote', 'config.json')
 }
 
+/**
+ * Backfill fields added to `BoardColumn` after a vault's config.json was last
+ * written — matched by char, since that's the stable key tying a saved
+ * column back to its default (name/order can be edited by the user).
+ */
+function withColumnDefaults(columns: VaultConfig['columns']): VaultConfig['columns'] {
+  return columns.map((col) => {
+    if (col.requireReason !== undefined) return col
+    const fallback = DEFAULT_VAULT_CONFIG.columns.find((d) => d.char === col.char)
+    return fallback?.requireReason ? { ...col, requireReason: true } : col
+  })
+}
+
 export async function getVaultConfig(): Promise<VaultConfig> {
   try {
     const raw = await fs.readFile(vaultConfigPath(), 'utf-8')
@@ -60,10 +73,11 @@ export async function getVaultConfig(): Promise<VaultConfig> {
     return {
       ...DEFAULT_VAULT_CONFIG,
       ...parsed,
-      columns:
+      columns: withColumnDefaults(
         Array.isArray(parsed.columns) && parsed.columns.length > 0
           ? parsed.columns
           : DEFAULT_VAULT_CONFIG.columns
+      )
     }
   } catch {
     return { ...DEFAULT_VAULT_CONFIG }

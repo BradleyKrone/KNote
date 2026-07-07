@@ -82,6 +82,21 @@ character right back in the source file. Cards can carry:
 New cards added from the global board land in your configured **Inbox**
 note (default `Inbox.md`, changeable in **Settings**).
 
+Columns can be marked **Require reason** in **Settings → Kanban board** —
+moving a task into one of these (drag-and-drop, the checkbox right-click
+menu, or adding a card straight into the column) pops a dialog asking why
+and since when, and won't let the move through without both. The answer is
+written as an indented line right under the task:
+
+```
+- [w] Waiting on vendor reply
+  Reason for Waiting: Vendor quoted 2 weeks for the part 📅 2026-07-15
+```
+
+and shown on the card as a small badge (hover it to read the reason) —
+handy for a **Waiting** column, so you're never left wondering why
+something got parked there. It's on by default for the **Waiting** column.
+
 Board getting cluttered with finished work? Click a card's **archive**
 button to strike it through in the note (`- [a] ...`) and drop it off the
 board — nothing is deleted, and un-archiving is as simple as editing the
@@ -113,6 +128,10 @@ the live-preview editor:
 Click the arrow on the task line to fold the note away, or unfold it again —
 the task itself always stays visible, box and all, whether or not it has a
 note to expand.
+
+Press **Enter** at the end of a task line to start typing its note right
+away — the new line is indented automatically instead of starting another
+`- [ ]` task.
 
 ## Timeline
 
@@ -180,9 +199,12 @@ embed automatically — no manual file handling needed.
 
 If you track work against specific machines (serial number, model,
 config attributes), register them in **Settings → Machines**. "Log
-machine work" inserts a dated entry tied to a machine at your cursor, and
-"Open machine log" gives you a filterable, searchable view of every
-logged entry across the vault, grouped by machine.
+machine work" inserts a dated entry tied to a machine at your cursor,
+followed by a blank **Base Machine Software / Testing Software / Notes**
+template so you can fill in details right below it, and "Open machine
+log" gives you a filterable, searchable view of every logged entry
+across the vault, grouped by machine — registered models are listed
+first in the filter list, ahead of config attributes and inline tags.
 
 ## Vaults & appearance
 

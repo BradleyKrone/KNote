@@ -8,6 +8,8 @@ import type { BoardCard, BoardScope } from './boardSelectors'
 import { Card } from './Card'
 import { TaskMetaToolbar, blurTargetIsPicker } from './TaskMetaToolbar'
 import { titleOf } from '@shared/pathUtils'
+import { promptReason } from '@/stores/reasonPromptStore'
+import { formatReasonLine } from '@shared/parser/patterns'
 
 interface Props {
   column: BoardColumn
@@ -29,7 +31,15 @@ export function Column({ column, cards, scope, groupByNote }: Props): React.JSX.
     const value = text.trim()
     setAdding(false)
     setText('')
-    if (value) void addCard(scope, column.char, value)
+    if (!value) return
+    if (!column.requireReason) {
+      void addCard(scope, column.char, value)
+      return
+    }
+    void promptReason(column.name).then((result) => {
+      if (!result) return
+      void addCard(scope, column.char, value, formatReasonLine('  ', column.name, result.reason, result.date))
+    })
   }
 
   const groups: Array<{ note: string | null; cards: BoardCard[] }> = []

@@ -195,19 +195,26 @@ const LIST_ITEM_RE = /^(\s*)([-*+]|\d+[.)])\s/
  * nesting), or a plain (non-checkbox) list item at the *same* indent as the
  * task — people often type notes as an unindented `-` line right under the
  * task rather than nesting them, and that reads the same as a proper note.
- * Any checkbox line always ends the block, regardless of its indent: a new
- * task (sibling or a more-deeply-indented subtask) starts its own note scope
- * rather than extending the previous one. Blank runs don't end the block by
- * themselves — only a following disqualifying line does — so trailing blanks
- * are trimmed automatically by tracking the last qualifying non-blank line.
+ * A checkbox line at the *same indent or shallower* ends the block — that's
+ * a sibling task or a dedent, and starts its own scope. A more-deeply-indented
+ * checkbox line is a genuine subtask: it's swept into this block too (along
+ * with its own note/subtasks, recursively) so the whole subtree renders as
+ * one connected box and folds as a single unit. Blank runs don't end the
+ * block by themselves — only a following disqualifying line does — so
+ * trailing blanks are trimmed automatically by tracking the last qualifying
+ * non-blank line.
  */
 function findNoteBlockEnd(state: EditorState, taskLineNumber: number, indentLen: number): number | null {
   let lastNonBlank: number | null = null
   for (let ln = taskLineNumber + 1; ln <= state.doc.lines; ln++) {
     const text = state.doc.line(ln).text
     if (/^\s*$/.test(text)) continue
-    if (TASK_LINE_RE.test(text)) break
     const lineIndent = /^[ \t]*/.exec(text)?.[0].length ?? 0
+    if (TASK_LINE_RE.test(text)) {
+      if (lineIndent <= indentLen) break
+      lastNonBlank = ln
+      continue
+    }
     if (lineIndent < indentLen) break
     if (lineIndent === indentLen && !LIST_ITEM_RE.test(text)) break
     lastNonBlank = ln
@@ -353,6 +360,10 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
   const tree = syntaxTree(state)
   const quoteLineStarts = new Set<number>()
   const codeLineStarts = new Set<number>()
+  // Lines already swept into an ancestor task's notebox (a nested subtask or
+  // its own note content) — these skip their own box/fold-toggle logic so the
+  // whole subtree renders as one connected box instead of nested boxes.
+  const consumedLines = new Set<number>()
 
   // Frontmatter block: dim it (Obsidian shows a properties UI instead)
   const frontmatterLineStarts = new Set<number>()
@@ -498,7 +509,8 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
           decos.push(Decoration.line({ class: 'cm-task-archived' }).range(line.from))
         }
 
-        const noteBlockEnd = findNoteBlockEnd(state, line.number, m[1].length)
+        const alreadyBoxed = consumedLines.has(line.number)
+        const noteBlockEnd = alreadyBoxed ? null : findNoteBlockEnd(state, line.number, m[1].length)
         if (noteBlockEnd !== null) {
           const blockFrom = line.to
           const blockTo = state.doc.line(noteBlockEnd).to
@@ -520,6 +532,10 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
           decos.push(Decoration.line({ class: taskBoxClasses }).range(line.from))
 
           for (let ln = line.number + 1; ln <= noteBlockEnd; ln++) {
+            // Nested subtasks (and their own note content) are swept into this
+            // block — mark them so their own pass through this loop skips
+            // re-boxing/re-toggling and the whole subtree stays one box.
+            consumedLines.add(ln)
             const childLine = state.doc.line(ln)
             const childIndent = /^[ \t]*/.exec(childLine.text)?.[0].length ?? 0
             // Hanging indent: wrapped continuation lines stay tabbed in under the
@@ -542,7 +558,7 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
               decos.push(Decoration.line({ class: boxClass }).range(childLine.from))
             }
           }
-        } else {
+        } else if (!alreadyBoxed) {
           // No attached note — still box the task on its own so every task
           // looks the same, just without a fold arrow (nothing to expand).
           decos.push(

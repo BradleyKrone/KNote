@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { Archive, CalendarDays, Pencil, X } from 'lucide-react'
+import { Archive, CalendarDays, Hourglass, Pencil, X } from 'lucide-react'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useUiStore } from '@/stores/uiStore'
 import { confirm } from '@/stores/confirmStore'
@@ -29,6 +29,11 @@ export function CardPreview({ card }: { card: BoardCard }): React.JSX.Element {
         {card.due && (
           <span className="board-card-due">
             <CalendarDays size={11} /> {card.due}
+          </span>
+        )}
+        {card.waitingSince && (
+          <span className="board-card-waiting" title={card.waitingReason ?? undefined}>
+            <Hourglass size={11} /> {card.waitingSince}
           </span>
         )}
         {card.tags.map((t) => (
@@ -130,6 +135,11 @@ export function Card({ card, showNote }: { card: BoardCard; showNote: boolean })
             {card.due && (
               <span className="board-card-due">
                 <CalendarDays size={11} /> {card.due}
+              </span>
+            )}
+            {card.waitingSince && (
+              <span className="board-card-waiting" title={card.waitingReason ?? undefined}>
+                <Hourglass size={11} /> {card.waitingSince}
               </span>
             )}
             {card.tags.map((t) => (

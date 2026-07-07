@@ -13,6 +13,13 @@ import { isIgnoredRel } from './vaultService'
  * a genuine external edit (even if it lands right after our save). For
  * structural ops (rename/move/delete) there is no content, so a short TTL
  * is used instead.
+ *
+ * Separately, `lastKnownHash` tracks the last content we know is on disk for
+ * a file — set whenever we read or write it — with no expiry. Sync clients
+ * like OneDrive frequently rewrite a file's bytes identically (rehydrating a
+ * cloud placeholder, reconciling metadata) well outside the own-write TTL;
+ * without this check those touches surface as false "changed outside KNote"
+ * conflicts even though nothing actually changed.
  */
 
 const OWN_WRITE_TTL_MS = 2000
@@ -25,16 +32,24 @@ interface OwnWrite {
 let watcher: FSWatcher | null = null
 let watchedRoot: string | null = null
 const recentOwnWrites = new Map<string, OwnWrite>()
+const lastKnownHash = new Map<string, string>()
 
 function hash(content: string): string {
   return createHash('sha1').update(content, 'utf-8').digest('hex')
 }
 
 export function markOwnWrite(absPath: string, content?: string): void {
-  recentOwnWrites.set(resolve(absPath).toLowerCase(), {
+  const key = resolve(absPath).toLowerCase()
+  recentOwnWrites.set(key, {
     time: Date.now(),
     contentHash: content !== undefined ? hash(content) : null
   })
+  if (content !== undefined) lastKnownHash.set(key, hash(content))
+}
+
+/** Records what we know is currently on disk without it being our own write (e.g. after reading a note into the editor). */
+export function markKnownContent(absPath: string, content: string): void {
+  lastKnownHash.set(resolve(absPath).toLowerCase(), hash(content))
 }
 
 async function isOwnEcho(absPath: string, kind: ExternalChangeKind): Promise<boolean> {
@@ -81,14 +96,30 @@ export async function startWatching(
     (absPath: string): void => {
       const rel = toRelSafe(absPath)
       if (rel === null || rel === '') return
-      void isOwnEcho(absPath, kind).then((echo) => {
-        if (!echo) onChange({ path: rel, kind })
-      })
+      void (async () => {
+        if (await isOwnEcho(absPath, kind)) return
+        if (kind === 'add' || kind === 'change') {
+          const key = resolve(absPath).toLowerCase()
+          const prevHash = lastKnownHash.get(key)
+          try {
+            const content = await fs.readFile(resolve(absPath), 'utf-8')
+            const newHash = hash(content)
+            if (newHash === prevHash) return // bytes unchanged: a sync client re-touching the file, not a real edit
+            lastKnownHash.set(key, newHash)
+          } catch {
+            // unreadable mid-write race; fall through and still report it
+          }
+        }
+        onChange({ path: rel, kind })
+      })()
     }
 
   watcher.on('add', emit('add'))
   watcher.on('change', emit('change'))
-  watcher.on('unlink', emit('unlink'))
+  watcher.on('unlink', (absPath: string) => {
+    lastKnownHash.delete(resolve(absPath).toLowerCase())
+    emit('unlink')(absPath)
+  })
   watcher.on('addDir', emit('addDir'))
   watcher.on('unlinkDir', emit('unlinkDir'))
   watcher.on('error', (err) => {
@@ -112,4 +143,5 @@ export async function stopWatching(): Promise<void> {
     await w.close().catch(() => {})
   }
   recentOwnWrites.clear()
+  lastKnownHash.clear()
 }

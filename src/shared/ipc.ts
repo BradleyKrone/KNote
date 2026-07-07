@@ -35,6 +35,7 @@ export const IpcChannels = {
   searchQuery: 'search:query',
   mentionsFind: 'mentions:find',
   lineReplace: 'line:replace',
+  lineSetStatusReason: 'line:setStatusReason',
   lineDelete: 'line:delete',
   lineMove: 'line:move',
   noteAppend: 'note:append',
@@ -91,6 +92,17 @@ export interface KnoteApi {
    * if the expected text no longer matches.
    */
   replaceLine(path: VaultPath, line: number, expectedText: string, newText: string): Promise<void>
+  /**
+   * Verified status-char rewrite that also inserts/replaces an attached
+   * `Reason for <Column>: ...` line directly under the task, in one write.
+   */
+  setTaskStatusReason(
+    path: VaultPath,
+    line: number,
+    expectedText: string,
+    targetChar: string,
+    reasonLine: string
+  ): Promise<void>
   /** Verified line delete (fails with KNOTE_STALE when the text moved). */
   deleteLine(path: VaultPath, line: number, expectedText: string): Promise<void>
   /** Verified same-note line move; beforeLine -1 = end of file. */
