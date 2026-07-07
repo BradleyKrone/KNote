@@ -181,6 +181,11 @@ export function EditorPane(): React.JSX.Element {
   const saveInFlight = useRef(false)
   const savePending = useRef(false)
   const lastSaved = useRef<string | null>(null)
+  // Latest known buffer content, kept fresh on every doc change so a save
+  // retry queued while the editor is being torn down (e.g. switching to the
+  // Kanban board mid-save) still has content to write instead of silently
+  // no-op'ing once editorRef.current goes null.
+  const pendingContent = useRef<string | null>(null)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [activePicker, setActivePicker] = useState<ActivePicker | null>(null)
   // Editor state captured on right-click (DOM event), consumed when the main
@@ -197,7 +202,19 @@ export function EditorPane(): React.JSX.Element {
 
   const save = useCallback(async (force = false): Promise<void> => {
     const editor = editorRef.current
-    if (!editor) return
+    let content: string
+    if (editor) {
+      content = editor.view.state.doc.toString()
+      if (eolRef.current === '\r\n') content = content.replace(/\n/g, '\r\n')
+      pendingContent.current = content
+    } else if (pendingContent.current !== null) {
+      // Editor already destroyed (e.g. this is a queued retry that fired
+      // after the user navigated away mid-save) — use the last buffer
+      // content captured before teardown instead of silently dropping it.
+      content = pendingContent.current
+    } else {
+      return
+    }
     // While a conflict is unresolved, never auto-write over the external edit
     if (!force && useWorkspaceStore.getState().conflict) return
     if (saveTimer.current) {
@@ -208,8 +225,6 @@ export function EditorPane(): React.JSX.Element {
       savePending.current = true
       return
     }
-    let content = editor.view.state.doc.toString()
-    if (eolRef.current === '\r\n') content = content.replace(/\n/g, '\r\n')
     if (!force && content === lastSaved.current) return
     saveInFlight.current = true
     try {
@@ -218,7 +233,8 @@ export function EditorPane(): React.JSX.Element {
       const expected = force ? undefined : useWorkspaceStore.getState().note?.mtimeMs
       const result = await window.knote.writeFile(pathRef.current, content, expected)
       lastSaved.current = content
-      useWorkspaceStore.getState().markSaved(result.mtimeMs)
+      pendingContent.current = null
+      useWorkspaceStore.getState().markSaved(content, result.mtimeMs)
     } catch (err) {
       if (String(err).includes('KNOTE_CONFLICT')) {
         useWorkspaceStore.getState().setConflict('modified')

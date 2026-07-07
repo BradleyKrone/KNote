@@ -44,7 +44,7 @@ interface WorkspaceState {
   setOutlineHeadings: (headings: HeadingRef[]) => void
   markDirty: () => void
   setConflict: (conflict: 'modified' | 'deleted' | null) => void
-  markSaved: (mtimeMs: number) => void
+  markSaved: (content: string, mtimeMs: number) => void
   /** A rename/move changed the open file's path. */
   pathChanged: (oldPath: VaultPath, newPath: VaultPath) => void
   /** Watcher reported an external change to some path. */
@@ -108,9 +108,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   setConflict: (conflict) => set({ conflict }),
 
-  markSaved: (mtimeMs) => {
+  markSaved: (content, mtimeMs) => {
     const note = get().note
-    if (note) set({ dirty: false, note: { ...note, mtimeMs } })
+    // Keep the disk-snapshot content in sync with what was just written so a
+    // later remount (e.g. leaving and returning to the editor) re-seeds the
+    // buffer from the saved text, not the stale content from when the note
+    // was first opened. Deliberately doesn't bump `version` — that would
+    // force-recreate the live CodeMirror instance (losing cursor/undo/focus)
+    // on every autosave.
+    if (note) set({ dirty: false, note: { ...note, content, mtimeMs } })
   },
 
   pathChanged: (oldPath, newPath) => {
