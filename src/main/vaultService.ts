@@ -21,6 +21,18 @@ export function setOwnWriteMarker(fn: (absPath: string, content?: string) => voi
   ownWriteMarker = fn
 }
 
+/**
+ * Called after every read, so the watcher has a baseline hash for the file
+ * even before KNote has written to it. Without this, a sync client (e.g.
+ * OneDrive) rewriting the file with identical bytes sometime after it was
+ * opened — but before any KNote save — would be misread as an external edit.
+ */
+let knownContentMarker: (absPath: string, content: string) => void = () => {}
+
+export function setKnownContentMarker(fn: (absPath: string, content: string) => void): void {
+  knownContentMarker = fn
+}
+
 export function setVault(root: string): VaultInfo {
   vaultRoot = resolve(root)
   return currentVault()!
@@ -113,6 +125,7 @@ export async function buildTree(): Promise<FileEntry[]> {
 export async function readFile(rel: VaultPath): Promise<FileReadResult> {
   const abs = toAbs(rel)
   const [content, stat] = await Promise.all([fs.readFile(abs, 'utf-8'), fs.stat(abs)])
+  knownContentMarker(abs, content)
   return { path: normalizeRel(rel), content, mtimeMs: stat.mtimeMs }
 }
 

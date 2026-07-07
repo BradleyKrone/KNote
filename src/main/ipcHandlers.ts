@@ -9,7 +9,7 @@ import * as vaultIndex from './indexer/vaultIndex'
 import * as searchIndex from './indexer/searchIndex'
 import { findMentions } from './indexer/mentions'
 import { appendLine, deleteLine, moveLine, replaceLine } from './lineEdit'
-import { markOwnWrite, startWatching } from './watcher'
+import { markKnownContent, markOwnWrite, startWatching } from './watcher'
 import { getSettings, getVaultConfig, setLastVault, setTheme, setVaultConfig } from './settings'
 import type { VaultConfig } from '@shared/types'
 
@@ -42,6 +42,7 @@ async function openVault(root: string, win: BrowserWindow): Promise<VaultInfo> {
 
 export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
   vault.setOwnWriteMarker(markOwnWrite)
+  vault.setKnownContentMarker(markKnownContent)
 
   ipcMain.handle(IpcChannels.vaultPick, async () => {
     const result = await dialog.showOpenDialog(getWindow(), {
