@@ -436,9 +436,12 @@ button {
    invisible wherever a line has its own opaque background (task/note-box
    lines, code blocks), since the opaque background paints on top of it.
    Raise the layer above line content — the highlight is translucent, so
-   text stays legible through it — and below the cursor layer (z-index 100). */
+   text stays legible through it — and below the cursor layer (z-index 100).
+   CodeMirror's LayerView re-applies z-index as an *inline* style on every
+   update, which otherwise stomps a plain stylesheet rule here — !important
+   is required to win over that inline style. */
 .cm-selectionLayer {
-  z-index: 10;
+  z-index: 10 !important;
 }
 
 .cm-selectionBackground,
