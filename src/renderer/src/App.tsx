@@ -8,7 +8,8 @@ import {
   Search,
   Settings,
   Trello,
-  Truck
+  Truck,
+  Waypoints
 } from 'lucide-react'
 import { initVault, scheduleTreeRefresh, useVaultStore } from './stores/vaultStore'
 import { initSettings } from './stores/settingsStore'
@@ -36,6 +37,7 @@ import { SearchPanel } from './components/panels/SearchPanel'
 import { BoardView } from './board/BoardView'
 import { TimelineView } from './timeline/TimelineView'
 import { MachineLogView } from './machineLog/MachineLogView'
+import { GraphView } from './graph/GraphView'
 import { TagPane } from './components/panels/TagPane'
 import { BacklinksPanel } from './components/panels/BacklinksPanel'
 import { PropertiesPanel } from './components/panels/PropertiesPanel'
@@ -61,6 +63,7 @@ export default function App(): React.JSX.Element {
     boardOpen,
     timelineOpen,
     machineLogOpen,
+    graphOpen,
     toast
   } = useUiStore()
   const [sidebarWidth, setSidebarWidth] = useState(260)
@@ -185,6 +188,13 @@ export default function App(): React.JSX.Element {
         >
           <Truck size={22} />
         </button>
+        <button
+          className={`icon-btn ribbon-btn${graphOpen ? ' active' : ''}`}
+          title={graphOpen ? 'Back to notes' : 'Open graph view'}
+          onClick={() => useUiStore.getState().setGraphOpen(!graphOpen)}
+        >
+          <Waypoints size={22} />
+        </button>
         <div className="ribbon-spacer" />
         <button
           className="icon-btn ribbon-btn"
@@ -225,6 +235,8 @@ export default function App(): React.JSX.Element {
           <TimelineView />
         ) : machineLogOpen ? (
           <MachineLogView />
+        ) : graphOpen ? (
+          <GraphView />
         ) : (
           <div className="content-row">
             <div className="editor-column">
