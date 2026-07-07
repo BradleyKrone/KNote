@@ -129,9 +129,18 @@ Click the arrow on the task line to fold the note away, or unfold it again —
 the task itself always stays visible, box and all, whether or not it has a
 note to expand.
 
-Press **Enter** at the end of a task line to start typing its note right
-away — the new line is indented automatically instead of starting another
-`- [ ]` task.
+Press **Enter** at the end of a task line to start its attached note right
+away — instead of starting another `- [ ]` task, KNote seeds a small
+template indented under it and drops the caret on the Notes line:
+
+```
+- [ ] Main task
+  - Date Entered: 7/7/2026
+  - Notes:
+```
+
+`Date Entered` is stamped with today's date. Press **Enter** again on that
+task to add a further plain note line (the header isn't duplicated).
 
 ## Timeline
 
@@ -158,7 +167,10 @@ Every new note is automatically stamped with a `created` date in its
 frontmatter, so notes carry a reliable timestamp even if a sync tool later
 resets the file's modified time.
 
-Templates support placeholders: `{{date}}`, `{{time}}`, `{{title}}`.
+Templates support placeholders: `{{date}}`, `{{time}}`, `{{title}}`, and
+`{{weekdays}}` — the latter expands to the seven days of the current week as
+headings (e.g. `### 7/7/2026 (Tuesday)`) so a weekly note comes prefilled with
+a dated spot for each day. The starter template puts it under **Notes**.
 Configure the weekly note folder/format/template and the templates folder
 in **Settings**. A brand-new vault (or any vault whose configured
 templates folder doesn't exist yet) is seeded with a starter `Note
@@ -214,6 +226,17 @@ first in the filter list, ahead of config attributes and inline tags.
 - Toggle light/dark theme from the command palette.
 - Everything above (and more) is reachable from the **command palette**
   (`Ctrl+P`) — it's the fastest way to discover features.
+
+## Using GitHub Copilot with your notes
+
+Edit your vault in VS Code with GitHub Copilot and want it to understand
+KNote's task syntax, Kanban statuses, and wiki-links? **Settings → General →
+GitHub Copilot instructions** drops a ready-made instruction file into your
+`Knote Resources` folder and opens it. Copy that file to
+`.github/copilot-instructions.md` in the vault (VS Code loads it
+automatically) and Copilot will write notes in KNote's format — correct
+`- [ ]` tasks, `📅` due dates, `[[wiki-links]]`, and more. It's a plain
+Markdown file you can edit or share freely.
 
 ## Settings
 

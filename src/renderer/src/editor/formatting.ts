@@ -316,12 +316,21 @@ export function insertCheckboxAtCursor(view: EditorView): void {
   })
 }
 
+/** A `- Date Entered: …` template line already sitting under a task. */
+const DATE_ENTERED_RE = /^\s*(?:[-*+]|\d+[.)])\s+Date Entered:/i
+
 /**
- * Enter on a task line starts an indented note line underneath it (rendered
- * folded as the task's attached note, see `findNoteBlockEnd` in
+ * Enter on a task line starts an indented note underneath it (rendered folded
+ * as the task's attached note, see `findNoteBlockEnd` in
  * livePreview/decorations.ts) instead of continuing with another `- [ ]`
  * sibling task at the same level — task text is usually short, and further
  * detail belongs in the note, not a new task.
+ *
+ * On a *fresh* task (no note block yet) it seeds a small template — a
+ * `- Date Entered: <today>` line and an empty `- Notes: ` line — and leaves
+ * the caret at the end of the Notes line ready to type. If the task already
+ * has that template below it, Enter just adds one more plain indented note
+ * line instead of duplicating the header.
  */
 export function insertTaskNoteLine(view: EditorView): boolean {
   const { state } = view
@@ -330,11 +339,21 @@ export function insertTaskNoteLine(view: EditorView): boolean {
   const line = state.doc.lineAt(range.head)
   const task = TASK_LINE_RE.exec(line.text)
   if (!task) return false
-  const insert = '\n' + task[1] + '  '
+  // Keep the whole task on its line: anchor the insert at the line end even if
+  // the caret sits mid-text, so we never split the task text into the note.
+  const at = line.to
+  const childIndent = task[1] + '  '
+
+  const next = line.number < state.doc.lines ? state.doc.line(line.number + 1) : null
+  const alreadySeeded = next != null && DATE_ENTERED_RE.test(next.text)
+
+  const insert = alreadySeeded
+    ? '\n' + childIndent
+    : `\n${childIndent}- Date Entered: ${dayjs().format('M/D/YYYY')}\n${childIndent}- Notes: `
   view.dispatch(
     state.update({
-      changes: { from: range.head, insert },
-      selection: EditorSelection.cursor(range.head + insert.length),
+      changes: { from: at, insert },
+      selection: EditorSelection.cursor(at + insert.length),
       userEvent: 'input.knote.taskNote',
       scrollIntoView: true
     })

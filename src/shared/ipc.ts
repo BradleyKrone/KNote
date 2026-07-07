@@ -40,6 +40,7 @@ export const IpcChannels = {
   lineMove: 'line:move',
   noteAppend: 'note:append',
   attachmentSave: 'attachment:save',
+  copilotEnsureDoc: 'copilot:ensureDoc',
   spellcheckAddWord: 'spellcheck:addWord',
   // main -> renderer events
   evExternalChange: 'ev:externalChange',
@@ -121,6 +122,14 @@ export interface KnoteApi {
    * path the file was actually saved at.
    */
   saveAttachment(fileName: string, data: ArrayBuffer): Promise<VaultPath>
+
+  /**
+   * Ensure the bundled "GitHub Copilot instructions" doc exists in the vault's
+   * Knote Resources folder (writing the passed content verbatim if missing),
+   * so the user can find it from Settings and copy it out into their own
+   * .github/copilot-instructions.md. Idempotent — returns the file's path.
+   */
+  ensureCopilotDoc(content: string): Promise<VaultPath>
 
   spellcheck: {
     /** Add a word to the user's personal spellchecker dictionary. */
