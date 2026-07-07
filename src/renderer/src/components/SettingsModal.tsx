@@ -3,6 +3,7 @@ import {
   ArrowDown,
   ArrowUp,
   BookOpen,
+  Bot,
   Calendar,
   FileText,
   HardDrive,
@@ -17,6 +18,7 @@ import type { VaultConfig } from '@shared/types'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useWelcomeStore } from '@/stores/welcomeStore'
 import { useReleaseNotesStore } from '@/stores/releaseNotesStore'
+import { openCopilotInstructions } from '@/commands/copilotInstructions'
 
 type SettingsCategory = 'general' | 'weekly' | 'templates' | 'attachments' | 'kanban' | 'machines'
 
@@ -171,6 +173,24 @@ export function SettingsModal(): React.JSX.Element | null {
                     }}
                   >
                     <ScrollText size={14} /> Open
+                  </button>
+                </div>
+                <div className="settings-row">
+                  <div>
+                    <div className="settings-row-title">GitHub Copilot instructions</div>
+                    <div className="settings-row-desc">
+                      Teach Copilot KNote&apos;s note format — saved to your Knote Resources
+                      folder to copy into a vault&apos;s .github/copilot-instructions.md
+                    </div>
+                  </div>
+                  <button
+                    className="icon-btn settings-row-btn"
+                    onClick={() => {
+                      setOpen(false)
+                      void openCopilotInstructions()
+                    }}
+                  >
+                    <Bot size={14} /> Open
                   </button>
                 </div>
               </>

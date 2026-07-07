@@ -10,11 +10,26 @@ import { getActiveEditorView } from '@/editor/activeView'
 
 dayjs.extend(isoWeek)
 
+/**
+ * The seven days of the current ISO week (Mon–Sun) as `###` headings, e.g.
+ * `### 7/7/2026 (Tuesday)`, separated by blank lines so there's room to type
+ * each day's notes underneath. Used to expand the `{{weekdays}}` placeholder
+ * in weekly-note templates.
+ */
+function weekdaysBlock(): string {
+  const start = dayjs().startOf('isoWeek')
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = start.add(i, 'day')
+    return `### ${day.format('M/D/YYYY')} (${day.format('dddd')})`
+  }).join('\n\n')
+}
+
 export function fillTemplate(template: string, title: string): string {
   return template
     .replace(/\{\{date\}\}/g, dayjs().format('YYYY-MM-DD'))
     .replace(/\{\{time\}\}/g, dayjs().format('HH:mm'))
     .replace(/\{\{title\}\}/g, title)
+    .replace(/\{\{weekdays\}\}/g, weekdaysBlock())
 }
 
 let pendingWeekNote: Promise<VaultPath> | null = null

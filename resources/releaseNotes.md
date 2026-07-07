@@ -3,6 +3,21 @@
 Reopen this any time from **Settings → Release notes**. The current version
 number is shown in the window's title bar, next to "KNote".
 
+## 0.7.0
+
+- Pressing **Enter** on a fresh task now seeds its attached note with a
+  small template — a `Date Entered` line stamped with today's date and an
+  empty `Notes:` line, caret ready to type — instead of a single blank
+  indented line
+- Weekly note templates support a new `{{weekdays}}` placeholder that
+  expands to the seven days of the current week as headings, so a weekly
+  note comes prefilled with a dated spot for each day; the starter template
+  now uses it
+- Added a bundled **GitHub Copilot instructions** doc (**Settings → General**)
+  that teaches Copilot KNote's note format — copy it into a vault's
+  `.github/copilot-instructions.md` to get correctly-formatted tasks, due
+  dates, and wiki-links out of Copilot
+
 ## 0.6.0
 
 - Fixed a Kanban board bug where clicking a task's note the first time

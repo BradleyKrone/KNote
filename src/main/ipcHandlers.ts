@@ -83,6 +83,12 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
 
   ipcMain.handle(IpcChannels.folderCreate, (_e, path: VaultPath) => vault.createFolder(path))
 
+  ipcMain.handle(IpcChannels.copilotEnsureDoc, async (_e, content: string) => {
+    const path = await vault.ensureCopilotInstructions(content)
+    void vaultIndex.indexFile(path)
+    return path
+  })
+
   ipcMain.handle(IpcChannels.entryRename, async (_e, path: VaultPath, newName: string) => {
     const wasFolder = await vaultIndex.statIsDir(path)
     const newPath = await vault.renameEntry(path, newName)

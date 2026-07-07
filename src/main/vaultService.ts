@@ -252,6 +252,8 @@ Created: {{date}}
 ## Tasks
 
 ## Notes
+
+{{weekdays}}
 `
 
 /**
@@ -266,6 +268,27 @@ export async function ensureDefaultTemplate(templatesFolder: string): Promise<Va
   return createFile(joinRel(templatesFolder, 'Note Template.md'), DEFAULT_TEMPLATE_NOTE, {
     skipCreatedStamp: true
   })
+}
+
+/** Where the bundled Copilot-instructions doc is placed inside a vault. */
+const COPILOT_DOC_REL = 'Knote Resources/GitHub Copilot Instructions.md'
+
+/**
+ * Drop a copy of the bundled "GitHub Copilot instructions" doc into the
+ * vault's Knote Resources folder so the user can find it and copy it out into
+ * their own `.github/copilot-instructions.md`. Idempotent: if the file is
+ * already there it's returned untouched (never clobbers the user's edits);
+ * otherwise the passed content is written verbatim — deliberately *without* a
+ * `created:` frontmatter stamp, since the file is meant to be copied as-is.
+ */
+export async function ensureCopilotInstructions(content: string): Promise<VaultPath> {
+  const rel = normalizeRel(COPILOT_DOC_REL)
+  const abs = toAbs(rel)
+  if (await exists(abs)) return rel
+  await fs.mkdir(dirname(abs), { recursive: true })
+  ownWriteMarker(abs, content)
+  await fs.writeFile(abs, content, { encoding: 'utf-8', flag: 'wx' })
+  return rel
 }
 
 export async function createFolder(rel: VaultPath): Promise<VaultPath> {
