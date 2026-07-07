@@ -207,6 +207,23 @@ Paste an image (e.g. a screenshot) directly into the editor and KNote
 saves it into your configured **Attachments** folder and inserts an
 embed automatically — no manual file handling needed.
 
+## Graph view
+
+The **graph view** (ribbon button under the machine log, or "Open graph
+view" in the command palette) draws every note in the vault as a dot,
+connected by lines wherever one note `[[wiki-links]]` to another — an
+interactive map of how your notes relate, like Obsidian's graph.
+
+- **Scroll** to zoom, **drag the background** to pan, **drag a dot** to
+  rearrange the layout.
+- **Hover** a note to spotlight it and its direct connections.
+- **Click** a note to open it. Bigger dots = more connections; the note
+  you had open is highlighted.
+- The **Highlight notes…** box spotlights notes by name; the
+  **Unresolved** toggle shows faded dots for `[[links]]` whose note
+  doesn't exist yet (clicking one creates it), and **Orphans** shows
+  notes with no links at all.
+
 ## Machine log
 
 If you track work against specific machines (serial number, model,

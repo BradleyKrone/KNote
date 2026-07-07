@@ -123,6 +123,12 @@ export function registerCoreCommands(): void {
   })
 
   registerCommand({
+    id: 'open-graph',
+    name: 'Open graph view',
+    run: () => useUiStore.getState().setGraphOpen(true)
+  })
+
+  registerCommand({
     id: 'insert-machine-entry',
     name: 'Log machine work',
     run: () => insertMachineEntryOnActive()

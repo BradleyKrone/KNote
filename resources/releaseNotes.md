@@ -3,6 +3,16 @@
 Reopen this any time from **Settings → Release notes**. The current version
 number is shown in the window's title bar, next to "KNote".
 
+## 0.8.0
+
+- Added a **graph view** (ribbon button under the machine log, or "Open
+  graph view" in the command palette) — an interactive connection map of
+  the vault like Obsidian's: every note is a dot, every `[[wiki-link]]` a
+  line. Zoom with the scroll wheel, pan and rearrange by dragging, hover
+  to spotlight a note's connections, click a note to open it. Unresolved
+  links and orphan notes can be toggled on/off, and a filter box
+  spotlights notes by name
+
 ## 0.7.0
 
 - Pressing **Enter** on a fresh task now seeds its attached note with a

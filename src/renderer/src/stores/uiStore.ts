@@ -44,6 +44,9 @@ interface UiState {
   machineLogOpen: boolean
   setMachineLogOpen: (open: boolean) => void
 
+  graphOpen: boolean
+  setGraphOpen: (open: boolean) => void
+
   toast: string | null
   showToast: (message: string) => void
 }
@@ -79,16 +82,36 @@ export const useUiStore = create<UiState>((set) => ({
   boardScope: { kind: 'global' },
   setBoardOpen: (boardOpen) => set({ boardOpen }),
   openBoard: (boardScope) =>
-    set({ boardScope, boardOpen: true, timelineOpen: false, machineLogOpen: false }),
+    set({
+      boardScope,
+      boardOpen: true,
+      timelineOpen: false,
+      machineLogOpen: false,
+      graphOpen: false
+    }),
 
   timelineOpen: false,
   setTimelineOpen: (timelineOpen) =>
-    set(timelineOpen ? { timelineOpen, boardOpen: false, machineLogOpen: false } : { timelineOpen }),
+    set(
+      timelineOpen
+        ? { timelineOpen, boardOpen: false, machineLogOpen: false, graphOpen: false }
+        : { timelineOpen }
+    ),
 
   machineLogOpen: false,
   setMachineLogOpen: (machineLogOpen) =>
     set(
-      machineLogOpen ? { machineLogOpen, boardOpen: false, timelineOpen: false } : { machineLogOpen }
+      machineLogOpen
+        ? { machineLogOpen, boardOpen: false, timelineOpen: false, graphOpen: false }
+        : { machineLogOpen }
+    ),
+
+  graphOpen: false,
+  setGraphOpen: (graphOpen) =>
+    set(
+      graphOpen
+        ? { graphOpen, boardOpen: false, timelineOpen: false, machineLogOpen: false }
+        : { graphOpen }
     ),
 
   toast: null,
