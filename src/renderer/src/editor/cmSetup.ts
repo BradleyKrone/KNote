@@ -33,7 +33,7 @@ import {
 } from './formatting'
 import { handleImagePaste } from './pasteImage'
 import { scanHeadings } from './outlineHeadings'
-import { noteCandidates, tagCounts, useIndexStore } from '@/stores/indexStore'
+import { noteCandidates, resolveTarget, tagCounts, useIndexStore } from '@/stores/indexStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 
@@ -66,9 +66,37 @@ const linkTagCompletionKeymap = [
 // fires while a popup is open, and otherwise falls through).
 const taskEnterKeymap = [{ key: 'Enter', run: insertTaskNoteLine }]
 
+const WIKI_HEADING_PREFIX_RE = /\[\[([^[\]|#\n]+)#([^[\]|\n]*)$/
+// matchBefore searches within a lookback window, so it must stay unanchored (see
+// wikiLinkCompletions/tagCompletions below); anchor separately when re-parsing the match.
+const WIKI_HEADING_PREFIX_ANCHORED_RE = /^\[\[([^[\]|#\n]+)#([^[\]|\n]*)$/
+
+/** [[Note#  →  fuzzy heading completion, once a resolvable note precedes the #. */
+function wikiHeadingCompletions(context: CompletionContext): CompletionResult | null {
+  const m = context.matchBefore(WIKI_HEADING_PREFIX_RE)
+  if (!m) return null
+  const match = WIKI_HEADING_PREFIX_ANCHORED_RE.exec(m.text)
+  if (!match) return null
+  const [, notePart, headingQuery] = match
+  const resolved = resolveTarget(notePart.trim())
+  if (!resolved) return null
+  const meta = useIndexStore.getState().notes.get(resolved)
+  if (!meta || meta.headings.length === 0) return null
+  return {
+    from: m.to - headingQuery.length,
+    options: meta.headings.map((h) => ({
+      label: h.text,
+      detail: `H${h.level}`,
+      type: 'text',
+      apply: h.text + ']]'
+    })),
+    validFor: /^[^[\]|\n]*$/
+  }
+}
+
 /** [[  →  fuzzy note-title/alias completion (Obsidian's link suggester). */
 function wikiLinkCompletions(context: CompletionContext): CompletionResult | null {
-  const m = context.matchBefore(/\[\[([^[\]]*)$/)
+  const m = context.matchBefore(/\[\[([^[\]#]*)$/)
   if (!m) return null
   const candidates = noteCandidates(useIndexStore.getState().notes)
   return {
@@ -77,9 +105,17 @@ function wikiLinkCompletions(context: CompletionContext): CompletionResult | nul
       label: c.alias ?? c.title,
       detail: c.alias ? `→ ${c.title}` : c.path,
       type: 'text',
-      apply: (c.alias ? `${c.title}|${c.alias}` : c.title) + ']]'
+      // Land the cursor just before "]]" (not after) so typing "#" immediately
+      // continues into wikiHeadingCompletions, matching Obsidian's flow.
+      apply: (view, _completion, from, to) => {
+        const insert = (c.alias ? `${c.title}|${c.alias}` : c.title) + ']]'
+        view.dispatch({
+          changes: { from, to, insert },
+          selection: { anchor: from + insert.length - 2 }
+        })
+      }
     })),
-    validFor: /^[^[\]]*$/
+    validFor: /^[^[\]#]*$/
   }
 }
 
@@ -191,7 +227,10 @@ export function createEditor(
     syntaxHighlighting(mdHighlight),
     syntaxHighlighting(classHighlighter),
     highlightSelectionMatches(),
-    autocompletion({ override: [wikiLinkCompletions, tagCompletions], icons: false }),
+    autocompletion({
+      override: [wikiHeadingCompletions, wikiLinkCompletions, tagCompletions],
+      icons: false
+    }),
     EditorView.domEventHandlers({ paste: handleImagePaste }),
     keymap.of([
       ...formatKeymap,
