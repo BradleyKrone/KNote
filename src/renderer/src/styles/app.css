@@ -423,6 +423,10 @@ button {
   caret-color: var(--text-normal);
 }
 
+:root[data-readable-line-length='false'] .cm-content {
+  max-width: none;
+}
+
 .cm-line {
   padding: 0;
 }
@@ -1110,6 +1114,10 @@ button {
   padding: 0 32px;
   font-size: 16px;
   line-height: 1.6;
+}
+
+:root[data-readable-line-length='false'] .reading-content {
+  max-width: none;
 }
 
 .reading-content h1 { font-size: 1.8em; }

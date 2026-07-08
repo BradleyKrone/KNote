@@ -164,6 +164,8 @@ export type ThemeName = 'light' | 'dark'
 export interface AppSettings {
   lastVault: string | null
   theme: ThemeName
+  /** Cap note content to a readable column width instead of filling the pane. */
+  readableLineLength: boolean
 }
 
 // ---------- Per-vault configuration (.knote/config.json) ----------

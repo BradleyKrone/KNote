@@ -14,6 +14,7 @@ import { ARCHIVED_CHAR, PRIORITY_RE, TAG_RE, WIKI_LINK_RE } from '@shared/parser
 import { openWikiTarget } from '@/stores/indexStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { PRIORITY_LABELS } from '@/taskMeta'
 
 /**
  * Obsidian-style live preview: formatting marks are hidden unless the
@@ -300,17 +301,44 @@ function decorateTags(
   }
 }
 
-/** Style a task's !/!!/!!! priority marker as a pill badge, like #tags. */
-function decoratePriority(decos: Range<Decoration>[], lineFrom: number, lineText: string): void {
+/** Renders a task's !/!!/!!! priority marker as a "Low"/"Medium"/"High" pill —
+ *  the raw `!` characters alone don't mean anything at a glance. */
+class PriorityWidget extends WidgetType {
+  constructor(readonly level: number) {
+    super()
+  }
+
+  override eq(other: PriorityWidget): boolean {
+    return other.level === this.level
+  }
+
+  override toDOM(): HTMLElement {
+    const span = document.createElement('span')
+    span.className = `cm-priority cm-priority-${this.level}`
+    span.textContent = PRIORITY_LABELS[this.level]
+    return span
+  }
+
+  override ignoreEvent(): boolean {
+    return true
+  }
+}
+
+/** Style a task's !/!!/!!! priority marker as a pill badge, like #tags — shown
+ *  as its word label unless the cursor is touching it, in which case the raw
+ *  markers are left visible for editing. */
+function decoratePriority(
+  decos: Range<Decoration>[],
+  lineFrom: number,
+  lineText: string,
+  touches: (from: number, to: number) => boolean
+): void {
   const m = PRIORITY_RE.exec(lineText)
   if (!m) return
   const start = lineFrom + m.index + (m[0].length - m[1].length)
-  decos.push(
-    Decoration.mark({ class: `cm-priority cm-priority-${m[1].length}` }).range(
-      start,
-      start + m[1].length
-    )
-  )
+  const end = start + m[1].length
+  if (touches(start, end)) return
+  decos.push(Decoration.replace({ widget: new PriorityWidget(m[1].length) }).range(start, end))
 }
 
 /** `<span style="font-size:NNpx">text</span>` — hide the tags, scale the text. */
@@ -572,7 +600,7 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
       if (!inCodeBlock && !frontmatterLineStarts.has(line.from)) {
         decorateWikiLinks(decos, line.from, line.text, touches, getPath)
         decorateTags(decos, line.from, line.text)
-        decoratePriority(decos, line.from, line.text)
+        decoratePriority(decos, line.from, line.text, touches)
         decorateFontSize(decos, line.from, line.text, touches)
       }
 

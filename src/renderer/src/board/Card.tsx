@@ -7,6 +7,7 @@ import { confirm } from '@/stores/confirmStore'
 import { archiveCard, deleteCard, updateCardText } from './boardActions'
 import type { BoardCard } from './boardSelectors'
 import { TaskMetaToolbar, blurTargetIsPicker } from './TaskMetaToolbar'
+import { PRIORITY_LABELS } from '@/taskMeta'
 
 export function cardId(card: BoardCard): string {
   return `${card.path} ${card.line} ${card.rawLine}`
@@ -18,7 +19,7 @@ export function CardPreview({ card }: { card: BoardCard }): React.JSX.Element {
     <div className="board-card dragging board-card-overlay">
       <div className="board-card-text">
         {card.priority > 0 && (
-          <span className={`prio prio-${card.priority}`}>{'!'.repeat(card.priority)}</span>
+          <span className={`prio prio-${card.priority}`}>{PRIORITY_LABELS[card.priority]}</span>
         )}
         {card.displayText}
       </div>
@@ -114,7 +115,7 @@ export function Card({ card, showNote }: { card: BoardCard; showNote: boolean })
         <>
           <div className="board-card-text">
             {card.priority > 0 && (
-              <span className={`prio prio-${card.priority}`}>{'!'.repeat(card.priority)}</span>
+              <span className={`prio prio-${card.priority}`}>{PRIORITY_LABELS[card.priority]}</span>
             )}
             {card.displayText}
           </div>

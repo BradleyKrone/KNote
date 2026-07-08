@@ -3,6 +3,20 @@
 Reopen this any time from **Settings → Release notes**. The current version
 number is shown in the window's title bar, next to "KNote".
 
+## 0.9.0
+
+- Priority markers now render as **Low / Medium / High** word pills instead
+  of plain `!`/`!!`/`!!!` marks, both on Kanban cards and in the editor's
+  live-preview pill — clicking into the marker still shows the raw `!`s for
+  editing
+- Added a **Readable line length** toggle (**Settings → General**, on by
+  default) to cap note width to a readable column instead of stretching
+  text across the full pane in both the editor and reading view
+- Pressing **Enter** to seed a task's note template (`Date Entered`/`Notes`)
+  now only applies to top-level tasks — a subtask (indented under a parent
+  task) gets normal list continuation instead, since subtasks are usually
+  short-lived checklist detail rather than something needing its own note
+
 ## 0.8.0
 
 - Added a **graph view** (ribbon button under the machine log, or "Open

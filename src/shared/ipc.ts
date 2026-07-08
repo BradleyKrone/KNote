@@ -29,6 +29,7 @@ export const IpcChannels = {
   entryDelete: 'entry:delete',
   settingsGet: 'settings:get',
   settingsSetTheme: 'settings:setTheme',
+  settingsSetReadableLineLength: 'settings:setReadableLineLength',
   vaultConfigGet: 'vaultConfig:get',
   vaultConfigSet: 'vaultConfig:set',
   indexSnapshot: 'index:snapshot',
@@ -80,6 +81,7 @@ export interface KnoteApi {
 
   getSettings(): Promise<AppSettings>
   setTheme(theme: ThemeName): Promise<void>
+  setReadableLineLength(enabled: boolean): Promise<void>
   getVaultConfig(): Promise<VaultConfig>
   setVaultConfig(config: VaultConfig): Promise<void>
 

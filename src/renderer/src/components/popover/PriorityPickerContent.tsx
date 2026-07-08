@@ -1,12 +1,14 @@
+import { PRIORITY_LABELS } from '@/taskMeta'
+
 interface Props {
   onSelect: (level: 0 | 1 | 2 | 3) => void
 }
 
 const LEVELS: Array<{ level: 0 | 1 | 2 | 3; label: string; marker: string }> = [
   { level: 0, label: 'None', marker: '' },
-  { level: 1, label: 'Low', marker: '!' },
-  { level: 2, label: 'Medium', marker: '!!' },
-  { level: 3, label: 'High', marker: '!!!' }
+  { level: 1, label: PRIORITY_LABELS[1], marker: '!' },
+  { level: 2, label: PRIORITY_LABELS[2], marker: '!!' },
+  { level: 3, label: PRIORITY_LABELS[3], marker: '!!!' }
 ]
 
 export function PriorityPickerContent({ onSelect }: Props): React.JSX.Element {

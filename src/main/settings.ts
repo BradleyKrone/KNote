@@ -6,7 +6,8 @@ import { getVaultRoot } from './vaultService'
 
 const DEFAULTS: AppSettings = {
   lastVault: null,
-  theme: 'dark'
+  theme: 'dark',
+  readableLineLength: true
 }
 
 let cached: AppSettings | null = null
@@ -45,6 +46,12 @@ export async function setTheme(theme: ThemeName): Promise<void> {
   s.theme = theme
   await save()
   nativeTheme.themeSource = theme
+}
+
+export async function setReadableLineLength(enabled: boolean): Promise<void> {
+  const s = await getSettings()
+  s.readableLineLength = enabled
+  await save()
 }
 
 // ---------- Per-vault config (<vault>/.knote/config.json) ----------

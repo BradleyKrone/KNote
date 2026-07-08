@@ -331,6 +331,11 @@ const DATE_ENTERED_RE = /^\s*(?:[-*+]|\d+[.)])\s+Date Entered:/i
  * the caret at the end of the Notes line ready to type. If the task already
  * has that template below it, Enter just adds one more plain indented note
  * line instead of duplicating the header.
+ *
+ * Only top-level tasks (no leading indent) get this treatment — a subtask
+ * (indented under a parent task) is usually short-lived checklist detail, not
+ * something that needs its own dated note, so Enter there falls through to
+ * normal list continuation instead.
  */
 export function insertTaskNoteLine(view: EditorView): boolean {
   const { state } = view
@@ -339,6 +344,7 @@ export function insertTaskNoteLine(view: EditorView): boolean {
   const line = state.doc.lineAt(range.head)
   const task = TASK_LINE_RE.exec(line.text)
   if (!task) return false
+  if (task[1].length > 0) return false
   // Keep the whole task on its line: anchor the insert at the line end even if
   // the caret sits mid-text, so we never split the task text into the note.
   const at = line.to

@@ -51,6 +51,8 @@ export function SettingsModal(): React.JSX.Element | null {
   const setOpen = useSettingsStore((s) => s.setSettingsOpen)
   const vaultConfig = useSettingsStore((s) => s.vaultConfig)
   const saveVaultConfig = useSettingsStore((s) => s.saveVaultConfig)
+  const readableLineLength = useSettingsStore((s) => s.readableLineLength)
+  const setReadableLineLength = useSettingsStore((s) => s.setReadableLineLength)
   const [draft, setDraft] = useState<VaultConfig>(vaultConfig)
   const [category, setCategory] = useState<SettingsCategory>('general')
   // Raw, as-typed text for each machine's attributes field. Kept separate from
@@ -222,6 +224,19 @@ export function SettingsModal(): React.JSX.Element | null {
                     <div className="settings-row-title">Version</div>
                     <div className="settings-row-desc">v{__APP_VERSION__}</div>
                   </div>
+                </div>
+                <div className="settings-row">
+                  <div>
+                    <div className="settings-row-title">Readable line length</div>
+                    <div className="settings-row-desc">
+                      Cap note width to a readable column instead of filling the pane
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={readableLineLength}
+                    onChange={(e) => setReadableLineLength(e.target.checked)}
+                  />
                 </div>
                 <div className="settings-row">
                   <div>

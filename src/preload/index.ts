@@ -28,6 +28,8 @@ const api: KnoteApi = {
 
   getSettings: () => ipcRenderer.invoke(IpcChannels.settingsGet),
   setTheme: (theme: ThemeName) => ipcRenderer.invoke(IpcChannels.settingsSetTheme, theme),
+  setReadableLineLength: (enabled: boolean) =>
+    ipcRenderer.invoke(IpcChannels.settingsSetReadableLineLength, enabled),
   getVaultConfig: () => ipcRenderer.invoke(IpcChannels.vaultConfigGet),
   setVaultConfig: (config) => ipcRenderer.invoke(IpcChannels.vaultConfigSet, config),
 
