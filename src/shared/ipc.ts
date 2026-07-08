@@ -29,6 +29,7 @@ export const IpcChannels = {
   entryDelete: 'entry:delete',
   settingsGet: 'settings:get',
   settingsSetTheme: 'settings:setTheme',
+  settingsSetReadableLineLength: 'settings:setReadableLineLength',
   vaultConfigGet: 'vaultConfig:get',
   vaultConfigSet: 'vaultConfig:set',
   indexSnapshot: 'index:snapshot',
@@ -39,6 +40,7 @@ export const IpcChannels = {
   lineDelete: 'line:delete',
   lineMove: 'line:move',
   noteAppend: 'note:append',
+  tagRename: 'tag:rename',
   attachmentSave: 'attachment:save',
   copilotEnsureDoc: 'copilot:ensureDoc',
   spellcheckAddWord: 'spellcheck:addWord',
@@ -79,6 +81,7 @@ export interface KnoteApi {
 
   getSettings(): Promise<AppSettings>
   setTheme(theme: ThemeName): Promise<void>
+  setReadableLineLength(enabled: boolean): Promise<void>
   getVaultConfig(): Promise<VaultConfig>
   setVaultConfig(config: VaultConfig): Promise<void>
 
@@ -116,6 +119,12 @@ export interface KnoteApi {
   ): Promise<void>
   /** Append a line to a note, creating the note if needed. */
   appendToNote(path: VaultPath, text: string): Promise<void>
+  /**
+   * Renames/merges a tag across every note in the vault (body text and
+   * frontmatter `tags:`/`tag:` fields), case-insensitively matched so e.g.
+   * `#knote` and `#KNOTE` can be unified. Returns the paths changed.
+   */
+  renameTag(oldTag: string, newTag: string): Promise<VaultPath[]>
   /**
    * Save pasted/dropped image bytes into the vault's configured attachments
    * folder, uniquifying the name if it's taken. Returns the vault-relative

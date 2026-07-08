@@ -1,5 +1,9 @@
 import { DUE_RE, PRIORITY_RE, TAG_RE } from '@shared/parser/patterns'
 
+/** Display label for a priority level (0 = none), shared by the board card,
+ *  the priority picker, and the editor's live-preview pill. */
+export const PRIORITY_LABELS: readonly string[] = ['', 'Low', 'Medium', 'High']
+
 /** Collapse whitespace left behind after stripping a marker, and trim. */
 function normalize(text: string): string {
   return text.replace(/\s{2,}/g, ' ').trim()

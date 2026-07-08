@@ -28,6 +28,8 @@ const api: KnoteApi = {
 
   getSettings: () => ipcRenderer.invoke(IpcChannels.settingsGet),
   setTheme: (theme: ThemeName) => ipcRenderer.invoke(IpcChannels.settingsSetTheme, theme),
+  setReadableLineLength: (enabled: boolean) =>
+    ipcRenderer.invoke(IpcChannels.settingsSetReadableLineLength, enabled),
   getVaultConfig: () => ipcRenderer.invoke(IpcChannels.vaultConfigGet),
   setVaultConfig: (config) => ipcRenderer.invoke(IpcChannels.vaultConfigSet, config),
 
@@ -63,6 +65,8 @@ const api: KnoteApi = {
   ) => ipcRenderer.invoke(IpcChannels.lineMove, path, fromLine, expectedText, beforeLine, beforeExpectedText),
   appendToNote: (path: VaultPath, text: string) =>
     ipcRenderer.invoke(IpcChannels.noteAppend, path, text),
+  renameTag: (oldTag: string, newTag: string) =>
+    ipcRenderer.invoke(IpcChannels.tagRename, oldTag, newTag),
   saveAttachment: (fileName: string, data: ArrayBuffer) =>
     ipcRenderer.invoke(IpcChannels.attachmentSave, fileName, data),
   ensureCopilotDoc: (content: string) =>

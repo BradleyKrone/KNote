@@ -9,8 +9,16 @@ import * as vaultIndex from './indexer/vaultIndex'
 import * as searchIndex from './indexer/searchIndex'
 import { findMentions } from './indexer/mentions'
 import { appendLine, deleteLine, moveLine, replaceLine, setTaskStatusReason } from './lineEdit'
+import { renameTagAcrossVault } from './tagRename'
 import { markKnownContent, markOwnWrite, startWatching } from './watcher'
-import { getSettings, getVaultConfig, setLastVault, setTheme, setVaultConfig } from './settings'
+import {
+  getSettings,
+  getVaultConfig,
+  setLastVault,
+  setReadableLineLength,
+  setTheme,
+  setVaultConfig
+} from './settings'
 import type { VaultConfig } from '@shared/types'
 
 async function openVault(root: string, win: BrowserWindow): Promise<VaultInfo> {
@@ -171,6 +179,11 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
     void vaultIndex.indexFile(path)
   })
 
+  ipcMain.handle(IpcChannels.tagRename, async (_e, oldTag: string, newTag: string) => {
+    const { filesChanged } = await renameTagAcrossVault(oldTag, newTag)
+    return filesChanged
+  })
+
   ipcMain.handle(IpcChannels.attachmentSave, async (_e, fileName: string, data: ArrayBuffer) => {
     const config = await getVaultConfig()
     const target = joinRel(config.attachmentsFolder, fileName)
@@ -180,6 +193,10 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
   ipcMain.handle(IpcChannels.settingsGet, () => getSettings())
 
   ipcMain.handle(IpcChannels.settingsSetTheme, (_e, theme: ThemeName) => setTheme(theme))
+
+  ipcMain.handle(IpcChannels.settingsSetReadableLineLength, (_e, enabled: boolean) =>
+    setReadableLineLength(enabled)
+  )
 
   ipcMain.handle(IpcChannels.vaultConfigGet, () => getVaultConfig())
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useIndexStore, tagCounts } from '@/stores/indexStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 const VALID_TAG = /^[A-Za-z0-9_][A-Za-z0-9_/-]*$/
 
@@ -16,12 +17,17 @@ export function TagPickerContent({ onSelect }: Props): React.JSX.Element {
     setTimeout(() => inputRef.current?.focus(), 0)
   }, [])
 
+  const deprecatedTags = useSettingsStore((s) => s.vaultConfig.deprecatedTags)
+
   const tags = useMemo(() => {
     const notes = useIndexStore.getState().notes
-    const all = [...tagCounts(notes).entries()].sort((a, b) => b[1] - a[1])
+    const deprecated = new Set(deprecatedTags)
+    const all = [...tagCounts(notes).entries()]
+      .filter(([tag]) => !deprecated.has(tag))
+      .sort((a, b) => b[1] - a[1])
     const q = query.trim().toLowerCase()
     return q ? all.filter(([tag]) => tag.toLowerCase().includes(q)) : all
-  }, [query])
+  }, [query, deprecatedTags])
 
   const cleanQuery = query.trim().replace(/^#/, '')
   const canCreate =

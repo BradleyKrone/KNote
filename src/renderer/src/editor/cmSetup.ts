@@ -35,6 +35,7 @@ import { handleImagePaste } from './pasteImage'
 import { scanHeadings } from './outlineHeadings'
 import { noteCandidates, tagCounts, useIndexStore } from '@/stores/indexStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 const formatKeymap = [
   { key: 'Mod-b', run: toggleBold },
@@ -91,13 +92,16 @@ function tagCompletions(context: CompletionContext): CompletionResult | null {
   const before = context.state.sliceDoc(Math.max(0, m.from - 1), m.from)
   if (before && !/[\s([{]/.test(before)) return null
   const counts = tagCounts(useIndexStore.getState().notes)
+  const deprecated = new Set(useSettingsStore.getState().vaultConfig.deprecatedTags)
   return {
     from: m.from + 1,
-    options: [...counts.entries()].map(([tag, count]) => ({
-      label: tag,
-      detail: String(count),
-      type: 'keyword'
-    })),
+    options: [...counts.entries()]
+      .filter(([tag]) => !deprecated.has(tag))
+      .map(([tag, count]) => ({
+        label: tag,
+        detail: String(count),
+        type: 'keyword'
+      })),
     validFor: /^[\w/-]*$/
   }
 }
