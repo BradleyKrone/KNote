@@ -39,6 +39,7 @@ export const IpcChannels = {
   lineDelete: 'line:delete',
   lineMove: 'line:move',
   noteAppend: 'note:append',
+  tagRename: 'tag:rename',
   attachmentSave: 'attachment:save',
   copilotEnsureDoc: 'copilot:ensureDoc',
   spellcheckAddWord: 'spellcheck:addWord',
@@ -116,6 +117,12 @@ export interface KnoteApi {
   ): Promise<void>
   /** Append a line to a note, creating the note if needed. */
   appendToNote(path: VaultPath, text: string): Promise<void>
+  /**
+   * Renames/merges a tag across every note in the vault (body text and
+   * frontmatter `tags:`/`tag:` fields), case-insensitively matched so e.g.
+   * `#knote` and `#KNOTE` can be unified. Returns the paths changed.
+   */
+  renameTag(oldTag: string, newTag: string): Promise<VaultPath[]>
   /**
    * Save pasted/dropped image bytes into the vault's configured attachments
    * folder, uniquifying the name if it's taken. Returns the vault-relative

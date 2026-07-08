@@ -9,6 +9,7 @@ import * as vaultIndex from './indexer/vaultIndex'
 import * as searchIndex from './indexer/searchIndex'
 import { findMentions } from './indexer/mentions'
 import { appendLine, deleteLine, moveLine, replaceLine, setTaskStatusReason } from './lineEdit'
+import { renameTagAcrossVault } from './tagRename'
 import { markKnownContent, markOwnWrite, startWatching } from './watcher'
 import { getSettings, getVaultConfig, setLastVault, setTheme, setVaultConfig } from './settings'
 import type { VaultConfig } from '@shared/types'
@@ -169,6 +170,11 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
   ipcMain.handle(IpcChannels.noteAppend, async (_e, path: VaultPath, text: string) => {
     await appendLine(path, text)
     void vaultIndex.indexFile(path)
+  })
+
+  ipcMain.handle(IpcChannels.tagRename, async (_e, oldTag: string, newTag: string) => {
+    const { filesChanged } = await renameTagAcrossVault(oldTag, newTag)
+    return filesChanged
   })
 
   ipcMain.handle(IpcChannels.attachmentSave, async (_e, fileName: string, data: ArrayBuffer) => {

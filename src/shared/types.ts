@@ -190,6 +190,8 @@ export interface VaultConfig {
   columns: BoardColumn[]
   /** Registered machines for the Machine Log (serial → model + config attributes) */
   machines: MachineDef[]
+  /** Tags hidden from the Tag pane and #-picker's quick-access lists, but left intact in notes */
+  deprecatedTags: string[]
 }
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
@@ -206,5 +208,6 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
     { name: 'In Progress', char: '/' },
     { name: 'Done', char: 'x' }
   ],
-  machines: []
+  machines: [],
+  deprecatedTags: []
 }

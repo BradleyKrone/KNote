@@ -192,6 +192,13 @@ vault, nested or not.
 - The **Tags** panel (sidebar) browses every tag in the vault. A
   **(no tags)** row at the top lists notes you haven't tagged yet — a
   quick way to periodically review and process fleeting captures.
+- **Settings → Tags** lets you clean up tags vault-wide: click a tag to
+  rename it — every occurrence across every note (body text and
+  frontmatter) is rewritten, so it's the way to merge spelling/case
+  variants like `#knote` and `#KNOTE` into one. **Deprecate** a tag to
+  hide it from the Tag pane and the `#` picker without touching any
+  notes — it's still there on disk, just out of the quick-access lists;
+  restore it from the same screen any time.
 - The right panel (toggle from the command palette) shows an **outline**
   (click a heading to jump to it, collapsible), **backlinks**, and
   **properties** (frontmatter) for the open note.
@@ -259,7 +266,7 @@ Markdown file you can edit or share freely.
 
 Open **Settings** from the toolbar or command palette. It's laid out like
 Obsidian's — a category list on the left (General, Weekly notes,
-Templates, Attachments, Kanban board, Machines) and that category's
+Templates, Attachments, Kanban board, Machines, Tags) and that category's
 options on the right. This guide is always reachable from **Settings →
 General**.
 

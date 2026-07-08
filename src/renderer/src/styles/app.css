@@ -1376,6 +1376,54 @@ button {
   min-width: 0;
 }
 
+.settings-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.settings-tag-row:last-child {
+  border-bottom: none;
+}
+
+.settings-tag-row-deprecated {
+  opacity: 0.6;
+}
+
+.settings-tag-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.settings-tag-name:hover {
+  color: var(--text-normal);
+  text-decoration: underline;
+}
+
+.settings-tag-name-static {
+  cursor: default;
+}
+.settings-tag-name-static:hover {
+  text-decoration: none;
+}
+
+.settings-tag-count {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.settings-tag-error {
+  font-size: 11.5px;
+  color: var(--text-error, #e06c75);
+  margin-bottom: 6px;
+}
+
 /* ---------- Kanban board ---------- */
 
 .board-view {
@@ -1719,9 +1767,11 @@ button {
   font-size: 13px;
   cursor: pointer;
 }
-.picker-row:hover,
-.picker-row.active {
+.picker-row:hover {
   background: var(--bg-hover);
+}
+.picker-row.active {
+  background: color-mix(in srgb, var(--interactive-accent) 18%, transparent);
 }
 
 .picker-row-label {

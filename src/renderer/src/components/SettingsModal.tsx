@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowDown,
   ArrowUp,
   BookOpen,
   Bot,
   Calendar,
+  Eye,
+  EyeOff,
   FileText,
   HardDrive,
+  Hash,
   Image,
   Info,
   Kanban,
@@ -19,8 +22,17 @@ import { useSettingsStore } from '@/stores/settingsStore'
 import { useWelcomeStore } from '@/stores/welcomeStore'
 import { useReleaseNotesStore } from '@/stores/releaseNotesStore'
 import { openCopilotInstructions } from '@/commands/copilotInstructions'
+import { useIndexStore, tagCounts } from '@/stores/indexStore'
+import { confirm } from '@/stores/confirmStore'
 
-type SettingsCategory = 'general' | 'weekly' | 'templates' | 'attachments' | 'kanban' | 'machines'
+type SettingsCategory =
+  | 'general'
+  | 'weekly'
+  | 'templates'
+  | 'attachments'
+  | 'kanban'
+  | 'machines'
+  | 'tags'
 
 const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof Info }[] = [
   { id: 'general', label: 'General', icon: Info },
@@ -28,8 +40,11 @@ const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof Info }[] =
   { id: 'templates', label: 'Templates', icon: FileText },
   { id: 'attachments', label: 'Attachments', icon: Image },
   { id: 'kanban', label: 'Kanban board', icon: Kanban },
-  { id: 'machines', label: 'Machines', icon: HardDrive }
+  { id: 'machines', label: 'Machines', icon: HardDrive },
+  { id: 'tags', label: 'Tags', icon: Hash }
 ]
+
+const VALID_TAG = /^[A-Za-z0-9_][A-Za-z0-9_/-]*$/
 
 export function SettingsModal(): React.JSX.Element | null {
   const open = useSettingsStore((s) => s.settingsOpen)
@@ -44,6 +59,26 @@ export function SettingsModal(): React.JSX.Element | null {
   // the instant it's typed, before the next word can be entered.
   const [machineAttrText, setMachineAttrText] = useState<string[]>(
     vaultConfig.machines.map((m) => m.attributes.join(' '))
+  )
+  const [renamingTag, setRenamingTag] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [tagBusy, setTagBusy] = useState(false)
+  const [tagError, setTagError] = useState<string | null>(null)
+
+  const notes = useIndexStore((s) => s.notes)
+  const tagCountEntries = useMemo(() => [...tagCounts(notes).entries()], [notes])
+  const tagCountMap = useMemo(() => new Map(tagCountEntries), [tagCountEntries])
+  const deprecatedSet = useMemo(() => new Set(draft.deprecatedTags), [draft.deprecatedTags])
+  const activeTagRows = useMemo(
+    () =>
+      tagCountEntries
+        .filter(([tag]) => !deprecatedSet.has(tag))
+        .sort((a, b) => a[0].localeCompare(b[0])),
+    [tagCountEntries, deprecatedSet]
+  )
+  const deprecatedTagRows = useMemo(
+    () => draft.deprecatedTags.map((tag): [string, number] => [tag, tagCountMap.get(tag) ?? 0]),
+    [draft.deprecatedTags, tagCountMap]
   )
 
   // On open: show the cached config immediately, then refresh once from
@@ -79,6 +114,49 @@ export function SettingsModal(): React.JSX.Element | null {
     setDraft({ ...draft, columns })
   }
 
+  const startRename = (tag: string): void => {
+    setTagError(null)
+    setRenamingTag(tag)
+    setRenameValue(tag)
+  }
+
+  const commitRename = async (oldTag: string): Promise<void> => {
+    const newTag = renameValue.trim().replace(/^#/, '')
+    setRenamingTag(null)
+    if (!newTag || newTag === oldTag) return
+    if (!VALID_TAG.test(newTag)) {
+      setTagError(`"${newTag}" isn't a valid tag name`)
+      return
+    }
+    const count = tagCountMap.get(oldTag) ?? 0
+    const ok = await confirm(
+      `Rename #${oldTag} to #${newTag} across ${count} note${count === 1 ? '' : 's'}?`
+    )
+    if (!ok) return
+    setTagBusy(true)
+    setTagError(null)
+    try {
+      await window.knote.renameTag(oldTag, newTag)
+      if (draft.deprecatedTags.includes(oldTag)) {
+        setDraft({
+          ...draft,
+          deprecatedTags: draft.deprecatedTags.map((t) => (t === oldTag ? newTag : t))
+        })
+      }
+    } finally {
+      setTagBusy(false)
+    }
+  }
+
+  const setTagDeprecated = (tag: string, deprecated: boolean): void => {
+    setDraft({
+      ...draft,
+      deprecatedTags: deprecated
+        ? [...draft.deprecatedTags, tag]
+        : draft.deprecatedTags.filter((t) => t !== tag)
+    })
+  }
+
   const commit = (): void => {
     setOpen(false)
     void saveVaultConfig({
@@ -96,7 +174,7 @@ export function SettingsModal(): React.JSX.Element | null {
 
   const field = (
     label: string,
-    key: keyof Omit<VaultConfig, 'columns' | 'machines'>,
+    key: keyof Omit<VaultConfig, 'columns' | 'machines' | 'deprecatedTags'>,
     hint?: string
   ): React.JSX.Element => (
     <div className="settings-field">
@@ -381,6 +459,87 @@ export function SettingsModal(): React.JSX.Element | null {
                   <Plus size={14} /> Add machine
                 </button>
               </div>
+            )}
+
+            {category === 'tags' && (
+              <>
+                <div className="settings-field">
+                  <label>
+                    <span className="settings-label">Tags</span>
+                    <span className="settings-hint">
+                      click a tag to rename it across every note — use this to merge case/spelling
+                      variants (e.g. #knote and #KNOTE)
+                    </span>
+                  </label>
+                  {tagError && <div className="settings-tag-error">{tagError}</div>}
+                  {activeTagRows.length === 0 && (
+                    <div className="panel-empty">No tags in this vault</div>
+                  )}
+                  {activeTagRows.map(([tag, count]) => (
+                    <div key={tag} className="settings-tag-row">
+                      {renamingTag === tag ? (
+                        <input
+                          className="panel-input small"
+                          autoFocus
+                          value={renameValue}
+                          disabled={tagBusy}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={() => void commitRename(tag)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              void commitRename(tag)
+                            } else if (e.key === 'Escape') {
+                              setRenamingTag(null)
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span
+                          className="settings-tag-name"
+                          title="Click to rename"
+                          onClick={() => startRename(tag)}
+                        >
+                          #{tag}
+                        </span>
+                      )}
+                      <span className="settings-tag-count">{count}</span>
+                      <button
+                        className="icon-btn"
+                        title="Deprecate (hide from Tag pane and # picker)"
+                        disabled={tagBusy}
+                        onClick={() => setTagDeprecated(tag, true)}
+                      >
+                        <Eye size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {deprecatedTagRows.length > 0 && (
+                  <div className="settings-field">
+                    <label>
+                      <span className="settings-label">Deprecated tags</span>
+                      <span className="settings-hint">
+                        hidden from quick access, but left untouched in notes
+                      </span>
+                    </label>
+                    {deprecatedTagRows.map(([tag, count]) => (
+                      <div key={tag} className="settings-tag-row settings-tag-row-deprecated">
+                        <span className="settings-tag-name settings-tag-name-static">#{tag}</span>
+                        <span className="settings-tag-count">{count}</span>
+                        <button
+                          className="icon-btn"
+                          title="Restore to quick access"
+                          onClick={() => setTagDeprecated(tag, false)}
+                        >
+                          <EyeOff size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
