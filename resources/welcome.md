@@ -210,6 +210,10 @@ Wiki-links work like `[[Note Name]]`, `[[Note Name#Heading]]`,
 content inline. Regular Markdown links (`[text](url)`) work too, though
 external links stay inert — KNote makes no network calls, ever.
 
+Typing `[[` suggests notes as you type; pick one and the cursor lands
+right before the closing `]]`, so typing `#` immediately suggests that
+note's headings — pick one to link straight to that section.
+
 Paste an image (e.g. a screenshot) directly into the editor and KNote
 saves it into your configured **Attachments** folder and inserts an
 embed automatically — no manual file handling needed.
