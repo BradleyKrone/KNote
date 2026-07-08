@@ -3,6 +3,13 @@
 Reopen this any time from **Settings → Release notes**. The current version
 number is shown in the window's title bar, next to "KNote".
 
+## 0.10.0
+
+- The `[[` link suggester now chains into a **heading suggester**: picking a
+  note leaves the cursor right before the closing `]]`, so typing `#`
+  immediately lists that note's headings — pick one to link straight to a
+  section (`[[Note Name#Heading]]`) instead of typing the heading by hand
+
 ## 0.9.0
 
 - Priority markers now render as **Low / Medium / High** word pills instead
