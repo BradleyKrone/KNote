@@ -3,6 +3,17 @@
 Reopen this any time from **Settings → Release notes**. The current version
 number is shown in the window's title bar, next to "KNote".
 
+## 0.10.1
+
+- Internal cleanup & stability pass — no feature changes:
+  - Fixed two rare write races that could clobber a note edited outside
+    KNote at the exact moment KNote wrote to it (quick capture / board
+    "add card" appends, and simultaneous saves of the same file)
+  - New test coverage for the code that guards your notes during Kanban
+    sync and external-edit detection (36 new tests)
+  - Removed dead code, consolidated duplicated UI/parser logic, and added
+    ESLint/Prettier with CI enforcement
+
 ## 0.10.0
 
 - The `[[` link suggester now chains into a **heading suggester**: picking a
