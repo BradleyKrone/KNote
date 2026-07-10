@@ -158,10 +158,48 @@ export function registerCoreCommands(): void {
     run: async () => {
       const info = await window.knote.pickVault()
       if (!info) return
-      useWorkspaceStore.getState().closeFile()
+      useWorkspaceStore.getState().closeAll()
       useUiStore.getState().setBoardOpen(false)
       useVaultStore.getState().setVault(info)
     }
+  })
+
+  registerCommand({
+    id: 'split-vertical',
+    name: 'Split pane: vertical (side by side)',
+    run: () => useWorkspaceStore.getState().splitPane('vertical')
+  })
+
+  registerCommand({
+    id: 'split-horizontal',
+    name: 'Split pane: horizontal (stacked)',
+    run: () => useWorkspaceStore.getState().splitPane('horizontal')
+  })
+
+  registerCommand({
+    id: 'close-split',
+    name: 'Close split (back to one pane)',
+    run: () => useWorkspaceStore.getState().closeSplit()
+  })
+
+  registerCommand({
+    id: 'tab-next',
+    name: 'Next tab',
+    hotkey: 'Ctrl+Tab',
+    run: () => useWorkspaceStore.getState().nextTab()
+  })
+
+  registerCommand({
+    id: 'tab-prev',
+    name: 'Previous tab',
+    hotkey: 'Ctrl+Shift+Tab',
+    run: () => useWorkspaceStore.getState().prevTab()
+  })
+
+  registerCommand({
+    id: 'tab-close',
+    name: 'Close tab',
+    run: () => useWorkspaceStore.getState().closeActiveTab()
   })
 
   registerCommand({

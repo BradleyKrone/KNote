@@ -23,7 +23,7 @@ import { useUiStore, type SidebarTab } from './stores/uiStore'
 import { VaultPicker } from './components/VaultPicker'
 import { FileExplorer } from './components/explorer/FileExplorer'
 import { TopBar } from './components/TopBar'
-import { EditorPane } from './editor/EditorPane'
+import { PaneLayout } from './editor/PaneLayout'
 import { QuickSwitcher } from './components/palette/QuickSwitcher'
 import { CommandPalette } from './components/palette/CommandPalette'
 import { TemplatePicker } from './components/palette/TemplatePicker'
@@ -114,6 +114,11 @@ export default function App(): React.JSX.Element {
       } else if (key === 'j') {
         e.preventDefault()
         useUiStore.getState().setQuickCaptureOpen(true)
+      } else if (key === 'tab') {
+        e.preventDefault()
+        void (e.shiftKey
+          ? useWorkspaceStore.getState().prevTab()
+          : useWorkspaceStore.getState().nextTab())
       }
     }
     window.addEventListener('keydown', onKey)
@@ -243,16 +248,7 @@ export default function App(): React.JSX.Element {
         ) : (
           <div className="content-row">
             <div className="editor-column">
-              {note ? (
-                <EditorPane key={note.path} />
-              ) : (
-                <div className="empty-state">
-                  <p>No note is open</p>
-                  <p className="empty-hint">
-                    Select a note in the file explorer, or press Ctrl+O to jump to one.
-                  </p>
-                </div>
-              )}
+              <PaneLayout />
             </div>
             {rightPanelOpen && note && (
               <div className="right-panel">

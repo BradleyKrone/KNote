@@ -216,8 +216,8 @@ function Transclusion({ target, depth }: { target: string; depth: number }): Rea
   )
 }
 
-export function ReadingView(): React.JSX.Element | null {
-  const note = useWorkspaceStore((s) => s.note)
+export function ReadingView({ paneIndex }: { paneIndex: number }): React.JSX.Element | null {
+  const note = useWorkspaceStore((s) => s.panes[paneIndex]?.note ?? null)
   if (!note) return null
 
   const toggleTask = async (line1: number): Promise<void> => {
@@ -232,9 +232,9 @@ export function ReadingView(): React.JSX.Element | null {
       rawLine.slice(m[1].length + m[2].length + 3)
     try {
       await window.knote.replaceLine(note.path, line1 - 1, rawLine, newLine)
-      await useWorkspaceStore.getState().openFile(note.path)
+      await useWorkspaceStore.getState().openFileInPane(paneIndex, note.path)
     } catch {
-      await useWorkspaceStore.getState().openFile(note.path)
+      await useWorkspaceStore.getState().openFileInPane(paneIndex, note.path)
     }
   }
 

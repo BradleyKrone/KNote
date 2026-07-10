@@ -260,11 +260,14 @@ export function createEditor(
     }),
     EditorView.updateListener.of((update) => {
       if (!update.docChanged && !update.selectionSet) return
+      // With split panes two editors are live; only the focused one may
+      // drive the global toolbar/outline state.
+      if (!update.view.hasFocus) return
       const line = update.state.doc.lineAt(update.state.selection.main.head)
       useWorkspaceStore.getState().setActiveLineIsTask(TASK_LINE_RE.test(line.text))
     }),
     EditorView.updateListener.of((update) => {
-      if (!update.docChanged) return
+      if (!update.docChanged || !update.view.hasFocus) return
       useWorkspaceStore.getState().setOutlineHeadings(scanHeadings(update.state.doc))
     })
   ]

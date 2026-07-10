@@ -92,10 +92,7 @@ export function FileExplorer(): React.JSX.Element {
       entry.kind === 'folder' ? `folder "${entry.name}" and its contents` : `"${entry.name}"`
     if (!(await confirm(`Move ${label} to the system trash?`, { danger: true }))) return
     await window.knote.deleteEntry(entry.path)
-    const open = useWorkspaceStore.getState().note
-    if (open && (samePath(open.path, entry.path) || open.path.startsWith(entry.path + '/'))) {
-      useWorkspaceStore.getState().closeFile()
-    }
+    useWorkspaceStore.getState().closeTabsForPath(entry.path)
     await refreshTree()
   }
 

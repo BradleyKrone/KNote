@@ -6,7 +6,7 @@ import { isConflictError } from '@shared/errors'
 import { registerKeepMine, useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { createEditor, type KnoteEditor } from './cmSetup'
-import { setActiveEditorView } from './activeView'
+import { clearActiveEditorView, setActiveEditorView } from './activeView'
 import {
   buildCheckboxMenuItems,
   buildContextMenuItems,
@@ -31,15 +31,20 @@ interface PendingContext {
   wordRange: { word: string; from: number; to: number } | null
 }
 
+interface EditorPaneProps {
+  /** Which workspace pane this editor belongs to (0, or 1 when split). */
+  paneIndex: number
+}
+
 /**
- * Hosts the CodeMirror view for the currently open note. The component is
- * keyed on the note path (remounts per note); external reloads bump
+ * Hosts the CodeMirror view for one pane's active note. The component is
+ * keyed on pane + note path (remounts per note); external reloads bump
  * note.version, which rebuilds the editor buffer.
  */
-export function EditorPane(): React.JSX.Element {
-  const note = useWorkspaceStore((s) => s.note)
+export function EditorPane({ paneIndex }: EditorPaneProps): React.JSX.Element {
+  const note = useWorkspaceStore((s) => s.panes[paneIndex]?.note ?? null)
   const mode = useWorkspaceStore((s) => s.mode)
-  const conflict = useWorkspaceStore((s) => s.conflict)
+  const conflict = useWorkspaceStore((s) => s.panes[paneIndex]?.conflict ?? null)
   const resolveConflict = useWorkspaceStore((s) => s.resolveConflict)
   const columns = useSettingsStore((s) => s.vaultConfig.columns)
 
@@ -84,7 +89,7 @@ export function EditorPane(): React.JSX.Element {
       return
     }
     // While a conflict is unresolved, never auto-write over the external edit
-    if (!force && useWorkspaceStore.getState().conflict) return
+    if (!force && useWorkspaceStore.getState().panes[paneIndex]?.conflict) return
     if (saveTimer.current) {
       clearTimeout(saveTimer.current)
       saveTimer.current = null
@@ -98,14 +103,16 @@ export function EditorPane(): React.JSX.Element {
     try {
       // Optimistic concurrency: refuse to clobber a file someone else wrote
       // since we loaded/saved it. Forced saves ("Keep my version") skip this.
-      const expected = force ? undefined : useWorkspaceStore.getState().note?.mtimeMs
+      const expected = force
+        ? undefined
+        : useWorkspaceStore.getState().panes[paneIndex]?.note?.mtimeMs
       const result = await window.knote.writeFile(pathRef.current, content, expected)
       lastSaved.current = content
       pendingContent.current = null
-      useWorkspaceStore.getState().markSaved(content, result.mtimeMs)
+      useWorkspaceStore.getState().markSaved(paneIndex, content, result.mtimeMs)
     } catch (err) {
       if (isConflictError(err)) {
-        useWorkspaceStore.getState().setConflict('modified')
+        useWorkspaceStore.getState().setConflict(paneIndex, 'modified')
       } else {
         console.error('Save failed:', err)
       }
@@ -116,11 +123,11 @@ export function EditorPane(): React.JSX.Element {
         void save(force)
       }
     }
-  }, [])
+  }, [paneIndex])
 
   const scheduleSave = useCallback(
     (flushNow: boolean): void => {
-      useWorkspaceStore.getState().markDirty()
+      useWorkspaceStore.getState().markDirty(paneIndex)
       if (saveTimer.current) clearTimeout(saveTimer.current)
       if (flushNow) {
         void save()
@@ -128,7 +135,7 @@ export function EditorPane(): React.JSX.Element {
         saveTimer.current = setTimeout(() => void save(), AUTOSAVE_DELAY_MS)
       }
     },
-    [save]
+    [save, paneIndex]
   )
 
   // (Re)create the editor when the note buffer is (re)loaded from disk
@@ -149,8 +156,13 @@ export function EditorPane(): React.JSX.Element {
       }
     )
     editorRef.current = editor
-    editor.view.focus()
-    setActiveEditorView(editor.view)
+    // Only the active pane's editor may take focus and the global active-view
+    // slot — a background rebuild (e.g. same note refreshed in the other
+    // pane after a save) must not steal focus from where the user is typing.
+    if (useWorkspaceStore.getState().activePane === paneIndex) {
+      editor.view.focus()
+      setActiveEditorView(editor.view)
+    }
     setContextMenu(null)
     setActivePicker(null)
 
@@ -159,7 +171,7 @@ export function EditorPane(): React.JSX.Element {
     // runs twice on a fresh mount (create → destroy → create), and clearing
     // in the first, discarded run would leave the second, live editor with
     // nothing to scroll to. It's cleared below, only by the surviving editor.
-    const scrollLine = useWorkspaceStore.getState().scrollRequest
+    const scrollLine = useWorkspaceStore.getState().panes[paneIndex]?.scrollRequest ?? null
     if (scrollLine !== null) {
       const scrollToTarget = (): void => {
         // Editor may have been torn down (StrictMode / fast re-nav) before this
@@ -184,18 +196,19 @@ export function EditorPane(): React.JSX.Element {
       requestAnimationFrame(() => {
         scrollToTarget()
         if (editorRef.current === editor) {
-          useWorkspaceStore.getState().clearScrollRequest()
+          useWorkspaceStore.getState().clearScrollRequest(paneIndex)
         }
       })
     }
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
       // Flush any unsaved edits before tearing down (fire and forget)
-      if (useWorkspaceStore.getState().dirty && !useWorkspaceStore.getState().conflict) {
+      const pane = useWorkspaceStore.getState().panes[paneIndex]
+      if (pane?.dirty && !pane.conflict) {
         void save()
       }
       editorRef.current = null
-      setActiveEditorView(null)
+      clearActiveEditorView(editor.view)
       editor.destroy()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -215,32 +228,32 @@ export function EditorPane(): React.JSX.Element {
       for (let i = 0; i < 20 && saveInFlight.current; i++) {
         await new Promise((r) => setTimeout(r, 100))
       }
-      const current = useWorkspaceStore.getState().note
+      const current = useWorkspaceStore.getState().panes[paneIndex]?.note
       if (cancelled || !current) return
       const fresh = await window.knote.readFile(current.path)
       if (!cancelled && fresh.content !== current.content) {
-        await useWorkspaceStore.getState().openFile(current.path)
+        await useWorkspaceStore.getState().openFileInPane(paneIndex, current.path)
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [isReading])
+  }, [isReading, paneIndex])
 
   // "Keep my version" in the conflict banner force-saves the live buffer
   useEffect(() => {
-    registerKeepMine(() => void save(true))
-    return () => registerKeepMine(null)
-  }, [save])
+    registerKeepMine(paneIndex, () => void save(true))
+    return () => registerKeepMine(paneIndex, null)
+  }, [save, paneIndex])
 
   // Flush on app close
   useEffect(() => {
     const flush = (): void => {
-      if (useWorkspaceStore.getState().dirty) void save()
+      if (useWorkspaceStore.getState().panes[paneIndex]?.dirty) void save()
     }
     window.addEventListener('beforeunload', flush)
     return () => window.removeEventListener('beforeunload', flush)
-  }, [save])
+  }, [save, paneIndex])
 
   // Right-click records where/what was clicked but does NOT open the menu or
   // preventDefault — letting the event through is what lets Chromium fire its
@@ -291,7 +304,15 @@ export function EditorPane(): React.JSX.Element {
   if (!note) return <></>
 
   return (
-    <div className="editor-pane">
+    <div
+      className="editor-pane"
+      // Clicking/typing into this pane makes it the active one and its
+      // editor the target of toolbar/board buffer actions.
+      onFocusCapture={() => {
+        useWorkspaceStore.getState().setActivePane(paneIndex)
+        if (editorRef.current) setActiveEditorView(editorRef.current.view)
+      }}
+    >
       {conflict && (
         <div className="conflict-banner">
           <span>
@@ -301,14 +322,16 @@ export function EditorPane(): React.JSX.Element {
           </span>
           <div className="conflict-actions">
             {conflict === 'modified' && (
-              <button onClick={() => void resolveConflict('reload')}>Reload from disk</button>
+              <button onClick={() => void resolveConflict(paneIndex, 'reload')}>
+                Reload from disk
+              </button>
             )}
-            <button onClick={() => void resolveConflict('keep')}>Keep my version</button>
+            <button onClick={() => void resolveConflict(paneIndex, 'keep')}>Keep my version</button>
           </div>
         </div>
       )}
       {isReading ? (
-        <ReadingView />
+        <ReadingView paneIndex={paneIndex} />
       ) : (
         <div ref={containerRef} className="editor-host" onContextMenu={handleContextMenu} />
       )}
