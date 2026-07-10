@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import fuzzysort from 'fuzzysort'
 import { noteCandidates, useIndexStore, type NoteCandidate } from '@/stores/indexStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useVaultStore } from '@/stores/vaultStore'
+import { ListModal } from './ListModal'
 
 const LIMIT = 50
 
@@ -18,15 +19,9 @@ export function QuickSwitcher(): React.JSX.Element | null {
   const setOpen = useUiStore((s) => s.setQuickSwitcherOpen)
   const notes = useIndexStore((s) => s.notes)
   const [query, setQuery] = useState('')
-  const [selected, setSelected] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (open) {
-      setQuery('')
-      setSelected(0)
-      setTimeout(() => inputRef.current?.focus(), 0)
-    }
+    if (open) setQuery('')
   }, [open])
 
   const rows = useMemo<Row[]>(() => {
@@ -73,44 +68,11 @@ export function QuickSwitcher(): React.JSX.Element | null {
   }
 
   return (
-    <div className="modal-overlay" onMouseDown={() => setOpen(false)}>
-      <div className="modal-panel" onMouseDown={(e) => e.stopPropagation()}>
-        <input
-          ref={inputRef}
-          className="modal-input"
-          placeholder="Jump to a note…"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value)
-            setSelected(0)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') setOpen(false)
-            else if (e.key === 'ArrowDown') {
-              e.preventDefault()
-              setSelected((s) => Math.min(s + 1, rows.length - 1))
-            } else if (e.key === 'ArrowUp') {
-              e.preventDefault()
-              setSelected((s) => Math.max(s - 1, 0))
-            } else if (e.key === 'Enter' && rows[selected]) {
-              void pick(rows[selected])
-            }
-          }}
-        />
-        <div className="modal-results">
-          {rows.map((row, i) => (
-            <div
-              key={`${row.label}-${i}`}
-              className={`modal-result${i === selected ? ' selected' : ''}`}
-              onMouseEnter={() => setSelected(i)}
-              onClick={() => void pick(row)}
-            >
-              <span className="modal-result-label">{row.label}</span>
-              <span className="modal-result-detail">{row.detail}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+    <ListModal
+      rows={rows.map((row, i) => ({ key: `${row.label}-${i}`, label: row.label, detail: row.detail }))}
+      onClose={() => setOpen(false)}
+      onPick={(i) => void pick(rows[i])}
+      input={{ placeholder: 'Jump to a note…', value: query, onChange: setQuery }}
+    />
   )
 }

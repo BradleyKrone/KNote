@@ -115,4 +115,67 @@ describe('parseNote', () => {
     const meta = parseNote('a.md', '```\n🚜 Z6A00101 fake 📅 2026-07-03\n```\n')
     expect(meta.machineLog).toHaveLength(0)
   })
+
+  it('extracts 🏁 milestones with tags, excluded from tasks', () => {
+    const meta = parseNote('a.md', '🏁 Ship v1 #release\n- [ ] real task\n')
+    expect(meta.milestones).toHaveLength(1)
+    expect(meta.milestones[0]).toMatchObject({
+      text: 'Ship v1 #release',
+      tags: ['release'],
+      line: 0,
+      rawLine: '🏁 Ship v1 #release'
+    })
+    expect(meta.tasks).toHaveLength(1)
+  })
+
+  it('attaches an indented Reason line to the task above it', () => {
+    const content = '- [w] waiting task\n  Reason for Waiting: parts on order 📅 2026-07-02\n- [ ] other\n'
+    const meta = parseNote('a.md', content)
+    expect(meta.tasks[0]).toMatchObject({
+      waitingReason: 'parts on order',
+      waitingSince: '2026-07-02'
+    })
+    expect(meta.tasks[1]).toMatchObject({ waitingReason: null, waitingSince: null })
+  })
+
+  it('does not attach a Reason line indented at or below the task level', () => {
+    const meta = parseNote('a.md', '  - [w] nested task\n  Reason for Waiting: nope 📅 2026-07-02\n')
+    expect(meta.tasks[0]).toMatchObject({ waitingReason: null, waitingSince: null })
+  })
+
+  it('parses a rich combined note consistently', () => {
+    const content = [
+      '---',
+      'tags: [project]',
+      'aliases: Alt',
+      '---',
+      '',
+      '# Plan',
+      '',
+      'Intro with [[Other#Sec|see]] and #body/tag.',
+      '',
+      '- [ ] top task #a',
+      '  - [/] child task',
+      '🏁 Milestone here #m',
+      '🚜 SN123 greased fittings #maint',
+      '',
+      '```',
+      '- [ ] not a task #nottag [[NotLink]]',
+      '```',
+      ''
+    ].join('\n')
+    const meta = parseNote('n.md', content)
+    // Frontmatter tags plus every body tag, including those on task/milestone/log lines
+    expect(meta.tags.map((t) => t.tag).sort()).toEqual(
+      ['project', 'body/tag', 'a', 'm', 'maint'].sort()
+    )
+    expect(meta.aliases).toEqual(['Alt'])
+    expect(meta.headings).toEqual([{ text: 'Plan', level: 1, line: 5 }])
+    expect(meta.links).toHaveLength(1)
+    expect(meta.links[0]).toMatchObject({ target: 'Other', heading: 'Sec', alias: 'see' })
+    expect(meta.tasks.map((t) => t.text)).toEqual(['top task #a', 'child task'])
+    expect(meta.tasks[1].isSubtask).toBe(true)
+    expect(meta.milestones).toHaveLength(1)
+    expect(meta.machineLog).toHaveLength(1)
+  })
 })
