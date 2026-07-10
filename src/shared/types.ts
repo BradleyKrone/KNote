@@ -134,6 +134,8 @@ export interface NoteMeta {
   tasks: TaskItem[]
   milestones: MilestoneItem[]
   machineLog: MachineLogItem[]
+  /** ^block-id anchors, for [[Note#^id]] block references. */
+  blockIds: BlockRef[]
   mtimeMs: number
 }
 
@@ -160,6 +162,13 @@ export interface Mention {
   length: number
   /** Which of the searched strings matched */
   matched: string
+}
+
+/** A `^block-id` anchor at the end of a line, targetable via [[Note#^id]]. */
+export interface BlockRef {
+  id: string
+  /** 0-based line of the anchored block. */
+  line: number
 }
 
 export type ThemeName = 'light' | 'dark'

@@ -27,6 +27,7 @@ import { extractTags, maskSource, type PositionedNode, type YamlBlock } from './
 
 export { WIKI_LINK_RE } from './patterns'
 import {
+  BLOCK_ID_RE,
   MACHINE_ENTRY_RE,
   MILESTONE_LINE_RE,
   REASON_FOR_RE,
@@ -186,6 +187,13 @@ function collectMilestones(meta: NoteMeta, maskedLines: string[], rawLines: stri
   })
 }
 
+/** ` ^block-id` line anchors — the targets of [[Note#^id]] block references. */
+function collectBlockIds(meta: NoteMeta, maskedLines: string[], rawLines: string[]): void {
+  scanLines(maskedLines, rawLines, BLOCK_ID_RE, (line, rawMatch) => {
+    meta.blockIds.push({ id: rawMatch[1], line })
+  })
+}
+
 /** 🚜 <serial> <activity…> lines — like milestones, never Kanban cards. */
 function collectMachineLog(meta: NoteMeta, maskedLines: string[], rawLines: string[]): void {
   scanLines(maskedLines, rawLines, MACHINE_ENTRY_RE, (line, rawMatch, rawLine) => {
@@ -213,6 +221,7 @@ export function parseNote(path: VaultPath, content: string, mtimeMs = 0): NoteMe
     tasks: [],
     milestones: [],
     machineLog: [],
+    blockIds: [],
     mtimeMs
   }
 
@@ -246,6 +255,7 @@ export function parseNote(path: VaultPath, content: string, mtimeMs = 0): NoteMe
   collectTasks(meta, maskedLines, rawLines)
   collectMilestones(meta, maskedLines, rawLines)
   collectMachineLog(meta, maskedLines, rawLines)
+  collectBlockIds(meta, maskedLines, rawLines)
 
   return meta
 }

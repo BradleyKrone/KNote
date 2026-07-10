@@ -31,14 +31,7 @@ import { confirm } from '@/stores/confirmStore'
 import { HotkeysSection } from './settings/HotkeysSection'
 
 type SettingsCategory =
-  | 'general'
-  | 'hotkeys'
-  | 'weekly'
-  | 'templates'
-  | 'attachments'
-  | 'kanban'
-  | 'machines'
-  | 'tags'
+  'general' | 'hotkeys' | 'weekly' | 'templates' | 'attachments' | 'kanban' | 'machines' | 'tags'
 
 const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof Info }[] = [
   { id: 'general', label: 'General', icon: Info },

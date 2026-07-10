@@ -153,6 +153,26 @@ describe('parseNote', () => {
     expect(meta.tasks[0]).toMatchObject({ waitingReason: null, waitingSince: null })
   })
 
+  it('extracts ^block-id anchors with their lines', () => {
+    const content = 'Intro paragraph. ^intro\n\n- [ ] a task ^task-1\nplain line\n'
+    const meta = parseNote('a.md', content)
+    expect(meta.blockIds).toEqual([
+      { id: 'intro', line: 0 },
+      { id: 'task-1', line: 2 }
+    ])
+  })
+
+  it('ignores ^ids inside code fences and mid-line carets', () => {
+    const content = '```\ncode ^notablock\n```\n\n2^10 is 1024\nreal ^yes\n'
+    const meta = parseNote('a.md', content)
+    expect(meta.blockIds).toEqual([{ id: 'yes', line: 5 }])
+  })
+
+  it('parses [[Note#^id]] links with the block ref in the heading slot', () => {
+    const meta = parseNote('a.md', 'See [[Other#^intro]] for context.\n')
+    expect(meta.links[0]).toMatchObject({ target: 'Other', heading: '^intro' })
+  })
+
   it('parses a rich combined note consistently', () => {
     const content = [
       '---',

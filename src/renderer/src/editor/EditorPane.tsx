@@ -73,57 +73,60 @@ export function EditorPane({ paneIndex }: EditorPaneProps): React.JSX.Element {
     eolRef.current = note.eol
   }
 
-  const save = useCallback(async (force = false): Promise<void> => {
-    const editor = editorRef.current
-    let content: string
-    if (editor) {
-      content = editor.view.state.doc.toString()
-      if (eolRef.current === '\r\n') content = content.replace(/\n/g, '\r\n')
-      pendingContent.current = content
-    } else if (pendingContent.current !== null) {
-      // Editor already destroyed (e.g. this is a queued retry that fired
-      // after the user navigated away mid-save) — use the last buffer
-      // content captured before teardown instead of silently dropping it.
-      content = pendingContent.current
-    } else {
-      return
-    }
-    // While a conflict is unresolved, never auto-write over the external edit
-    if (!force && useWorkspaceStore.getState().panes[paneIndex]?.conflict) return
-    if (saveTimer.current) {
-      clearTimeout(saveTimer.current)
-      saveTimer.current = null
-    }
-    if (saveInFlight.current) {
-      savePending.current = true
-      return
-    }
-    if (!force && content === lastSaved.current) return
-    saveInFlight.current = true
-    try {
-      // Optimistic concurrency: refuse to clobber a file someone else wrote
-      // since we loaded/saved it. Forced saves ("Keep my version") skip this.
-      const expected = force
-        ? undefined
-        : useWorkspaceStore.getState().panes[paneIndex]?.note?.mtimeMs
-      const result = await window.knote.writeFile(pathRef.current, content, expected)
-      lastSaved.current = content
-      pendingContent.current = null
-      useWorkspaceStore.getState().markSaved(paneIndex, content, result.mtimeMs)
-    } catch (err) {
-      if (isConflictError(err)) {
-        useWorkspaceStore.getState().setConflict(paneIndex, 'modified')
+  const save = useCallback(
+    async (force = false): Promise<void> => {
+      const editor = editorRef.current
+      let content: string
+      if (editor) {
+        content = editor.view.state.doc.toString()
+        if (eolRef.current === '\r\n') content = content.replace(/\n/g, '\r\n')
+        pendingContent.current = content
+      } else if (pendingContent.current !== null) {
+        // Editor already destroyed (e.g. this is a queued retry that fired
+        // after the user navigated away mid-save) — use the last buffer
+        // content captured before teardown instead of silently dropping it.
+        content = pendingContent.current
       } else {
-        console.error('Save failed:', err)
+        return
       }
-    } finally {
-      saveInFlight.current = false
-      if (savePending.current) {
-        savePending.current = false
-        void save(force)
+      // While a conflict is unresolved, never auto-write over the external edit
+      if (!force && useWorkspaceStore.getState().panes[paneIndex]?.conflict) return
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current)
+        saveTimer.current = null
       }
-    }
-  }, [paneIndex])
+      if (saveInFlight.current) {
+        savePending.current = true
+        return
+      }
+      if (!force && content === lastSaved.current) return
+      saveInFlight.current = true
+      try {
+        // Optimistic concurrency: refuse to clobber a file someone else wrote
+        // since we loaded/saved it. Forced saves ("Keep my version") skip this.
+        const expected = force
+          ? undefined
+          : useWorkspaceStore.getState().panes[paneIndex]?.note?.mtimeMs
+        const result = await window.knote.writeFile(pathRef.current, content, expected)
+        lastSaved.current = content
+        pendingContent.current = null
+        useWorkspaceStore.getState().markSaved(paneIndex, content, result.mtimeMs)
+      } catch (err) {
+        if (isConflictError(err)) {
+          useWorkspaceStore.getState().setConflict(paneIndex, 'modified')
+        } else {
+          console.error('Save failed:', err)
+        }
+      } finally {
+        saveInFlight.current = false
+        if (savePending.current) {
+          savePending.current = false
+          void save(force)
+        }
+      }
+    },
+    [paneIndex]
+  )
 
   const scheduleSave = useCallback(
     (flushNow: boolean): void => {

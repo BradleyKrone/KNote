@@ -53,7 +53,26 @@ Right-click a misspelled word (red squiggle) for spelling suggestions and
 | `Ctrl+N` | New note |
 | `Ctrl+J` | Quick capture |
 | `Ctrl+E` | Toggle reading mode |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
 | `Ctrl+B` / `Ctrl+I` / `Ctrl+Shift+X` / `` Ctrl+` `` | Bold / italic / strikethrough / code |
+
+All of these (except the fixed text-formatting ones) are **customizable**
+under **Settings → Hotkeys**: click Record, press the new combination.
+Any command palette entry can be given a shortcut there, bound or not.
+
+## Tabs & split panes
+
+Every note you open becomes a **tab** in the strip above the editor —
+click to switch, middle-click or the `×` to close, `Ctrl+Tab` /
+`Ctrl+Shift+Tab` to cycle. From the command palette:
+
+- **Split pane: vertical** — two panes side by side
+- **Split pane: horizontal** — two panes stacked
+- **Close split** — back to one pane
+
+Each pane has its own tabs and its own editor; clicking into a pane makes
+it the target for the file explorer, quick switcher, and toolbar. The
+same note open in both panes stays in sync as you save.
 
 ## Tasks and the Kanban board
 
@@ -206,13 +225,19 @@ vault, nested or not.
 ## Links, images, and embeds
 
 Wiki-links work like `[[Note Name]]`, `[[Note Name#Heading]]`,
-`[[Note Name|display text]]`, and `![[Note Name]]` to embed a note's
-content inline. Regular Markdown links (`[text](url)`) work too, though
-external links stay inert — KNote makes no network calls, ever.
+`[[Note Name#^block-id]]`, `[[Note Name|display text]]`, and
+`![[Note Name]]` to embed a note's content inline. Regular Markdown links
+(`[text](url)`) work too, though external links stay inert — KNote makes
+no network calls, ever.
 
 Typing `[[` suggests notes as you type; pick one and the cursor lands
 right before the closing `]]`, so typing `#` immediately suggests that
-note's headings — pick one to link straight to that section.
+note's headings — pick one to link straight to that section. Typing `#^`
+instead suggests the note's **block anchors**.
+
+**Block references**: end any line with a space and `^some-id` to give it
+an anchor (e.g. `The key insight. ^insight`), then link straight to that
+line from anywhere with `[[Note Name#^insight]]`.
 
 Paste an image (e.g. a screenshot) directly into the editor and KNote
 saves it into your configured **Attachments** folder and inserts an
