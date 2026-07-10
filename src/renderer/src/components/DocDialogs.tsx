@@ -16,7 +16,12 @@ interface MarkdownDialogProps {
   content: string
 }
 
-function MarkdownDialog({ open, onClose, title, content }: MarkdownDialogProps): React.JSX.Element | null {
+function MarkdownDialog({
+  open,
+  onClose,
+  title,
+  content
+}: MarkdownDialogProps): React.JSX.Element | null {
   useEscapeToClose(open, onClose)
   if (!open) return null
 

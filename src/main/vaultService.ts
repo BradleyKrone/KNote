@@ -6,7 +6,13 @@ import { promises as fs } from 'fs'
 import { dirname, join, resolve, sep } from 'path'
 import { shell } from 'electron'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
-import type { FileEntry, FileReadResult, FileWriteResult, VaultInfo, VaultPath } from '@shared/types'
+import type {
+  FileEntry,
+  FileReadResult,
+  FileWriteResult,
+  VaultInfo,
+  VaultPath
+} from '@shared/types'
 import { isImage, isMarkdown, joinRel, nameOf, normalizeRel, parentOf } from '@shared/pathUtils'
 import { getVaultConfig } from './settings'
 import { CONFLICT_ERROR } from '@shared/errors'

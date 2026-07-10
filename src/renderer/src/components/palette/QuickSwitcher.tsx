@@ -69,7 +69,11 @@ export function QuickSwitcher(): React.JSX.Element | null {
 
   return (
     <ListModal
-      rows={rows.map((row, i) => ({ key: `${row.label}-${i}`, label: row.label, detail: row.detail }))}
+      rows={rows.map((row, i) => ({
+        key: `${row.label}-${i}`,
+        label: row.label,
+        detail: row.detail
+      }))}
       onClose={() => setOpen(false)}
       onPick={(i) => void pick(rows[i])}
       input={{ placeholder: 'Jump to a note…', value: query, onChange: setQuery }}

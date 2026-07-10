@@ -78,7 +78,9 @@ export function ListModal({ rows, onPick, onClose, input, header }: Props): Reac
               onClick={() => onPick(i)}
             >
               <span className="modal-result-label">{row.label}</span>
-              {row.detail !== undefined && <span className="modal-result-detail">{row.detail}</span>}
+              {row.detail !== undefined && (
+                <span className="modal-result-detail">{row.detail}</span>
+              )}
             </div>
           ))}
         </div>

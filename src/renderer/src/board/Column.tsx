@@ -38,7 +38,12 @@ export function Column({ column, cards, scope, groupByNote }: Props): React.JSX.
     }
     void promptReason(column.name).then((result) => {
       if (!result) return
-      void addCard(scope, column.char, value, formatReasonLine('  ', column.name, result.reason, result.date))
+      void addCard(
+        scope,
+        column.char,
+        value,
+        formatReasonLine('  ', column.name, result.reason, result.date)
+      )
     })
   }
 
@@ -81,7 +86,11 @@ export function Column({ column, cards, scope, groupByNote }: Props): React.JSX.
           <div key={g.note ?? '_all'}>
             {g.note !== null && <div className="board-group-label">{titleOf(g.note)}</div>}
             {g.cards.map((card) => (
-              <Card key={`${card.path}:${card.line}`} card={card} showNote={scope.kind !== 'note' && !groupByNote} />
+              <Card
+                key={`${card.path}:${card.line}`}
+                card={card}
+                showNote={scope.kind !== 'note' && !groupByNote}
+              />
             ))}
           </div>
         ))}

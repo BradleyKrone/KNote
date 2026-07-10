@@ -47,7 +47,13 @@ export function CardPreview({ card }: { card: BoardCard }): React.JSX.Element {
   )
 }
 
-export function Card({ card, showNote }: { card: BoardCard; showNote: boolean }): React.JSX.Element {
+export function Card({
+  card,
+  showNote
+}: {
+  card: BoardCard
+  showNote: boolean
+}): React.JSX.Element {
   const id = cardId(card)
   const drag = useDraggable({ id, data: { card } })
   // Cards are also drop targets so same-note reordering can insert before them
@@ -79,11 +85,7 @@ export function Card({ card, showNote }: { card: BoardCard; showNote: boolean })
         drag.setNodeRef(el)
         drop.setNodeRef(el)
       }}
-      className={[
-        'board-card',
-        drag.isDragging ? 'dragging' : '',
-        drop.isOver ? 'drop-before' : ''
-      ]
+      className={['board-card', drag.isDragging ? 'dragging' : '', drop.isOver ? 'drop-before' : '']
         .filter(Boolean)
         .join(' ')}
       {...(editing ? {} : { ...drag.listeners, ...drag.attributes })}

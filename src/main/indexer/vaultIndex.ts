@@ -118,7 +118,11 @@ export async function handleFsChange(rel: VaultPath, kind: string): Promise<void
   }
 }
 
-export async function moveIndexed(oldRel: VaultPath, newRel: VaultPath, isFolder: boolean): Promise<void> {
+export async function moveIndexed(
+  oldRel: VaultPath,
+  newRel: VaultPath,
+  isFolder: boolean
+): Promise<void> {
   if (isFolder) {
     removeFolder(oldRel)
     await reindexFolder(newRel)

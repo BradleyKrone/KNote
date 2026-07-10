@@ -209,7 +209,11 @@ const LIST_ITEM_RE = /^(\s*)([-*+]|\d+[.)])\s/
  * trailing blanks are trimmed automatically by tracking the last qualifying
  * non-blank line.
  */
-function findNoteBlockEnd(state: EditorState, taskLineNumber: number, indentLen: number): number | null {
+function findNoteBlockEnd(
+  state: EditorState,
+  taskLineNumber: number,
+  indentLen: number
+): number | null {
   let lastNonBlank: number | null = null
   for (let ln = taskLineNumber + 1; ln <= state.doc.lines; ln++) {
     const text = state.doc.line(ln).text
@@ -263,7 +267,10 @@ function decorateWikiLinks(
     if (embed && isImage(target)) {
       const resolved = resolveVaultPath(parentOf(getPath()), target) ?? target
       decos.push(
-        Decoration.replace({ widget: new ImageWidget(toImgSrc(resolved), target) }).range(start, end)
+        Decoration.replace({ widget: new ImageWidget(toImgSrc(resolved), target) }).range(
+          start,
+          end
+        )
       )
       continue
     }
@@ -285,11 +292,7 @@ function decorateWikiLinks(
 }
 
 /** Style #tags (clickable, never hidden). */
-function decorateTags(
-  decos: Range<Decoration>[],
-  lineFrom: number,
-  lineText: string
-): void {
+function decorateTags(decos: Range<Decoration>[], lineFrom: number, lineText: string): void {
   TAG_RE.lastIndex = 0
   let m: RegExpExecArray | null
   while ((m = TAG_RE.exec(lineText)) !== null) {
@@ -367,18 +370,17 @@ function decorateFontSize(
     const displayTo = end - '</span>'.length
     decos.push(Decoration.replace({}).range(start, displayFrom))
     decos.push(
-      Decoration.mark({ attributes: { style: `font-size:${size}px` } }).range(displayFrom, displayTo)
+      Decoration.mark({ attributes: { style: `font-size:${size}px` } }).range(
+        displayFrom,
+        displayTo
+      )
     )
     decos.push(Decoration.replace({}).range(displayTo, end))
   }
 }
 
 function isInCode(tree: ReturnType<typeof syntaxTree>, pos: number): boolean {
-  for (
-    let node: SyntaxNode | null = tree.resolveInner(pos, 1);
-    node;
-    node = node.parent
-  ) {
+  for (let node: SyntaxNode | null = tree.resolveInner(pos, 1); node; node = node.parent) {
     if (node.name === 'FencedCode' || node.name === 'CodeBlock' || node.name === 'InlineCode') {
       return true
     }
@@ -474,9 +476,7 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
           }
           case 'HorizontalRule': {
             if (touchesLine(node.from)) break
-            decos.push(
-              Decoration.replace({ widget: new HrWidget() }).range(node.from, node.to)
-            )
+            decos.push(Decoration.replace({ widget: new HrWidget() }).range(node.from, node.to))
             break
           }
           case 'Blockquote': {
@@ -575,7 +575,9 @@ function buildDecorations(view: EditorView, getPath: () => string): DecorationSe
             if (childIndent > 0) {
               decos.push(
                 Decoration.line({
-                  attributes: { style: `padding-left:${childIndent}ch;text-indent:-${childIndent}ch` }
+                  attributes: {
+                    style: `padding-left:${childIndent}ch;text-indent:-${childIndent}ch`
+                  }
                 }).range(childLine.from)
               )
             }

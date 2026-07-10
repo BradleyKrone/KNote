@@ -3,7 +3,13 @@ import { mkdtemp, readFile, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import * as vault from '../src/main/vaultService'
-import { appendLine, deleteLine, moveLine, replaceLine, setTaskStatusReason } from '../src/main/lineEdit'
+import {
+  appendLine,
+  deleteLine,
+  moveLine,
+  replaceLine,
+  setTaskStatusReason
+} from '../src/main/lineEdit'
 
 let dir: string
 
@@ -58,13 +64,25 @@ describe('replaceLine', () => {
 describe('setTaskStatusReason', () => {
   it('sets the status char and inserts a reason line under the task', async () => {
     await seed('a.md', '- [ ] task\nnext\n')
-    await setTaskStatusReason('a.md', 0, '- [ ] task', 'w', '  Reason for Waiting: parts 📅 2026-07-09')
+    await setTaskStatusReason(
+      'a.md',
+      0,
+      '- [ ] task',
+      'w',
+      '  Reason for Waiting: parts 📅 2026-07-09'
+    )
     expect(await read('a.md')).toBe('- [w] task\n  Reason for Waiting: parts 📅 2026-07-09\nnext\n')
   })
 
   it('replaces an existing reason line instead of stacking a second one', async () => {
     await seed('a.md', '- [w] task\n  Reason for Waiting: old 📅 2026-07-01\nnext\n')
-    await setTaskStatusReason('a.md', 0, '- [w] task', 'b', '  Reason for Blocked: new 📅 2026-07-09')
+    await setTaskStatusReason(
+      'a.md',
+      0,
+      '- [w] task',
+      'b',
+      '  Reason for Blocked: new 📅 2026-07-09'
+    )
     expect(await read('a.md')).toBe('- [b] task\n  Reason for Blocked: new 📅 2026-07-09\nnext\n')
   })
 

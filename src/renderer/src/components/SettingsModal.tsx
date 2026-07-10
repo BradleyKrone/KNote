@@ -29,13 +29,7 @@ import { useIndexStore, tagCounts } from '@/stores/indexStore'
 import { confirm } from '@/stores/confirmStore'
 
 type SettingsCategory =
-  | 'general'
-  | 'weekly'
-  | 'templates'
-  | 'attachments'
-  | 'kanban'
-  | 'machines'
-  | 'tags'
+  'general' | 'weekly' | 'templates' | 'attachments' | 'kanban' | 'machines' | 'tags'
 
 const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof Info }[] = [
   { id: 'general', label: 'General', icon: Info },
@@ -275,8 +269,8 @@ export function SettingsModal(): React.JSX.Element | null {
                   <div>
                     <div className="settings-row-title">GitHub Copilot instructions</div>
                     <div className="settings-row-desc">
-                      Teach Copilot KNote&apos;s note format — saved to your Knote Resources
-                      folder to copy into a vault&apos;s .github/copilot-instructions.md
+                      Teach Copilot KNote&apos;s note format — saved to your Knote Resources folder
+                      to copy into a vault&apos;s .github/copilot-instructions.md
                     </div>
                   </div>
                   <button

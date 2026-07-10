@@ -152,7 +152,10 @@ export function GraphView(): React.JSX.Element {
     const observer = new MutationObserver(() => {
       colorsRef.current = readThemeColors()
     })
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    })
     return () => observer.disconnect()
   }, [])
 
@@ -296,7 +299,11 @@ export function GraphView(): React.JSX.Element {
         const active =
           hovered !== null && (e.source === hovered.node.id || e.target === hovered.node.id)
         const dim =
-          dimmed(e.source, a.node.label) || dimmed(e.target, b.node.label) ? 0.12 : active ? 0.9 : 0.45
+          dimmed(e.source, a.node.label) || dimmed(e.target, b.node.label)
+            ? 0.12
+            : active
+              ? 0.9
+              : 0.45
         ctx.globalAlpha = dim
         ctx.strokeStyle = active ? colors.accent : colors.edge
         ctx.lineWidth = (active ? 1.8 : 1) / t.k
@@ -317,7 +324,11 @@ export function GraphView(): React.JSX.Element {
             ? 0.45
             : 1
         ctx.fillStyle =
-          isHover || isActive ? colors.accent : sim.node.unresolved ? colors.unresolved : colors.node
+          isHover || isActive
+            ? colors.accent
+            : sim.node.unresolved
+              ? colors.unresolved
+              : colors.node
         ctx.beginPath()
         ctx.arc(sim.x, sim.y, r, 0, Math.PI * 2)
         ctx.fill()

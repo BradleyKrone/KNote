@@ -44,7 +44,8 @@ function matchesFilters(item: TimelineItem, filters: TimelineFilters): boolean {
     return false
   if (filters.text) {
     const q = filters.text.toLowerCase()
-    if (!item.text.toLowerCase().includes(q) && !item.noteTitle.toLowerCase().includes(q)) return false
+    if (!item.text.toLowerCase().includes(q) && !item.noteTitle.toLowerCase().includes(q))
+      return false
   }
   return true
 }

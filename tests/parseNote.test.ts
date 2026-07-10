@@ -60,7 +60,13 @@ describe('parseNote', () => {
     const content = '- [ ] open\n- [x] done\n- [/] doing #urgent\n  - [ ] child\n1. [ ] numbered\n'
     const meta = parseNote('a.md', content)
     expect(meta.tasks).toHaveLength(5)
-    expect(meta.tasks[0]).toMatchObject({ statusChar: ' ', text: 'open', line: 0, indent: 0, isSubtask: false })
+    expect(meta.tasks[0]).toMatchObject({
+      statusChar: ' ',
+      text: 'open',
+      line: 0,
+      indent: 0,
+      isSubtask: false
+    })
     expect(meta.tasks[1]).toMatchObject({ statusChar: 'x', text: 'done', isSubtask: false })
     expect(meta.tasks[2]).toMatchObject({ statusChar: '/', tags: ['urgent'], isSubtask: false })
     expect(meta.tasks[3]).toMatchObject({ indent: 2, text: 'child', isSubtask: true })
@@ -129,7 +135,8 @@ describe('parseNote', () => {
   })
 
   it('attaches an indented Reason line to the task above it', () => {
-    const content = '- [w] waiting task\n  Reason for Waiting: parts on order 📅 2026-07-02\n- [ ] other\n'
+    const content =
+      '- [w] waiting task\n  Reason for Waiting: parts on order 📅 2026-07-02\n- [ ] other\n'
     const meta = parseNote('a.md', content)
     expect(meta.tasks[0]).toMatchObject({
       waitingReason: 'parts on order',
@@ -139,7 +146,10 @@ describe('parseNote', () => {
   })
 
   it('does not attach a Reason line indented at or below the task level', () => {
-    const meta = parseNote('a.md', '  - [w] nested task\n  Reason for Waiting: nope 📅 2026-07-02\n')
+    const meta = parseNote(
+      'a.md',
+      '  - [w] nested task\n  Reason for Waiting: nope 📅 2026-07-02\n'
+    )
     expect(meta.tasks[0]).toMatchObject({ waitingReason: null, waitingSince: null })
   })
 

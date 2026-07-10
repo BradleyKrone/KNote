@@ -13,7 +13,12 @@ import {
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown, markdownKeymap, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
-import { codeFolding, HighlightStyle, indentOnInput, syntaxHighlighting } from '@codemirror/language'
+import {
+  codeFolding,
+  HighlightStyle,
+  indentOnInput,
+  syntaxHighlighting
+} from '@codemirror/language'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import {
   acceptCompletion,

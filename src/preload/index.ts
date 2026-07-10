@@ -62,15 +62,22 @@ const api: KnoteApi = {
     expectedText: string,
     beforeLine: number,
     beforeExpectedText: string | null
-  ) => ipcRenderer.invoke(IpcChannels.lineMove, path, fromLine, expectedText, beforeLine, beforeExpectedText),
+  ) =>
+    ipcRenderer.invoke(
+      IpcChannels.lineMove,
+      path,
+      fromLine,
+      expectedText,
+      beforeLine,
+      beforeExpectedText
+    ),
   appendToNote: (path: VaultPath, text: string) =>
     ipcRenderer.invoke(IpcChannels.noteAppend, path, text),
   renameTag: (oldTag: string, newTag: string) =>
     ipcRenderer.invoke(IpcChannels.tagRename, oldTag, newTag),
   saveAttachment: (fileName: string, data: ArrayBuffer) =>
     ipcRenderer.invoke(IpcChannels.attachmentSave, fileName, data),
-  ensureCopilotDoc: (content: string) =>
-    ipcRenderer.invoke(IpcChannels.copilotEnsureDoc, content),
+  ensureCopilotDoc: (content: string) => ipcRenderer.invoke(IpcChannels.copilotEnsureDoc, content),
 
   spellcheck: {
     addWord: (word: string) => ipcRenderer.invoke(IpcChannels.spellcheckAddWord, word)

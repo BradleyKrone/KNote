@@ -42,9 +42,7 @@ export function SearchPanel(): React.JSX.Element {
           <div
             key={r.path}
             className="search-result"
-            onClick={() =>
-              void useWorkspaceStore.getState().openFile(r.path, r.snippet?.line)
-            }
+            onClick={() => void useWorkspaceStore.getState().openFile(r.path, r.snippet?.line)}
           >
             <div className="search-result-title">{r.title}</div>
             {r.snippet && <div className="search-result-snippet">{r.snippet.text}</div>}

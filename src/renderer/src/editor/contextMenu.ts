@@ -47,7 +47,10 @@ export function wordAt(
 ): { word: string; from: number; to: number } | null {
   const line = view.state.doc.lineAt(pos)
   const offset = pos - line.from
-  if (!WORD_CHAR_RE.test(line.text[offset] ?? '') && !WORD_CHAR_RE.test(line.text[offset - 1] ?? '')) {
+  if (
+    !WORD_CHAR_RE.test(line.text[offset] ?? '') &&
+    !WORD_CHAR_RE.test(line.text[offset - 1] ?? '')
+  ) {
     return null
   }
   let start = offset

@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { mkdtemp, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { markKnownContent, markOwnWrite, shouldReportChange, stopWatching } from '../src/main/watcher'
+import {
+  markKnownContent,
+  markOwnWrite,
+  shouldReportChange,
+  stopWatching
+} from '../src/main/watcher'
 
 let dir: string
 

@@ -27,7 +27,10 @@ function renameFrontmatterTag(
   const raw = fm[key]
   const wasString = typeof raw === 'string'
   const entries = wasString
-    ? (raw as string).split(',').map((s) => s.trim()).filter(Boolean)
+    ? (raw as string)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
     : Array.isArray(raw)
       ? raw.map((v) => String(v))
       : null
@@ -102,7 +105,10 @@ export interface TagRenameResult {
 }
 
 /** Renames/merges a tag across every note in the vault, writing changed files atomically and refreshing the in-memory index. */
-export async function renameTagAcrossVault(oldTag: string, newTag: string): Promise<TagRenameResult> {
+export async function renameTagAcrossVault(
+  oldTag: string,
+  newTag: string
+): Promise<TagRenameResult> {
   const from = oldTag.replace(/^#/, '').trim()
   const to = newTag.replace(/^#/, '').trim()
   const filesChanged: VaultPath[] = []

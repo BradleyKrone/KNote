@@ -26,7 +26,14 @@ import { extractTags, maskSource, type PositionedNode, type YamlBlock } from './
  */
 
 export { WIKI_LINK_RE } from './patterns'
-import { MACHINE_ENTRY_RE, MILESTONE_LINE_RE, REASON_FOR_RE, TAG_RE, TASK_LINE_RE, WIKI_LINK_RE } from './patterns'
+import {
+  MACHINE_ENTRY_RE,
+  MILESTONE_LINE_RE,
+  REASON_FOR_RE,
+  TAG_RE,
+  TASK_LINE_RE,
+  WIKI_LINK_RE
+} from './patterns'
 
 function toStringArray(value: unknown): string[] {
   if (typeof value === 'string') {
@@ -68,7 +75,10 @@ function collectHeadings(
     const to = node.position?.end?.offset
     if (from === undefined || to === undefined) return
     const raw = content.slice(from, to)
-    const text = raw.replace(/^#{1,6}\s*/, '').replace(/\s*#+\s*$/, '').trim()
+    const text = raw
+      .replace(/^#{1,6}\s*/, '')
+      .replace(/\s*#+\s*$/, '')
+      .trim()
     meta.headings.push({ text, level: node.depth ?? 1, line: lineOf(from) } as HeadingRef)
   })
 }

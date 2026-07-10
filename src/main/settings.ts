@@ -5,7 +5,12 @@
 import { app, nativeTheme } from 'electron'
 import { promises as fs } from 'fs'
 import { join } from 'path'
-import { DEFAULT_VAULT_CONFIG, type AppSettings, type ThemeName, type VaultConfig } from '@shared/types'
+import {
+  DEFAULT_VAULT_CONFIG,
+  type AppSettings,
+  type ThemeName,
+  type VaultConfig
+} from '@shared/types'
 import { getVaultRoot } from './vaultService'
 
 const DEFAULTS: AppSettings = {

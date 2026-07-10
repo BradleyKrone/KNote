@@ -40,8 +40,7 @@ export function ContextMenu({ x, y, items, onClose }: Props): React.JSX.Element 
   }, [onClose])
 
   // Keep the menu on screen
-  const estimatedHeight =
-    items.reduce((h, entry) => h + ('separator' in entry ? 9 : 30), 0) + 12
+  const estimatedHeight = items.reduce((h, entry) => h + ('separator' in entry ? 9 : 30), 0) + 12
   const style: React.CSSProperties = {
     left: Math.min(x, window.innerWidth - 180),
     top: Math.min(y, window.innerHeight - estimatedHeight)

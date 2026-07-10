@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import fuzzysort from 'fuzzysort'
 import { allCommands, type Command } from '@/commands/registry'
 import { useUiStore } from '@/stores/uiStore'
@@ -13,13 +13,13 @@ export function CommandPalette(): React.JSX.Element | null {
     if (open) setQuery('')
   }, [open])
 
-  const rows = useMemo<Command[]>(() => {
-    const commands = allCommands()
-    if (query.trim() === '') return commands
-    return fuzzysort.go(query, commands, { key: 'name', limit: 30 }).map((r) => r.obj)
-  }, [query, open])
-
   if (!open) return null
+
+  // Cheap enough to compute per render (renders only on open/query changes)
+  const rows: Command[] =
+    query.trim() === ''
+      ? allCommands()
+      : fuzzysort.go(query, allCommands(), { key: 'name', limit: 30 }).map((r) => r.obj)
 
   return (
     <ListModal

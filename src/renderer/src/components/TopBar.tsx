@@ -210,7 +210,13 @@ export function TopBar({ onToggleSidebar }: Props): React.JSX.Element {
               setMode(mode === 'live' ? 'source' : mode === 'source' ? 'reading' : 'live')
             }
           >
-            {mode === 'live' ? <Eye size={16} /> : mode === 'source' ? <Code2 size={16} /> : <BookOpen size={16} />}
+            {mode === 'live' ? (
+              <Eye size={16} />
+            ) : mode === 'source' ? (
+              <Code2 size={16} />
+            ) : (
+              <BookOpen size={16} />
+            )}
           </button>
         )}
         <button className="icon-btn" title="Toggle theme" onClick={toggleTheme}>

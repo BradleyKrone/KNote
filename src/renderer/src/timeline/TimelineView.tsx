@@ -73,7 +73,11 @@ export function TimelineView(): React.JSX.Element {
               </option>
             ))}
           </select>
-          <button className="icon-btn" title="Close timeline" onClick={() => setTimelineOpen(false)}>
+          <button
+            className="icon-btn"
+            title="Close timeline"
+            onClick={() => setTimelineOpen(false)}
+          >
             <X size={16} />
           </button>
         </div>

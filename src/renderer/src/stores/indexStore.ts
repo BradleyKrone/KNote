@@ -120,7 +120,13 @@ export async function openWikiTarget(rawTarget: string): Promise<void> {
 
   const hashIdx = rawTarget.indexOf('#')
   const target = (hashIdx === -1 ? rawTarget : rawTarget.slice(0, hashIdx)).trim()
-  const heading = hashIdx === -1 ? null : rawTarget.slice(hashIdx + 1).replace(/^\^/, '').trim()
+  const heading =
+    hashIdx === -1
+      ? null
+      : rawTarget
+          .slice(hashIdx + 1)
+          .replace(/^\^/, '')
+          .trim()
 
   const resolved = resolveTarget(target)
   if (resolved !== null) {

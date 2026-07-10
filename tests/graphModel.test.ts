@@ -14,10 +14,7 @@ const ALL = { showUnresolved: true, showOrphans: true }
 
 describe('buildGraph', () => {
   it('creates a node per note and an edge per resolved link', () => {
-    const notes = vault(
-      ['A.md', 'Links to [[B]]\n'],
-      ['B.md', 'no links\n']
-    )
+    const notes = vault(['A.md', 'Links to [[B]]\n'], ['B.md', 'no links\n'])
     const { nodes, edges } = buildGraph(notes, ALL)
     expect(nodes.map((n) => n.id).sort()).toEqual(['A.md', 'B.md'])
     expect(edges).toEqual([{ source: 'A.md', target: 'B.md' }])
@@ -26,10 +23,7 @@ describe('buildGraph', () => {
   })
 
   it('dedupes repeated and reciprocal links into one edge', () => {
-    const notes = vault(
-      ['A.md', '[[B]] and again [[B]]\n'],
-      ['B.md', 'back at [[A]]\n']
-    )
+    const notes = vault(['A.md', '[[B]] and again [[B]]\n'], ['B.md', 'back at [[A]]\n'])
     const { edges } = buildGraph(notes, ALL)
     expect(edges).toHaveLength(1)
   })
@@ -41,19 +35,13 @@ describe('buildGraph', () => {
   })
 
   it('resolves links to notes in subfolders by title', () => {
-    const notes = vault(
-      ['A.md', '[[Deep Note]]\n'],
-      ['folder/Deep Note.md', '\n']
-    )
+    const notes = vault(['A.md', '[[Deep Note]]\n'], ['folder/Deep Note.md', '\n'])
     const { edges } = buildGraph(notes, ALL)
     expect(edges).toEqual([{ source: 'A.md', target: 'folder/Deep Note.md' }])
   })
 
   it('adds a faded ghost node for unresolved targets, merged case-insensitively', () => {
-    const notes = vault(
-      ['A.md', '[[Missing]]\n'],
-      ['B.md', '[[missing]]\n']
-    )
+    const notes = vault(['A.md', '[[Missing]]\n'], ['B.md', '[[missing]]\n'])
     const { nodes, edges } = buildGraph(notes, ALL)
     const ghosts = nodes.filter((n) => n.unresolved)
     expect(ghosts).toHaveLength(1)
@@ -69,11 +57,7 @@ describe('buildGraph', () => {
   })
 
   it('filters unlinked notes when showOrphans is off', () => {
-    const notes = vault(
-      ['A.md', '[[B]]\n'],
-      ['B.md', '\n'],
-      ['Lonely.md', 'nothing links here\n']
-    )
+    const notes = vault(['A.md', '[[B]]\n'], ['B.md', '\n'], ['Lonely.md', 'nothing links here\n'])
     const { nodes } = buildGraph(notes, { showUnresolved: true, showOrphans: false })
     expect(nodes.map((n) => n.id).sort()).toEqual(['A.md', 'B.md'])
   })

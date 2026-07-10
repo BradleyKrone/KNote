@@ -253,9 +253,7 @@ export function EditorPane(): React.JSX.Element {
     const isCheckbox = !!(e.target as HTMLElement).closest?.('.knote-task-checkbox')
     const pos = view.posAtCoords({ x: e.clientX, y: e.clientY })
     if (pos !== null) {
-      const insideSelection = view.state.selection.ranges.some(
-        (r) => pos >= r.from && pos <= r.to
-      )
+      const insideSelection = view.state.selection.ranges.some((r) => pos >= r.from && pos <= r.to)
       if (!insideSelection) view.dispatch({ selection: EditorSelection.cursor(pos) })
     }
     const line = view.state.doc.lineAt(pos ?? view.state.selection.main.head)

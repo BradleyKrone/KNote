@@ -26,7 +26,12 @@ export const DUE_RE = /(?:@due\((\d{4}-\d{2}-\d{2})\)|📅\s*(\d{4}-\d{2}-\d{2})
 export const REASON_FOR_RE = /^(\s+)Reason for (.+?):\s*(.*?)\s*📅\s*(\d{4}-\d{2}-\d{2})\s*$/
 
 /** Builds the indented `Reason for <Column>: <reason> 📅 <date>` line attached under a task. */
-export function formatReasonLine(indent: string, columnName: string, reason: string, date: string): string {
+export function formatReasonLine(
+  indent: string,
+  columnName: string,
+  reason: string,
+  date: string
+): string {
   return `${indent}Reason for ${columnName}: ${reason} 📅 ${date}`
 }
 

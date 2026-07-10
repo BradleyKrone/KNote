@@ -85,7 +85,11 @@ export async function setTaskStatusReason(
 }
 
 /** Verified line delete (Kanban "delete card"). */
-export async function deleteLine(rel: VaultPath, lineNo: number, expectedText: string): Promise<void> {
+export async function deleteLine(
+  rel: VaultPath,
+  lineNo: number,
+  expectedText: string
+): Promise<void> {
   const { eol, lines } = await readNoteLines(rel)
   const target = locateLine(lines, lineNo, expectedText)
   if (target === -1) throw new Error(`${STALE_ERROR}: line changed on disk in ${rel}`)
