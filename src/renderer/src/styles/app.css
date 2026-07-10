@@ -796,6 +796,44 @@ button {
   color: var(--text-normal);
 }
 
+/* ---------- Settings: hotkeys ---------- */
+
+.hotkey-row {
+  align-items: center;
+}
+
+.hotkey-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.hotkey-chip {
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  padding: 3px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-muted);
+  min-width: 64px;
+  text-align: center;
+}
+.hotkey-chip.recording {
+  border-color: var(--interactive-accent);
+  color: var(--text-accent);
+}
+
+.hotkey-fixed {
+  color: var(--text-faint);
+  font-family: inherit;
+}
+
+.hotkey-error {
+  color: var(--danger);
+  padding: 4px 0 8px;
+}
+
 .right-panel {
   width: 300px;
   flex-shrink: 0;

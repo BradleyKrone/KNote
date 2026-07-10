@@ -30,6 +30,7 @@ export const IpcChannels = {
   settingsGet: 'settings:get',
   settingsSetTheme: 'settings:setTheme',
   settingsSetReadableLineLength: 'settings:setReadableLineLength',
+  settingsSetHotkeyOverrides: 'settings:setHotkeyOverrides',
   vaultConfigGet: 'vaultConfig:get',
   vaultConfigSet: 'vaultConfig:set',
   indexSnapshot: 'index:snapshot',
@@ -82,6 +83,7 @@ export interface KnoteApi {
   getSettings(): Promise<AppSettings>
   setTheme(theme: ThemeName): Promise<void>
   setReadableLineLength(enabled: boolean): Promise<void>
+  setHotkeyOverrides(overrides: Record<string, string | null>): Promise<void>
   getVaultConfig(): Promise<VaultConfig>
   setVaultConfig(config: VaultConfig): Promise<void>
 

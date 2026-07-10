@@ -17,6 +17,7 @@ import {
   Image,
   Info,
   Kanban,
+  Keyboard,
   Plus,
   ScrollText,
   X
@@ -27,12 +28,21 @@ import { useReleaseNotesStore, useWelcomeStore } from '@/stores/docDialogs'
 import { openCopilotInstructions } from '@/commands/copilotInstructions'
 import { useIndexStore, tagCounts } from '@/stores/indexStore'
 import { confirm } from '@/stores/confirmStore'
+import { HotkeysSection } from './settings/HotkeysSection'
 
 type SettingsCategory =
-  'general' | 'weekly' | 'templates' | 'attachments' | 'kanban' | 'machines' | 'tags'
+  | 'general'
+  | 'hotkeys'
+  | 'weekly'
+  | 'templates'
+  | 'attachments'
+  | 'kanban'
+  | 'machines'
+  | 'tags'
 
 const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof Info }[] = [
   { id: 'general', label: 'General', icon: Info },
+  { id: 'hotkeys', label: 'Hotkeys', icon: Keyboard },
   { id: 'weekly', label: 'Weekly notes', icon: Calendar },
   { id: 'templates', label: 'Templates', icon: FileText },
   { id: 'attachments', label: 'Attachments', icon: Image },
@@ -285,6 +295,8 @@ export function SettingsModal(): React.JSX.Element | null {
                 </div>
               </>
             )}
+
+            {category === 'hotkeys' && <HotkeysSection />}
 
             {category === 'weekly' && (
               <>

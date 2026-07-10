@@ -62,4 +62,6 @@ export async function initSettings(): Promise<void> {
     theme: settings.theme,
     readableLineLength: settings.readableLineLength
   })
+  const { useHotkeyStore } = await import('@/commands/hotkeys')
+  useHotkeyStore.setState({ overrides: settings.hotkeyOverrides ?? {} })
 }

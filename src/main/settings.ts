@@ -16,7 +16,8 @@ import { getVaultRoot } from './vaultService'
 const DEFAULTS: AppSettings = {
   lastVault: null,
   theme: 'dark',
-  readableLineLength: true
+  readableLineLength: true,
+  hotkeyOverrides: {}
 }
 
 let cached: AppSettings | null = null
@@ -60,6 +61,12 @@ export async function setTheme(theme: ThemeName): Promise<void> {
 export async function setReadableLineLength(enabled: boolean): Promise<void> {
   const s = await getSettings()
   s.readableLineLength = enabled
+  await save()
+}
+
+export async function setHotkeyOverrides(overrides: Record<string, string | null>): Promise<void> {
+  const s = await getSettings()
+  s.hotkeyOverrides = overrides
   await save()
 }
 

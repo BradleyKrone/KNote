@@ -169,6 +169,11 @@ export interface AppSettings {
   theme: ThemeName
   /** Cap note content to a readable column width instead of filling the pane. */
   readableLineLength: boolean
+  /**
+   * Command hotkey overrides (commandId → combo like "Ctrl+Shift+P", or
+   * null to unbind a default). Commands not listed use their defaults.
+   */
+  hotkeyOverrides: Record<string, string | null>
 }
 
 // ---------- Per-vault configuration (.knote/config.json) ----------

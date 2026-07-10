@@ -30,6 +30,8 @@ const api: KnoteApi = {
   setTheme: (theme: ThemeName) => ipcRenderer.invoke(IpcChannels.settingsSetTheme, theme),
   setReadableLineLength: (enabled: boolean) =>
     ipcRenderer.invoke(IpcChannels.settingsSetReadableLineLength, enabled),
+  setHotkeyOverrides: (overrides: Record<string, string | null>) =>
+    ipcRenderer.invoke(IpcChannels.settingsSetHotkeyOverrides, overrides),
   getVaultConfig: () => ipcRenderer.invoke(IpcChannels.vaultConfigGet),
   setVaultConfig: (config) => ipcRenderer.invoke(IpcChannels.vaultConfigSet, config),
 

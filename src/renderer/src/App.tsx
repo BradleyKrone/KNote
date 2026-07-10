@@ -34,6 +34,7 @@ import { ConfirmDialog } from './components/ConfirmDialog'
 import { ReasonDialog } from './components/ReasonDialog'
 import { registerCoreCommands } from './commands/coreCommands'
 import { runCommand } from './commands/registry'
+import { commandForEvent } from './commands/hotkeys'
 import { openThisWeekNote } from './commands/weeklyNotes'
 import { useSettingsStore } from './stores/settingsStore'
 import { SearchPanel } from './components/panels/SearchPanel'
@@ -62,7 +63,6 @@ export default function App(): React.JSX.Element {
     sidebarTab,
     setSidebarTab,
     rightPanelOpen,
-    setQuickSwitcherOpen,
     boardOpen,
     timelineOpen,
     machineLogOpen,
@@ -94,36 +94,18 @@ export default function App(): React.JSX.Element {
     })
   }, [])
 
-  // Global shortcuts
+  // Global shortcuts: every binding is a command (see commands/hotkeys.ts);
+  // rebindable under Settings → Hotkeys.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (!(e.ctrlKey || e.metaKey)) return
-      const key = e.key.toLowerCase()
-      if (key === 'o') {
-        e.preventDefault()
-        setQuickSwitcherOpen(true)
-      } else if (key === 'p' && !e.shiftKey) {
-        e.preventDefault()
-        useUiStore.getState().setCommandPaletteOpen(true)
-      } else if (key === 'e') {
-        e.preventDefault()
-        runCommand('mode-reading')
-      } else if (key === 'n') {
-        e.preventDefault()
-        runCommand('new-note')
-      } else if (key === 'j') {
-        e.preventDefault()
-        useUiStore.getState().setQuickCaptureOpen(true)
-      } else if (key === 'tab') {
-        e.preventDefault()
-        void (e.shiftKey
-          ? useWorkspaceStore.getState().prevTab()
-          : useWorkspaceStore.getState().nextTab())
-      }
+      const commandId = commandForEvent(e)
+      if (!commandId) return
+      e.preventDefault()
+      runCommand(commandId)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setQuickSwitcherOpen])
+  }, [])
 
   useEffect(() => {
     const move = (e: MouseEvent): void => {

@@ -20,9 +20,14 @@ export function registerCoreCommands(): void {
   })
 
   registerCommand({
+    id: 'command-palette',
+    name: 'Open command palette',
+    run: () => useUiStore.getState().setCommandPaletteOpen(true)
+  })
+
+  registerCommand({
     id: 'quick-capture',
     name: 'Quick capture…',
-    hotkey: 'Ctrl+J',
     run: () => useUiStore.getState().setQuickCaptureOpen(true)
   })
 
@@ -45,7 +50,6 @@ export function registerCoreCommands(): void {
   registerCommand({
     id: 'quick-switcher',
     name: 'Open quick switcher',
-    hotkey: 'Ctrl+O',
     run: () => useUiStore.getState().setQuickSwitcherOpen(true)
   })
 
@@ -70,7 +74,6 @@ export function registerCoreCommands(): void {
   registerCommand({
     id: 'mode-reading',
     name: 'Reading mode',
-    hotkey: 'Ctrl+E',
     run: () => {
       const ws = useWorkspaceStore.getState()
       ws.setMode(ws.mode === 'reading' ? 'live' : 'reading')
@@ -185,14 +188,12 @@ export function registerCoreCommands(): void {
   registerCommand({
     id: 'tab-next',
     name: 'Next tab',
-    hotkey: 'Ctrl+Tab',
     run: () => useWorkspaceStore.getState().nextTab()
   })
 
   registerCommand({
     id: 'tab-prev',
     name: 'Previous tab',
-    hotkey: 'Ctrl+Shift+Tab',
     run: () => useWorkspaceStore.getState().prevTab()
   })
 

@@ -19,6 +19,7 @@ import {
   getSettings,
   getVaultConfig,
   setLastVault,
+  setHotkeyOverrides,
   setReadableLineLength,
   setTheme,
   setVaultConfig
@@ -200,6 +201,11 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
 
   ipcMain.handle(IpcChannels.settingsSetReadableLineLength, (_e, enabled: boolean) =>
     setReadableLineLength(enabled)
+  )
+
+  ipcMain.handle(
+    IpcChannels.settingsSetHotkeyOverrides,
+    (_e, overrides: Record<string, string | null>) => setHotkeyOverrides(overrides)
   )
 
   ipcMain.handle(IpcChannels.vaultConfigGet, () => getVaultConfig())
