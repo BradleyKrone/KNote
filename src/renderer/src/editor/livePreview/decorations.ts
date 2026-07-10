@@ -1,3 +1,7 @@
+// The live-preview engine: decorates markdown in place (hides syntax
+// markers away from the cursor, renders checkboxes, tag/priority/date
+// pills, image embeds, and heading folds) via a CodeMirror ViewPlugin.
+
 import {
   Decoration,
   type DecorationSet,

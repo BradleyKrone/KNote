@@ -1,3 +1,7 @@
+// Reading mode: the current note rendered read-only via react-markdown.
+// Also exports Md, the shared renderer used for embeds and the bundled-doc
+// dialogs (welcome guide, release notes).
+
 import { useEffect, useState } from 'react'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'

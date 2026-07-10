@@ -1,3 +1,6 @@
+// The vault link graph: canvas force-layout of notes and their wiki-link
+// edges (built by graphModel.ts), with hover/click navigation.
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { openWikiTarget, useIndexStore } from '@/stores/indexStore'

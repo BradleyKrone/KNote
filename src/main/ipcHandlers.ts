@@ -1,3 +1,7 @@
+// Registers every IPC endpoint the renderer can call (the channel list and
+// payload types live in shared/ipc.ts) and pushes vault/watcher/spellcheck
+// events back to the window. The only bridge between UI and filesystem.
+
 import { BrowserWindow, dialog, ipcMain, session } from 'electron'
 import { promises as fs } from 'fs'
 import { IpcChannels } from '@shared/ipc'

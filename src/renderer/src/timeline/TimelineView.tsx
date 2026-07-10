@@ -1,3 +1,6 @@
+// The timeline view: dated tasks and 🏁 milestones from across the vault
+// laid out chronologically.
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import dayjs from 'dayjs'
 import { CheckCircle2, Circle, FileText, Flag, X } from 'lucide-react'

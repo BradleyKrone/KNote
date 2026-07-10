@@ -1,3 +1,6 @@
+// The toolbar above the editor: view-mode toggles, formatting buttons for
+// the open note, task pickers (tag/priority/date), and panel toggles.
+
 import {
   Bold,
   BookOpen,

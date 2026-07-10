@@ -1,3 +1,7 @@
+// Persistence for app-level settings (knote-settings.json in userData:
+// last vault, theme) and the per-vault config (.knote/config.json:
+// board columns, folders, feature toggles).
+
 import { app, nativeTheme } from 'electron'
 import { promises as fs } from 'fs'
 import { join } from 'path'

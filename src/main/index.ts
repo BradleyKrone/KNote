@@ -1,3 +1,6 @@
+// Electron main-process entry point: creates the window, serves vault
+// images over the knote:// protocol, and starts IPC + settings on app ready.
+
 import { app, BrowserWindow, dialog, nativeTheme, net, protocol, session } from 'electron'
 import { join } from 'path'
 import { pathToFileURL } from 'url'

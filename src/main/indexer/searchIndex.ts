@@ -1,3 +1,7 @@
+// MiniSearch-backed full-text search over note titles/content, combined
+// with the operator filters from shared/searchQuery (path:/tag:/file:) and
+// snippet extraction for the results panel.
+
 import MiniSearch from 'minisearch'
 import type { NoteMeta, SearchResult, VaultPath } from '@shared/types'
 import { nameOf } from '@shared/pathUtils'

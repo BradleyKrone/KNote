@@ -1,3 +1,7 @@
+// Verified, targeted line edits — how the Kanban board and quick capture
+// write into notes without clobbering them. Every function re-reads the file
+// and refuses to write when the target line changed (KNOTE_STALE).
+
 import { promises as fs } from 'fs'
 import type { VaultPath } from '@shared/types'
 import { REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'

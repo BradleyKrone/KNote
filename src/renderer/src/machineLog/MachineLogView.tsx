@@ -1,3 +1,6 @@
+// The machine work-log view: 🚜 entries collected from every note, grouped
+// per machine with date/tag filtering.
+
 import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import { Truck, Wrench, X } from 'lucide-react'

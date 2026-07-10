@@ -1,3 +1,7 @@
+// The filesystem layer: vault root state, path safety (toAbs), and all
+// note/folder CRUD. Writes go through writeFileAtomic and coordinate with
+// the watcher via the own-write / known-content markers below.
+
 import { promises as fs } from 'fs'
 import { dirname, join, resolve, sep } from 'path'
 import { shell } from 'electron'

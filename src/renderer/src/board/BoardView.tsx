@@ -1,3 +1,7 @@
+// The Kanban board: every task in the vault (or one note), grouped into
+// status-char columns, with dnd-kit drag-and-drop written back to the
+// source notes through boardActions.
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   DndContext,

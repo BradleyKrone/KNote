@@ -1,3 +1,6 @@
+// The shared data model: every type that crosses the main/preload/renderer
+// boundary lives here.
+
 /** Vault-relative paths use forward slashes, no leading slash: "folder/note.md" */
 export type VaultPath = string
 

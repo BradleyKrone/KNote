@@ -1,3 +1,6 @@
+// The vault file tree: expand/collapse folders, open notes, and
+// create/rename/move/delete files via inline editing and context menu.
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronDown, ChevronRight, FilePlus2, FileText, FolderPlus, Image } from 'lucide-react'
 import type { FileEntry, VaultPath } from '@shared/types'

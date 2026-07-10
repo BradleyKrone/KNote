@@ -1,3 +1,6 @@
+// Assembles the CodeMirror 6 editor: extensions, keymaps, markdown language,
+// autocomplete, and the live-preview compartment toggled by the mode switch.
+
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
 import {
   drawSelection,

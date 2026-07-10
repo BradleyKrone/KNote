@@ -1,3 +1,7 @@
+// The settings dialog: category sidebar (General, Weekly notes, Templates,
+// Attachments, Kanban, Machines, Tags) + content pane, editing app settings
+// and the per-vault config.
+
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowDown,

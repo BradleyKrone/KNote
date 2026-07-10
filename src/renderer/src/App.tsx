@@ -1,3 +1,7 @@
+// Root component: sidebar + topbar + active view (editor/board/timeline/
+// machine log), global keyboard shortcuts, sidebar resize, and the
+// app-wide modals/dialogs mounted at the bottom.
+
 import { useEffect, useRef, useState } from 'react'
 import {
   CalendarDays,
