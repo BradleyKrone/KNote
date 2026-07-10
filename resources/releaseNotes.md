@@ -3,6 +3,32 @@
 Reopen this any time from **Settings → Release notes**. The current version
 number is shown in the window's title bar, next to "KNote".
 
+## 0.11.0
+
+- **Tabs**: every note you open becomes a tab above the editor — click to
+  switch, middle-click or `×` to close, `Ctrl+Tab` / `Ctrl+Shift+Tab` to
+  cycle
+- **Split panes**: "Split pane: vertical / horizontal" in the command
+  palette opens a second pane with its own tabs and editor; "Close split"
+  merges back. The same note open in both panes stays in sync
+- **Custom keyboard shortcuts**: new **Settings → Hotkeys** section —
+  record a new combination for any command palette entry, with conflict
+  detection, unbind, and per-command reset to default
+- **Block references**: end a line with ` ^some-id` to anchor it, link to
+  it with `[[Note#^some-id]]`; typing `[[Note#^` suggests the note's
+  anchors
+
+## 0.10.1
+
+- Internal cleanup & stability pass — no feature changes:
+  - Fixed two rare write races that could clobber a note edited outside
+    KNote at the exact moment KNote wrote to it (quick capture / board
+    "add card" appends, and simultaneous saves of the same file)
+  - New test coverage for the code that guards your notes during Kanban
+    sync and external-edit detection (36 new tests)
+  - Removed dead code, consolidated duplicated UI/parser logic, and added
+    ESLint/Prettier with CI enforcement
+
 ## 0.10.0
 
 - The `[[` link suggester now chains into a **heading suggester**: picking a

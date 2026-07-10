@@ -1,4 +1,5 @@
 import { samePath } from '@shared/pathUtils'
+import { isStaleError } from '@shared/errors'
 import { ARCHIVED_CHAR, REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
 import { getActiveEditorView } from '@/editor/activeView'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -19,7 +20,10 @@ function staleToast(): void {
 }
 
 /** Returns true if the change was applied to a live editor buffer. */
-function tryBufferRewrite(card: BoardCard, mutate: (lineFrom: number, lineText: string) => boolean): boolean {
+function tryBufferRewrite(
+  card: BoardCard,
+  mutate: (lineFrom: number, lineText: string) => boolean
+): boolean {
   const ws = useWorkspaceStore.getState()
   const view = getActiveEditorView()
   if (!view || !ws.note || !samePath(ws.note.path, card.path)) return false
@@ -57,7 +61,8 @@ export async function setCardStatus(
   const m = TASK_LINE_RE.exec(card.rawLine)
   if (!m) return
   const bracketOffset = m[1].length + m[2].length + 2
-  const newLine = card.rawLine.slice(0, bracketOffset) + targetChar + card.rawLine.slice(bracketOffset + 1)
+  const newLine =
+    card.rawLine.slice(0, bracketOffset) + targetChar + card.rawLine.slice(bracketOffset + 1)
 
   const applied = tryBufferRewrite(card, (lineFrom, lineText) => {
     const view = getActiveEditorView()!
@@ -81,12 +86,18 @@ export async function setCardStatus(
 
   try {
     if (reasonLine !== undefined) {
-      await window.knote.setTaskStatusReason(card.path, card.line, card.rawLine, targetChar, reasonLine)
+      await window.knote.setTaskStatusReason(
+        card.path,
+        card.line,
+        card.rawLine,
+        targetChar,
+        reasonLine
+      )
     } else {
       await window.knote.replaceLine(card.path, card.line, card.rawLine, newLine)
     }
   } catch (err) {
-    if (String(err).includes('KNOTE_STALE')) staleToast()
+    if (isStaleError(err)) staleToast()
     else throw err
   }
 }
@@ -155,7 +166,7 @@ export async function reorderCard(card: BoardCard, before: BoardCard | null): Pr
       before ? before.rawLine : null
     )
   } catch (err) {
-    if (String(err).includes('KNOTE_STALE')) staleToast()
+    if (isStaleError(err)) staleToast()
     else throw err
   }
 }
@@ -183,7 +194,7 @@ export async function updateCardText(card: BoardCard, newText: string): Promise<
   try {
     await window.knote.replaceLine(card.path, card.line, card.rawLine, newLine)
   } catch (err) {
-    if (String(err).includes('KNOTE_STALE')) staleToast()
+    if (isStaleError(err)) staleToast()
     else throw err
   }
 }
@@ -202,7 +213,7 @@ export async function deleteCard(card: BoardCard): Promise<void> {
   try {
     await window.knote.deleteLine(card.path, card.line, card.rawLine)
   } catch (err) {
-    if (String(err).includes('KNOTE_STALE')) staleToast()
+    if (isStaleError(err)) staleToast()
     else throw err
   }
 }
@@ -221,7 +232,8 @@ export async function addCard(
   await useSettingsStore.getState().loadVaultConfig()
   const config = useSettingsStore.getState().vaultConfig
   const target = scope.kind === 'note' ? scope.path : config.inboxNote
-  const line = `- [${statusChar}] ${text.trim()}` + (reasonLine !== undefined ? '\n' + reasonLine : '')
+  const line =
+    `- [${statusChar}] ${text.trim()}` + (reasonLine !== undefined ? '\n' + reasonLine : '')
 
   // If the target note is open with unsaved edits, append via the buffer
   const ws = useWorkspaceStore.getState()

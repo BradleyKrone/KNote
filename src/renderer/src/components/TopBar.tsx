@@ -1,3 +1,6 @@
+// The toolbar above the editor: view-mode toggles, formatting buttons for
+// the open note, task pickers (tag/priority/date), and panel toggles.
+
 import {
   Bold,
   BookOpen,
@@ -37,7 +40,6 @@ import { titleOf } from '@shared/pathUtils'
 type PickerKind = 'tag' | 'priority' | 'date' | null
 
 interface Props {
-  sidebarOpen: boolean
   onToggleSidebar: () => void
 }
 
@@ -208,7 +210,13 @@ export function TopBar({ onToggleSidebar }: Props): React.JSX.Element {
               setMode(mode === 'live' ? 'source' : mode === 'source' ? 'reading' : 'live')
             }
           >
-            {mode === 'live' ? <Eye size={16} /> : mode === 'source' ? <Code2 size={16} /> : <BookOpen size={16} />}
+            {mode === 'live' ? (
+              <Eye size={16} />
+            ) : mode === 'source' ? (
+              <Code2 size={16} />
+            ) : (
+              <BookOpen size={16} />
+            )}
           </button>
         )}
         <button className="icon-btn" title="Toggle theme" onClick={toggleTheme}>

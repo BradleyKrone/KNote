@@ -1,3 +1,6 @@
+// The shared data model: every type that crosses the main/preload/renderer
+// boundary lives here.
+
 /** Vault-relative paths use forward slashes, no leading slash: "folder/note.md" */
 export type VaultPath = string
 
@@ -131,6 +134,8 @@ export interface NoteMeta {
   tasks: TaskItem[]
   milestones: MilestoneItem[]
   machineLog: MachineLogItem[]
+  /** ^block-id anchors, for [[Note#^id]] block references. */
+  blockIds: BlockRef[]
   mtimeMs: number
 }
 
@@ -159,6 +164,13 @@ export interface Mention {
   matched: string
 }
 
+/** A `^block-id` anchor at the end of a line, targetable via [[Note#^id]]. */
+export interface BlockRef {
+  id: string
+  /** 0-based line of the anchored block. */
+  line: number
+}
+
 export type ThemeName = 'light' | 'dark'
 
 export interface AppSettings {
@@ -166,6 +178,11 @@ export interface AppSettings {
   theme: ThemeName
   /** Cap note content to a readable column width instead of filling the pane. */
   readableLineLength: boolean
+  /**
+   * Command hotkey overrides (commandId → combo like "Ctrl+Shift+P", or
+   * null to unbind a default). Commands not listed use their defaults.
+   */
+  hotkeyOverrides: Record<string, string | null>
 }
 
 // ---------- Per-vault configuration (.knote/config.json) ----------

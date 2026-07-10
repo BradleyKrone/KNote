@@ -1,3 +1,7 @@
+// MiniSearch-backed full-text search over note titles/content, combined
+// with the operator filters from shared/searchQuery (path:/tag:/file:) and
+// snippet extraction for the results panel.
+
 import MiniSearch from 'minisearch'
 import type { NoteMeta, SearchResult, VaultPath } from '@shared/types'
 import { nameOf } from '@shared/pathUtils'
@@ -94,7 +98,8 @@ export function search(query: string): SearchResult[] {
     if (!meta || content === undefined) continue
 
     const lowerPath = path.toLowerCase()
-    if (parsed.path.length && !parsed.path.every((p) => lowerPath.includes(p.toLowerCase()))) continue
+    if (parsed.path.length && !parsed.path.every((p) => lowerPath.includes(p.toLowerCase())))
+      continue
     if (
       parsed.file.length &&
       !parsed.file.every((f) => nameOf(path).toLowerCase().includes(f.toLowerCase()))
@@ -105,12 +110,17 @@ export function search(query: string): SearchResult[] {
     if (parsed.tag.length && !parsed.tag.every((t) => tagMatches(noteTags, t))) continue
 
     const lowerContent = content.toLowerCase()
-    if (parsed.phrases.length && !parsed.phrases.every((p) => lowerContent.includes(p.toLowerCase()))) {
+    if (
+      parsed.phrases.length &&
+      !parsed.phrases.every((p) => lowerContent.includes(p.toLowerCase()))
+    ) {
       continue
     }
     if (
       parsed.excludes.some(
-        (x) => lowerContent.includes(x.toLowerCase()) || meta.title.toLowerCase().includes(x.toLowerCase())
+        (x) =>
+          lowerContent.includes(x.toLowerCase()) ||
+          meta.title.toLowerCase().includes(x.toLowerCase())
       )
     ) {
       continue

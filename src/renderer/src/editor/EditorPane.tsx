@@ -1,52 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { EditorSelection } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { ARCHIVED_CHAR, DUE_RE, MILESTONE_LINE_RE, reasonLineForTask, TASK_LINE_RE } from '@shared/parser/patterns'
-import { promptReason } from '@/stores/reasonPromptStore'
-import type { BoardColumn } from '@shared/types'
+import { MILESTONE_LINE_RE, TASK_LINE_RE } from '@shared/parser/patterns'
+import { isConflictError } from '@shared/errors'
 import { registerKeepMine, useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { createEditor, type KnoteEditor } from './cmSetup'
-import { getActiveEditorView, setActiveEditorView } from './activeView'
+import { clearActiveEditorView, setActiveEditorView } from './activeView'
 import {
-  adjustFontSize,
-  insertCheckboxAtCursor,
-  insertMachineEntryAtCursor,
-  insertMilestoneAtCursor,
-  insertTagAtCursor,
-  setDueDateAtCursor,
-  setPriorityAtCursor,
-  setTaskStatusAtCursor,
-  toggleBold,
-  toggleInlineCode,
-  toggleItalic,
-  toggleStrikethrough
-} from './formatting'
+  buildCheckboxMenuItems,
+  buildContextMenuItems,
+  wordAt,
+  type ContextMenuState,
+  type SpellingTarget
+} from './contextMenu'
+import { EditorPickers, type ActivePicker } from './EditorPickers'
 import { ReadingView } from '@/components/reading/ReadingView'
-import { ContextMenu, type MenuEntry } from '@/components/ContextMenu'
-import { Popover } from '@/components/popover/Popover'
-import { TagPickerContent } from '@/components/popover/TagPickerContent'
-import { PriorityPickerContent } from '@/components/popover/PriorityPickerContent'
-import { DatePickerContent } from '@/components/popover/DatePickerContent'
-import { MachineEntryPickerContent } from '@/components/popover/MachineEntryPickerContent'
+import { ContextMenu } from '@/components/ContextMenu'
 
 const AUTOSAVE_DELAY_MS = 500
-
-interface ContextMenuState {
-  x: number
-  y: number
-  isTask: boolean
-  isMilestone: boolean
-  isCheckbox: boolean
-  spelling: SpellingTarget | null
-}
-
-interface SpellingTarget {
-  word: string
-  from: number
-  to: number
-  suggestions: string[]
-}
 
 /** Editor state captured on right-click, paired with async spell data from main. */
 interface PendingContext {
@@ -59,136 +31,20 @@ interface PendingContext {
   wordRange: { word: string; from: number; to: number } | null
 }
 
-const WORD_CHAR_RE = /[A-Za-z']/
-
-/** Finds the word (if any) touching `pos`, for spellcheck suggestions on right-click. */
-function wordAt(
-  view: EditorView,
-  pos: number
-): { word: string; from: number; to: number } | null {
-  const line = view.state.doc.lineAt(pos)
-  const offset = pos - line.from
-  if (!WORD_CHAR_RE.test(line.text[offset] ?? '') && !WORD_CHAR_RE.test(line.text[offset - 1] ?? '')) {
-    return null
-  }
-  let start = offset
-  while (start > 0 && WORD_CHAR_RE.test(line.text[start - 1])) start--
-  let end = offset
-  while (end < line.text.length && WORD_CHAR_RE.test(line.text[end])) end++
-  if (start === end) return null
-  return { word: line.text.slice(start, end), from: line.from + start, to: line.from + end }
-}
-
-function replaceWordWith(
-  view: EditorView,
-  target: { from: number; to: number },
-  replacement: string
-): void {
-  view.dispatch({
-    changes: { from: target.from, to: target.to, insert: replacement },
-    selection: { anchor: target.from + replacement.length }
-  })
-  view.focus()
-}
-
-/** Spelling-suggestion entries shown above the regular formatting menu. */
-function buildSpellingMenuItems(view: EditorView, target: SpellingTarget): MenuEntry[] {
-  const items: MenuEntry[] = target.suggestions.slice(0, 5).map((s) => ({
-    label: s,
-    onClick: () => replaceWordWith(view, target, s)
-  }))
-  if (items.length === 0) items.push({ label: 'No suggestions', onClick: () => {} })
-  items.push({
-    label: 'Add to dictionary',
-    onClick: () => void window.knote.spellcheck.addWord(target.word)
-  })
-  items.push({ separator: true })
-  return items
-}
-
-type PickerKind = 'tag' | 'priority' | 'date' | 'machine'
-
-interface ActivePicker {
-  kind: PickerKind
-  x: number
-  y: number
-}
-
-/** Right-click landed on a task's checkbox glyph: offer a quick status switch instead of formatting. */
-function buildCheckboxMenuItems(view: EditorView, columns: BoardColumn[]): MenuEntry[] {
-  const line = view.state.doc.lineAt(view.state.selection.main.head)
-  const currentChar = TASK_LINE_RE.exec(line.text)?.[3] ?? null
-  const items: MenuEntry[] = columns.map((col) => ({
-    label: col.char === currentChar ? `✓ ${col.name}` : col.name,
-    onClick: () => {
-      if (col.char === currentChar) return
-      if (!col.requireReason) {
-        setTaskStatusAtCursor(view, col.char)
-        return
-      }
-      void promptReason(col.name).then((result) => {
-        if (!result) return
-        const target = getActiveEditorView() ?? view
-        const taskLine = target.state.doc.lineAt(target.state.selection.main.head).text
-        setTaskStatusAtCursor(
-          target,
-          col.char,
-          reasonLineForTask(taskLine, col.name, result.reason, result.date)
-        )
-      })
-    }
-  }))
-  items.push(
-    { separator: true },
-    {
-      label: currentChar === ARCHIVED_CHAR ? '✓ Archived' : 'Archived',
-      onClick: () => setTaskStatusAtCursor(view, ARCHIVED_CHAR)
-    }
-  )
-  return items
-}
-
-function buildContextMenuItems(
-  view: EditorView,
-  ctx: ContextMenuState,
-  openPicker: (kind: PickerKind) => void
-): MenuEntry[] {
-  const items: MenuEntry[] = ctx.spelling ? buildSpellingMenuItems(view, ctx.spelling) : []
-  items.push(
-    { label: 'Bold', onClick: () => toggleBold(view) },
-    { label: 'Italic', onClick: () => toggleItalic(view) },
-    { label: 'Strikethrough', onClick: () => toggleStrikethrough(view) },
-    { label: 'Inline code', onClick: () => toggleInlineCode(view) },
-    { separator: true },
-    { label: 'Add checkbox', onClick: () => insertCheckboxAtCursor(view) },
-    { label: 'Add milestone', onClick: () => insertMilestoneAtCursor(false) },
-    { label: 'Log machine work…', onClick: () => openPicker('machine') }
-  )
-  if (ctx.isTask || ctx.isMilestone) {
-    items.push(
-      { separator: true },
-      { label: 'Add tag…', onClick: () => openPicker('tag') },
-      { label: 'Set priority…', onClick: () => openPicker('priority') },
-      { label: 'Set due date…', onClick: () => openPicker('date') }
-    )
-  }
-  items.push(
-    { separator: true },
-    { label: 'Increase font size', onClick: () => adjustFontSize(view, 1) },
-    { label: 'Decrease font size', onClick: () => adjustFontSize(view, -1) }
-  )
-  return items
+interface EditorPaneProps {
+  /** Which workspace pane this editor belongs to (0, or 1 when split). */
+  paneIndex: number
 }
 
 /**
- * Hosts the CodeMirror view for the currently open note. The component is
- * keyed on the note path (remounts per note); external reloads bump
+ * Hosts the CodeMirror view for one pane's active note. The component is
+ * keyed on pane + note path (remounts per note); external reloads bump
  * note.version, which rebuilds the editor buffer.
  */
-export function EditorPane(): React.JSX.Element {
-  const note = useWorkspaceStore((s) => s.note)
+export function EditorPane({ paneIndex }: EditorPaneProps): React.JSX.Element {
+  const note = useWorkspaceStore((s) => s.panes[paneIndex]?.note ?? null)
   const mode = useWorkspaceStore((s) => s.mode)
-  const conflict = useWorkspaceStore((s) => s.conflict)
+  const conflict = useWorkspaceStore((s) => s.panes[paneIndex]?.conflict ?? null)
   const resolveConflict = useWorkspaceStore((s) => s.resolveConflict)
   const columns = useSettingsStore((s) => s.vaultConfig.columns)
 
@@ -217,59 +73,64 @@ export function EditorPane(): React.JSX.Element {
     eolRef.current = note.eol
   }
 
-  const save = useCallback(async (force = false): Promise<void> => {
-    const editor = editorRef.current
-    let content: string
-    if (editor) {
-      content = editor.view.state.doc.toString()
-      if (eolRef.current === '\r\n') content = content.replace(/\n/g, '\r\n')
-      pendingContent.current = content
-    } else if (pendingContent.current !== null) {
-      // Editor already destroyed (e.g. this is a queued retry that fired
-      // after the user navigated away mid-save) — use the last buffer
-      // content captured before teardown instead of silently dropping it.
-      content = pendingContent.current
-    } else {
-      return
-    }
-    // While a conflict is unresolved, never auto-write over the external edit
-    if (!force && useWorkspaceStore.getState().conflict) return
-    if (saveTimer.current) {
-      clearTimeout(saveTimer.current)
-      saveTimer.current = null
-    }
-    if (saveInFlight.current) {
-      savePending.current = true
-      return
-    }
-    if (!force && content === lastSaved.current) return
-    saveInFlight.current = true
-    try {
-      // Optimistic concurrency: refuse to clobber a file someone else wrote
-      // since we loaded/saved it. Forced saves ("Keep my version") skip this.
-      const expected = force ? undefined : useWorkspaceStore.getState().note?.mtimeMs
-      const result = await window.knote.writeFile(pathRef.current, content, expected)
-      lastSaved.current = content
-      pendingContent.current = null
-      useWorkspaceStore.getState().markSaved(content, result.mtimeMs)
-    } catch (err) {
-      if (String(err).includes('KNOTE_CONFLICT')) {
-        useWorkspaceStore.getState().setConflict('modified')
+  const save = useCallback(
+    async (force = false): Promise<void> => {
+      const editor = editorRef.current
+      let content: string
+      if (editor) {
+        content = editor.view.state.doc.toString()
+        if (eolRef.current === '\r\n') content = content.replace(/\n/g, '\r\n')
+        pendingContent.current = content
+      } else if (pendingContent.current !== null) {
+        // Editor already destroyed (e.g. this is a queued retry that fired
+        // after the user navigated away mid-save) — use the last buffer
+        // content captured before teardown instead of silently dropping it.
+        content = pendingContent.current
       } else {
-        console.error('Save failed:', err)
+        return
       }
-    } finally {
-      saveInFlight.current = false
-      if (savePending.current) {
-        savePending.current = false
-        void save(force)
+      // While a conflict is unresolved, never auto-write over the external edit
+      if (!force && useWorkspaceStore.getState().panes[paneIndex]?.conflict) return
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current)
+        saveTimer.current = null
       }
-    }
-  }, [])
+      if (saveInFlight.current) {
+        savePending.current = true
+        return
+      }
+      if (!force && content === lastSaved.current) return
+      saveInFlight.current = true
+      try {
+        // Optimistic concurrency: refuse to clobber a file someone else wrote
+        // since we loaded/saved it. Forced saves ("Keep my version") skip this.
+        const expected = force
+          ? undefined
+          : useWorkspaceStore.getState().panes[paneIndex]?.note?.mtimeMs
+        const result = await window.knote.writeFile(pathRef.current, content, expected)
+        lastSaved.current = content
+        pendingContent.current = null
+        useWorkspaceStore.getState().markSaved(paneIndex, content, result.mtimeMs)
+      } catch (err) {
+        if (isConflictError(err)) {
+          useWorkspaceStore.getState().setConflict(paneIndex, 'modified')
+        } else {
+          console.error('Save failed:', err)
+        }
+      } finally {
+        saveInFlight.current = false
+        if (savePending.current) {
+          savePending.current = false
+          void save(force)
+        }
+      }
+    },
+    [paneIndex]
+  )
 
   const scheduleSave = useCallback(
     (flushNow: boolean): void => {
-      useWorkspaceStore.getState().markDirty()
+      useWorkspaceStore.getState().markDirty(paneIndex)
       if (saveTimer.current) clearTimeout(saveTimer.current)
       if (flushNow) {
         void save()
@@ -277,7 +138,7 @@ export function EditorPane(): React.JSX.Element {
         saveTimer.current = setTimeout(() => void save(), AUTOSAVE_DELAY_MS)
       }
     },
-    [save]
+    [save, paneIndex]
   )
 
   // (Re)create the editor when the note buffer is (re)loaded from disk
@@ -298,8 +159,13 @@ export function EditorPane(): React.JSX.Element {
       }
     )
     editorRef.current = editor
-    editor.view.focus()
-    setActiveEditorView(editor.view)
+    // Only the active pane's editor may take focus and the global active-view
+    // slot — a background rebuild (e.g. same note refreshed in the other
+    // pane after a save) must not steal focus from where the user is typing.
+    if (useWorkspaceStore.getState().activePane === paneIndex) {
+      editor.view.focus()
+      setActiveEditorView(editor.view)
+    }
     setContextMenu(null)
     setActivePicker(null)
 
@@ -308,7 +174,7 @@ export function EditorPane(): React.JSX.Element {
     // runs twice on a fresh mount (create → destroy → create), and clearing
     // in the first, discarded run would leave the second, live editor with
     // nothing to scroll to. It's cleared below, only by the surviving editor.
-    const scrollLine = useWorkspaceStore.getState().scrollRequest
+    const scrollLine = useWorkspaceStore.getState().panes[paneIndex]?.scrollRequest ?? null
     if (scrollLine !== null) {
       const scrollToTarget = (): void => {
         // Editor may have been torn down (StrictMode / fast re-nav) before this
@@ -333,18 +199,19 @@ export function EditorPane(): React.JSX.Element {
       requestAnimationFrame(() => {
         scrollToTarget()
         if (editorRef.current === editor) {
-          useWorkspaceStore.getState().clearScrollRequest()
+          useWorkspaceStore.getState().clearScrollRequest(paneIndex)
         }
       })
     }
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
       // Flush any unsaved edits before tearing down (fire and forget)
-      if (useWorkspaceStore.getState().dirty && !useWorkspaceStore.getState().conflict) {
+      const pane = useWorkspaceStore.getState().panes[paneIndex]
+      if (pane?.dirty && !pane.conflict) {
         void save()
       }
       editorRef.current = null
-      setActiveEditorView(null)
+      clearActiveEditorView(editor.view)
       editor.destroy()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -364,32 +231,32 @@ export function EditorPane(): React.JSX.Element {
       for (let i = 0; i < 20 && saveInFlight.current; i++) {
         await new Promise((r) => setTimeout(r, 100))
       }
-      const current = useWorkspaceStore.getState().note
+      const current = useWorkspaceStore.getState().panes[paneIndex]?.note
       if (cancelled || !current) return
       const fresh = await window.knote.readFile(current.path)
       if (!cancelled && fresh.content !== current.content) {
-        await useWorkspaceStore.getState().openFile(current.path)
+        await useWorkspaceStore.getState().openFileInPane(paneIndex, current.path)
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [isReading])
+  }, [isReading, paneIndex])
 
   // "Keep my version" in the conflict banner force-saves the live buffer
   useEffect(() => {
-    registerKeepMine(() => void save(true))
-    return () => registerKeepMine(null)
-  }, [save])
+    registerKeepMine(paneIndex, () => void save(true))
+    return () => registerKeepMine(paneIndex, null)
+  }, [save, paneIndex])
 
   // Flush on app close
   useEffect(() => {
     const flush = (): void => {
-      if (useWorkspaceStore.getState().dirty) void save()
+      if (useWorkspaceStore.getState().panes[paneIndex]?.dirty) void save()
     }
     window.addEventListener('beforeunload', flush)
     return () => window.removeEventListener('beforeunload', flush)
-  }, [save])
+  }, [save, paneIndex])
 
   // Right-click records where/what was clicked but does NOT open the menu or
   // preventDefault — letting the event through is what lets Chromium fire its
@@ -402,9 +269,7 @@ export function EditorPane(): React.JSX.Element {
     const isCheckbox = !!(e.target as HTMLElement).closest?.('.knote-task-checkbox')
     const pos = view.posAtCoords({ x: e.clientX, y: e.clientY })
     if (pos !== null) {
-      const insideSelection = view.state.selection.ranges.some(
-        (r) => pos >= r.from && pos <= r.to
-      )
+      const insideSelection = view.state.selection.ranges.some((r) => pos >= r.from && pos <= r.to)
       if (!insideSelection) view.dispatch({ selection: EditorSelection.cursor(pos) })
     }
     const line = view.state.doc.lineAt(pos ?? view.state.selection.main.head)
@@ -439,18 +304,18 @@ export function EditorPane(): React.JSX.Element {
     })
   }, [])
 
-  const currentLineDue = (): string | null => {
-    const view = editorRef.current?.view
-    if (!view) return null
-    const line = view.state.doc.lineAt(view.state.selection.main.head)
-    const m = DUE_RE.exec(line.text)
-    return m ? (m[1] ?? m[2]) : null
-  }
-
   if (!note) return <></>
 
   return (
-    <div className="editor-pane">
+    <div
+      className="editor-pane"
+      // Clicking/typing into this pane makes it the active one and its
+      // editor the target of toolbar/board buffer actions.
+      onFocusCapture={() => {
+        useWorkspaceStore.getState().setActivePane(paneIndex)
+        if (editorRef.current) setActiveEditorView(editorRef.current.view)
+      }}
+    >
       {conflict && (
         <div className="conflict-banner">
           <span>
@@ -460,14 +325,16 @@ export function EditorPane(): React.JSX.Element {
           </span>
           <div className="conflict-actions">
             {conflict === 'modified' && (
-              <button onClick={() => void resolveConflict('reload')}>Reload from disk</button>
+              <button onClick={() => void resolveConflict(paneIndex, 'reload')}>
+                Reload from disk
+              </button>
             )}
-            <button onClick={() => void resolveConflict('keep')}>Keep my version</button>
+            <button onClick={() => void resolveConflict(paneIndex, 'keep')}>Keep my version</button>
           </div>
         </div>
       )}
       {isReading ? (
-        <ReadingView />
+        <ReadingView paneIndex={paneIndex} />
       ) : (
         <div ref={containerRef} className="editor-host" onContextMenu={handleContextMenu} />
       )}
@@ -486,45 +353,11 @@ export function EditorPane(): React.JSX.Element {
         />
       )}
       {activePicker && (
-        <Popover anchorPoint={{ x: activePicker.x, y: activePicker.y }} onClose={() => setActivePicker(null)}>
-          {activePicker.kind === 'tag' && (
-            <TagPickerContent
-              onSelect={(tag) => {
-                const view = editorRef.current?.view
-                if (view) insertTagAtCursor(view, tag)
-                setActivePicker(null)
-              }}
-            />
-          )}
-          {activePicker.kind === 'priority' && (
-            <PriorityPickerContent
-              onSelect={(level) => {
-                const view = editorRef.current?.view
-                if (view) setPriorityAtCursor(view, level)
-                setActivePicker(null)
-              }}
-            />
-          )}
-          {activePicker.kind === 'date' && (
-            <DatePickerContent
-              currentDate={currentLineDue()}
-              onSelect={(date) => {
-                const view = editorRef.current?.view
-                if (view) setDueDateAtCursor(view, date)
-                setActivePicker(null)
-              }}
-            />
-          )}
-          {activePicker.kind === 'machine' && (
-            <MachineEntryPickerContent
-              onSubmit={(serial, date, tags) => {
-                const view = editorRef.current?.view
-                if (view) insertMachineEntryAtCursor(view, serial, date, tags)
-                setActivePicker(null)
-              }}
-            />
-          )}
-        </Popover>
+        <EditorPickers
+          picker={activePicker}
+          getView={() => editorRef.current?.view ?? null}
+          onClose={() => setActivePicker(null)}
+        />
       )}
     </div>
   )

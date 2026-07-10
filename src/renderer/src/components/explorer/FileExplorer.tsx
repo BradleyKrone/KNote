@@ -1,3 +1,6 @@
+// The vault file tree: expand/collapse folders, open notes, and
+// create/rename/move/delete files via inline editing and context menu.
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronDown, ChevronRight, FilePlus2, FileText, FolderPlus, Image } from 'lucide-react'
 import type { FileEntry, VaultPath } from '@shared/types'
@@ -85,13 +88,11 @@ export function FileExplorer(): React.JSX.Element {
   }
 
   const doDelete = async (entry: FileEntry): Promise<void> => {
-    const label = entry.kind === 'folder' ? `folder "${entry.name}" and its contents` : `"${entry.name}"`
+    const label =
+      entry.kind === 'folder' ? `folder "${entry.name}" and its contents` : `"${entry.name}"`
     if (!(await confirm(`Move ${label} to the system trash?`, { danger: true }))) return
     await window.knote.deleteEntry(entry.path)
-    const open = useWorkspaceStore.getState().note
-    if (open && (samePath(open.path, entry.path) || open.path.startsWith(entry.path + '/'))) {
-      useWorkspaceStore.getState().closeFile()
-    }
+    useWorkspaceStore.getState().closeTabsForPath(entry.path)
     await refreshTree()
   }
 
@@ -235,7 +236,10 @@ export function FileExplorer(): React.JSX.Element {
         className={`tree-root${dropTarget === '' ? ' drop-target' : ''}`}
         onContextMenu={rootMenu}
         onDragOver={(e) => {
-          if (e.target === e.currentTarget && e.dataTransfer.types.includes('application/knote-path')) {
+          if (
+            e.target === e.currentTarget &&
+            e.dataTransfer.types.includes('application/knote-path')
+          ) {
             e.preventDefault()
             setDropTarget('')
           }
@@ -249,7 +253,9 @@ export function FileExplorer(): React.JSX.Element {
       >
         {tree.map((entry) => renderEntry(entry, 0))}
       </div>
-      {menu && <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
+      {menu && (
+        <ContextMenu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />
+      )}
     </div>
   )
 }

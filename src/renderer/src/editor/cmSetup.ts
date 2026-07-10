@@ -1,3 +1,6 @@
+// Assembles the CodeMirror 6 editor: extensions, keymaps, markdown language,
+// autocomplete, and the live-preview compartment toggled by the mode switch.
+
 import { Compartment, EditorState, type Extension } from '@codemirror/state'
 import {
   drawSelection,
@@ -10,7 +13,12 @@ import {
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { markdown, markdownKeymap, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
-import { codeFolding, HighlightStyle, indentOnInput, syntaxHighlighting } from '@codemirror/language'
+import {
+  codeFolding,
+  HighlightStyle,
+  indentOnInput,
+  syntaxHighlighting
+} from '@codemirror/language'
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search'
 import {
   acceptCompletion,
@@ -71,7 +79,10 @@ const WIKI_HEADING_PREFIX_RE = /\[\[([^[\]|#\n]+)#([^[\]|\n]*)$/
 // wikiLinkCompletions/tagCompletions below); anchor separately when re-parsing the match.
 const WIKI_HEADING_PREFIX_ANCHORED_RE = /^\[\[([^[\]|#\n]+)#([^[\]|\n]*)$/
 
-/** [[Note#  →  fuzzy heading completion, once a resolvable note precedes the #. */
+/**
+ * [[Note#  →  fuzzy heading completion, once a resolvable note precedes the #.
+ * [[Note#^ →  block-id completion (the note's ^block-id anchors) instead.
+ */
 function wikiHeadingCompletions(context: CompletionContext): CompletionResult | null {
   const m = context.matchBefore(WIKI_HEADING_PREFIX_RE)
   if (!m) return null
@@ -81,7 +92,21 @@ function wikiHeadingCompletions(context: CompletionContext): CompletionResult | 
   const resolved = resolveTarget(notePart.trim())
   if (!resolved) return null
   const meta = useIndexStore.getState().notes.get(resolved)
-  if (!meta || meta.headings.length === 0) return null
+  if (!meta) return null
+  if (headingQuery.startsWith('^')) {
+    if (meta.blockIds.length === 0) return null
+    return {
+      from: m.to - headingQuery.length,
+      options: meta.blockIds.map((b) => ({
+        label: `^${b.id}`,
+        detail: `line ${b.line + 1}`,
+        type: 'text',
+        apply: `^${b.id}]]`
+      })),
+      validFor: /^\^[\w-]*$/
+    }
+  }
+  if (meta.headings.length === 0) return null
   return {
     from: m.to - headingQuery.length,
     options: meta.headings.map((h) => ({
@@ -252,11 +277,14 @@ export function createEditor(
     }),
     EditorView.updateListener.of((update) => {
       if (!update.docChanged && !update.selectionSet) return
+      // With split panes two editors are live; only the focused one may
+      // drive the global toolbar/outline state.
+      if (!update.view.hasFocus) return
       const line = update.state.doc.lineAt(update.state.selection.main.head)
       useWorkspaceStore.getState().setActiveLineIsTask(TASK_LINE_RE.test(line.text))
     }),
     EditorView.updateListener.of((update) => {
-      if (!update.docChanged) return
+      if (!update.docChanged || !update.view.hasFocus) return
       useWorkspaceStore.getState().setOutlineHeadings(scanHeadings(update.state.doc))
     })
   ]

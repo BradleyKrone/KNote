@@ -51,7 +51,11 @@ function isReferencedElsewhere(attachmentRel: VaultPath, exceptNotePath: VaultPa
   return false
 }
 
-async function trashIfOrphaned(rel: VaultPath, attachmentsFolder: string, exceptNotePath: VaultPath): Promise<void> {
+async function trashIfOrphaned(
+  rel: VaultPath,
+  attachmentsFolder: string,
+  exceptNotePath: VaultPath
+): Promise<void> {
   if (!isInside(rel, attachmentsFolder)) return
   if (isReferencedElsewhere(rel, exceptNotePath)) return
   try {
@@ -81,7 +85,10 @@ export async function cleanupRemovedAttachments(
 }
 
 /** Trash attachments a just-deleted note referenced, if nothing else still uses them. */
-export async function cleanupAttachmentsForDeletedNote(notePath: VaultPath, content: string): Promise<void> {
+export async function cleanupAttachmentsForDeletedNote(
+  notePath: VaultPath,
+  content: string
+): Promise<void> {
   const refs = collectImageRefs(content, notePath)
   if (refs.length === 0) return
 

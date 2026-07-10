@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { Mention } from '@shared/types'
 import { samePath } from '@shared/pathUtils'
+import { isStaleError } from '@shared/errors'
 import { backlinksFor, useIndexStore } from '@/stores/indexStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -15,10 +16,10 @@ export function BacklinksPanel(): React.JSX.Element {
   const unlinkedCollapsed = useUiStore((s) => s.unlinkedMentionsCollapsed)
   const toggleUnlinkedMentions = useUiStore((s) => s.toggleUnlinkedMentions)
 
-  const backlinks = useMemo(
-    () => (notePath ? backlinksFor(notePath) : []),
-    [notePath, notes]
-  )
+  // `notes` is deliberately a dep: backlinksFor reads the index store
+  // internally, so the memo must recompute when the index changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const backlinks = useMemo(() => (notePath ? backlinksFor(notePath) : []), [notePath, notes])
 
   // Unlinked mentions: plain-text occurrences of this note's title/aliases
   useEffect(() => {
@@ -29,13 +30,11 @@ export function BacklinksPanel(): React.JSX.Element {
     const meta = notes.get(notePath)
     if (!meta) return
     const t = setTimeout(() => {
-      void window.knote
-        .findMentions([meta.title, ...meta.aliases], notePath)
-        .then((found) => {
-          // Drop mentions from notes that already link here
-          const linking = new Set(backlinks.map((b) => b.path.toLowerCase()))
-          setMentions(found.filter((m) => !linking.has(m.path.toLowerCase())))
-        })
+      void window.knote.findMentions([meta.title, ...meta.aliases], notePath).then((found) => {
+        // Drop mentions from notes that already link here
+        const linking = new Set(backlinks.map((b) => b.path.toLowerCase()))
+        setMentions(found.filter((m) => !linking.has(m.path.toLowerCase())))
+      })
     }, 400)
     return () => clearTimeout(t)
   }, [notePath, notes, backlinks])
@@ -53,7 +52,7 @@ export function BacklinksPanel(): React.JSX.Element {
     try {
       await window.knote.replaceLine(mention.path, mention.line, mention.text, newLine)
     } catch (err) {
-      alert(String(err).includes('KNOTE_STALE') ? 'That note changed — refreshed.' : String(err))
+      alert(isStaleError(err) ? 'That note changed — refreshed.' : String(err))
     }
   }
 

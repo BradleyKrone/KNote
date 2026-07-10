@@ -45,7 +45,14 @@ export function findMentions(strings: string[], excludePath: VaultPath): Mention
           const afterOk = end >= line.length || !/\w/.test(line[end])
           if (!insideLink && !overlapsLonger && beforeOk && afterOk) {
             claimed.push([idx, end])
-            results.push({ path, line: i, text: line, col: idx, length: needle.length, matched: needle })
+            results.push({
+              path,
+              line: i,
+              text: line,
+              col: idx,
+              length: needle.length,
+              matched: needle
+            })
             if (results.length >= MAX_MENTIONS) return results
           }
           idx = end

@@ -1,3 +1,7 @@
+// Registers every IPC endpoint the renderer can call (the channel list and
+// payload types live in shared/ipc.ts) and pushes vault/watcher/spellcheck
+// events back to the window. The only bridge between UI and filesystem.
+
 import { BrowserWindow, dialog, ipcMain, session } from 'electron'
 import { promises as fs } from 'fs'
 import { IpcChannels } from '@shared/ipc'
@@ -15,6 +19,7 @@ import {
   getSettings,
   getVaultConfig,
   setLastVault,
+  setHotkeyOverrides,
   setReadableLineLength,
   setTheme,
   setVaultConfig
@@ -196,6 +201,11 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
 
   ipcMain.handle(IpcChannels.settingsSetReadableLineLength, (_e, enabled: boolean) =>
     setReadableLineLength(enabled)
+  )
+
+  ipcMain.handle(
+    IpcChannels.settingsSetHotkeyOverrides,
+    (_e, overrides: Record<string, string | null>) => setHotkeyOverrides(overrides)
   )
 
   ipcMain.handle(IpcChannels.vaultConfigGet, () => getVaultConfig())

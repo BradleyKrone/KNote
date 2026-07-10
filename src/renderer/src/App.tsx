@@ -1,3 +1,7 @@
+// Root component: sidebar + topbar + active view (editor/board/timeline/
+// machine log), global keyboard shortcuts, sidebar resize, and the
+// app-wide modals/dialogs mounted at the bottom.
+
 import { useEffect, useRef, useState } from 'react'
 import {
   CalendarDays,
@@ -19,18 +23,18 @@ import { useUiStore, type SidebarTab } from './stores/uiStore'
 import { VaultPicker } from './components/VaultPicker'
 import { FileExplorer } from './components/explorer/FileExplorer'
 import { TopBar } from './components/TopBar'
-import { EditorPane } from './editor/EditorPane'
+import { PaneLayout } from './editor/PaneLayout'
 import { QuickSwitcher } from './components/palette/QuickSwitcher'
 import { CommandPalette } from './components/palette/CommandPalette'
 import { TemplatePicker } from './components/palette/TemplatePicker'
 import { QuickCapture } from './components/palette/QuickCapture'
 import { SettingsModal } from './components/SettingsModal'
-import { WelcomeDialog } from './components/WelcomeDialog'
-import { ReleaseNotesDialog } from './components/ReleaseNotesDialog'
+import { ReleaseNotesDialog, WelcomeDialog } from './components/DocDialogs'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { ReasonDialog } from './components/ReasonDialog'
 import { registerCoreCommands } from './commands/coreCommands'
 import { runCommand } from './commands/registry'
+import { commandForEvent } from './commands/hotkeys'
 import { openThisWeekNote } from './commands/weeklyNotes'
 import { useSettingsStore } from './stores/settingsStore'
 import { SearchPanel } from './components/panels/SearchPanel'
@@ -59,7 +63,6 @@ export default function App(): React.JSX.Element {
     sidebarTab,
     setSidebarTab,
     rightPanelOpen,
-    setQuickSwitcherOpen,
     boardOpen,
     timelineOpen,
     machineLogOpen,
@@ -91,31 +94,18 @@ export default function App(): React.JSX.Element {
     })
   }, [])
 
-  // Global shortcuts
+  // Global shortcuts: every binding is a command (see commands/hotkeys.ts);
+  // rebindable under Settings → Hotkeys.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (!(e.ctrlKey || e.metaKey)) return
-      const key = e.key.toLowerCase()
-      if (key === 'o') {
-        e.preventDefault()
-        setQuickSwitcherOpen(true)
-      } else if (key === 'p' && !e.shiftKey) {
-        e.preventDefault()
-        useUiStore.getState().setCommandPaletteOpen(true)
-      } else if (key === 'e') {
-        e.preventDefault()
-        runCommand('mode-reading')
-      } else if (key === 'n') {
-        e.preventDefault()
-        runCommand('new-note')
-      } else if (key === 'j') {
-        e.preventDefault()
-        useUiStore.getState().setQuickCaptureOpen(true)
-      }
+      const commandId = commandForEvent(e)
+      if (!commandId) return
+      e.preventDefault()
+      runCommand(commandId)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setQuickSwitcherOpen])
+  }, [])
 
   useEffect(() => {
     const move = (e: MouseEvent): void => {
@@ -228,7 +218,7 @@ export default function App(): React.JSX.Element {
         </>
       )}
       <div className="main-area">
-        <TopBar sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((v) => !v)} />
+        <TopBar onToggleSidebar={() => setSidebarOpen((v) => !v)} />
         {boardOpen ? (
           <BoardView />
         ) : timelineOpen ? (
@@ -240,16 +230,7 @@ export default function App(): React.JSX.Element {
         ) : (
           <div className="content-row">
             <div className="editor-column">
-              {note ? (
-                <EditorPane key={note.path} />
-              ) : (
-                <div className="empty-state">
-                  <p>No note is open</p>
-                  <p className="empty-hint">
-                    Select a note in the file explorer, or press Ctrl+O to jump to one.
-                  </p>
-                </div>
-              )}
+              <PaneLayout />
             </div>
             {rightPanelOpen && note && (
               <div className="right-panel">

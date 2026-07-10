@@ -1,13 +1,23 @@
+// Persistence for app-level settings (knote-settings.json in userData:
+// last vault, theme) and the per-vault config (.knote/config.json:
+// board columns, folders, feature toggles).
+
 import { app, nativeTheme } from 'electron'
 import { promises as fs } from 'fs'
 import { join } from 'path'
-import { DEFAULT_VAULT_CONFIG, type AppSettings, type ThemeName, type VaultConfig } from '@shared/types'
+import {
+  DEFAULT_VAULT_CONFIG,
+  type AppSettings,
+  type ThemeName,
+  type VaultConfig
+} from '@shared/types'
 import { getVaultRoot } from './vaultService'
 
 const DEFAULTS: AppSettings = {
   lastVault: null,
   theme: 'dark',
-  readableLineLength: true
+  readableLineLength: true,
+  hotkeyOverrides: {}
 }
 
 let cached: AppSettings | null = null
@@ -51,6 +61,12 @@ export async function setTheme(theme: ThemeName): Promise<void> {
 export async function setReadableLineLength(enabled: boolean): Promise<void> {
   const s = await getSettings()
   s.readableLineLength = enabled
+  await save()
+}
+
+export async function setHotkeyOverrides(overrides: Record<string, string | null>): Promise<void> {
+  const s = await getSettings()
+  s.hotkeyOverrides = overrides
   await save()
 }
 

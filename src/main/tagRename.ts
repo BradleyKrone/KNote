@@ -1,33 +1,16 @@
-import { unified } from 'unified'
-import remarkParse from 'remark-parse'
-import remarkGfm from 'remark-gfm'
-import remarkFrontmatter from 'remark-frontmatter'
-import { visit } from 'unist-util-visit'
-import type { Node } from 'unist'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type { VaultPath } from '@shared/types'
 import { TAG_RE } from '@shared/parser/patterns'
+import { maskSource } from '@shared/parser/mdScaffold'
 import { writeFileAtomic } from './vaultService'
 import * as vaultIndex from './indexer/vaultIndex'
 
 /**
  * Vault-wide tag rename/merge — e.g. unifying `#knote` and `#KNOTE` into one
- * spelling. Mirrors parseNote's mask-then-regex strategy (same processor, same
- * code/frontmatter blanking) so a match here is exactly a tag parseNote would
- * have found, then splices the replacement into the *unmasked* source.
+ * spelling. Mirrors parseNote's mask-then-regex strategy (shared maskSource
+ * scaffold) so a match here is exactly a tag parseNote would have found, then
+ * splices the replacement into the *unmasked* source.
  */
-
-const processor = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml'])
-
-interface PositionedNode extends Node {
-  value?: string
-}
-
-function maskRange(chars: string[], from: number, to: number): void {
-  for (let i = from; i < to && i < chars.length; i++) {
-    if (chars[i] !== '\n' && chars[i] !== '\r') chars[i] = ' '
-  }
-}
 
 function sameTag(candidate: string, target: string): boolean {
   return candidate.toLowerCase() === target.toLowerCase()
@@ -44,7 +27,10 @@ function renameFrontmatterTag(
   const raw = fm[key]
   const wasString = typeof raw === 'string'
   const entries = wasString
-    ? (raw as string).split(',').map((s) => s.trim()).filter(Boolean)
+    ? (raw as string)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
     : Array.isArray(raw)
       ? raw.map((v) => String(v))
       : null
@@ -64,29 +50,9 @@ function renameFrontmatterTag(
 
 /** Renames a tag in one note's content. Returns the new content, or null if the tag doesn't occur. */
 export function renameTagInContent(content: string, oldTag: string, newTag: string): string | null {
-  let tree: Node
-  try {
-    tree = processor.parse(content)
-  } catch {
-    return null
-  }
-
-  const chars = Array.from(content)
-  let yamlNode: { from: number; to: number; value: string } | null = null
-
-  visit(tree, (node: PositionedNode) => {
-    const from = node.position?.start?.offset
-    const to = node.position?.end?.offset
-    if (from === undefined || to === undefined) return
-    if (node.type === 'yaml') {
-      if (typeof node.value === 'string') yamlNode = { from, to, value: node.value }
-      maskRange(chars, from, to)
-    } else if (node.type === 'code' || node.type === 'inlineCode') {
-      maskRange(chars, from, to)
-    }
-  })
-
-  const masked = chars.join('')
+  const source = maskSource(content)
+  if (!source) return null
+  const { masked, yaml: yamlNode } = source
   let result = content
   let changed = false
 
@@ -115,7 +81,7 @@ export function renameTagInContent(content: string, oldTag: string, newTag: stri
   // --- Frontmatter tags, spliced in using the original parse's offsets
   // (still valid: body edits above only touch content after this range).
   if (yamlNode) {
-    const { from, to, value } = yamlNode as { from: number; to: number; value: string }
+    const { from, to, value } = yamlNode
     try {
       const parsed = parseYaml(value)
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
@@ -139,7 +105,10 @@ export interface TagRenameResult {
 }
 
 /** Renames/merges a tag across every note in the vault, writing changed files atomically and refreshing the in-memory index. */
-export async function renameTagAcrossVault(oldTag: string, newTag: string): Promise<TagRenameResult> {
+export async function renameTagAcrossVault(
+  oldTag: string,
+  newTag: string
+): Promise<TagRenameResult> {
   const from = oldTag.replace(/^#/, '').trim()
   const to = newTag.replace(/^#/, '').trim()
   const filesChanged: VaultPath[] = []

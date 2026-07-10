@@ -3,9 +3,7 @@ import { isInside, samePath, titleOf } from '@shared/pathUtils'
 import { ARCHIVED_CHAR, DUE_RE, PRIORITY_RE } from '@shared/parser/patterns'
 
 export type BoardScope =
-  | { kind: 'global' }
-  | { kind: 'folder'; path: VaultPath }
-  | { kind: 'note'; path: VaultPath }
+  { kind: 'global' } | { kind: 'folder'; path: VaultPath } | { kind: 'note'; path: VaultPath }
 
 export interface BoardCard {
   path: VaultPath
@@ -77,7 +75,10 @@ export function collectCards(
       if (task.statusChar === ARCHIVED_CHAR) continue
       if (task.isSubtask) continue
       const card = toCard(meta, task)
-      if (filters.tag && !card.tags.some((t) => t === filters.tag || t.startsWith(filters.tag + '/')))
+      if (
+        filters.tag &&
+        !card.tags.some((t) => t === filters.tag || t.startsWith(filters.tag + '/'))
+      )
         continue
       if (filters.text && !card.text.toLowerCase().includes(filters.text.toLowerCase())) continue
       cards.push(card)

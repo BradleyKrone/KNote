@@ -17,7 +17,11 @@ function parseValue(raw: string): unknown {
   if (v === 'true') return true
   if (v === 'false') return false
   if (v !== '' && !isNaN(Number(v)) && /^-?\d+(\.\d+)?$/.test(v)) return Number(v)
-  if (v.includes(',')) return v.split(',').map((s) => s.trim()).filter(Boolean)
+  if (v.includes(','))
+    return v
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
   return v
 }
 

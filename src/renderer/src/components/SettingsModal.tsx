@@ -1,3 +1,7 @@
+// The settings dialog: category sidebar (General, Weekly notes, Templates,
+// Attachments, Kanban, Machines, Tags) + content pane, editing app settings
+// and the per-vault config.
+
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowDown,
@@ -13,29 +17,25 @@ import {
   Image,
   Info,
   Kanban,
+  Keyboard,
   Plus,
   ScrollText,
   X
 } from 'lucide-react'
 import type { VaultConfig } from '@shared/types'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { useWelcomeStore } from '@/stores/welcomeStore'
-import { useReleaseNotesStore } from '@/stores/releaseNotesStore'
+import { useReleaseNotesStore, useWelcomeStore } from '@/stores/docDialogs'
 import { openCopilotInstructions } from '@/commands/copilotInstructions'
 import { useIndexStore, tagCounts } from '@/stores/indexStore'
 import { confirm } from '@/stores/confirmStore'
+import { HotkeysSection } from './settings/HotkeysSection'
 
 type SettingsCategory =
-  | 'general'
-  | 'weekly'
-  | 'templates'
-  | 'attachments'
-  | 'kanban'
-  | 'machines'
-  | 'tags'
+  'general' | 'hotkeys' | 'weekly' | 'templates' | 'attachments' | 'kanban' | 'machines' | 'tags'
 
 const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof Info }[] = [
   { id: 'general', label: 'General', icon: Info },
+  { id: 'hotkeys', label: 'Hotkeys', icon: Keyboard },
   { id: 'weekly', label: 'Weekly notes', icon: Calendar },
   { id: 'templates', label: 'Templates', icon: FileText },
   { id: 'attachments', label: 'Attachments', icon: Image },
@@ -272,8 +272,8 @@ export function SettingsModal(): React.JSX.Element | null {
                   <div>
                     <div className="settings-row-title">GitHub Copilot instructions</div>
                     <div className="settings-row-desc">
-                      Teach Copilot KNote&apos;s note format — saved to your Knote Resources
-                      folder to copy into a vault&apos;s .github/copilot-instructions.md
+                      Teach Copilot KNote&apos;s note format — saved to your Knote Resources folder
+                      to copy into a vault&apos;s .github/copilot-instructions.md
                     </div>
                   </div>
                   <button
@@ -288,6 +288,8 @@ export function SettingsModal(): React.JSX.Element | null {
                 </div>
               </>
             )}
+
+            {category === 'hotkeys' && <HotkeysSection />}
 
             {category === 'weekly' && (
               <>

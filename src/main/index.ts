@@ -1,3 +1,6 @@
+// Electron main-process entry point: creates the window, serves vault
+// images over the knote:// protocol, and starts IPC + settings on app ready.
+
 import { app, BrowserWindow, dialog, nativeTheme, net, protocol, session } from 'electron'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
@@ -77,62 +80,65 @@ function createWindow(theme: ThemeName): void {
   }
 }
 
-app.whenReady().then(async () => {
-  // Hard zero-network guarantee: block every request that isn't local.
-  const devUrl = process.env['ELECTRON_RENDERER_URL']
-  session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
-    const url = details.url
-    const local =
-      url.startsWith('file:') ||
-      url.startsWith('knote:') ||
-      url.startsWith('data:') ||
-      url.startsWith('blob:') ||
-      url.startsWith('devtools:') ||
-      url.startsWith('chrome-extension:') ||
-      (devUrl !== undefined &&
-        (url.startsWith(devUrl) || url.startsWith(devUrl.replace(/^http/, 'ws'))))
-    callback({ cancel: !local })
+app
+  .whenReady()
+  .then(async () => {
+    // Hard zero-network guarantee: block every request that isn't local.
+    const devUrl = process.env['ELECTRON_RENDERER_URL']
+    session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
+      const url = details.url
+      const local =
+        url.startsWith('file:') ||
+        url.startsWith('knote:') ||
+        url.startsWith('data:') ||
+        url.startsWith('blob:') ||
+        url.startsWith('devtools:') ||
+        url.startsWith('chrome-extension:') ||
+        (devUrl !== undefined &&
+          (url.startsWith(devUrl) || url.startsWith(devUrl.replace(/^http/, 'ws'))))
+      callback({ cancel: !local })
+    })
+
+    // Spell checking uses the OS-native checker on Windows/macOS (no dictionary
+    // download, so the zero-network policy above is untouched). Enable it and set
+    // the language explicitly; suggestions surface via the context-menu event.
+    session.defaultSession.setSpellCheckerEnabled(true)
+    session.defaultSession.setSpellCheckerLanguages(['en-US'])
+
+    protocol.handle('knote', async (request) => {
+      const prefix = 'knote://img/'
+      if (!request.url.startsWith(prefix)) return new Response('Not found', { status: 404 })
+      try {
+        const rel = decodeURIComponent(request.url.slice(prefix.length))
+        if (!isImage(rel)) return new Response('Forbidden', { status: 403 })
+        const abs = vault.toAbs(rel)
+        // Awaited so a missing/moved file's rejection is caught here instead
+        // of surfacing as an unhandled net::ERR_FILE_NOT_FOUND after this
+        // handler has already returned.
+        return await net.fetch(pathToFileURL(abs).toString())
+      } catch {
+        return new Response('Not found', { status: 404 })
+      }
+    })
+
+    registerIpcHandlers(() => {
+      if (!mainWindow) throw new Error('No window')
+      return mainWindow
+    })
+
+    const settings = await getSettings() // warm the settings cache
+    nativeTheme.themeSource = settings.theme
+    createWindow(settings.theme)
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow(settings.theme)
+    })
   })
-
-  // Spell checking uses the OS-native checker on Windows/macOS (no dictionary
-  // download, so the zero-network policy above is untouched). Enable it and set
-  // the language explicitly; suggestions surface via the context-menu event.
-  session.defaultSession.setSpellCheckerEnabled(true)
-  session.defaultSession.setSpellCheckerLanguages(['en-US'])
-
-  protocol.handle('knote', async (request) => {
-    const prefix = 'knote://img/'
-    if (!request.url.startsWith(prefix)) return new Response('Not found', { status: 404 })
-    try {
-      const rel = decodeURIComponent(request.url.slice(prefix.length))
-      if (!isImage(rel)) return new Response('Forbidden', { status: 403 })
-      const abs = vault.toAbs(rel)
-      // Awaited so a missing/moved file's rejection is caught here instead
-      // of surfacing as an unhandled net::ERR_FILE_NOT_FOUND after this
-      // handler has already returned.
-      return await net.fetch(pathToFileURL(abs).toString())
-    } catch {
-      return new Response('Not found', { status: 404 })
-    }
+  .catch((err) => {
+    console.error('Failed to start KNote:', err)
+    dialog.showErrorBox('KNote failed to start', err instanceof Error ? err.message : String(err))
+    app.quit()
   })
-
-  registerIpcHandlers(() => {
-    if (!mainWindow) throw new Error('No window')
-    return mainWindow
-  })
-
-  const settings = await getSettings() // warm the settings cache
-  nativeTheme.themeSource = settings.theme
-  createWindow(settings.theme)
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow(settings.theme)
-  })
-}).catch((err) => {
-  console.error('Failed to start KNote:', err)
-  dialog.showErrorBox('KNote failed to start', err instanceof Error ? err.message : String(err))
-  app.quit()
-})
 
 app.on('window-all-closed', () => {
   void stopWatching()

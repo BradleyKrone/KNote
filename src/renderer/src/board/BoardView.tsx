@@ -1,3 +1,7 @@
+// The Kanban board: every task in the vault (or one note), grouped into
+// status-char columns, with dnd-kit drag-and-drop written back to the
+// source notes through boardActions.
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   DndContext,
@@ -56,7 +60,10 @@ export function BoardView(): React.JSX.Element {
     const pending = pendingMoveRef.current
     if (!pending) return
     const moved = cards.find((c) => c.path === pending.path && c.line === pending.line)
-    if (moved && columnForChar(columns, moved.statusChar) === columnForChar(columns, pending.targetChar)) {
+    if (
+      moved &&
+      columnForChar(columns, moved.statusChar) === columnForChar(columns, pending.targetChar)
+    ) {
       pendingMoveRef.current = null
       setActiveCard(null)
       setOverColumnChar(null)
@@ -166,7 +173,8 @@ export function BoardView(): React.JSX.Element {
       clearPreview()
       return
     }
-    const sameColumn = columnForChar(columns, overCard.statusChar) === columnForChar(columns, card.statusChar)
+    const sameColumn =
+      columnForChar(columns, overCard.statusChar) === columnForChar(columns, card.statusChar)
     if (!sameColumn) {
       attemptColumnChange(card, overCard.statusChar)
     } else if (card.path === overCard.path && card.line !== overCard.line) {
@@ -218,7 +226,12 @@ export function BoardView(): React.JSX.Element {
           </button>
         </div>
       </div>
-      <DndContext sensors={sensors} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDragEnd={onDragEnd}
+      >
         <div className="board-columns">
           {columns.map((col, i) => (
             <Column

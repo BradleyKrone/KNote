@@ -25,7 +25,10 @@ export function scanHeadings(doc: Text): HeadingRef[] {
     const match = ATX_HEADING_RE.exec(text)
     if (!match) continue
     const level = match[1].length
-    const heading = text.slice(match[0].length).replace(/\s+#+\s*$/, '').trim()
+    const heading = text
+      .slice(match[0].length)
+      .replace(/\s+#+\s*$/, '')
+      .trim()
     headings.push({ text: heading, level, line: i - 1 })
   }
 

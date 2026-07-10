@@ -10,7 +10,12 @@ interface Props {
 }
 
 /** Small dropdown anchored below a trigger element or at a point. Closes on outside click / Escape. */
-export function Popover({ anchorEl, anchorPoint, onClose, children }: Props): React.JSX.Element | null {
+export function Popover({
+  anchorEl,
+  anchorPoint,
+  onClose,
+  children
+}: Props): React.JSX.Element | null {
   const panelRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
 

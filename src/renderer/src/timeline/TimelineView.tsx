@@ -1,3 +1,6 @@
+// The timeline view: dated tasks and 🏁 milestones from across the vault
+// laid out chronologically.
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import dayjs from 'dayjs'
 import { CheckCircle2, Circle, FileText, Flag, X } from 'lucide-react'
@@ -70,7 +73,11 @@ export function TimelineView(): React.JSX.Element {
               </option>
             ))}
           </select>
-          <button className="icon-btn" title="Close timeline" onClick={() => setTimelineOpen(false)}>
+          <button
+            className="icon-btn"
+            title="Close timeline"
+            onClick={() => setTimelineOpen(false)}
+          >
             <X size={16} />
           </button>
         </div>

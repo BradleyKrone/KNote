@@ -1,3 +1,7 @@
+// Reading mode: the current note rendered read-only via react-markdown.
+// Also exports Md, the shared renderer used for embeds and the bundled-doc
+// dialogs (welcome guide, release notes).
+
 import { useEffect, useState } from 'react'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -64,6 +68,7 @@ function urlTransform(url: string): string {
 function rehypeTaskLines() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (tree: any): void => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     visit(tree, 'element', (node: any) => {
       if (node.tagName !== 'li' || !node.position) return
       const stack = [...(node.children ?? [])]
@@ -211,8 +216,8 @@ function Transclusion({ target, depth }: { target: string; depth: number }): Rea
   )
 }
 
-export function ReadingView(): React.JSX.Element | null {
-  const note = useWorkspaceStore((s) => s.note)
+export function ReadingView({ paneIndex }: { paneIndex: number }): React.JSX.Element | null {
+  const note = useWorkspaceStore((s) => s.panes[paneIndex]?.note ?? null)
   if (!note) return null
 
   const toggleTask = async (line1: number): Promise<void> => {
@@ -222,19 +227,26 @@ export function ReadingView(): React.JSX.Element | null {
     if (!m) return
     const next = /^[xX]$/.test(m[3]) ? ' ' : 'x'
     const newLine =
-      rawLine.slice(0, m[1].length + m[2].length + 2) + next + rawLine.slice(m[1].length + m[2].length + 3)
+      rawLine.slice(0, m[1].length + m[2].length + 2) +
+      next +
+      rawLine.slice(m[1].length + m[2].length + 3)
     try {
       await window.knote.replaceLine(note.path, line1 - 1, rawLine, newLine)
-      await useWorkspaceStore.getState().openFile(note.path)
+      await useWorkspaceStore.getState().openFileInPane(paneIndex, note.path)
     } catch {
-      await useWorkspaceStore.getState().openFile(note.path)
+      await useWorkspaceStore.getState().openFileInPane(paneIndex, note.path)
     }
   }
 
   return (
     <div className="reading-view">
       <div className="reading-content">
-        <Md content={note.content} path={note.path} depth={0} onToggleTask={(l) => void toggleTask(l)} />
+        <Md
+          content={note.content}
+          path={note.path}
+          depth={0}
+          onToggleTask={(l) => void toggleTask(l)}
+        />
       </div>
     </div>
   )

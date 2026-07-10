@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { IndexDelta, LinkRef, NoteMeta, VaultPath } from '@shared/types'
-import { normalizeRel, samePath, titleOf } from '@shared/pathUtils'
+import { normalizeRel, samePath } from '@shared/pathUtils'
 
 interface IndexState {
   /** Replaced (new Map) on every change so selectors re-run. */
@@ -120,15 +120,22 @@ export async function openWikiTarget(rawTarget: string): Promise<void> {
 
   const hashIdx = rawTarget.indexOf('#')
   const target = (hashIdx === -1 ? rawTarget : rawTarget.slice(0, hashIdx)).trim()
-  const heading = hashIdx === -1 ? null : rawTarget.slice(hashIdx + 1).replace(/^\^/, '').trim()
+  const section = hashIdx === -1 ? null : rawTarget.slice(hashIdx + 1).trim()
 
   const resolved = resolveTarget(target)
   if (resolved !== null) {
     let scrollToLine: number | undefined
-    if (heading) {
+    if (section) {
       const meta = useIndexStore.getState().notes.get(resolved)
-      const h = meta?.headings.find((x) => x.text.toLowerCase() === heading.toLowerCase())
-      if (h) scrollToLine = h.line
+      if (section.startsWith('^')) {
+        // Block reference: [[Note#^block-id]]
+        const id = section.slice(1).toLowerCase()
+        const b = meta?.blockIds.find((x) => x.id.toLowerCase() === id)
+        if (b) scrollToLine = b.line
+      } else {
+        const h = meta?.headings.find((x) => x.text.toLowerCase() === section.toLowerCase())
+        if (h) scrollToLine = h.line
+      }
     }
     await useWorkspaceStore.getState().openFile(resolved, scrollToLine)
     return
@@ -137,8 +144,4 @@ export async function openWikiTarget(rawTarget: string): Promise<void> {
   const created = await window.knote.createFile(clean.endsWith('.md') ? clean : clean + '.md', '')
   await useVaultStore.getState().refreshTree()
   await useWorkspaceStore.getState().openFile(created)
-}
-
-export function titleOfPath(path: VaultPath): string {
-  return titleOf(path)
 }

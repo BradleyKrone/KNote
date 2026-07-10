@@ -1,14 +1,23 @@
+// The filesystem layer: vault root state, path safety (toAbs), and all
+// note/folder CRUD. Writes go through writeFileAtomic and coordinate with
+// the watcher via the own-write / known-content markers below.
+
 import { promises as fs } from 'fs'
 import { dirname, join, resolve, sep } from 'path'
 import { shell } from 'electron'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
-import type { FileEntry, FileReadResult, FileWriteResult, VaultInfo, VaultPath } from '@shared/types'
+import type {
+  FileEntry,
+  FileReadResult,
+  FileWriteResult,
+  VaultInfo,
+  VaultPath
+} from '@shared/types'
 import { isImage, isMarkdown, joinRel, nameOf, normalizeRel, parentOf } from '@shared/pathUtils'
 import { getVaultConfig } from './settings'
+import { CONFLICT_ERROR } from '@shared/errors'
 
 let vaultRoot: string | null = null
-
-export const CONFLICT_ERROR = 'KNOTE_CONFLICT'
 
 /**
  * Called around every write KNote itself makes, so the watcher can tell
@@ -57,14 +66,6 @@ export function toAbs(rel: VaultPath): string {
   const abs = resolve(root, norm)
   if (abs !== root && !abs.startsWith(root + sep)) throw new Error(`Path escapes vault: ${rel}`)
   return abs
-}
-
-export function toRel(absPath: string): VaultPath {
-  const root = getVaultRoot()
-  const abs = resolve(absPath)
-  if (abs === root) return ''
-  if (!abs.startsWith(root + sep)) throw new Error(`Path outside vault: ${absPath}`)
-  return normalizeRel(abs.slice(root.length + 1))
 }
 
 const IGNORED_DIRS = new Set(['.knote', '.git', '.obsidian', 'node_modules'])
@@ -129,6 +130,8 @@ export async function readFile(rel: VaultPath): Promise<FileReadResult> {
   return { path: normalizeRel(rel), content, mtimeMs: stat.mtimeMs }
 }
 
+let tmpCounter = 0
+
 /**
  * Atomic write: write to a temp file in the same directory, then rename over
  * the target. Rename can transiently fail on Windows (AV/sync tools holding
@@ -155,7 +158,10 @@ export async function writeFileAtomic(
       // File missing is fine — the write recreates it
     }
   }
-  const tmp = abs + '.knote-tmp'
+  // Unique per write so concurrent writes to the same file can't clobber
+  // each other's temp file. Must keep the `.knote-tmp` suffix — the watcher
+  // ignores paths by that ending.
+  const tmp = `${abs}.${process.pid}-${tmpCounter++}.knote-tmp`
   await fs.writeFile(tmp, content, 'utf-8')
   let lastErr: unknown
   for (let attempt = 0; attempt < 4; attempt++) {

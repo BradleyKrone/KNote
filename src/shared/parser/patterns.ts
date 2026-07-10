@@ -7,6 +7,12 @@
 /** [[target]], [[target#heading]], [[target|alias]], ![[embed]] */
 export const WIKI_LINK_RE = /(!?)\[\[([^[\]|#\n]+)(#[^[\]|\n]+)?(\|[^[\]\n]+)?\]\]/g
 
+/**
+ * ` ^block-id` at the end of a line — an Obsidian-style block anchor that
+ * `[[Note#^block-id]]` links can jump to. Group 1 = the id.
+ */
+export const BLOCK_ID_RE = /(?:^|\s)\^([A-Za-z0-9_-]+)\s*$/
+
 /** #tag — must follow start-of-line/whitespace/bracket; purely numeric tags excluded by callers */
 export const TAG_RE = /(^|[\s([{])#([A-Za-z0-9_][A-Za-z0-9_/-]*)/g
 
@@ -26,7 +32,12 @@ export const DUE_RE = /(?:@due\((\d{4}-\d{2}-\d{2})\)|📅\s*(\d{4}-\d{2}-\d{2})
 export const REASON_FOR_RE = /^(\s+)Reason for (.+?):\s*(.*?)\s*📅\s*(\d{4}-\d{2}-\d{2})\s*$/
 
 /** Builds the indented `Reason for <Column>: <reason> 📅 <date>` line attached under a task. */
-export function formatReasonLine(indent: string, columnName: string, reason: string, date: string): string {
+export function formatReasonLine(
+  indent: string,
+  columnName: string,
+  reason: string,
+  date: string
+): string {
   return `${indent}Reason for ${columnName}: ${reason} 📅 ${date}`
 }
 

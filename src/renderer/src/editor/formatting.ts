@@ -1,3 +1,7 @@
+// Cursor-targeted editing commands dispatched into the CodeMirror view:
+// inline formatting (bold/italic/…), checkbox + milestone + machine-entry
+// insertion, and task metadata (status char, tags, priority, due date).
+
 import dayjs from 'dayjs'
 import { EditorSelection, type Text } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'

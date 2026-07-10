@@ -29,7 +29,9 @@ describe('machineLogSelectors', () => {
 
   it('joins entries to their registry config', () => {
     const notes = vault(['log.md', '🚜 Z6A00101 Replaced final drive #maintenance 📅 2026-07-03\n'])
-    const machines: MachineDef[] = [{ serial: 'Z6A00101', model: 'D6', attributes: ['LGP', 'VP', 'EX'] }]
+    const machines: MachineDef[] = [
+      { serial: 'Z6A00101', model: 'D6', attributes: ['LGP', 'VP', 'EX'] }
+    ]
     const entries = collectMachineEntries(notes, machines)
     expect(entries).toHaveLength(1)
     expect(entries[0]).toMatchObject({
@@ -75,14 +77,17 @@ describe('machineLogSelectors', () => {
       { serial: 'B2', model: 'D8', attributes: ['XL'] }
     ]
     // config attribute
-    expect(collectMachineEntries(notes, machines, { serial: null, tags: ['LGP'], text: '' })).toHaveLength(1)
+    expect(
+      collectMachineEntries(notes, machines, { serial: null, tags: ['LGP'], text: '' })
+    ).toHaveLength(1)
     // model
     expect(
       collectMachineEntries(notes, machines, { serial: null, tags: ['D8'], text: '' })[0].serial
     ).toBe('B2')
     // inline tag
     expect(
-      collectMachineEntries(notes, machines, { serial: null, tags: ['service'], text: '' })[0].serial
+      collectMachineEntries(notes, machines, { serial: null, tags: ['service'], text: '' })[0]
+        .serial
     ).toBe('A1')
   })
 
@@ -96,7 +101,11 @@ describe('machineLogSelectors', () => {
       { serial: 'B2', model: 'D6', attributes: ['XL'] },
       { serial: 'C3', model: 'D8', attributes: ['LGP'] }
     ]
-    const entries = collectMachineEntries(notes, machines, { serial: null, tags: ['D6', 'LGP'], text: '' })
+    const entries = collectMachineEntries(notes, machines, {
+      serial: null,
+      tags: ['D6', 'LGP'],
+      text: ''
+    })
     expect(entries).toHaveLength(1)
     expect(entries[0].serial).toBe('A1')
   })
@@ -109,9 +118,9 @@ describe('machineLogSelectors', () => {
     expect(
       collectMachineEntries(notes, [], { serial: null, tags: [], text: 'oil' })[0].serial
     ).toBe('B2')
-    expect(
-      collectMachineEntries(notes, [], { serial: null, tags: [], text: 'a1' })[0].serial
-    ).toBe('A1')
+    expect(collectMachineEntries(notes, [], { serial: null, tags: [], text: 'a1' })[0].serial).toBe(
+      'A1'
+    )
   })
 
   it('groups entries by serial with each group carrying its definition', () => {
