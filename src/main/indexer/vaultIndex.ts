@@ -98,7 +98,7 @@ export function removeFolder(rel: VaultPath): void {
 }
 
 /** Reindex every markdown file under a folder (after a folder move/rename). */
-export async function reindexFolder(rel: VaultPath): Promise<void> {
+async function reindexFolder(rel: VaultPath): Promise<void> {
   const files: string[] = []
   await collectMarkdownFiles(normalizeRel(rel), files)
   const limit = pLimit(8)

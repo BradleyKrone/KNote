@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { IndexDelta, LinkRef, NoteMeta, VaultPath } from '@shared/types'
-import { normalizeRel, samePath, titleOf } from '@shared/pathUtils'
+import { normalizeRel, samePath } from '@shared/pathUtils'
 
 interface IndexState {
   /** Replaced (new Map) on every change so selectors re-run. */
@@ -137,8 +137,4 @@ export async function openWikiTarget(rawTarget: string): Promise<void> {
   const created = await window.knote.createFile(clean.endsWith('.md') ? clean : clean + '.md', '')
   await useVaultStore.getState().refreshTree()
   await useWorkspaceStore.getState().openFile(created)
-}
-
-export function titleOfPath(path: VaultPath): string {
-  return titleOf(path)
 }

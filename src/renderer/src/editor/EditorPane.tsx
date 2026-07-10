@@ -4,6 +4,7 @@ import { EditorView } from '@codemirror/view'
 import { ARCHIVED_CHAR, DUE_RE, MILESTONE_LINE_RE, reasonLineForTask, TASK_LINE_RE } from '@shared/parser/patterns'
 import { promptReason } from '@/stores/reasonPromptStore'
 import type { BoardColumn } from '@shared/types'
+import { isConflictError } from '@shared/errors'
 import { registerKeepMine, useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { createEditor, type KnoteEditor } from './cmSetup'
@@ -253,7 +254,7 @@ export function EditorPane(): React.JSX.Element {
       pendingContent.current = null
       useWorkspaceStore.getState().markSaved(content, result.mtimeMs)
     } catch (err) {
-      if (String(err).includes('KNOTE_CONFLICT')) {
+      if (isConflictError(err)) {
         useWorkspaceStore.getState().setConflict('modified')
       } else {
         console.error('Save failed:', err)

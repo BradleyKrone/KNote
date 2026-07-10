@@ -30,7 +30,7 @@ import { titleOf } from '../pathUtils'
 
 const processor = unified().use(remarkParse).use(remarkGfm).use(remarkFrontmatter, ['yaml'])
 
-export { TAG_RE, TASK_LINE_RE, WIKI_LINK_RE } from './patterns'
+export { WIKI_LINK_RE } from './patterns'
 import { MACHINE_ENTRY_RE, MILESTONE_LINE_RE, REASON_FOR_RE, TAG_RE, TASK_LINE_RE, WIKI_LINK_RE } from './patterns'
 
 interface PositionedNode extends Node {

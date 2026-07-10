@@ -5,10 +5,9 @@ import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type { FileEntry, FileReadResult, FileWriteResult, VaultInfo, VaultPath } from '@shared/types'
 import { isImage, isMarkdown, joinRel, nameOf, normalizeRel, parentOf } from '@shared/pathUtils'
 import { getVaultConfig } from './settings'
+import { CONFLICT_ERROR } from '@shared/errors'
 
 let vaultRoot: string | null = null
-
-export const CONFLICT_ERROR = 'KNOTE_CONFLICT'
 
 /**
  * Called around every write KNote itself makes, so the watcher can tell
@@ -57,14 +56,6 @@ export function toAbs(rel: VaultPath): string {
   const abs = resolve(root, norm)
   if (abs !== root && !abs.startsWith(root + sep)) throw new Error(`Path escapes vault: ${rel}`)
   return abs
-}
-
-export function toRel(absPath: string): VaultPath {
-  const root = getVaultRoot()
-  const abs = resolve(absPath)
-  if (abs === root) return ''
-  if (!abs.startsWith(root + sep)) throw new Error(`Path outside vault: ${absPath}`)
-  return normalizeRel(abs.slice(root.length + 1))
 }
 
 const IGNORED_DIRS = new Set(['.knote', '.git', '.obsidian', 'node_modules'])

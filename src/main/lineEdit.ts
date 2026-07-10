@@ -2,8 +2,7 @@ import { promises as fs } from 'fs'
 import type { VaultPath } from '@shared/types'
 import { REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
 import { toAbs, writeFileAtomic } from './vaultService'
-
-export const STALE_ERROR = 'KNOTE_STALE'
+import { STALE_ERROR } from '@shared/errors'
 
 /**
  * Verified, targeted single-line rewrite — the core two-way-sync primitive.

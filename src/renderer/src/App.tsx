@@ -228,7 +228,7 @@ export default function App(): React.JSX.Element {
         </>
       )}
       <div className="main-area">
-        <TopBar sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((v) => !v)} />
+        <TopBar onToggleSidebar={() => setSidebarOpen((v) => !v)} />
         {boardOpen ? (
           <BoardView />
         ) : timelineOpen ? (

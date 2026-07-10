@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { Mention } from '@shared/types'
 import { samePath } from '@shared/pathUtils'
+import { isStaleError } from '@shared/errors'
 import { backlinksFor, useIndexStore } from '@/stores/indexStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -53,7 +54,7 @@ export function BacklinksPanel(): React.JSX.Element {
     try {
       await window.knote.replaceLine(mention.path, mention.line, mention.text, newLine)
     } catch (err) {
-      alert(String(err).includes('KNOTE_STALE') ? 'That note changed — refreshed.' : String(err))
+      alert(isStaleError(err) ? 'That note changed — refreshed.' : String(err))
     }
   }
 

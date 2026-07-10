@@ -37,7 +37,6 @@ import { titleOf } from '@shared/pathUtils'
 type PickerKind = 'tag' | 'priority' | 'date' | null
 
 interface Props {
-  sidebarOpen: boolean
   onToggleSidebar: () => void
 }
 

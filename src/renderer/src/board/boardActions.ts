@@ -1,4 +1,5 @@
 import { samePath } from '@shared/pathUtils'
+import { isStaleError } from '@shared/errors'
 import { ARCHIVED_CHAR, REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
 import { getActiveEditorView } from '@/editor/activeView'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -86,7 +87,7 @@ export async function setCardStatus(
       await window.knote.replaceLine(card.path, card.line, card.rawLine, newLine)
     }
   } catch (err) {
-    if (String(err).includes('KNOTE_STALE')) staleToast()
+    if (isStaleError(err)) staleToast()
     else throw err
   }
 }
@@ -155,7 +156,7 @@ export async function reorderCard(card: BoardCard, before: BoardCard | null): Pr
       before ? before.rawLine : null
     )
   } catch (err) {
-    if (String(err).includes('KNOTE_STALE')) staleToast()
+    if (isStaleError(err)) staleToast()
     else throw err
   }
 }
@@ -183,7 +184,7 @@ export async function updateCardText(card: BoardCard, newText: string): Promise<
   try {
     await window.knote.replaceLine(card.path, card.line, card.rawLine, newLine)
   } catch (err) {
-    if (String(err).includes('KNOTE_STALE')) staleToast()
+    if (isStaleError(err)) staleToast()
     else throw err
   }
 }
@@ -202,7 +203,7 @@ export async function deleteCard(card: BoardCard): Promise<void> {
   try {
     await window.knote.deleteLine(card.path, card.line, card.rawLine)
   } catch (err) {
-    if (String(err).includes('KNOTE_STALE')) staleToast()
+    if (isStaleError(err)) staleToast()
     else throw err
   }
 }
