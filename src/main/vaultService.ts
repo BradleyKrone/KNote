@@ -120,6 +120,8 @@ export async function readFile(rel: VaultPath): Promise<FileReadResult> {
   return { path: normalizeRel(rel), content, mtimeMs: stat.mtimeMs }
 }
 
+let tmpCounter = 0
+
 /**
  * Atomic write: write to a temp file in the same directory, then rename over
  * the target. Rename can transiently fail on Windows (AV/sync tools holding
@@ -146,7 +148,10 @@ export async function writeFileAtomic(
       // File missing is fine — the write recreates it
     }
   }
-  const tmp = abs + '.knote-tmp'
+  // Unique per write so concurrent writes to the same file can't clobber
+  // each other's temp file. Must keep the `.knote-tmp` suffix — the watcher
+  // ignores paths by that ending.
+  const tmp = `${abs}.${process.pid}-${tmpCounter++}.knote-tmp`
   await fs.writeFile(tmp, content, 'utf-8')
   let lastErr: unknown
   for (let attempt = 0; attempt < 4; attempt++) {

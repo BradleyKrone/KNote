@@ -71,6 +71,32 @@ async function isOwnEcho(absPath: string, kind: ExternalChangeKind): Promise<boo
   return true
 }
 
+/**
+ * Decide whether a raw fs event should surface as an external change:
+ * suppresses echoes of our own writes and byte-identical re-touches by sync
+ * clients, and updates the known-hash baseline for genuine content changes.
+ * Exported for tests.
+ */
+export async function shouldReportChange(
+  absPath: string,
+  kind: ExternalChangeKind
+): Promise<boolean> {
+  if (await isOwnEcho(absPath, kind)) return false
+  if (kind === 'add' || kind === 'change') {
+    const key = resolve(absPath).toLowerCase()
+    const prevHash = lastKnownHash.get(key)
+    try {
+      const content = await fs.readFile(resolve(absPath), 'utf-8')
+      const newHash = hash(content)
+      if (newHash === prevHash) return false // bytes unchanged: a sync client re-touching the file, not a real edit
+      lastKnownHash.set(key, newHash)
+    } catch {
+      // unreadable mid-write race; fall through and still report it
+    }
+  }
+  return true
+}
+
 export async function startWatching(
   vaultRoot: string,
   onChange: (change: ExternalChange) => void
@@ -97,20 +123,7 @@ export async function startWatching(
       const rel = toRelSafe(absPath)
       if (rel === null || rel === '') return
       void (async () => {
-        if (await isOwnEcho(absPath, kind)) return
-        if (kind === 'add' || kind === 'change') {
-          const key = resolve(absPath).toLowerCase()
-          const prevHash = lastKnownHash.get(key)
-          try {
-            const content = await fs.readFile(resolve(absPath), 'utf-8')
-            const newHash = hash(content)
-            if (newHash === prevHash) return // bytes unchanged: a sync client re-touching the file, not a real edit
-            lastKnownHash.set(key, newHash)
-          } catch {
-            // unreadable mid-write race; fall through and still report it
-          }
-        }
-        onChange({ path: rel, kind })
+        if (await shouldReportChange(absPath, kind)) onChange({ path: rel, kind })
       })()
     }
 
