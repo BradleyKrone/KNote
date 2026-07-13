@@ -3,7 +3,7 @@
 // a dirty dot while unsaved.
 
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { SplitSquareHorizontal, X } from 'lucide-react'
 import { titleOf } from '@shared/pathUtils'
 import type { VaultPath } from '@shared/types'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
@@ -21,10 +21,12 @@ export function TabStrip({ paneIndex }: { paneIndex: number }): React.JSX.Elemen
     ? [
         {
           label: 'Split vertically',
+          icon: SplitSquareHorizontal,
           onClick: () => void useWorkspaceStore.getState().openInSplit(menu.path, 'vertical')
         },
         {
           label: 'Close tab',
+          icon: X,
           onClick: () => useWorkspaceStore.getState().closeTab(paneIndex, menu.path)
         }
       ]

@@ -318,7 +318,9 @@ button {
 }
 
 .context-menu-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   padding: 6px 10px;
   border: none;
@@ -331,6 +333,14 @@ button {
 }
 .context-menu-item:hover {
   background: var(--bg-hover);
+}
+.context-menu-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  flex-shrink: 0;
+  color: var(--text-muted);
 }
 .context-menu-item.danger {
   color: var(--danger);

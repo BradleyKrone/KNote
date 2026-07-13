@@ -8,6 +8,26 @@ import type { BoardColumn } from '@shared/types'
 import { ARCHIVED_CHAR, reasonLineForTask, TASK_LINE_RE } from '@shared/parser/patterns'
 import { promptReason } from '@/stores/reasonPromptStore'
 import type { MenuEntry } from '@/components/ContextMenu'
+import {
+  Archive,
+  Bold as BoldIcon,
+  BookPlus,
+  CalendarDays,
+  CheckSquare,
+  Circle,
+  CircleCheck,
+  Code as CodeIcon,
+  Flag,
+  Italic as ItalicIcon,
+  Milestone,
+  Pencil,
+  SpellCheck2,
+  Strikethrough as StrikethroughIcon,
+  Tag,
+  Wrench,
+  ZoomIn,
+  ZoomOut
+} from 'lucide-react'
 import { getActiveEditorView } from './activeView'
 import {
   adjustFontSize,
@@ -78,11 +98,13 @@ function replaceWordWith(
 function buildSpellingMenuItems(view: EditorView, target: SpellingTarget): MenuEntry[] {
   const items: MenuEntry[] = target.suggestions.slice(0, 5).map((s) => ({
     label: s,
+    icon: SpellCheck2,
     onClick: () => replaceWordWith(view, target, s)
   }))
   if (items.length === 0) items.push({ label: 'No suggestions', onClick: () => {} })
   items.push({
     label: 'Add to dictionary',
+    icon: BookPlus,
     onClick: () => void window.knote.spellcheck.addWord(target.word)
   })
   items.push({ separator: true })
@@ -94,7 +116,8 @@ export function buildCheckboxMenuItems(view: EditorView, columns: BoardColumn[])
   const line = view.state.doc.lineAt(view.state.selection.main.head)
   const currentChar = TASK_LINE_RE.exec(line.text)?.[3] ?? null
   const items: MenuEntry[] = columns.map((col) => ({
-    label: col.char === currentChar ? `✓ ${col.name}` : col.name,
+    label: col.name,
+    icon: col.char === currentChar ? CircleCheck : Circle,
     onClick: () => {
       if (col.char === currentChar) return
       if (!col.requireReason) {
@@ -116,7 +139,8 @@ export function buildCheckboxMenuItems(view: EditorView, columns: BoardColumn[])
   items.push(
     { separator: true },
     {
-      label: currentChar === ARCHIVED_CHAR ? '✓ Archived' : 'Archived',
+      label: 'Archived',
+      icon: currentChar === ARCHIVED_CHAR ? CircleCheck : Archive,
       onClick: () => setTaskStatusAtCursor(view, ARCHIVED_CHAR)
     }
   )
@@ -130,33 +154,33 @@ export function buildContextMenuItems(
 ): MenuEntry[] {
   const items: MenuEntry[] = ctx.spelling ? buildSpellingMenuItems(view, ctx.spelling) : []
   items.push(
-    { label: 'Bold', onClick: () => toggleBold(view) },
-    { label: 'Italic', onClick: () => toggleItalic(view) },
-    { label: 'Strikethrough', onClick: () => toggleStrikethrough(view) },
-    { label: 'Inline code', onClick: () => toggleInlineCode(view) },
+    { label: 'Bold', icon: BoldIcon, onClick: () => toggleBold(view) },
+    { label: 'Italic', icon: ItalicIcon, onClick: () => toggleItalic(view) },
+    { label: 'Strikethrough', icon: StrikethroughIcon, onClick: () => toggleStrikethrough(view) },
+    { label: 'Inline code', icon: CodeIcon, onClick: () => toggleInlineCode(view) },
     { separator: true },
-    { label: 'Add checkbox', onClick: () => insertCheckboxAtCursor(view) },
-    { label: 'Add milestone', onClick: () => insertMilestoneAtCursor(false) },
-    { label: 'Log machine work…', onClick: () => openPicker('machine') }
+    { label: 'Add checkbox', icon: CheckSquare, onClick: () => insertCheckboxAtCursor(view) },
+    { label: 'Add milestone', icon: Milestone, onClick: () => insertMilestoneAtCursor(false) },
+    { label: 'Log machine work…', icon: Wrench, onClick: () => openPicker('machine') }
   )
   if (ctx.isTask || ctx.isMilestone) {
     items.push(
       { separator: true },
-      { label: 'Add tag…', onClick: () => openPicker('tag') },
-      { label: 'Set priority…', onClick: () => openPicker('priority') },
-      { label: 'Set due date…', onClick: () => openPicker('date') }
+      { label: 'Add tag…', icon: Tag, onClick: () => openPicker('tag') },
+      { label: 'Set priority…', icon: Flag, onClick: () => openPicker('priority') },
+      { label: 'Set due date…', icon: CalendarDays, onClick: () => openPicker('date') }
     )
   }
   if (ctx.isMachineEntry) {
     items.push(
       { separator: true },
-      { label: 'Edit machine entry…', onClick: () => openPicker('edit-machine') }
+      { label: 'Edit machine entry…', icon: Pencil, onClick: () => openPicker('edit-machine') }
     )
   }
   items.push(
     { separator: true },
-    { label: 'Increase font size', onClick: () => adjustFontSize(view, 1) },
-    { label: 'Decrease font size', onClick: () => adjustFontSize(view, -1) }
+    { label: 'Increase font size', icon: ZoomIn, onClick: () => adjustFontSize(view, 1) },
+    { label: 'Decrease font size', icon: ZoomOut, onClick: () => adjustFontSize(view, -1) }
   )
   return items
 }

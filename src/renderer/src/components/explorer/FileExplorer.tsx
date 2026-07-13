@@ -2,7 +2,18 @@
 // create/rename/move/delete files via inline editing and context menu.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronDown, ChevronRight, FilePlus2, FileText, FolderPlus, Image } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  FilePlus2,
+  FileText,
+  FolderPlus,
+  Image,
+  Pencil,
+  SplitSquareHorizontal,
+  Trash2,
+  Trello
+} from 'lucide-react'
 import type { FileEntry, VaultPath } from '@shared/types'
 import { isMarkdown, joinRel, parentOf, samePath, titleOf } from '@shared/pathUtils'
 import { useVaultStore } from '@/stores/vaultStore'
@@ -114,10 +125,11 @@ export function FileExplorer(): React.JSX.Element {
     const items: MenuItem[] = []
     if (entry.kind === 'folder') {
       items.push(
-        { label: 'New note', onClick: () => void createNote(entry.path) },
-        { label: 'New folder', onClick: () => void createFolder(entry.path) },
+        { label: 'New note', icon: FilePlus2, onClick: () => void createNote(entry.path) },
+        { label: 'New folder', icon: FolderPlus, onClick: () => void createFolder(entry.path) },
         {
           label: 'Open board for folder',
+          icon: Trello,
           onClick: () => useUiStore.getState().openBoard({ kind: 'folder', path: entry.path })
         }
       )
@@ -125,17 +137,19 @@ export function FileExplorer(): React.JSX.Element {
       items.push(
         {
           label: 'Open board for note',
+          icon: Trello,
           onClick: () => useUiStore.getState().openBoard({ kind: 'note', path: entry.path })
         },
         {
           label: 'Split vertically',
+          icon: SplitSquareHorizontal,
           onClick: () => void useWorkspaceStore.getState().openInSplit(entry.path, 'vertical')
         }
       )
     }
     items.push(
-      { label: 'Rename', onClick: () => setRenaming(entry.path) },
-      { label: 'Delete', danger: true, onClick: () => void doDelete(entry) }
+      { label: 'Rename', icon: Pencil, onClick: () => setRenaming(entry.path) },
+      { label: 'Delete', icon: Trash2, danger: true, onClick: () => void doDelete(entry) }
     )
     setMenu({ x: e.clientX, y: e.clientY, items })
   }
@@ -146,8 +160,8 @@ export function FileExplorer(): React.JSX.Element {
       x: e.clientX,
       y: e.clientY,
       items: [
-        { label: 'New note', onClick: () => void createNote('') },
-        { label: 'New folder', onClick: () => void createFolder('') }
+        { label: 'New note', icon: FilePlus2, onClick: () => void createNote('') },
+        { label: 'New folder', icon: FolderPlus, onClick: () => void createFolder('') }
       ]
     })
   }
