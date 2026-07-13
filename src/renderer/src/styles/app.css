@@ -2226,6 +2226,77 @@ button {
   background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 
+/* ---------- Dashboard ---------- */
+
+.dashboard-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.dashboard-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 20px 24px 40px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.dashboard-section-wide {
+  grid-column: 1 / -1;
+}
+
+.dashboard-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+}
+
+.dashboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dashboard-overdue-callout {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+  margin-bottom: 8px;
+}
+
+.dashboard-link-target {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-add-link-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.dashboard-add-link-form .panel-input {
+  flex: 1;
+}
+
+.tab-icon {
+  flex-shrink: 0;
+}
+
 /* ---------- Machine log ---------- */
 
 .machine-item-date {

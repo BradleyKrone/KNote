@@ -10,6 +10,8 @@ import {
   FolderPlus,
   Image,
   Pencil,
+  Pin,
+  PinOff,
   SplitSquareHorizontal,
   Trash2,
   Trello
@@ -19,6 +21,7 @@ import { isMarkdown, joinRel, parentOf, samePath, titleOf } from '@shared/pathUt
 import { useVaultStore } from '@/stores/vaultStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useUiStore } from '@/stores/uiStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { confirm } from '@/stores/confirmStore'
 import { ContextMenu, type MenuItem } from '../ContextMenu'
 
@@ -134,6 +137,9 @@ export function FileExplorer(): React.JSX.Element {
         }
       )
     } else if (isMarkdown(entry.path)) {
+      const pinned = useSettingsStore
+        .getState()
+        .vaultConfig.pinnedNotes.some((p) => samePath(p, entry.path))
       items.push(
         {
           label: 'Open board for note',
@@ -144,6 +150,14 @@ export function FileExplorer(): React.JSX.Element {
           label: 'Split vertically',
           icon: SplitSquareHorizontal,
           onClick: () => void useWorkspaceStore.getState().openInSplit(entry.path, 'vertical')
+        },
+        {
+          label: pinned ? 'Unpin from dashboard' : 'Pin to dashboard',
+          icon: pinned ? PinOff : Pin,
+          onClick: () =>
+            void (pinned
+              ? useSettingsStore.getState().unpinNote(entry.path)
+              : useSettingsStore.getState().pinNote(entry.path))
         }
       )
     }

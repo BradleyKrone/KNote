@@ -176,7 +176,7 @@ export function SettingsModal(): React.JSX.Element | null {
 
   const field = (
     label: string,
-    key: keyof Omit<VaultConfig, 'columns' | 'machines' | 'deprecatedTags'>,
+    key: keyof Omit<VaultConfig, 'columns' | 'machines' | 'deprecatedTags' | 'pinnedNotes' | 'links'>,
     hint?: string
   ): React.JSX.Element => (
     <div className="settings-field">

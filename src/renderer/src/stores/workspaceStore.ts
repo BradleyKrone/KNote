@@ -13,6 +13,17 @@ import { isInside, normalizeRel, samePath } from '@shared/pathUtils'
 export type EditorMode = 'live' | 'source' | 'reading'
 export type SplitDirection = 'vertical' | 'horizontal'
 
+/**
+ * Sentinel tab id for the Dashboard tab. A NUL byte can never occur in a
+ * real vault-relative path, so this is guaranteed not to collide with any
+ * file path and passes safely through samePath/isInside/normalizeRel.
+ */
+export const DASHBOARD_TAB_ID: VaultPath = '\u0000:dashboard'
+
+export function isDashboardTab(id: VaultPath | null | undefined): boolean {
+  return id === DASHBOARD_TAB_ID
+}
+
 export interface OpenNote {
   path: VaultPath
   /** Content as loaded from disk (the editor owns the live buffer). */
@@ -28,8 +39,14 @@ export interface OpenNote {
 }
 
 export interface PaneState {
-  /** Open tab paths, in strip order. The active tab is `note?.path`. */
+  /** Open tab ids, in strip order. Either a file path or DASHBOARD_TAB_ID. */
   tabs: VaultPath[]
+  /**
+   * The active tab id for this pane — the single source of truth for which
+   * tab is showing. Equals `note?.path` for a file tab, or DASHBOARD_TAB_ID
+   * for the dashboard tab (where `note` is null).
+   */
+  activeTab: VaultPath | null
   note: OpenNote | null
   dirty: boolean
   /** External change arrived while the buffer was dirty. */
@@ -63,6 +80,11 @@ interface WorkspaceState {
   /** Open a note in the active pane (adds a tab if not already open there). */
   openFile: (path: VaultPath, scrollToLine?: number) => Promise<void>
   openFileInPane: (pane: number, path: VaultPath, scrollToLine?: number) => Promise<void>
+  /** Open the Dashboard tab in the active pane (adds a tab if not already open there). */
+  openDashboard: () => void
+  openDashboardInPane: (pane: number) => void
+  /** Activate an already-open tab (file or dashboard) in a pane, loading it if needed. */
+  activateTab: (pane: number, tabId: VaultPath) => Promise<void>
   /** Close one tab in a pane; activates a neighbor, unsplits an emptied second pane. */
   closeTab: (pane: number, path: VaultPath) => void
   /** Close every tab showing `path` (or inside folder `path`) in every pane. */
@@ -102,6 +124,7 @@ function detectEol(content: string): '\n' | '\r\n' {
 
 const emptyPane = (): PaneState => ({
   tabs: [],
+  activeTab: null,
   note: null,
   dirty: false,
   conflict: null,
@@ -164,6 +187,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
           ? {
               ...cur,
               tabs,
+              activeTab: clean,
               note: {
                 path: clean,
                 content: result.content,
@@ -180,6 +204,46 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
       set({ panes, activePane: pane, ...mirrorsOf(panes, pane) })
     },
 
+    openDashboard: () => {
+      get().openDashboardInPane(get().activePane)
+    },
+
+    // Declared void in WorkspaceState (TS permits a Promise-returning
+    // implementation for a void-typed callback); the await ensures the
+    // exclusive-view reset commits before the pane switches, matching
+    // openFileInPane's ordering so there's no one-frame flash of the old view.
+    openDashboardInPane: async (pane) => {
+      // Opening the dashboard always returns from any exclusive full-screen view
+      const { useUiStore } = await import('./uiStore')
+      useUiStore.getState().setBoardOpen(false)
+      useUiStore.getState().setTimelineOpen(false)
+      useUiStore.getState().setMachineLogOpen(false)
+      useUiStore.getState().setGraphOpen(false)
+      const s = get()
+      if (pane < 0 || pane >= s.panes.length) pane = s.activePane
+      const p = s.panes[pane]
+      const tabs = p.tabs.some((t) => isDashboardTab(t)) ? p.tabs : [...p.tabs, DASHBOARD_TAB_ID]
+      const panes = s.panes.map((cur, i) =>
+        i === pane
+          ? {
+              ...cur,
+              tabs,
+              activeTab: DASHBOARD_TAB_ID,
+              note: null,
+              dirty: false,
+              conflict: null,
+              scrollRequest: null
+            }
+          : cur
+      )
+      set({ panes, activePane: pane, ...mirrorsOf(panes, pane) })
+    },
+
+    activateTab: async (pane, tabId) => {
+      if (isDashboardTab(tabId)) await get().openDashboardInPane(pane)
+      else await get().openFileInPane(pane, tabId)
+    },
+
     closeTab: (pane, path) => {
       const s = get()
       const p = s.panes[pane]
@@ -187,7 +251,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
       const idx = p.tabs.findIndex((t) => samePath(t, path))
       if (idx === -1) return
       const tabs = p.tabs.filter((_, i) => i !== idx)
-      const wasActive = p.note !== null && samePath(p.note.path, path)
+      const wasActive = p.activeTab !== null && samePath(p.activeTab, path)
 
       // Second pane emptied → collapse the split
       if (tabs.length === 0 && s.panes.length === 2) {
@@ -201,10 +265,17 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
         patchPane(pane, { tabs })
         return
       }
-      patchPane(pane, { tabs, note: null, dirty: false, conflict: null, scrollRequest: null })
+      patchPane(pane, {
+        tabs,
+        activeTab: null,
+        note: null,
+        dirty: false,
+        conflict: null,
+        scrollRequest: null
+      })
       // Activate the nearest remaining neighbor, if any
       const neighbor = tabs[Math.min(idx, tabs.length - 1)]
-      if (neighbor) void get().openFileInPane(pane, neighbor)
+      if (neighbor) void get().activateTab(pane, neighbor)
     },
 
     closeTabsForPath: (path) => {
@@ -226,23 +297,25 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
     nextTab: async () => {
       const s = get()
       const p = s.panes[s.activePane]
-      if (!p || p.tabs.length < 2 || !p.note) return
-      const idx = p.tabs.findIndex((t) => samePath(t, p.note!.path))
-      await get().openFileInPane(s.activePane, p.tabs[(idx + 1) % p.tabs.length])
+      if (!p || p.tabs.length < 2 || p.activeTab === null) return
+      const idx = p.tabs.findIndex((t) => samePath(t, p.activeTab!))
+      await get().activateTab(s.activePane, p.tabs[(idx + 1) % p.tabs.length])
     },
 
     prevTab: async () => {
       const s = get()
       const p = s.panes[s.activePane]
-      if (!p || p.tabs.length < 2 || !p.note) return
-      const idx = p.tabs.findIndex((t) => samePath(t, p.note!.path))
-      await get().openFileInPane(s.activePane, p.tabs[(idx - 1 + p.tabs.length) % p.tabs.length])
+      if (!p || p.tabs.length < 2 || p.activeTab === null) return
+      const idx = p.tabs.findIndex((t) => samePath(t, p.activeTab!))
+      await get().activateTab(s.activePane, p.tabs[(idx - 1 + p.tabs.length) % p.tabs.length])
     },
 
     closeActiveTab: () => {
       const s = get()
       const p = s.panes[s.activePane]
-      if (p?.note) get().closeTab(s.activePane, p.note.path)
+      if (p?.activeTab !== null && p?.activeTab !== undefined) {
+        get().closeTab(s.activePane, p.activeTab)
+      }
     },
 
     setActivePane: (pane) => {
@@ -262,10 +335,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
         ? {
             ...emptyPane(),
             tabs: [active.note.path],
+            activeTab: active.note.path,
             // Same disk snapshot; the new pane's editor builds its own buffer
             note: { ...active.note, version: 1 }
           }
-        : emptyPane()
+        : isDashboardTab(active.activeTab)
+          ? { ...emptyPane(), tabs: [DASHBOARD_TAB_ID], activeTab: DASHBOARD_TAB_ID }
+          : emptyPane()
       const panes = [...s.panes, second]
       set({ panes, split: direction, activePane: 1, ...mirrorsOf(panes, 1) })
     },
@@ -278,7 +354,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
         set({ split: direction })
       }
       const target = 1 - get().activePane
-      await get().openFileInPane(target, path)
+      if (isDashboardTab(path)) get().openDashboardInPane(target)
+      else await get().openFileInPane(target, path)
     },
 
     closeSplit: () => {

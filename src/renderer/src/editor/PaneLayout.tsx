@@ -2,7 +2,8 @@
 // (vertical split) / stacked (horizontal split), each with its own tab
 // strip and editor. Clicking anywhere in a pane makes it the active one.
 
-import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { DashboardView } from '@/dashboard/DashboardView'
+import { isDashboardTab, useWorkspaceStore } from '@/stores/workspaceStore'
 import { EditorPane } from './EditorPane'
 import { TabStrip } from './TabStrip'
 
@@ -32,7 +33,13 @@ export function PaneLayout(): React.JSX.Element {
           onMouseDownCapture={() => setActivePane(i)}
         >
           <TabStrip paneIndex={i} />
-          {pane.note ? <EditorPane key={`${i}:${pane.note.path}`} paneIndex={i} /> : <EmptyPane />}
+          {isDashboardTab(pane.activeTab) ? (
+            <DashboardView key={`${i}:dashboard`} paneIndex={i} />
+          ) : pane.note ? (
+            <EditorPane key={`${i}:${pane.note.path}`} paneIndex={i} />
+          ) : (
+            <EmptyPane />
+          )}
         </div>
       ))}
     </div>

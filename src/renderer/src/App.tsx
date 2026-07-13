@@ -9,6 +9,7 @@ import {
   Files,
   FolderOpen,
   Hash,
+  LayoutDashboard,
   Search,
   Settings,
   Trello,
@@ -17,7 +18,7 @@ import {
 } from 'lucide-react'
 import { initVault, scheduleTreeRefresh, useVaultStore } from './stores/vaultStore'
 import { initSettings } from './stores/settingsStore'
-import { useWorkspaceStore } from './stores/workspaceStore'
+import { DASHBOARD_TAB_ID, isDashboardTab, useWorkspaceStore } from './stores/workspaceStore'
 import { useIndexStore } from './stores/indexStore'
 import { useUiStore, type SidebarTab } from './stores/uiStore'
 import { VaultPicker } from './components/VaultPicker'
@@ -59,6 +60,7 @@ const SIDEBAR_TABS: Array<{ id: SidebarTab; icon: React.JSX.Element; title: stri
 export default function App(): React.JSX.Element {
   const { vault, loading } = useVaultStore()
   const note = useWorkspaceStore((s) => s.note)
+  const dashboardActive = useWorkspaceStore((s) => isDashboardTab(s.panes[s.activePane]?.activeTab))
   const {
     sidebarTab,
     setSidebarTab,
@@ -154,6 +156,19 @@ export default function App(): React.JSX.Element {
           <CalendarDays size={22} />
         </button>
         <div className="ribbon-divider" />
+        <button
+          className={`icon-btn ribbon-btn${dashboardActive ? ' active' : ''}`}
+          title={dashboardActive ? 'Close dashboard' : 'Open dashboard'}
+          onClick={() => {
+            if (dashboardActive) {
+              useWorkspaceStore.getState().closeTab(useWorkspaceStore.getState().activePane, DASHBOARD_TAB_ID)
+            } else {
+              useWorkspaceStore.getState().openDashboard()
+            }
+          }}
+        >
+          <LayoutDashboard size={22} />
+        </button>
         <button
           className={`icon-btn ribbon-btn${boardOpen ? ' active' : ''}`}
           title={boardOpen ? 'Back to notes' : 'Open Kanban board'}

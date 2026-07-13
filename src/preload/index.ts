@@ -85,6 +85,8 @@ const api: KnoteApi = {
     addWord: (word: string) => ipcRenderer.invoke(IpcChannels.spellcheckAddWord, word)
   },
 
+  openExternal: (url: string) => ipcRenderer.invoke(IpcChannels.shellOpenExternal, url),
+
   onSpellContextMenu: (cb: (info: SpellContextInfo) => void) => {
     const listener = (_e: Electron.IpcRendererEvent, info: SpellContextInfo): void => cb(info)
     ipcRenderer.on(IpcChannels.evSpellContextMenu, listener)

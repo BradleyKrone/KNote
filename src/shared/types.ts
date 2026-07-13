@@ -195,6 +195,13 @@ export interface BoardColumn {
   requireReason?: boolean
 }
 
+export interface DashboardLink {
+  id: string
+  label: string
+  /** An http(s) URL (opened in the system browser), or a note reference resolved like a wikilink target. */
+  target: string
+}
+
 export interface VaultConfig {
   weeklyFolder: string
   /** dayjs format string applied to the Monday of the week for weekly note file names */
@@ -211,6 +218,10 @@ export interface VaultConfig {
   machines: MachineDef[]
   /** Tags hidden from the Tag pane and #-picker's quick-access lists, but left intact in notes */
   deprecatedTags: string[]
+  /** Notes pinned to the Dashboard, in pin order */
+  pinnedNotes: VaultPath[]
+  /** Freeform links (external URLs or note references) pinned to the Dashboard, in add order */
+  links: DashboardLink[]
 }
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
@@ -228,5 +239,7 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
     { name: 'Done', char: 'x' }
   ],
   machines: [],
-  deprecatedTags: []
+  deprecatedTags: [],
+  pinnedNotes: [],
+  links: []
 }

@@ -2,7 +2,7 @@
 // payload types live in shared/ipc.ts) and pushes vault/watcher/spellcheck
 // events back to the window. The only bridge between UI and filesystem.
 
-import { BrowserWindow, dialog, ipcMain, session } from 'electron'
+import { BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
 import { promises as fs } from 'fs'
 import { IpcChannels } from '@shared/ipc'
 import type { ThemeName, VaultInfo, VaultPath } from '@shared/types'
@@ -214,5 +214,12 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
 
   ipcMain.handle(IpcChannels.spellcheckAddWord, (_e, word: string) => {
     session.defaultSession.addWordToSpellCheckerDictionary(word)
+  })
+
+  ipcMain.handle(IpcChannels.shellOpenExternal, async (_e, url: string) => {
+    // Defense in depth: only ever hand http(s) URLs to the OS, never any
+    // other scheme (file:, custom protocol handlers, etc).
+    if (!/^https?:\/\//i.test(url)) throw new Error('openExternal: only http(s) URLs are allowed')
+    await shell.openExternal(url)
   })
 }

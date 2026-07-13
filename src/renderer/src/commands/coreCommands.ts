@@ -132,6 +132,30 @@ export function registerCoreCommands(): void {
   })
 
   registerCommand({
+    id: 'open-dashboard',
+    name: 'Open dashboard',
+    run: () => useWorkspaceStore.getState().openDashboard()
+  })
+
+  registerCommand({
+    id: 'pin-current-note',
+    name: 'Pin current note to dashboard',
+    run: () => {
+      const note = useWorkspaceStore.getState().note
+      if (note) void useSettingsStore.getState().pinNote(note.path)
+    }
+  })
+
+  registerCommand({
+    id: 'unpin-current-note',
+    name: 'Unpin current note from dashboard',
+    run: () => {
+      const note = useWorkspaceStore.getState().note
+      if (note) void useSettingsStore.getState().unpinNote(note.path)
+    }
+  })
+
+  registerCommand({
     id: 'insert-machine-entry',
     name: 'Log machine work',
     run: () => insertMachineEntryOnActive()

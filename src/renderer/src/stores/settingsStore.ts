@@ -1,5 +1,12 @@
 import { create } from 'zustand'
-import { DEFAULT_VAULT_CONFIG, type ThemeName, type VaultConfig } from '@shared/types'
+import {
+  DEFAULT_VAULT_CONFIG,
+  type DashboardLink,
+  type ThemeName,
+  type VaultConfig,
+  type VaultPath
+} from '@shared/types'
+import { samePath } from '@shared/pathUtils'
 
 interface SettingsState {
   theme: ThemeName
@@ -12,6 +19,14 @@ interface SettingsState {
   loadVaultConfig: () => Promise<void>
   saveVaultConfig: (config: VaultConfig) => Promise<void>
   setSettingsOpen: (open: boolean) => void
+  /** Pin a note to the Dashboard (no-op if already pinned). */
+  pinNote: (path: VaultPath) => Promise<void>
+  /** Unpin a note from the Dashboard (no-op if not pinned). */
+  unpinNote: (path: VaultPath) => Promise<void>
+  /** Add a freeform link (URL or note reference) to the Dashboard. */
+  addLink: (label: string, target: string) => Promise<void>
+  /** Remove a link from the Dashboard by id. */
+  removeLink: (id: string) => Promise<void>
 }
 
 function applyTheme(theme: ThemeName): void {
@@ -51,7 +66,32 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     await window.knote.setVaultConfig(config)
   },
 
-  setSettingsOpen: (settingsOpen) => set({ settingsOpen })
+  setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+
+  pinNote: async (path) => {
+    const config = get().vaultConfig
+    if (config.pinnedNotes.some((p) => samePath(p, path))) return
+    await get().saveVaultConfig({ ...config, pinnedNotes: [...config.pinnedNotes, path] })
+  },
+
+  unpinNote: async (path) => {
+    const config = get().vaultConfig
+    await get().saveVaultConfig({
+      ...config,
+      pinnedNotes: config.pinnedNotes.filter((p) => !samePath(p, path))
+    })
+  },
+
+  addLink: async (label, target) => {
+    const config = get().vaultConfig
+    const link: DashboardLink = { id: crypto.randomUUID(), label, target }
+    await get().saveVaultConfig({ ...config, links: [...config.links, link] })
+  },
+
+  removeLink: async (id) => {
+    const config = get().vaultConfig
+    await get().saveVaultConfig({ ...config, links: config.links.filter((l) => l.id !== id) })
+  }
 }))
 
 export async function initSettings(): Promise<void> {

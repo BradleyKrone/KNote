@@ -3,10 +3,10 @@
 // a dirty dot while unsaved.
 
 import { useState } from 'react'
-import { SplitSquareHorizontal, X } from 'lucide-react'
+import { LayoutDashboard, SplitSquareHorizontal, X } from 'lucide-react'
 import { titleOf } from '@shared/pathUtils'
 import type { VaultPath } from '@shared/types'
-import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { isDashboardTab, useWorkspaceStore } from '@/stores/workspaceStore'
 import { ContextMenu, type MenuItem } from '@/components/ContextMenu'
 
 export function TabStrip({ paneIndex }: { paneIndex: number }): React.JSX.Element | null {
@@ -15,7 +15,7 @@ export function TabStrip({ paneIndex }: { paneIndex: number }): React.JSX.Elemen
   const [menu, setMenu] = useState<{ x: number; y: number; path: VaultPath } | null>(null)
   if (!pane || pane.tabs.length === 0) return null
 
-  const activePath = pane.note?.path ?? null
+  const activePath = pane.activeTab
 
   const menuItems: MenuItem[] = menu
     ? [
@@ -40,10 +40,10 @@ export function TabStrip({ paneIndex }: { paneIndex: number }): React.JSX.Elemen
           <div
             key={path}
             className={`tab${isActive ? ' active' : ''}`}
-            title={path}
+            title={isDashboardTab(path) ? 'Dashboard' : path}
             onClick={() => {
               setActivePane(paneIndex)
-              if (!isActive) void useWorkspaceStore.getState().openFileInPane(paneIndex, path)
+              if (!isActive) void useWorkspaceStore.getState().activateTab(paneIndex, path)
             }}
             onMouseDown={(e) => {
               if (e.button === 1) {
@@ -57,7 +57,8 @@ export function TabStrip({ paneIndex }: { paneIndex: number }): React.JSX.Elemen
               setMenu({ x: e.clientX, y: e.clientY, path })
             }}
           >
-            <span className="tab-title">{titleOf(path)}</span>
+            {isDashboardTab(path) && <LayoutDashboard size={13} className="tab-icon" />}
+            <span className="tab-title">{isDashboardTab(path) ? 'Dashboard' : titleOf(path)}</span>
             {isActive && pane.dirty && <span className="tab-dirty" />}
             <button
               className="tab-close"

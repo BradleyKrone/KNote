@@ -45,6 +45,7 @@ export const IpcChannels = {
   attachmentSave: 'attachment:save',
   copilotEnsureDoc: 'copilot:ensureDoc',
   spellcheckAddWord: 'spellcheck:addWord',
+  shellOpenExternal: 'shell:openExternal',
   // main -> renderer events
   evExternalChange: 'ev:externalChange',
   evIndexDelta: 'ev:indexDelta',
@@ -146,6 +147,14 @@ export interface KnoteApi {
     /** Add a word to the user's personal spellchecker dictionary. */
     addWord(word: string): Promise<void>
   }
+
+  /**
+   * Open an http(s) URL in the system's default browser (Electron shell.openExternal).
+   * KNote makes no network calls of its own — this only hands the URL to the
+   * OS, for Dashboard links the user has explicitly added and clicked.
+   * Rejects for any non-http(s) scheme.
+   */
+  openExternal(url: string): Promise<void>
 
   /**
    * Subscribe to spellcheck context (misspelled word + suggestions) emitted by

@@ -174,6 +174,32 @@ today's date at your cursor. Right-click any item in the timeline — task,
 milestone, or note — to change its date with a calendar picker, without
 leaving the timeline to find it in the note.
 
+## Dashboard
+
+A home base you can keep open alongside your notes. Open it from the
+ribbon's dashboard icon or "Open dashboard" in the command palette — it
+opens as a normal **tab**, so it works with split panes just like any note
+(put a note in one pane and the Dashboard in the other).
+It shows four things, each reading live from your vault:
+
+- **Pinned notes** — your own curated shortlist. Right-click a note in the
+  file explorer and choose "Pin to dashboard" (or "Pin current note to
+  dashboard" from the command palette) to add it; unpin from either place,
+  or with the pin button on the dashboard itself.
+- **Current working tasks** — every task sitting in whichever Kanban column
+  is named "In Progress" (Settings → Kanban board), across the whole vault.
+- **Links** — a freeform list for anything else you find useful. "Add link"
+  on the dashboard and give it a label plus a target: a `https://` URL opens
+  in your default browser, anything else is resolved as a note reference
+  (same matching as `[[wikilinks]]` — by path, title, or alias). This is the
+  one deliberate, scoped exception to KNote's "no network calls" rule —
+  KNote itself never fetches anything; clicking a link just hands the URL to
+  the OS to open in your browser.
+- **Upcoming deadlines** — the same dated tasks, milestones, and
+  frontmatter-dated notes as the Timeline, split into overdue and upcoming.
+
+Click anything on the dashboard to jump straight to it.
+
 ## Weekly notes & templates
 
 - **Open this week's note** creates/opens a note named from your
