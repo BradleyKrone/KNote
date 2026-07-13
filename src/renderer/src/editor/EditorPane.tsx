@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { EditorSelection } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { MILESTONE_LINE_RE, TASK_LINE_RE } from '@shared/parser/patterns'
+import { MACHINE_ENTRY_RE, MILESTONE_LINE_RE, TASK_LINE_RE } from '@shared/parser/patterns'
 import { isConflictError } from '@shared/errors'
 import { registerKeepMine, useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -26,6 +26,7 @@ interface PendingContext {
   y: number
   isTask: boolean
   isMilestone: boolean
+  isMachineEntry: boolean
   isCheckbox: boolean
   /** The word range under the cursor (null on a checkbox or blank spot). */
   wordRange: { word: string; from: number; to: number } | null
@@ -278,6 +279,7 @@ export function EditorPane({ paneIndex }: EditorPaneProps): React.JSX.Element {
       y: e.clientY,
       isTask: TASK_LINE_RE.test(line.text),
       isMilestone: MILESTONE_LINE_RE.test(line.text),
+      isMachineEntry: MACHINE_ENTRY_RE.test(line.text),
       isCheckbox,
       wordRange: !isCheckbox && pos !== null ? wordAt(view, pos) : null
     }
@@ -298,6 +300,7 @@ export function EditorPane({ paneIndex }: EditorPaneProps): React.JSX.Element {
         y: ctx.y,
         isTask: ctx.isTask,
         isMilestone: ctx.isMilestone,
+        isMachineEntry: ctx.isMachineEntry,
         isCheckbox: ctx.isCheckbox,
         spelling
       })

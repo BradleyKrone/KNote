@@ -102,6 +102,8 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
     return path
   })
 
+  ipcMain.handle(IpcChannels.vaultOpenVSCode, () => vault.openVSCodeWorkspace())
+
   ipcMain.handle(IpcChannels.entryRename, async (_e, path: VaultPath, newName: string) => {
     const wasFolder = await vaultIndex.statIsDir(path)
     const newPath = await vault.renameEntry(path, newName)

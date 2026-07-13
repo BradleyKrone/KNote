@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
+import type { LucideIcon } from 'lucide-react'
 
 export interface MenuItem {
   label: string
+  icon?: LucideIcon
   danger?: boolean
   onClick: () => void
 }
@@ -60,6 +62,9 @@ export function ContextMenu({ x, y, items, onClose }: Props): React.JSX.Element 
               entry.onClick()
             }}
           >
+            <span className="context-menu-item-icon">
+              {entry.icon ? <entry.icon size={14} /> : null}
+            </span>
             {entry.label}
           </button>
         )

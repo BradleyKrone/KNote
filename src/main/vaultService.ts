@@ -276,6 +276,26 @@ export async function ensureDefaultTemplate(templatesFolder: string): Promise<Va
   })
 }
 
+/**
+ * Ensure a VS Code workspace file exists for this vault (creating a blank
+ * one pointing at the vault root if it doesn't) and open it, which hands
+ * off to VS Code via the OS's `.code-workspace` file association. Kept in
+ * `.knote/` alongside the rest of the per-vault config so it doesn't
+ * clutter the note tree. Returns an error string from `shell.openPath` on
+ * failure (e.g. no app associated with `.code-workspace`, meaning VS Code
+ * isn't installed), or '' on success.
+ */
+export async function openVSCodeWorkspace(): Promise<string> {
+  const root = getVaultRoot()
+  const abs = join(root, '.knote', 'vault.code-workspace')
+  if (!(await exists(abs))) {
+    await fs.mkdir(dirname(abs), { recursive: true })
+    const workspace = { folders: [{ path: root }], settings: {} }
+    await fs.writeFile(abs, JSON.stringify(workspace, null, 2), 'utf-8')
+  }
+  return shell.openPath(abs)
+}
+
 /** Where the bundled Copilot-instructions doc is placed inside a vault. */
 const COPILOT_DOC_REL = 'Knote Resources/GitHub Copilot Instructions.md'
 

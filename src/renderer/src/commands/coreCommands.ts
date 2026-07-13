@@ -1,5 +1,6 @@
 import { registerCommand } from './registry'
 import { openThisWeekNote } from './weeklyNotes'
+import { openInVSCode } from './vscode'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -165,6 +166,12 @@ export function registerCoreCommands(): void {
       useUiStore.getState().setBoardOpen(false)
       useVaultStore.getState().setVault(info)
     }
+  })
+
+  registerCommand({
+    id: 'open-in-vscode',
+    name: 'Open vault in VS Code',
+    run: () => openInVSCode()
   })
 
   registerCommand({

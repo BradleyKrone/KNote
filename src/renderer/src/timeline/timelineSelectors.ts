@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import type { NoteMeta, VaultPath } from '@shared/types'
-import { DUE_RE, PRIORITY_RE } from '@shared/parser/patterns'
+import { ARCHIVED_CHAR, DUE_RE, PRIORITY_RE } from '@shared/parser/patterns'
 import { stripInlineMarkers, toCard } from '@/board/boardSelectors'
 
 /**
@@ -21,15 +21,19 @@ export interface TimelineItem {
   tags: string[]
   /** Milestone marked with a priority marker (!/!!/!!!) — renders larger on the timeline */
   important: boolean
+  /** Exact full source line, used to verify targeted rewrites — tasks and milestones only (right-click date edit) */
+  rawLine?: string
+  /** Which frontmatter key carried the date (`date`/`due`/`deadline`) — notes only (right-click date edit) */
+  frontmatterKey?: string
 }
 
-function frontmatterDate(meta: NoteMeta): string | null {
+function frontmatterDate(meta: NoteMeta): { date: string; key: string } | null {
   for (const key of ['date', 'due', 'deadline']) {
     const value = meta.frontmatter[key]
     if (value === undefined || value === null) continue
     const s = value instanceof Date ? value.toISOString().slice(0, 10) : String(value)
     const m = /^(\d{4}-\d{2}-\d{2})/.exec(s.trim())
-    if (m) return m[1]
+    if (m) return { date: m[1], key }
   }
   return null
 }
@@ -67,7 +71,7 @@ export function collectTimelineItems(
     const noteDate = frontmatterDate(meta)
     if (noteDate) {
       push({
-        date: noteDate,
+        date: noteDate.date,
         kind: 'note',
         path: meta.path,
         noteTitle: meta.title,
@@ -75,7 +79,8 @@ export function collectTimelineItems(
         text: meta.title,
         done: false,
         tags: meta.tags.map((t) => t.tag),
-        important: false
+        important: false,
+        frontmatterKey: noteDate.key
       })
     }
     for (const task of meta.tasks) {
@@ -89,9 +94,10 @@ export function collectTimelineItems(
         noteTitle: meta.title,
         line: task.line,
         text: card.displayText,
-        done: /^[xX]$/.test(task.statusChar),
+        done: /^[xX]$/.test(task.statusChar) || task.statusChar === ARCHIVED_CHAR,
         tags: task.tags,
-        important: false
+        important: false,
+        rawLine: task.rawLine
       })
     }
     for (const milestone of meta.milestones) {
@@ -106,7 +112,8 @@ export function collectTimelineItems(
         text: stripInlineMarkers(milestone.text),
         done: false,
         tags: milestone.tags,
-        important: PRIORITY_RE.test(milestone.text)
+        important: PRIORITY_RE.test(milestone.text),
+        rawLine: milestone.rawLine
       })
     }
   }

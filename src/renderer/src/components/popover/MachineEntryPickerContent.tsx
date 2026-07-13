@@ -9,19 +9,31 @@ interface Props {
   /** Called with the chosen serial, date (YYYY-MM-DD), and the matched machine's registered
    *  tags (model + attributes, '' if unregistered) when the user confirms. */
   onSubmit: (serial: string, date: string, tags: string[]) => void
+  /** Pre-fill for editing an existing entry instead of logging a new one. */
+  initialSerial?: string
+  initialDate?: string
+  /** Submit button label — defaults to "Log work". */
+  submitLabel?: string
 }
 
 /**
  * Popover for logging machine work: pick/enter a serial (with a datalist of
  * machines already known to the vault) and a date, then insert the 🚜 entry.
+ * Also reused (with `initialSerial`/`initialDate`/`submitLabel`) to edit an
+ * existing entry's serial and date in place.
  */
-export function MachineEntryPickerContent({ onSubmit }: Props): React.JSX.Element {
+export function MachineEntryPickerContent({
+  onSubmit,
+  initialSerial = '',
+  initialDate,
+  submitLabel = 'Log work'
+}: Props): React.JSX.Element {
   const notes = useIndexStore((s) => s.notes)
   const machines = useSettingsStore((s) => s.vaultConfig.machines)
   const serials = useMemo(() => machineSerials(notes, machines), [notes, machines])
   const registry = useMemo(() => buildRegistry(machines), [machines])
-  const [serial, setSerial] = useState('')
-  const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'))
+  const [serial, setSerial] = useState(initialSerial)
+  const [date, setDate] = useState(initialDate ?? dayjs().format('YYYY-MM-DD'))
   const matchedDef = serial.trim() ? registry.get(serial.trim()) : undefined
 
   const quick: Array<{ label: string; date: string }> = [
@@ -85,7 +97,7 @@ export function MachineEntryPickerContent({ onSubmit }: Props): React.JSX.Elemen
         />
       </div>
       <button className="btn-primary picker-submit" disabled={!serial.trim()} onClick={submit}>
-        Log work
+        {submitLabel}
       </button>
     </div>
   )

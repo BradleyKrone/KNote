@@ -3,6 +3,26 @@
 Reopen this any time from **Settings → Release notes**. The current version
 number is shown in the window's title bar, next to "KNote".
 
+## 0.12.0
+
+- **Right-click date editing**: right-click a task, milestone, or note in
+  the Timeline view — or a machine log `🚜` entry, either in the log view
+  or inline in a note — to change its date (and, for machine entries, the
+  machine) with a calendar picker, instead of hunting it down in the note
+- **Hyperlinks**: right-click in the editor and choose "Insert link…" to
+  wrap the current selection (or fresh text) into a `[text](url)` Markdown
+  link
+- **Open vault in VS Code**: a new ribbon button (also in the command
+  palette and **Settings → General**) opens the current vault as a VS Code
+  workspace, creating a `.code-workspace` file in the vault's hidden
+  `.knote` folder the first time
+- Context menus (file explorer, editor) now show an icon next to each item
+  instead of a plain text label
+- Fixed archived tasks showing up as overdue in the Timeline view — they're
+  now treated as done, like completed tasks
+- Fixed the editor's search/replace panel having unreadable input and
+  button styling under some themes
+
 ## 0.11.0
 
 - **Tabs**: every note you open becomes a tab above the editor — click to

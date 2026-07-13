@@ -26,6 +26,8 @@ import type { VaultConfig } from '@shared/types'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useReleaseNotesStore, useWelcomeStore } from '@/stores/docDialogs'
 import { openCopilotInstructions } from '@/commands/copilotInstructions'
+import { openInVSCode } from '@/commands/vscode'
+import { VSCodeIcon } from './icons/VSCodeIcon'
 import { useIndexStore, tagCounts } from '@/stores/indexStore'
 import { confirm } from '@/stores/confirmStore'
 import { HotkeysSection } from './settings/HotkeysSection'
@@ -284,6 +286,18 @@ export function SettingsModal(): React.JSX.Element | null {
                     }}
                   >
                     <Bot size={14} /> Open
+                  </button>
+                </div>
+                <div className="settings-row">
+                  <div>
+                    <div className="settings-row-title">Open in VS Code</div>
+                    <div className="settings-row-desc">
+                      Opens this vault as a VS Code workspace, creating a blank one first if it
+                      doesn&apos;t exist yet
+                    </div>
+                  </div>
+                  <button className="icon-btn settings-row-btn" onClick={() => void openInVSCode()}>
+                    <VSCodeIcon size={14} /> Open
                   </button>
                 </div>
               </>

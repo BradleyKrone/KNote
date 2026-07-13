@@ -2,16 +2,35 @@
 // pane. Click activates, middle-click or the × closes, the active tab shows
 // a dirty dot while unsaved.
 
-import { X } from 'lucide-react'
+import { useState } from 'react'
+import { SplitSquareHorizontal, X } from 'lucide-react'
 import { titleOf } from '@shared/pathUtils'
+import type { VaultPath } from '@shared/types'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { ContextMenu, type MenuItem } from '@/components/ContextMenu'
 
 export function TabStrip({ paneIndex }: { paneIndex: number }): React.JSX.Element | null {
   const pane = useWorkspaceStore((s) => s.panes[paneIndex])
   const setActivePane = useWorkspaceStore((s) => s.setActivePane)
+  const [menu, setMenu] = useState<{ x: number; y: number; path: VaultPath } | null>(null)
   if (!pane || pane.tabs.length === 0) return null
 
   const activePath = pane.note?.path ?? null
+
+  const menuItems: MenuItem[] = menu
+    ? [
+        {
+          label: 'Split vertically',
+          icon: SplitSquareHorizontal,
+          onClick: () => void useWorkspaceStore.getState().openInSplit(menu.path, 'vertical')
+        },
+        {
+          label: 'Close tab',
+          icon: X,
+          onClick: () => useWorkspaceStore.getState().closeTab(paneIndex, menu.path)
+        }
+      ]
+    : []
 
   return (
     <div className="tab-strip">
@@ -32,6 +51,11 @@ export function TabStrip({ paneIndex }: { paneIndex: number }): React.JSX.Elemen
                 useWorkspaceStore.getState().closeTab(paneIndex, path)
               }
             }}
+            onContextMenu={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setMenu({ x: e.clientX, y: e.clientY, path })
+            }}
           >
             <span className="tab-title">{titleOf(path)}</span>
             {isActive && pane.dirty && <span className="tab-dirty" />}
@@ -48,6 +72,9 @@ export function TabStrip({ paneIndex }: { paneIndex: number }): React.JSX.Elemen
           </div>
         )
       })}
+      {menu && (
+        <ContextMenu x={menu.x} y={menu.y} items={menuItems} onClose={() => setMenu(null)} />
+      )}
     </div>
   )
 }

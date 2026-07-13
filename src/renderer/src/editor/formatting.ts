@@ -5,7 +5,7 @@
 import dayjs from 'dayjs'
 import { EditorSelection, type Text } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
-import { REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
+import { MACHINE_ENTRY_RE, REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
 import { getActiveEditorView } from './activeView'
 import { insertTag, setDueDate, setPriority } from '@/taskMeta'
 
@@ -142,6 +142,23 @@ export const toggleBold = (view: EditorView): boolean => toggleInline(view, '**'
 export const toggleItalic = (view: EditorView): boolean => toggleInline(view, '*')
 export const toggleStrikethrough = (view: EditorView): boolean => toggleInline(view, '~~')
 export const toggleInlineCode = (view: EditorView): boolean => toggleInline(view, '`')
+
+/** Replace the current selection (or just insert at the cursor) with a
+ *  `[text](url)` markdown link. An empty `text` falls back to the URL itself. */
+export function insertLinkAtCursor(view: EditorView, url: string, text: string): void {
+  const { from, to } = view.state.selection.main
+  const label = text.trim() || url
+  const insert = `[${label}](${url})`
+  view.dispatch(
+    view.state.update({
+      changes: { from, to, insert },
+      selection: EditorSelection.cursor(from + insert.length),
+      userEvent: 'input.knote.link',
+      scrollIntoView: true
+    })
+  )
+  view.focus()
+}
 
 // ---------- Per-selection font size ----------
 // Stored as a raw HTML span, e.g. <span style="font-size:20px">text</span>.
@@ -478,4 +495,18 @@ export function insertMachineEntryAtCursor(
 export function insertMachineEntryOnActive(): void {
   const view = getActiveEditorView()
   if (view) insertMachineEntryAtCursor(view, '', dayjs().format('YYYY-MM-DD'))
+}
+
+/**
+ * Replace an existing 🚜 entry's serial and date in place (right-click →
+ * "Edit machine entry…"), leaving everything else on the line — inline
+ * tags, activity text — untouched.
+ */
+export function editMachineEntryAtCursor(view: EditorView, serial: string, date: string): void {
+  replaceCurrentLine(view, (text) => {
+    const m = MACHINE_ENTRY_RE.exec(text)
+    if (!m) return text
+    const rest = setDueDate(m[2], date)
+    return rest ? `🚜 ${serial} ${rest}` : `🚜 ${serial}`
+  })
 }
