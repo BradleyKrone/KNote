@@ -298,6 +298,17 @@ automatically) and Copilot will write notes in KNote's format — correct
 `- [ ]` tasks, `📅` due dates, `[[wiki-links]]`, and more. It's a plain
 Markdown file you can edit or share freely.
 
+## Opening a vault in VS Code
+
+Click the **code icon** in the ribbon (or **Settings → General → Open in
+VS Code**, or run "Open vault in VS Code" from the command palette) to
+open the current vault as a VS Code workspace. The first time you use it
+for a vault, KNote creates a blank `.code-workspace` file (stored in the
+vault's hidden `.knote` folder) pointing at the vault root; after that it
+just reopens the same one. Handy for editing notes' raw Markdown, running
+Copilot against the vault, or anything else you'd rather do in a text
+editor.
+
 ## Settings
 
 Open **Settings** from the toolbar or command palette. It's laid out like

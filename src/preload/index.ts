@@ -80,6 +80,7 @@ const api: KnoteApi = {
   saveAttachment: (fileName: string, data: ArrayBuffer) =>
     ipcRenderer.invoke(IpcChannels.attachmentSave, fileName, data),
   ensureCopilotDoc: (content: string) => ipcRenderer.invoke(IpcChannels.copilotEnsureDoc, content),
+  openInVSCode: () => ipcRenderer.invoke(IpcChannels.vaultOpenVSCode),
 
   spellcheck: {
     addWord: (word: string) => ipcRenderer.invoke(IpcChannels.spellcheckAddWord, word)

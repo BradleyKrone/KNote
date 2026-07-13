@@ -15,6 +15,7 @@ import {
   Truck,
   Waypoints
 } from 'lucide-react'
+import { VSCodeIcon } from './components/icons/VSCodeIcon'
 import { initVault, scheduleTreeRefresh, useVaultStore } from './stores/vaultStore'
 import { initSettings } from './stores/settingsStore'
 import { useWorkspaceStore } from './stores/workspaceStore'
@@ -186,6 +187,13 @@ export default function App(): React.JSX.Element {
           <Waypoints size={22} />
         </button>
         <div className="ribbon-spacer" />
+        <button
+          className="icon-btn ribbon-btn"
+          title="Open vault in VS Code"
+          onClick={() => runCommand('open-in-vscode')}
+        >
+          <VSCodeIcon size={22} />
+        </button>
         <button
           className="icon-btn ribbon-btn"
           title="Open another vault…"

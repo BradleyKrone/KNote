@@ -44,6 +44,7 @@ export const IpcChannels = {
   tagRename: 'tag:rename',
   attachmentSave: 'attachment:save',
   copilotEnsureDoc: 'copilot:ensureDoc',
+  vaultOpenVSCode: 'vault:openVSCode',
   spellcheckAddWord: 'spellcheck:addWord',
   // main -> renderer events
   evExternalChange: 'ev:externalChange',
@@ -141,6 +142,14 @@ export interface KnoteApi {
    * .github/copilot-instructions.md. Idempotent — returns the file's path.
    */
   ensureCopilotDoc(content: string): Promise<VaultPath>
+
+  /**
+   * Open the current vault as a VS Code workspace, creating a blank
+   * `.code-workspace` file for it first if one doesn't exist yet. Resolves
+   * with an error message string if the OS couldn't open it (e.g. VS Code
+   * isn't installed), or '' on success.
+   */
+  openInVSCode(): Promise<string>
 
   spellcheck: {
     /** Add a word to the user's personal spellchecker dictionary. */
