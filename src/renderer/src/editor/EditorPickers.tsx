@@ -9,9 +9,11 @@ import { TagPickerContent } from '@/components/popover/TagPickerContent'
 import { PriorityPickerContent } from '@/components/popover/PriorityPickerContent'
 import { DatePickerContent } from '@/components/popover/DatePickerContent'
 import { MachineEntryPickerContent } from '@/components/popover/MachineEntryPickerContent'
+import { LinkPickerContent } from '@/components/popover/LinkPickerContent'
 import type { PickerKind } from './contextMenu'
 import {
   editMachineEntryAtCursor,
+  insertLinkAtCursor,
   insertMachineEntryAtCursor,
   insertTagAtCursor,
   setDueDateAtCursor,
@@ -36,6 +38,12 @@ function currentLineDue(view: EditorView | null): string | null {
   const line = view.state.doc.lineAt(view.state.selection.main.head)
   const m = DUE_RE.exec(line.text)
   return m ? (m[1] ?? m[2]) : null
+}
+
+function currentSelectionText(view: EditorView | null): string {
+  if (!view) return ''
+  const { from, to } = view.state.selection.main
+  return view.state.sliceDoc(from, to)
 }
 
 function currentLineMachine(view: EditorView | null): { serial: string; date: string } | null {
@@ -75,6 +83,12 @@ export function EditorPickers({ picker, getView, onClose }: Props): React.JSX.El
           onSubmit={(serial, date, tags) =>
             withView((view) => insertMachineEntryAtCursor(view, serial, date, tags))
           }
+        />
+      )}
+      {picker.kind === 'link' && (
+        <LinkPickerContent
+          initialText={currentSelectionText(getView())}
+          onSubmit={(url, text) => withView((view) => insertLinkAtCursor(view, url, text))}
         />
       )}
       {picker.kind === 'edit-machine' &&

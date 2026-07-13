@@ -19,6 +19,7 @@ import {
   Code as CodeIcon,
   Flag,
   Italic as ItalicIcon,
+  Link as LinkIcon,
   Milestone,
   Pencil,
   SpellCheck2,
@@ -40,7 +41,7 @@ import {
   toggleStrikethrough
 } from './formatting'
 
-export type PickerKind = 'tag' | 'priority' | 'date' | 'machine' | 'edit-machine'
+export type PickerKind = 'tag' | 'priority' | 'date' | 'machine' | 'edit-machine' | 'link'
 
 export interface ContextMenuState {
   x: number
@@ -158,6 +159,7 @@ export function buildContextMenuItems(
     { label: 'Italic', icon: ItalicIcon, onClick: () => toggleItalic(view) },
     { label: 'Strikethrough', icon: StrikethroughIcon, onClick: () => toggleStrikethrough(view) },
     { label: 'Inline code', icon: CodeIcon, onClick: () => toggleInlineCode(view) },
+    { label: 'Insert link…', icon: LinkIcon, onClick: () => openPicker('link') },
     { separator: true },
     { label: 'Add checkbox', icon: CheckSquare, onClick: () => insertCheckboxAtCursor(view) },
     { label: 'Add milestone', icon: Milestone, onClick: () => insertMilestoneAtCursor(false) },

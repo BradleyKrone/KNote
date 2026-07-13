@@ -143,6 +143,23 @@ export const toggleItalic = (view: EditorView): boolean => toggleInline(view, '*
 export const toggleStrikethrough = (view: EditorView): boolean => toggleInline(view, '~~')
 export const toggleInlineCode = (view: EditorView): boolean => toggleInline(view, '`')
 
+/** Replace the current selection (or just insert at the cursor) with a
+ *  `[text](url)` markdown link. An empty `text` falls back to the URL itself. */
+export function insertLinkAtCursor(view: EditorView, url: string, text: string): void {
+  const { from, to } = view.state.selection.main
+  const label = text.trim() || url
+  const insert = `[${label}](${url})`
+  view.dispatch(
+    view.state.update({
+      changes: { from, to, insert },
+      selection: EditorSelection.cursor(from + insert.length),
+      userEvent: 'input.knote.link',
+      scrollIntoView: true
+    })
+  )
+  view.focus()
+}
+
 // ---------- Per-selection font size ----------
 // Stored as a raw HTML span, e.g. <span style="font-size:20px">text</span>.
 // Sizes are kept to exactly two digits (10-36) so the open tag has a fixed

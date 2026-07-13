@@ -42,7 +42,9 @@ on the word under the cursor:
 Standard Markdown also works as you'd expect: `#` headings, `> ` quotes,
 ` ``` ` fenced code blocks, `1.` ordered lists, and `-`/`*` bullets.
 Right-click a misspelled word (red squiggle) for spelling suggestions and
-"Add to dictionary."
+"Add to dictionary." Right-click anywhere in the editor and choose
+**Insert link…** to wrap the current selection (or type fresh text) into a
+`[text](url)` Markdown link.
 
 ## Keyboard shortcuts
 

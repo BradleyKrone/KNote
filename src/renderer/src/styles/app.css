@@ -459,8 +459,13 @@ button {
    CodeMirror's LayerView re-applies z-index as an *inline* style on every
    update, which otherwise stomps a plain stylesheet rule here — !important
    is required to win over that inline style. */
+/* Raising the layer above content otherwise puts it above the editor's
+   editable text in hit-testing too, so a click/right-click landing on
+   selected text hits this highlight instead of the text underneath —
+   silently killing the context menu (native spellcheck and ours alike). */
 .cm-selectionLayer {
   z-index: 10 !important;
+  pointer-events: none;
 }
 
 .cm-selectionBackground,
