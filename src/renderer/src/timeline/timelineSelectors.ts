@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import type { NoteMeta, VaultPath } from '@shared/types'
-import { DUE_RE, PRIORITY_RE } from '@shared/parser/patterns'
+import { ARCHIVED_CHAR, DUE_RE, PRIORITY_RE } from '@shared/parser/patterns'
 import { stripInlineMarkers, toCard } from '@/board/boardSelectors'
 
 /**
@@ -94,7 +94,7 @@ export function collectTimelineItems(
         noteTitle: meta.title,
         line: task.line,
         text: card.displayText,
-        done: /^[xX]$/.test(task.statusChar),
+        done: /^[xX]$/.test(task.statusChar) || task.statusChar === ARCHIVED_CHAR,
         tags: task.tags,
         important: false,
         rawLine: task.rawLine
