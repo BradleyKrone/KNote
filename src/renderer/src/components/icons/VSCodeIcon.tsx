@@ -9,7 +9,13 @@ interface VSCodeIconProps {
  */
 export function VSCodeIcon({ size = 22 }: VSCodeIconProps): React.JSX.Element {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         fillRule="evenodd"
         clipRule="evenodd"

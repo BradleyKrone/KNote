@@ -4,10 +4,7 @@ import { rewriteLine, setLineDate } from '@/dateLineEdit'
 import type { MachineEntry } from './machineLogSelectors'
 
 /** Change a machine-log entry's 📅 date in place (or clear it when `date` is null). */
-export async function setMachineEntryDate(
-  entry: MachineEntry,
-  date: string | null
-): Promise<void> {
+export async function setMachineEntryDate(entry: MachineEntry, date: string | null): Promise<void> {
   await setLineDate({ path: entry.path, line: entry.line, rawLine: entry.rawLine }, date)
 }
 
