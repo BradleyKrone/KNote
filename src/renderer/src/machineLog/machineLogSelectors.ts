@@ -28,6 +28,8 @@ export interface MachineEntry {
   path: VaultPath
   noteTitle: string
   line: number
+  /** Exact full source line, used to verify targeted rewrites (right-click date edit) */
+  rawLine: string
 }
 
 export interface MachineFilters {
@@ -95,7 +97,8 @@ export function collectMachineEntries(
         registered: def !== undefined,
         path: meta.path,
         noteTitle: meta.title,
-        line: item.line
+        line: item.line,
+        rawLine: item.rawLine
       }
       if (matchesFilters(entry, filters)) entries.push(entry)
     }

@@ -7,12 +7,15 @@ import { CheckCircle2, Circle, FileText, Flag, X } from 'lucide-react'
 import { useIndexStore } from '@/stores/indexStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
+import { Popover } from '@/components/popover/Popover'
+import { DatePickerContent } from '@/components/popover/DatePickerContent'
 import {
   collectTimelineItems,
   formatTimeUntil,
   timelineTags,
   type TimelineItem
 } from './timelineSelectors'
+import { setTimelineItemDate } from './timelineActions'
 
 export function TimelineView(): React.JSX.Element {
   const notes = useIndexStore((s) => s.notes)
@@ -20,6 +23,10 @@ export function TimelineView(): React.JSX.Element {
   const todayRef = useRef<HTMLDivElement>(null)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [textFilter, setTextFilter] = useState('')
+  const [dateEditor, setDateEditor] = useState<{
+    item: TimelineItem
+    point: { x: number; y: number }
+  } | null>(null)
 
   const today = dayjs().format('YYYY-MM-DD')
 
@@ -128,7 +135,13 @@ export function TimelineView(): React.JSX.Element {
                       ]
                         .filter(Boolean)
                         .join(' ')}
+                      title="Right-click to change date"
                       onClick={() => open(item)}
+                      onContextMenu={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setDateEditor({ item, point: { x: e.clientX, y: e.clientY } })
+                      }}
                     >
                       <span className="timeline-item-icon">
                         {item.kind === 'note' ? (
@@ -163,6 +176,17 @@ export function TimelineView(): React.JSX.Element {
           })}
         </div>
       </div>
+      {dateEditor && (
+        <Popover anchorPoint={dateEditor.point} onClose={() => setDateEditor(null)}>
+          <DatePickerContent
+            currentDate={dateEditor.item.date}
+            onSelect={(date) => {
+              void setTimelineItemDate(dateEditor.item, date)
+              setDateEditor(null)
+            }}
+          />
+        </Popover>
+      )}
     </div>
   )
 }

@@ -122,10 +122,16 @@ export function FileExplorer(): React.JSX.Element {
         }
       )
     } else if (isMarkdown(entry.path)) {
-      items.push({
-        label: 'Open board for note',
-        onClick: () => useUiStore.getState().openBoard({ kind: 'note', path: entry.path })
-      })
+      items.push(
+        {
+          label: 'Open board for note',
+          onClick: () => useUiStore.getState().openBoard({ kind: 'note', path: entry.path })
+        },
+        {
+          label: 'Split vertically',
+          onClick: () => void useWorkspaceStore.getState().openInSplit(entry.path, 'vertical')
+        }
+      )
     }
     items.push(
       { label: 'Rename', onClick: () => setRenaming(entry.path) },

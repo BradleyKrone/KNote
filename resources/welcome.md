@@ -168,7 +168,9 @@ every `🏁` milestone, and every note with a `date:` frontmatter field, laid
 out chronologically with a marker for **today** — a quick way to see
 what's coming up across the whole vault. Use "Insert timeline milestone"
 (or "…important milestone" for one marked `!!!`) to drop a `🏁` marker with
-today's date at your cursor.
+today's date at your cursor. Right-click any item in the timeline — task,
+milestone, or note — to change its date with a calendar picker, without
+leaving the timeline to find it in the note.
 
 ## Weekly notes & templates
 
@@ -270,6 +272,9 @@ template so you can fill in details right below it, and "Open machine
 log" gives you a filterable, searchable view of every logged entry
 across the vault, grouped by machine — registered models are listed
 first in the filter list, ahead of config attributes and inline tags.
+Right-click an entry — in the machine log view, or on its `🚜` line in a
+note itself — to edit its machine and date together with a calendar
+picker.
 
 ## Vaults & appearance
 

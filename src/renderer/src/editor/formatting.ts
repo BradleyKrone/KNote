@@ -5,7 +5,7 @@
 import dayjs from 'dayjs'
 import { EditorSelection, type Text } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
-import { REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
+import { MACHINE_ENTRY_RE, REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
 import { getActiveEditorView } from './activeView'
 import { insertTag, setDueDate, setPriority } from '@/taskMeta'
 
@@ -478,4 +478,18 @@ export function insertMachineEntryAtCursor(
 export function insertMachineEntryOnActive(): void {
   const view = getActiveEditorView()
   if (view) insertMachineEntryAtCursor(view, '', dayjs().format('YYYY-MM-DD'))
+}
+
+/**
+ * Replace an existing 🚜 entry's serial and date in place (right-click →
+ * "Edit machine entry…"), leaving everything else on the line — inline
+ * tags, activity text — untouched.
+ */
+export function editMachineEntryAtCursor(view: EditorView, serial: string, date: string): void {
+  replaceCurrentLine(view, (text) => {
+    const m = MACHINE_ENTRY_RE.exec(text)
+    if (!m) return text
+    const rest = setDueDate(m[2], date)
+    return rest ? `🚜 ${serial} ${rest}` : `🚜 ${serial}`
+  })
 }

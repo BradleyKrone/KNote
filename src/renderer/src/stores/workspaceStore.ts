@@ -76,6 +76,8 @@ interface WorkspaceState {
   /** Split into two panes (carrying the active tab into the new one), or re-orient an existing split. */
   splitPane: (direction: SplitDirection) => void
   closeSplit: () => void
+  /** Open a specific note in the other pane, splitting first if not already split. */
+  openInSplit: (path: VaultPath, direction?: SplitDirection) => Promise<void>
 
   setMode: (mode: EditorMode) => void
   setActiveLineIsTask: (isTask: boolean) => void
@@ -266,6 +268,17 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => {
         : emptyPane()
       const panes = [...s.panes, second]
       set({ panes, split: direction, activePane: 1, ...mirrorsOf(panes, 1) })
+    },
+
+    openInSplit: async (path, direction = 'vertical') => {
+      const s = get()
+      if (s.panes.length === 1) {
+        set({ panes: [...s.panes, emptyPane()], split: direction })
+      } else {
+        set({ split: direction })
+      }
+      const target = 1 - get().activePane
+      await get().openFileInPane(target, path)
     },
 
     closeSplit: () => {

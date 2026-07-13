@@ -5,6 +5,8 @@ import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import { Truck, Wrench, X } from 'lucide-react'
 import { MachineConfigChips } from '@/components/MachineConfigChips'
+import { Popover } from '@/components/popover/Popover'
+import { MachineEntryPickerContent } from '@/components/popover/MachineEntryPickerContent'
 import { useIndexStore } from '@/stores/indexStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -17,6 +19,7 @@ import {
   machineSerials,
   type MachineEntry
 } from './machineLogSelectors'
+import { setMachineEntryFields } from './machineLogActions'
 
 export function MachineLogView(): React.JSX.Element {
   const notes = useIndexStore((s) => s.notes)
@@ -26,6 +29,10 @@ export function MachineLogView(): React.JSX.Element {
   const [tagFilters, setTagFilters] = useState<string[]>([])
   const [textFilter, setTextFilter] = useState('')
   const [separate, setSeparate] = useState(false)
+  const [dateEditor, setDateEditor] = useState<{
+    entry: MachineEntry
+    point: { x: number; y: number }
+  } | null>(null)
 
   const serials = useMemo(() => machineSerials(notes, machines), [notes, machines])
   const tags = useMemo(() => machineFilterTags(notes, machines), [notes, machines])
@@ -58,7 +65,13 @@ export function MachineLogView(): React.JSX.Element {
     <div
       key={`${entry.path}-${entry.line}-${i}`}
       className="timeline-item machine-item"
+      title="Right-click to edit machine/date"
       onClick={() => open(entry)}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setDateEditor({ entry, point: { x: e.clientX, y: e.clientY } })
+      }}
     >
       <span className="timeline-item-icon">
         <Wrench size={14} />
@@ -168,6 +181,19 @@ export function MachineLogView(): React.JSX.Element {
             ))}
         </div>
       </div>
+      {dateEditor && (
+        <Popover anchorPoint={dateEditor.point} onClose={() => setDateEditor(null)}>
+          <MachineEntryPickerContent
+            initialSerial={dateEditor.entry.serial}
+            initialDate={dateEditor.entry.date}
+            submitLabel="Save"
+            onSubmit={(serial, date) => {
+              void setMachineEntryFields(dateEditor.entry, serial, date)
+              setDateEditor(null)
+            }}
+          />
+        </Popover>
+      )}
     </div>
   )
 }

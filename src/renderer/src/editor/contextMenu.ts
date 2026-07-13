@@ -20,13 +20,14 @@ import {
   toggleStrikethrough
 } from './formatting'
 
-export type PickerKind = 'tag' | 'priority' | 'date' | 'machine'
+export type PickerKind = 'tag' | 'priority' | 'date' | 'machine' | 'edit-machine'
 
 export interface ContextMenuState {
   x: number
   y: number
   isTask: boolean
   isMilestone: boolean
+  isMachineEntry: boolean
   isCheckbox: boolean
   spelling: SpellingTarget | null
 }
@@ -144,6 +145,12 @@ export function buildContextMenuItems(
       { label: 'Add tag…', onClick: () => openPicker('tag') },
       { label: 'Set priority…', onClick: () => openPicker('priority') },
       { label: 'Set due date…', onClick: () => openPicker('date') }
+    )
+  }
+  if (ctx.isMachineEntry) {
+    items.push(
+      { separator: true },
+      { label: 'Edit machine entry…', onClick: () => openPicker('edit-machine') }
     )
   }
   items.push(
