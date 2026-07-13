@@ -1265,14 +1265,48 @@ button {
   background: var(--bg-secondary) !important;
   color: var(--text-normal) !important;
   border-color: var(--border-color) !important;
+  padding: 6px 8px !important;
 }
 
+/*
+ * CodeMirror's search/replace panel ships its own base theme as a pair of
+ * generated classes (light + dark variants), each with 2-class specificity
+ * (e.g. ".ͼ2 .cm-textfield") — higher than a plain ".cm-panels input"
+ * descendant selector. Without !important here those rules win outright
+ * (most visibly: .cm-textfield gets a hardcoded white background from the
+ * light variant, making our light-on-dark theme text unreadable).
+ */
 .cm-panels input,
 .cm-panels button {
-  background: var(--bg-primary);
+  background: var(--bg-primary) !important;
+  color: var(--text-normal) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 4px !important;
+  padding: 3px 6px !important;
+}
+
+.cm-panels input.cm-textfield {
+  outline: none;
+}
+
+.cm-panels input.cm-textfield:focus {
+  border-color: var(--text-accent) !important;
+}
+
+.cm-panels button.cm-button {
+  cursor: pointer;
+}
+
+.cm-panels button.cm-button:hover {
+  background: var(--bg-hover) !important;
+}
+
+.cm-panels button.cm-button:active {
+  background: var(--bg-active) !important;
+}
+
+.cm-panels label {
   color: var(--text-normal);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
 }
 
 .cm-searchMatch {
