@@ -41,21 +41,14 @@ const api: KnoteApi = {
     ipcRenderer.invoke(IpcChannels.mentionsFind, strings, excludePath),
   replaceLine: (path: VaultPath, line: number, expectedText: string, newText: string) =>
     ipcRenderer.invoke(IpcChannels.lineReplace, path, line, expectedText, newText),
-  setTaskStatusReason: (
+  setTaskStatusMeta: (
     path: VaultPath,
     line: number,
     expectedText: string,
     targetChar: string,
-    reasonLine: string
+    meta: { reasonLine?: string; statusChangedLine?: string }
   ) =>
-    ipcRenderer.invoke(
-      IpcChannels.lineSetStatusReason,
-      path,
-      line,
-      expectedText,
-      targetChar,
-      reasonLine
-    ),
+    ipcRenderer.invoke(IpcChannels.lineSetStatusMeta, path, line, expectedText, targetChar, meta),
   deleteLine: (path: VaultPath, line: number, expectedText: string) =>
     ipcRenderer.invoke(IpcChannels.lineDelete, path, line, expectedText),
   moveLine: (

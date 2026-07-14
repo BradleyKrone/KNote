@@ -4,7 +4,7 @@
 
 import { promises as fs } from 'fs'
 import type { VaultPath } from '@shared/types'
-import { REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
+import { planTaskMetaEdit, TASK_LINE_RE } from '@shared/parser/patterns'
 import { toAbs, writeFileAtomic } from './vaultService'
 import { isConflictError, STALE_ERROR } from '@shared/errors'
 
@@ -54,16 +54,17 @@ export async function replaceLine(
 }
 
 /**
- * Verified status-char rewrite that also attaches a `Reason for <Column>: ...`
- * note line directly under the task (inserted, or replacing an existing
- * reason line already sitting there) — one atomic write for both edits.
+ * Verified status-char rewrite that also attaches the `Reason for <Column>:
+ * ...` and/or `Status Changed: ...` lines under the task — updating an
+ * existing line anywhere in the task's own-note block in place (never
+ * duplicating it), inserting one only when absent — in one atomic write.
  */
-export async function setTaskStatusReason(
+export async function setTaskStatusMeta(
   rel: VaultPath,
   lineNo: number,
   expectedText: string,
   targetChar: string,
-  reasonLine: string
+  meta: { reasonLine?: string; statusChangedLine?: string }
 ): Promise<void> {
   const { eol, lines } = await readNoteLines(rel)
   const target = locateLine(lines, lineNo, expectedText)
@@ -75,12 +76,8 @@ export async function setTaskStatusReason(
   lines[target] =
     lines[target].slice(0, bracketOffset) + targetChar + lines[target].slice(bracketOffset + 1)
 
-  const nextLine = lines[target + 1]
-  if (nextLine !== undefined && REASON_FOR_RE.test(nextLine)) {
-    lines[target + 1] = reasonLine
-  } else {
-    lines.splice(target + 1, 0, reasonLine)
-  }
+  const plan = planTaskMetaEdit(lines, target, meta)
+  lines.splice(plan.start, plan.deleteCount, ...plan.insert)
   await writeFileAtomic(rel, lines.join(eol))
 }
 

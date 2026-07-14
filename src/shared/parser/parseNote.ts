@@ -28,9 +28,13 @@ import { extractTags, maskSource, type PositionedNode, type YamlBlock } from './
 export { WIKI_LINK_RE } from './patterns'
 import {
   BLOCK_ID_RE,
+  DATE_ENTERED_RE,
   MACHINE_ENTRY_RE,
   MILESTONE_LINE_RE,
+  ownNoteBlockEnd,
   REASON_FOR_RE,
+  STATUS_CHANGED_RE,
+  STATUS_CHANGED_UNSET,
   TAG_RE,
   TASK_LINE_RE,
   WIKI_LINK_RE
@@ -140,6 +144,10 @@ function scanLines(
 }
 
 function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[]): void {
+  // \r-stripped once, up front — ownNoteBlockEnd/STATUS_CHANGED_RE/DATE_ENTERED_RE
+  // anchor on $ and a trailing \r (CRLF files) would defeat that.
+  const cleanLines = rawLines.map((l) => l.replace(/\r$/, ''))
+
   // Open ancestor task indents, so a checkbox indented deeper than the
   // nearest preceding task above it is treated as that task's subtask.
   const taskIndentStack: number[] = []
@@ -156,12 +164,36 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
     // is this task's attached waiting reason (same nesting as a task note).
     let waitingSince: string | null = null
     let waitingReason: string | null = null
-    const nextRaw = line + 1 < rawLines.length ? rawLines[line + 1].replace(/\r$/, '') : null
+    const nextRaw = line + 1 < rawLines.length ? cleanLines[line + 1] : null
     if (nextRaw !== null) {
       const reasonMatch = REASON_FOR_RE.exec(nextRaw)
       if (reasonMatch && reasonMatch[1].length > indent) {
         waitingReason = reasonMatch[3]
         waitingSince = reasonMatch[4]
+      }
+    }
+
+    // `Status Changed`/`Date Entered` lines attached under the task, wherever
+    // they sit in its own note block (a blank line or the other of the pair
+    // may come first — see `ownNoteBlockEnd`).
+    let statusChanged: string | null = null
+    let dateEntered: string | null = null
+    const blockEnd = ownNoteBlockEnd(cleanLines, line, indent)
+    for (let i = line + 1; i < blockEnd; i++) {
+      const l = cleanLines[i]
+      if (statusChanged === null) {
+        const sm = STATUS_CHANGED_RE.exec(l)
+        if (sm) {
+          statusChanged = sm[1].toLowerCase() === STATUS_CHANGED_UNSET ? null : sm[1]
+          continue
+        }
+      }
+      if (dateEntered === null) {
+        const dm = DATE_ENTERED_RE.exec(l)
+        if (dm) {
+          dateEntered = dm[1]
+          continue
+        }
       }
     }
 
@@ -174,7 +206,9 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
       tags: extractTags(text),
       rawLine,
       waitingSince,
-      waitingReason
+      waitingReason,
+      statusChanged,
+      dateEntered
     } as TaskItem)
   })
 }

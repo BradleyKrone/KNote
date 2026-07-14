@@ -12,7 +12,7 @@ import * as vault from './vaultService'
 import * as vaultIndex from './indexer/vaultIndex'
 import * as searchIndex from './indexer/searchIndex'
 import { findMentions } from './indexer/mentions'
-import { appendLine, deleteLine, moveLine, replaceLine, setTaskStatusReason } from './lineEdit'
+import { appendLine, deleteLine, moveLine, replaceLine, setTaskStatusMeta } from './lineEdit'
 import { renameTagAcrossVault } from './tagRename'
 import { markKnownContent, markOwnWrite, startWatching } from './watcher'
 import {
@@ -144,16 +144,16 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow): void {
   )
 
   ipcMain.handle(
-    IpcChannels.lineSetStatusReason,
+    IpcChannels.lineSetStatusMeta,
     async (
       _e,
       path: VaultPath,
       line: number,
       expectedText: string,
       targetChar: string,
-      reasonLine: string
+      meta: { reasonLine?: string; statusChangedLine?: string }
     ) => {
-      await setTaskStatusReason(path, line, expectedText, targetChar, reasonLine)
+      await setTaskStatusMeta(path, line, expectedText, targetChar, meta)
       void vaultIndex.indexFile(path)
     }
   )

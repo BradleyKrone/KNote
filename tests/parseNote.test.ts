@@ -153,6 +153,31 @@ describe('parseNote', () => {
     expect(meta.tasks[0]).toMatchObject({ waitingReason: null, waitingSince: null })
   })
 
+  it('extracts Status Changed and Date Entered dates from a task note block', () => {
+    const content =
+      '- [/] task\n  - Status Changed: 7/13/2026\n  - Date Entered: 7/1/2026\n  - Notes: hi\n'
+    const meta = parseNote('a.md', content)
+    expect(meta.tasks[0]).toMatchObject({ statusChanged: '7/13/2026', dateEntered: '7/1/2026' })
+  })
+
+  it('treats an unset Status Changed (n/a) as null', () => {
+    const content = '- [ ] task\n  - Status Changed: n/a\n  - Date Entered: 7/1/2026\n'
+    const meta = parseNote('a.md', content)
+    expect(meta.tasks[0]).toMatchObject({ statusChanged: null, dateEntered: '7/1/2026' })
+  })
+
+  it('finds Status Changed / Date Entered past a blank line and a Reason line', () => {
+    const content =
+      '- [w] task\n  Reason for Waiting: parts 📅 2026-07-02\n\n  - Status Changed: 7/2/2026\n  - Date Entered: 6/30/2026\n'
+    const meta = parseNote('a.md', content)
+    expect(meta.tasks[0]).toMatchObject({ statusChanged: '7/2/2026', dateEntered: '6/30/2026' })
+  })
+
+  it('leaves Status Changed / Date Entered null when a task has no note block', () => {
+    const meta = parseNote('a.md', '- [ ] plain task\n- [ ] another\n')
+    expect(meta.tasks[0]).toMatchObject({ statusChanged: null, dateEntered: null })
+  })
+
   it('extracts ^block-id anchors with their lines', () => {
     const content = 'Intro paragraph. ^intro\n\n- [ ] a task ^task-1\nplain line\n'
     const meta = parseNote('a.md', content)

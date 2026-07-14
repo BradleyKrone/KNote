@@ -8,7 +8,7 @@ import {
   deleteLine,
   moveLine,
   replaceLine,
-  setTaskStatusReason
+  setTaskStatusMeta
 } from '../src/main/lineEdit'
 
 let dir: string
@@ -61,35 +61,127 @@ describe('replaceLine', () => {
   })
 })
 
-describe('setTaskStatusReason', () => {
+describe('setTaskStatusMeta', () => {
   it('sets the status char and inserts a reason line under the task', async () => {
     await seed('a.md', '- [ ] task\nnext\n')
-    await setTaskStatusReason(
-      'a.md',
-      0,
-      '- [ ] task',
-      'w',
-      '  Reason for Waiting: parts 📅 2026-07-09'
-    )
+    await setTaskStatusMeta('a.md', 0, '- [ ] task', 'w', {
+      reasonLine: '  Reason for Waiting: parts 📅 2026-07-09'
+    })
     expect(await read('a.md')).toBe('- [w] task\n  Reason for Waiting: parts 📅 2026-07-09\nnext\n')
   })
 
   it('replaces an existing reason line instead of stacking a second one', async () => {
     await seed('a.md', '- [w] task\n  Reason for Waiting: old 📅 2026-07-01\nnext\n')
-    await setTaskStatusReason(
-      'a.md',
-      0,
-      '- [w] task',
-      'b',
-      '  Reason for Blocked: new 📅 2026-07-09'
-    )
+    await setTaskStatusMeta('a.md', 0, '- [w] task', 'b', {
+      reasonLine: '  Reason for Blocked: new 📅 2026-07-09'
+    })
     expect(await read('a.md')).toBe('- [b] task\n  Reason for Blocked: new 📅 2026-07-09\nnext\n')
+  })
+
+  it('inserts a status-changed line under the task', async () => {
+    await seed('a.md', '- [ ] task\nnext\n')
+    await setTaskStatusMeta('a.md', 0, '- [ ] task', 'x', {
+      statusChangedLine: '  - Status Changed: 7/13/2026'
+    })
+    expect(await read('a.md')).toBe('- [x] task\n  - Status Changed: 7/13/2026\nnext\n')
+  })
+
+  it('updates a seeded n/a status-changed line in place instead of stacking a new one', async () => {
+    await seed(
+      'a.md',
+      '- [ ] task\n  - Status Changed: n/a\n  - Date Entered: 7/13/2026\n  - Notes: \n'
+    )
+    await setTaskStatusMeta('a.md', 0, '- [ ] task', 'x', {
+      statusChangedLine: '  - Status Changed: 7/14/2026'
+    })
+    expect(await read('a.md')).toBe(
+      '- [x] task\n  - Status Changed: 7/14/2026\n  - Date Entered: 7/13/2026\n  - Notes: \n'
+    )
+  })
+
+  it('updates a status-changed line in place even when a blank line separates it from the task', async () => {
+    await seed(
+      'a.md',
+      '- [/] task\n\n  - Status Changed: 7/10/2026\n  - Date Entered: 7/13/2026\n  - Notes: \n'
+    )
+    await setTaskStatusMeta('a.md', 0, '- [/] task', 'x', {
+      statusChangedLine: '  - Status Changed: 7/14/2026'
+    })
+    const out = await read('a.md')
+    expect((out.match(/Status Changed:/g) || []).length).toBe(1)
+    expect(out).toContain('- Status Changed: 7/14/2026')
+    expect(out).toContain('- Date Entered: 7/13/2026')
+  })
+
+  it('collapses an already-duplicated status-changed block down to a single line', async () => {
+    await seed(
+      'a.md',
+      '- [/] task\n  - Status Changed: 7/13/2026\n\n  - Status Changed: 7/10/2026\n  - Date Entered: 7/13/2026\n  - Notes: \n'
+    )
+    await setTaskStatusMeta('a.md', 0, '- [/] task', 'x', {
+      statusChangedLine: '  - Status Changed: 7/15/2026'
+    })
+    const out = await read('a.md')
+    expect((out.match(/Status Changed:/g) || []).length).toBe(1)
+    expect(out).toContain('- Status Changed: 7/15/2026')
+  })
+
+  it('heals a stray blank line above the note instead of leaving a gap', async () => {
+    await seed(
+      'a.md',
+      '- [/] task\n  - Status Changed: 7/13/2026\n\n\n  - Date Entered: 7/13/2026\n  - Notes: \n'
+    )
+    await setTaskStatusMeta('a.md', 0, '- [/] task', 'x', {
+      statusChangedLine: '  - Status Changed: 7/14/2026'
+    })
+    expect(await read('a.md')).toBe(
+      '- [x] task\n  - Status Changed: 7/14/2026\n  - Date Entered: 7/13/2026\n  - Notes: \n'
+    )
+  })
+
+  it("does not touch a subtask's own status-changed line when the parent changes", async () => {
+    await seed(
+      'a.md',
+      '- [ ] parent\n  - Status Changed: 7/1/2026\n  - [ ] child\n    - Status Changed: 7/2/2026\n'
+    )
+    await setTaskStatusMeta('a.md', 0, '- [ ] parent', 'x', {
+      statusChangedLine: '  - Status Changed: 7/5/2026'
+    })
+    expect(await read('a.md')).toBe(
+      '- [x] parent\n  - Status Changed: 7/5/2026\n  - [ ] child\n    - Status Changed: 7/2/2026\n'
+    )
+  })
+
+  it('keeps the reason line adjacent to the task and appends status-changed after it', async () => {
+    await seed('a.md', '- [w] task\n  Reason for Waiting: parts 📅 2026-07-09\nnext\n')
+    await setTaskStatusMeta('a.md', 0, '- [w] task', 'b', {
+      reasonLine: '  Reason for Blocked: new 📅 2026-07-09',
+      statusChangedLine: '  - Status Changed: 7/13/2026'
+    })
+    expect(await read('a.md')).toBe(
+      '- [b] task\n  Reason for Blocked: new 📅 2026-07-09\n  - Status Changed: 7/13/2026\nnext\n'
+    )
+  })
+
+  it('preserves an existing status-changed line when only the reason is being updated', async () => {
+    await seed(
+      'a.md',
+      '- [w] task\n  Reason for Waiting: parts 📅 2026-07-01\n  - Status Changed: 7/1/2026\nnext\n'
+    )
+    await setTaskStatusMeta('a.md', 0, '- [w] task', 'w', {
+      reasonLine: '  Reason for Waiting: still parts 📅 2026-07-09'
+    })
+    expect(await read('a.md')).toBe(
+      '- [w] task\n  Reason for Waiting: still parts 📅 2026-07-09\n  - Status Changed: 7/1/2026\nnext\n'
+    )
   })
 
   it('rejects with KNOTE_STALE when the line is not a task', async () => {
     await seed('a.md', 'not a task\n')
     await expect(
-      setTaskStatusReason('a.md', 0, 'not a task', 'w', '  Reason for W: x 📅 2026-07-09')
+      setTaskStatusMeta('a.md', 0, 'not a task', 'w', {
+        reasonLine: '  Reason for W: x 📅 2026-07-09'
+      })
     ).rejects.toThrow('KNOTE_STALE')
   })
 })

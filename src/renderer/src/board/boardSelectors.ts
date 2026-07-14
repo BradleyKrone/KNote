@@ -1,6 +1,10 @@
+import dayjs from 'dayjs'
+import isoWeek from 'dayjs/plugin/isoWeek'
 import type { BoardColumn, NoteMeta, VaultPath } from '@shared/types'
 import { isInside, samePath, titleOf } from '@shared/pathUtils'
 import { ARCHIVED_CHAR, DUE_RE, PRIORITY_RE } from '@shared/parser/patterns'
+
+dayjs.extend(isoWeek)
 
 export type BoardScope =
   { kind: 'global' } | { kind: 'folder'; path: VaultPath } | { kind: 'note'; path: VaultPath }
@@ -19,6 +23,10 @@ export interface BoardCard {
   waitingSince: string | null
   waitingReason: string | null
   rawLine: string
+  /** Date (M/D/YYYY) the task last changed Kanban column, if it ever has */
+  statusChanged: string | null
+  /** Date (M/D/YYYY) the task's note template was seeded, if present */
+  dateEntered: string | null
 }
 
 export function scopeLabel(scope: BoardScope): string {
@@ -53,13 +61,53 @@ export function toCard(meta: NoteMeta, task: NoteMeta['tasks'][number]): BoardCa
     priority: prio ? prio[1].length : 0,
     waitingSince: task.waitingSince,
     waitingReason: task.waitingReason,
-    rawLine: task.rawLine
+    rawLine: task.rawLine,
+    statusChanged: task.statusChanged,
+    dateEntered: task.dateEntered
+  }
+}
+
+/** A Status Changed / Date Entered / Due Date board filter. */
+export type DateRangeFilter =
+  | { kind: 'any' }
+  | { kind: 'today' }
+  | { kind: 'week' }
+  | { kind: 'date'; date: string } // YYYY-MM-DD
+  | { kind: 'range'; from: string; to: string } // YYYY-MM-DD, either may be blank
+
+export const ANY_DATE_FILTER: DateRangeFilter = { kind: 'any' }
+
+/** Parses a card date value, which is either YYYY-MM-DD (due) or M/D/YYYY (Status Changed/Date Entered). */
+function parseCardDate(value: string | null): dayjs.Dayjs | null {
+  if (!value) return null
+  const d = dayjs(value, ['YYYY-MM-DD', 'M/D/YYYY'], true)
+  return d.isValid() ? d : null
+}
+
+export function matchesDateFilter(value: string | null, filter: DateRangeFilter): boolean {
+  if (filter.kind === 'any') return true
+  const d = parseCardDate(value)
+  if (!d) return false
+  switch (filter.kind) {
+    case 'today':
+      return d.isSame(dayjs(), 'day')
+    case 'week':
+      return d.isSame(dayjs(), 'isoWeek')
+    case 'date':
+      return d.isSame(dayjs(filter.date), 'day')
+    case 'range':
+      if (filter.from && d.isBefore(dayjs(filter.from), 'day')) return false
+      if (filter.to && d.isAfter(dayjs(filter.to), 'day')) return false
+      return true
   }
 }
 
 export interface BoardFilters {
   tag: string | null
   text: string
+  statusChanged?: DateRangeFilter
+  dateEntered?: DateRangeFilter
+  due?: DateRangeFilter
 }
 
 export function collectCards(
@@ -81,6 +129,9 @@ export function collectCards(
       )
         continue
       if (filters.text && !card.text.toLowerCase().includes(filters.text.toLowerCase())) continue
+      if (!matchesDateFilter(card.statusChanged, filters.statusChanged ?? ANY_DATE_FILTER)) continue
+      if (!matchesDateFilter(card.dateEntered, filters.dateEntered ?? ANY_DATE_FILTER)) continue
+      if (!matchesDateFilter(card.due, filters.due ?? ANY_DATE_FILTER)) continue
       cards.push(card)
     }
   }

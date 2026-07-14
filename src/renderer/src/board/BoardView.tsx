@@ -18,16 +18,19 @@ import { useIndexStore } from '@/stores/indexStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
 import {
+  ANY_DATE_FILTER,
   boardTags,
   collectCards,
   columnForChar,
   groupByColumn,
   scopeLabel,
-  type BoardCard
+  type BoardCard,
+  type DateRangeFilter
 } from './boardSelectors'
 import { reorderCard, setCardStatus } from './boardActions'
 import { Column } from './Column'
 import { cardId, CardPreview } from './Card'
+import { DateRangeFilterControl } from './DateRangeFilterControl'
 import { promptReason } from '@/stores/reasonPromptStore'
 import { reasonLineForTask } from '@shared/parser/patterns'
 
@@ -39,10 +42,20 @@ export function BoardView(): React.JSX.Element {
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [textFilter, setTextFilter] = useState('')
   const [groupByNote, setGroupByNote] = useState(false)
+  const [statusChangedFilter, setStatusChangedFilter] = useState<DateRangeFilter>(ANY_DATE_FILTER)
+  const [dateEnteredFilter, setDateEnteredFilter] = useState<DateRangeFilter>(ANY_DATE_FILTER)
+  const [dueFilter, setDueFilter] = useState<DateRangeFilter>(ANY_DATE_FILTER)
 
   const cards = useMemo(
-    () => collectCards(notes, scope, { tag: tagFilter, text: textFilter }),
-    [notes, scope, tagFilter, textFilter]
+    () =>
+      collectCards(notes, scope, {
+        tag: tagFilter,
+        text: textFilter,
+        statusChanged: statusChangedFilter,
+        dateEntered: dateEnteredFilter,
+        due: dueFilter
+      }),
+    [notes, scope, tagFilter, textFilter, statusChangedFilter, dateEnteredFilter, dueFilter]
   )
   const byColumn = useMemo(() => groupByColumn(cards, columns), [cards, columns])
   const tags = useMemo(() => boardTags(notes, scope), [notes, scope])
@@ -111,7 +124,7 @@ export function BoardView(): React.JSX.Element {
   }
 
   /** Column change committed: keep the preview until `cards` confirms the move. */
-  const commitColumnChange = (card: BoardCard, targetChar: string, appendText = ''): void => {
+  const commitColumnChange = (card: BoardCard, targetChar: string, appendText?: string): void => {
     const pending = { path: card.path, line: card.line, targetChar }
     pendingMoveRef.current = pending
     void setCardStatus(card, targetChar, appendText).finally(() => {
@@ -213,6 +226,17 @@ export function BoardView(): React.JSX.Element {
               </option>
             ))}
           </select>
+          <DateRangeFilterControl
+            label="Status Changed"
+            value={statusChangedFilter}
+            onChange={setStatusChangedFilter}
+          />
+          <DateRangeFilterControl
+            label="Date Entered"
+            value={dateEnteredFilter}
+            onChange={setDateEnteredFilter}
+          />
+          <DateRangeFilterControl label="Due" value={dueFilter} onChange={setDueFilter} />
           <label className="board-group-toggle">
             <input
               type="checkbox"
