@@ -89,6 +89,10 @@ export interface TaskItem {
   waitingSince: string | null
   /** Reason text from an attached `Reason for <Column>: ...` note line, if present */
   waitingReason: string | null
+  /** Date (M/D/YYYY) from an attached `Status Changed: <date>` note line; null if unset (`n/a`) or absent */
+  statusChanged: string | null
+  /** Date (M/D/YYYY) from an attached `Date Entered: <date>` note line, if present */
+  dateEntered: string | null
 }
 
 export interface MilestoneItem {

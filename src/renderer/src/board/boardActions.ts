@@ -1,7 +1,9 @@
+import dayjs from 'dayjs'
 import { samePath } from '@shared/pathUtils'
 import { isStaleError } from '@shared/errors'
-import { ARCHIVED_CHAR, REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
+import { ARCHIVED_CHAR, statusChangedLineForTask, TASK_LINE_RE } from '@shared/parser/patterns'
 import { getActiveEditorView } from '@/editor/activeView'
+import { planMetaChange } from '@/editor/formatting'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -51,7 +53,8 @@ function tryBufferRewrite(
  * <Column>: ... 📅 <date>` line for a column that requires one), is
  * inserted directly under the task in the same rewrite — replacing an
  * existing reason line there, if any — so the status change and its reason
- * land as a single edit/undo step.
+ * land as a single edit/undo step. Whenever the char actually changes, a
+ * `Status Changed: <date>` line is stamped/refreshed alongside it.
  */
 export async function setCardStatus(
   card: BoardCard,
@@ -63,21 +66,21 @@ export async function setCardStatus(
   const bracketOffset = m[1].length + m[2].length + 2
   const newLine =
     card.rawLine.slice(0, bracketOffset) + targetChar + card.rawLine.slice(bracketOffset + 1)
+  const statusChangedLine =
+    targetChar !== m[3]
+      ? statusChangedLineForTask(card.rawLine, dayjs().format('M/D/YYYY'))
+      : undefined
 
-  const applied = tryBufferRewrite(card, (lineFrom, lineText) => {
+  const applied = tryBufferRewrite(card, (lineFrom) => {
     const view = getActiveEditorView()!
+    const doc = view.state.doc
     const changes: Array<{ from: number; to?: number; insert: string }> = [
       { from: lineFrom + bracketOffset, to: lineFrom + bracketOffset + 1, insert: targetChar }
     ]
-    if (reasonLine !== undefined) {
-      const doc = view.state.doc
+    if (reasonLine !== undefined || statusChangedLine !== undefined) {
       const lineNo = doc.lineAt(lineFrom).number
-      const nextLine = lineNo + 1 <= doc.lines ? doc.line(lineNo + 1) : null
-      if (nextLine && REASON_FOR_RE.test(nextLine.text)) {
-        changes.push({ from: nextLine.from, to: nextLine.to, insert: reasonLine })
-      } else {
-        changes.push({ from: lineFrom + lineText.length, insert: '\n' + reasonLine })
-      }
+      const metaChange = planMetaChange(doc, lineNo, { reasonLine, statusChangedLine })
+      if (metaChange) changes.push(metaChange)
     }
     view.dispatch({ changes, userEvent: 'input.knote.toggleTask' })
     return true
@@ -85,14 +88,11 @@ export async function setCardStatus(
   if (applied) return
 
   try {
-    if (reasonLine !== undefined) {
-      await window.knote.setTaskStatusReason(
-        card.path,
-        card.line,
-        card.rawLine,
-        targetChar,
-        reasonLine
-      )
+    if (reasonLine !== undefined || statusChangedLine !== undefined) {
+      await window.knote.setTaskStatusMeta(card.path, card.line, card.rawLine, targetChar, {
+        reasonLine,
+        statusChangedLine
+      })
     } else {
       await window.knote.replaceLine(card.path, card.line, card.rawLine, newLine)
     }

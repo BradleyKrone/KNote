@@ -1699,7 +1699,29 @@ button {
 .board-controls {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.board-date-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.board-date-input {
+  background: var(--bg-primary);
+  color: var(--text-normal);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 2px 4px;
+  font-size: 12.5px;
+  width: 128px;
+}
+
+.board-date-filter-sep {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .board-filter {

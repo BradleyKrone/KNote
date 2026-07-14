@@ -5,7 +5,15 @@
 import dayjs from 'dayjs'
 import { EditorSelection, type Text } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
-import { MACHINE_ENTRY_RE, REASON_FOR_RE, TASK_LINE_RE } from '@shared/parser/patterns'
+import {
+  DATE_ENTERED_RE,
+  MACHINE_ENTRY_RE,
+  mergeTaskMetaLines,
+  planTaskMetaEdit,
+  statusChangedLineForTask,
+  STATUS_CHANGED_UNSET,
+  TASK_LINE_RE
+} from '@shared/parser/patterns'
 import { getActiveEditorView } from './activeView'
 import { insertTag, setDueDate, setPriority } from '@/taskMeta'
 
@@ -337,9 +345,6 @@ export function insertCheckboxAtCursor(view: EditorView): void {
   })
 }
 
-/** A `- Date Entered: …` template line already sitting under a task. */
-const DATE_ENTERED_RE = /^\s*(?:[-*+]|\d+[.)])\s+Date Entered:/i
-
 /**
  * Enter on a task line starts an indented note underneath it (rendered folded
  * as the task's attached note, see `findNoteBlockEnd` in
@@ -348,10 +353,11 @@ const DATE_ENTERED_RE = /^\s*(?:[-*+]|\d+[.)])\s+Date Entered:/i
  * detail belongs in the note, not a new task.
  *
  * On a *fresh* task (no note block yet) it seeds a small template — a
- * `- Date Entered: <today>` line and an empty `- Notes: ` line — and leaves
- * the caret at the end of the Notes line ready to type. If the task already
- * has that template below it, Enter just adds one more plain indented note
- * line instead of duplicating the header.
+ * `- Status Changed: n/a` line (updated to a date on the task's first Kanban
+ * move), a `- Date Entered: <today>` line, and an empty `- Notes: ` line —
+ * and leaves the caret at the end of the Notes line ready to type. If the
+ * task already has that template below it, Enter just adds one more plain
+ * indented note line instead of duplicating the header.
  *
  * Only top-level tasks (no leading indent) get this treatment — a subtask
  * (indented under a parent task) is usually short-lived checklist detail, not
@@ -366,17 +372,34 @@ export function insertTaskNoteLine(view: EditorView): boolean {
   const task = TASK_LINE_RE.exec(line.text)
   if (!task) return false
   if (task[1].length > 0) return false
-  // Keep the whole task on its line: anchor the insert at the line end even if
-  // the caret sits mid-text, so we never split the task text into the note.
-  const at = line.to
   const childIndent = task[1] + '  '
 
-  const next = line.number < state.doc.lines ? state.doc.line(line.number + 1) : null
+  // Skip past any `Reason for <Column>` / `Status Changed` lines already
+  // sitting right under the task (kept there so a status change always
+  // finds — and updates — the same line instead of stacking a new one) so
+  // the note template lands after them, not shoved in between.
+  const doc = state.doc
+  const peek: string[] = []
+  for (let i = 1; i <= 2 && line.number + i <= doc.lines; i++) {
+    peek.push(doc.line(line.number + i).text)
+  }
+  const metaLen = mergeTaskMetaLines(peek, {}).consumed
+  // Keep the whole task on its line: anchor the insert at the line end even if
+  // the caret sits mid-text, so we never split the task text into the note.
+  const at = metaLen > 0 ? doc.line(line.number + metaLen).to : line.to
+
+  const afterMetaLineNo = line.number + metaLen
+  const next = afterMetaLineNo < doc.lines ? doc.line(afterMetaLineNo + 1) : null
   const alreadySeeded = next != null && DATE_ENTERED_RE.test(next.text)
 
+  // Only seed the `Status Changed: n/a` line on a truly fresh task; if a meta
+  // line already sits under the task (e.g. a status/reason from an earlier
+  // board move) it's kept and updated in place, not duplicated here.
+  const statusSeed =
+    metaLen === 0 ? `${childIndent}- Status Changed: ${STATUS_CHANGED_UNSET}\n` : ''
   const insert = alreadySeeded
     ? '\n' + childIndent
-    : `\n${childIndent}- Date Entered: ${dayjs().format('M/D/YYYY')}\n${childIndent}- Notes: `
+    : `\n${statusSeed}${childIndent}- Date Entered: ${dayjs().format('M/D/YYYY')}\n${childIndent}- Notes: `
   view.dispatch(
     state.update({
       changes: { from: at, insert },
@@ -395,10 +418,35 @@ export function insertCheckboxOnActive(): void {
 }
 
 /**
+ * Translate a `planTaskMetaEdit` splice (`taskLineNumber` is 1-based) into a
+ * single CodeMirror change against `doc`, updating the task's reason/status
+ * lines in place anywhere in its own-note block. Returns null when there's
+ * nothing to write.
+ */
+export function planMetaChange(
+  doc: Text,
+  taskLineNumber: number,
+  updates: { reasonLine?: string; statusChangedLine?: string }
+): { from: number; to?: number; insert: string } | null {
+  const lines: string[] = []
+  for (let i = 1; i <= doc.lines; i++) lines.push(doc.line(i).text)
+  const plan = planTaskMetaEdit(lines, taskLineNumber - 1, updates)
+  if (plan.deleteCount === 0) {
+    if (plan.insert.length === 0) return null
+    return { from: doc.line(taskLineNumber).to, insert: '\n' + plan.insert.join('\n') }
+  }
+  const first = doc.line(plan.start + 1)
+  const last = doc.line(plan.start + plan.deleteCount)
+  return { from: first.from, to: last.to, insert: plan.insert.join('\n') }
+}
+
+/**
  * Rewrite the current line's checkbox status char (Kanban column or
  * archive). `reasonLine`, when given (a `Reason for <Column>: ... 📅 <date>`
  * line for a column that requires one), is inserted directly under the task
  * in the same transaction — replacing an existing reason line there, if any.
+ * Whenever the char actually changes, a `Status Changed: <date>` line is
+ * stamped/refreshed (in place, never duplicated) alongside it.
  */
 export function setTaskStatusAtCursor(view: EditorView, char: string, reasonLine?: string): void {
   const line = view.state.doc.lineAt(view.state.selection.main.head)
@@ -408,14 +456,14 @@ export function setTaskStatusAtCursor(view: EditorView, char: string, reasonLine
   const changes: Array<{ from: number; to?: number; insert: string }> = [
     { from: line.from + bracketOffset, to: line.from + bracketOffset + 1, insert: char }
   ]
-  if (reasonLine !== undefined) {
-    const doc = view.state.doc
-    const nextLine = line.number + 1 <= doc.lines ? doc.line(line.number + 1) : null
-    if (nextLine && REASON_FOR_RE.test(nextLine.text)) {
-      changes.push({ from: nextLine.from, to: nextLine.to, insert: reasonLine })
-    } else {
-      changes.push({ from: line.to, insert: '\n' + reasonLine })
-    }
+  const statusChangedLine =
+    char !== m[3] ? statusChangedLineForTask(line.text, dayjs().format('M/D/YYYY')) : undefined
+  if (reasonLine !== undefined || statusChangedLine !== undefined) {
+    const metaChange = planMetaChange(view.state.doc, line.number, {
+      reasonLine,
+      statusChangedLine
+    })
+    if (metaChange) changes.push(metaChange)
   }
   view.dispatch({ changes, userEvent: 'input.knote.toggleTask' })
 }

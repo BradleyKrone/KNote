@@ -5,6 +5,16 @@ number is shown in the window's title bar, next to "KNote".
 
 ## 0.12.0
 
+- The Kanban board's filter bar gained three date filters — **Status
+  Changed**, **Date Entered**, and **Due date** — each with an Any / Today /
+  This week / specific date / custom range option, alongside the existing
+  tag and text filters
+- Tasks now carry a `Status Changed` line — seeded as `n/a` when the task's
+  note template is created, then updated **in place** (never duplicated) to
+  today's date every time the task's Kanban column changes (drag-and-drop or
+  the checkbox right-click menu) — a running record of when a task last
+  changed state, alongside the existing `Date Entered` (when it was added)
+  and `Reason for <Column>` (why/since when, for columns that require one)
 - **Right-click date editing**: right-click a task, milestone, or note in
   the Timeline view — or a machine log `🚜` entry, either in the log view
   or inline in a note — to change its date (and, for machine entries, the

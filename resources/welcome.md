@@ -118,6 +118,26 @@ and shown on the card as a small badge (hover it to read the reason) —
 handy for a **Waiting** column, so you're never left wondering why
 something got parked there. It's on by default for the **Waiting** column.
 
+Every task also carries a `Status Changed` line, seeded as `n/a` when its
+note is created and updated **in place** (never duplicated) to today's date
+on each column move — drag-and-drop or the checkbox right-click menu:
+
+```
+- [w] Waiting on vendor reply
+  Reason for Waiting: Vendor quoted 2 weeks for the part 📅 2026-07-15
+  - Status Changed: 7/15/2026
+```
+
+Unlike `Reason for <Column>`, it fires for every column, not just ones
+marked **Require reason** — a running record of when a task last changed
+state, separate from `Date Entered` (when it was first added).
+
+The board's filter bar can narrow cards by **tag**, free-text search, and
+three date fields — **Status Changed**, **Date Entered**, and **Due
+date** — each with its own **Any / Today / This week / Date… / Range…**
+dropdown, so you can pull up e.g. everything whose status changed this
+week, or everything due in a custom date range.
+
 Board getting cluttered with finished work? Click a card's **archive**
 button to strike it through in the note (`- [a] ...`) and drop it off the
 board — nothing is deleted, and un-archiving is as simple as editing the
@@ -156,12 +176,15 @@ template indented under it and drops the caret on the Notes line:
 
 ```
 - [ ] Main task
+  - Status Changed: n/a
   - Date Entered: 7/7/2026
   - Notes:
 ```
 
-`Date Entered` is stamped with today's date. Press **Enter** again on that
-task to add a further plain note line (the header isn't duplicated).
+`Date Entered` is stamped with today's date; `Status Changed` starts at
+`n/a` and updates to a date the first time you move the task's Kanban
+column. Press **Enter** again on that task to add a further plain note line
+(the headers aren't duplicated).
 
 ## Timeline
 
