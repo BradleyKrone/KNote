@@ -7,7 +7,7 @@ import {
   markOwnWrite,
   shouldReportChange,
   stopWatching
-} from '../src/main/watcher'
+} from '../src/core/watcher'
 
 let dir: string
 

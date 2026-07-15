@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mkdtemp, readdir, readFile, rm } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import * as vault from '../src/main/vaultService'
+import * as vault from '../src/core/vaultService'
 
 describe('ensureDefaultTemplate', () => {
   it('seeds a starter template note when the templates folder is missing', async () => {

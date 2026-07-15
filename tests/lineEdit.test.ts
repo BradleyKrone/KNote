@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { mkdtemp, readFile, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import * as vault from '../src/main/vaultService'
+import * as vault from '../src/core/vaultService'
 import {
   appendLine,
   deleteLine,
   moveLine,
   replaceLine,
   setTaskStatusMeta
-} from '../src/main/lineEdit'
+} from '../src/core/lineEdit'
 
 let dir: string
 
