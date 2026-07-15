@@ -9,7 +9,7 @@
   "author": "Bradley Krone",
   "license": "MIT",
   "engines": {
-    "vscode": "^1.96.0"
+    "vscode": "^1.97.0"
   },
   "categories": [
     "Notebooks",
@@ -24,8 +24,124 @@
       {
         "command": "knote.initializeVault",
         "title": "KNote: Initialize Vault in This Workspace"
+      },
+      {
+        "command": "knote.openWeeklyNote",
+        "title": "KNote: Open This Week's Note"
+      },
+      {
+        "command": "knote.quickCapture",
+        "title": "KNote: Quick Capture to Weekly Note"
+      },
+      {
+        "command": "knote.insertTemplate",
+        "title": "KNote: Insert Template"
+      },
+      {
+        "command": "knote.cycleTaskStatus",
+        "title": "KNote: Cycle Task Status"
+      },
+      {
+        "command": "knote.setTaskStatus",
+        "title": "KNote: Set Task Status…"
+      },
+      {
+        "command": "knote.insertCheckbox",
+        "title": "KNote: Toggle Checkbox on Line"
+      },
+      {
+        "command": "knote.insertTaskNote",
+        "title": "KNote: Add Task Note"
+      },
+      {
+        "command": "knote.insertMilestone",
+        "title": "KNote: Insert Milestone"
+      },
+      {
+        "command": "knote.insertMilestoneImportant",
+        "title": "KNote: Insert Important Milestone"
+      },
+      {
+        "command": "knote.insertMachineEntry",
+        "title": "KNote: Insert Machine Log Entry"
+      },
+      {
+        "command": "knote.format.bold",
+        "title": "KNote: Toggle Bold"
+      },
+      {
+        "command": "knote.format.italic",
+        "title": "KNote: Toggle Italic"
+      },
+      {
+        "command": "knote.format.strikethrough",
+        "title": "KNote: Toggle Strikethrough"
+      },
+      {
+        "command": "knote.format.code",
+        "title": "KNote: Toggle Inline Code"
       }
-    ]
+    ],
+    "keybindings": [
+      {
+        "command": "knote.cycleTaskStatus",
+        "key": "ctrl+l",
+        "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "knote.setTaskStatus",
+        "key": "ctrl+alt+l",
+        "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "knote.insertCheckbox",
+        "key": "ctrl+alt+x",
+        "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "knote.insertTaskNote",
+        "key": "ctrl+alt+enter",
+        "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "knote.openWeeklyNote",
+        "key": "ctrl+alt+w"
+      },
+      {
+        "command": "knote.quickCapture",
+        "key": "ctrl+alt+j"
+      },
+      {
+        "command": "knote.format.bold",
+        "key": "ctrl+b",
+        "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "knote.format.italic",
+        "key": "ctrl+i",
+        "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "knote.format.strikethrough",
+        "key": "ctrl+shift+x",
+        "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "knote.format.code",
+        "key": "ctrl+alt+c",
+        "when": "editorTextFocus && editorLangId == markdown"
+      }
+    ],
+    "configuration": {
+      "title": "KNote",
+      "properties": {
+        "knote.decorations.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show KNote decorations in notes: tag pills, priority markers, milestone lines, and dimmed task-meta lines."
+        }
+      }
+    }
   },
   "scripts": {
     "build": "node esbuild.mjs",
@@ -73,7 +189,7 @@
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/unist": "^3.0.3",
-    "@types/vscode": "^1.96.0",
+    "@types/vscode": "^1.97.0",
     "@vscode/vsce": "^3.2.0",
     "esbuild": "^0.25.0",
     "eslint": "^10.6.0",

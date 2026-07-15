@@ -3,7 +3,7 @@
 // (webviews, decorations, tree views).
 
 import * as vscode from 'vscode'
-import type { IndexDelta } from '@shared/types'
+import type { IndexDelta, NoteMeta } from '@shared/types'
 import * as vault from '../core/vaultService'
 import * as vaultIndex from '../core/indexer/vaultIndex'
 import { getVaultConfig, setVaultConfig } from '../core/vaultConfig'
@@ -17,6 +17,11 @@ let vaultRoot: string | null = null
 
 export function currentVaultRoot(): string | null {
   return vaultRoot
+}
+
+/** Fresh Map view of the index for the shared wikiResolve selectors. */
+export function notesMap(): Map<string, NoteMeta> {
+  return new Map(vaultIndex.getSnapshot().map((m) => [m.path, m]))
 }
 
 export async function startEngine(root: string, log: vscode.OutputChannel): Promise<void> {

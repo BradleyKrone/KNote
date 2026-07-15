@@ -65,6 +65,21 @@ export async function initIndex(): Promise<void> {
   await Promise.all(files.map((rel) => limit(() => indexFile(rel, false))))
 }
 
+/**
+ * (Re)index one markdown file from in-memory content — used for live editor
+ * buffers, where the truth is the (possibly unsaved) document text rather
+ * than what's on disk.
+ */
+export function updateFromContent(rel: VaultPath, content: string, mtimeMs = Date.now()): void {
+  const key = normalizeRel(rel)
+  if (!isMarkdown(key) || isIgnoredRel(key)) return
+  const meta = parseNote(key, content, mtimeMs)
+  notes.set(key, meta)
+  contents.set(key, content)
+  searchIndex.update(meta, content)
+  deltaListener({ path: key, meta })
+}
+
 /** (Re)index one markdown file from disk. */
 export async function indexFile(rel: VaultPath, emit = true): Promise<void> {
   const key = normalizeRel(rel)
