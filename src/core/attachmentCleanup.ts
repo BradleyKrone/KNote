@@ -1,3 +1,4 @@
+import { promises as fs } from 'fs'
 import type { VaultPath } from '@shared/types'
 import { isImage, isInside, parentOf, resolveEmbedPath, samePath } from '@shared/pathUtils'
 import { parseNote } from '@shared/parser/parseNote'
@@ -41,6 +42,37 @@ function collectImageRefs(content: string, notePath: VaultPath): string[] {
 
 function includesPath(list: string[], target: VaultPath): boolean {
   return list.some((r) => samePath(r, target))
+}
+
+/**
+ * Full-vault orphan scan: every image file inside the attachments folder
+ * that no note references anymore. Read-only — the caller decides what to
+ * trash (the "Clean Up Attachments" command confirms with the user first).
+ */
+export async function findOrphanedAttachments(): Promise<VaultPath[]> {
+  const config = await getVaultConfig()
+
+  const referenced: string[] = []
+  for (const [notePath, content] of vaultIndex.getAllContents()) {
+    referenced.push(...collectImageRefs(content, notePath))
+  }
+
+  const orphans: VaultPath[] = []
+  async function walk(relDir: string): Promise<void> {
+    let dirents
+    try {
+      dirents = await fs.readdir(vault.toAbs(relDir), { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const d of dirents) {
+      const rel = relDir === '' ? d.name : `${relDir}/${d.name}`
+      if (d.isDirectory()) await walk(rel)
+      else if (d.isFile() && isImage(d.name) && !includesPath(referenced, rel)) orphans.push(rel)
+    }
+  }
+  await walk(config.attachmentsFolder)
+  return orphans
 }
 
 function isReferencedElsewhere(attachmentRel: VaultPath, exceptNotePath: VaultPath): boolean {

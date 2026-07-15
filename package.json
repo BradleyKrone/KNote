@@ -34,6 +34,30 @@
         "title": "KNote: Open Board for This Note"
       },
       {
+        "command": "knote.openTimeline",
+        "title": "KNote: Open Timeline"
+      },
+      {
+        "command": "knote.openMachineLog",
+        "title": "KNote: Open Machine Log"
+      },
+      {
+        "command": "knote.openGraph",
+        "title": "KNote: Open Graph View"
+      },
+      {
+        "command": "knote.openSettings",
+        "title": "KNote: Open Vault Settings"
+      },
+      {
+        "command": "knote.openWelcome",
+        "title": "KNote: Open Welcome & Feature Guide"
+      },
+      {
+        "command": "knote.cleanupAttachments",
+        "title": "KNote: Clean Up Orphaned Attachments"
+      },
+      {
         "command": "knote.openWeeklyNote",
         "title": "KNote: Open This Week's Note"
       },

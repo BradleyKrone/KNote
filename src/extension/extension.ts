@@ -10,6 +10,7 @@ import { registerPasteImage } from './providers/pasteImage'
 import { registerAllCommands } from './commands'
 import { registerRpcBroadcasts } from './rpc/webviewRpc'
 import { registerBoardPanel } from './views/boardPanel'
+import { registerPanels } from './views/panels'
 import { registerSidebarViews } from './views/sidebarViews'
 import { registerTagsTree } from './trees/tagsTree'
 
@@ -26,6 +27,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerPasteImage(context)
   registerAllCommands(context)
   registerBoardPanel(context)
+  registerPanels(context)
   registerSidebarViews(context)
   registerTagsTree(context)
   registerRpcBroadcasts(context)

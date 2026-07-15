@@ -12,6 +12,7 @@ import { getVaultConfig, setVaultConfig } from '../../core/vaultConfig'
 import * as vault from '../../core/vaultService'
 import * as verifiedEdit from '../verifiedEdit'
 import { setFrontmatter } from '../frontmatterEdit'
+import { openWikiTarget } from '../providers/wikiLinks'
 import { uriForRel } from '../paths'
 import { broadcast, type HostHandlers } from './webviewRpc'
 
@@ -39,6 +40,8 @@ export function createHostHandlers(): HostHandlers {
 
     setFrontmatter: (path: VaultPath, frontmatter: Record<string, unknown>) =>
       setFrontmatter(path, frontmatter),
+
+    openWikiTarget: (rawTarget: string) => openWikiTarget(rawTarget),
 
     openNote: async (path: VaultPath, line?: number) => {
       const options: vscode.TextDocumentShowOptions = { viewColumn: vscode.ViewColumn.One }

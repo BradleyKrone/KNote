@@ -53,6 +53,12 @@ export interface HostApi {
   openNote(path: VaultPath, line?: number): Promise<void>
 
   /**
+   * Open a raw wiki target ("Note", "Note#Heading", "folder/Note"), creating
+   * the note (Obsidian behavior) when it doesn't resolve.
+   */
+  openWikiTarget(rawTarget: string): Promise<void>
+
+  /**
    * Replace a note's whole frontmatter block (creating or removing it as
    * needed). Live-buffer edit when the note is open, verified disk write
    * otherwise.
