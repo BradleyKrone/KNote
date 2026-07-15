@@ -26,6 +26,14 @@
         "title": "KNote: Initialize Vault in This Workspace"
       },
       {
+        "command": "knote.openBoard",
+        "title": "KNote: Open Kanban Board"
+      },
+      {
+        "command": "knote.openBoardForNote",
+        "title": "KNote: Open Board for This Note"
+      },
+      {
         "command": "knote.openWeeklyNote",
         "title": "KNote: Open This Week's Note"
       },
@@ -80,8 +88,83 @@
       {
         "command": "knote.format.code",
         "title": "KNote: Toggle Inline Code"
+      },
+      {
+        "command": "knote.searchVault",
+        "title": "KNote: Search Vault"
+      },
+      {
+        "command": "knote.renameTag",
+        "title": "KNote: Rename Tag Across Vault"
+      },
+      {
+        "command": "knote.deprecateTag",
+        "title": "KNote: Deprecate Tag"
+      },
+      {
+        "command": "knote.undeprecateTag",
+        "title": "KNote: Restore Deprecated Tag"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "knote",
+          "title": "KNote",
+          "icon": "resources/knote-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "knote": [
+        {
+          "id": "knote.search",
+          "name": "Search",
+          "type": "webview"
+        },
+        {
+          "id": "knote.backlinks",
+          "name": "Backlinks",
+          "type": "webview"
+        },
+        {
+          "id": "knote.tags",
+          "name": "Tags"
+        },
+        {
+          "id": "knote.properties",
+          "name": "Properties",
+          "type": "webview",
+          "visibility": "collapsed"
+        }
+      ]
+    },
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "knote.renameTag",
+          "when": "view == knote.tags && viewItem == tag"
+        },
+        {
+          "command": "knote.deprecateTag",
+          "when": "view == knote.tags && viewItem == tag"
+        },
+        {
+          "command": "knote.undeprecateTag",
+          "when": "view == knote.tags && viewItem == deprecatedTag"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "knote.deprecateTag",
+          "when": "false"
+        },
+        {
+          "command": "knote.undeprecateTag",
+          "when": "false"
+        }
+      ]
+    },
     "keybindings": [
       {
         "command": "knote.cycleTaskStatus",
@@ -102,6 +185,10 @@
         "command": "knote.insertTaskNote",
         "key": "ctrl+alt+enter",
         "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "knote.openBoard",
+        "key": "ctrl+alt+k"
       },
       {
         "command": "knote.openWeeklyNote",
@@ -146,7 +233,7 @@
   "scripts": {
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.webviews.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src tests",

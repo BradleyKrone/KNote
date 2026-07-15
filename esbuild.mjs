@@ -41,6 +41,7 @@ const webviewOptions = (() => {
   return {
     entryPoints,
     outdir: 'dist/webviews',
+    outbase: 'src/webviews',
     entryNames: '[dir]', // src/webviews/board/main.tsx -> dist/webviews/board.js
     bundle: true,
     platform: 'browser',

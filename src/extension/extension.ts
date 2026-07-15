@@ -8,6 +8,10 @@ import { registerHover } from './providers/hover'
 import { registerDecorations } from './providers/decorations'
 import { registerPasteImage } from './providers/pasteImage'
 import { registerAllCommands } from './commands'
+import { registerRpcBroadcasts } from './rpc/webviewRpc'
+import { registerBoardPanel } from './views/boardPanel'
+import { registerSidebarViews } from './views/sidebarViews'
+import { registerTagsTree } from './trees/tagsTree'
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const log = vscode.window.createOutputChannel('KNote')
@@ -21,6 +25,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerDecorations(context)
   registerPasteImage(context)
   registerAllCommands(context)
+  registerBoardPanel(context)
+  registerSidebarViews(context)
+  registerTagsTree(context)
+  registerRpcBroadcasts(context)
 
   const start = async (root: string): Promise<void> => {
     try {
