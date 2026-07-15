@@ -45,13 +45,14 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm test
-      - run: npm run dist
+      - run: npm run build
+      - run: npm run package
 
-      - name: Upload installer artifact
+      - name: Upload extension artifact
         uses: actions/upload-artifact@v4
         with:
-          name: knote-installer
-          path: release/*.exe
+          name: knote-vsix
+          path: '*.vsix'
           if-no-files-found: error
 
       # Only runs after a merge to main (push event), not on PRs.
@@ -67,5 +68,5 @@ jobs:
         with:
           tag_name: v${{ steps.pkg.outputs.version }}-${{ github.run_number }}
           name: KNote v${{ steps.pkg.outputs.version }} (build ${{ github.run_number }})
-          files: release/*.exe
+          files: '*.vsix'
           generate_release_notes: true

@@ -32,7 +32,9 @@ export async function findVaultRoot(): Promise<string | null> {
 export async function initializeVault(): Promise<string | null> {
   const folder = (vscode.workspace.workspaceFolders ?? []).find((f) => f.uri.scheme === 'file')
   if (!folder) {
-    void vscode.window.showErrorMessage('KNote: open a folder first, then initialize it as a vault.')
+    void vscode.window.showErrorMessage(
+      'KNote: open a folder first, then initialize it as a vault.'
+    )
     return null
   }
   const root = folder.uri.fsPath

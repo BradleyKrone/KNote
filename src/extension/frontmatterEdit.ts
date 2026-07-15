@@ -39,7 +39,8 @@ export async function setFrontmatter(
     if (end === -1) {
       edit.insert(doc.uri, new vscode.Position(0, 0), insert)
     } else {
-      const replaceEnd = end + 1 < doc.lineCount ? new vscode.Position(end + 1, 0) : doc.lineAt(end).range.end
+      const replaceEnd =
+        end + 1 < doc.lineCount ? new vscode.Position(end + 1, 0) : doc.lineAt(end).range.end
       edit.replace(doc.uri, new vscode.Range(new vscode.Position(0, 0), replaceEnd), insert)
     }
     const wasClean = !doc.isDirty

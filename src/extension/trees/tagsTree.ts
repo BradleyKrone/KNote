@@ -53,10 +53,7 @@ class TagsTreeProvider implements vscode.TreeDataProvider<TagNode> {
         return item
       }
       case 'deprecatedHeader': {
-        const item = new vscode.TreeItem(
-          'Deprecated',
-          vscode.TreeItemCollapsibleState.Collapsed
-        )
+        const item = new vscode.TreeItem('Deprecated', vscode.TreeItemCollapsibleState.Collapsed)
         item.iconPath = new vscode.ThemeIcon('eye-closed')
         return item
       }

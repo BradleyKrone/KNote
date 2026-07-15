@@ -33,9 +33,15 @@ function wirePanel(
   const key = scopeKey(scope)
   panels.set(key, panel)
   const rpc = attach(panel.webview, createHostHandlers())
-  panel.webview.html = webviewHtml(panel.webview, context.extensionUri, 'board', panelTitle(scope), {
-    scope
-  })
+  panel.webview.html = webviewHtml(
+    panel.webview,
+    context.extensionUri,
+    'board',
+    panelTitle(scope),
+    {
+      scope
+    }
+  )
   panel.onDidDispose(() => {
     rpc.dispose()
     panels.delete(key)

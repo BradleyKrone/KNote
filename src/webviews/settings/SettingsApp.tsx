@@ -184,7 +184,11 @@ export function SettingsApp(): React.JSX.Element {
             </button>
           ))}
           <div className="settings-sidebar-spacer" />
-          <button className="btn-primary settings-save" disabled={!dirty} onClick={() => void save()}>
+          <button
+            className="btn-primary settings-save"
+            disabled={!dirty}
+            onClick={() => void save()}
+          >
             {dirty ? 'Save changes' : 'Saved'}
           </button>
         </div>
@@ -383,7 +387,9 @@ export function SettingsApp(): React.JSX.Element {
                   </span>
                 </label>
                 {tagError && <div className="settings-tag-error">{tagError}</div>}
-                {activeTagRows.length === 0 && <div className="panel-empty">No tags in this vault</div>}
+                {activeTagRows.length === 0 && (
+                  <div className="panel-empty">No tags in this vault</div>
+                )}
                 {activeTagRows.map(([tag, count]) => (
                   <div key={tag} className="settings-tag-row">
                     {renamingTag === tag ? (

@@ -41,7 +41,10 @@ function locateLine(doc: vscode.TextDocument, lineNo: number, expectedText: stri
   return found
 }
 
-async function applyAndMaybeSave(doc: vscode.TextDocument, edit: vscode.WorkspaceEdit): Promise<void> {
+async function applyAndMaybeSave(
+  doc: vscode.TextDocument,
+  edit: vscode.WorkspaceEdit
+): Promise<void> {
   const wasClean = !doc.isDirty
   const ok = await vscode.workspace.applyEdit(edit)
   if (!ok) throw new Error(`Edit could not be applied to ${doc.uri.fsPath}`)
@@ -96,7 +99,11 @@ export async function setTaskStatusMeta(
 
   const edit = new vscode.WorkspaceEdit()
   const bracketOffset = m[1].length + m[2].length + 2
-  edit.replace(doc.uri, new vscode.Range(target, bracketOffset, target, bracketOffset + 1), targetChar)
+  edit.replace(
+    doc.uri,
+    new vscode.Range(target, bracketOffset, target, bracketOffset + 1),
+    targetChar
+  )
 
   // planTaskMetaEdit works on the pre-edit line array; the status-char
   // replacement above touches only the task line itself, which the plan
@@ -120,7 +127,11 @@ export async function setTaskStatusMeta(
   await applyAndMaybeSave(doc, edit)
 }
 
-export async function deleteLine(rel: VaultPath, lineNo: number, expectedText: string): Promise<void> {
+export async function deleteLine(
+  rel: VaultPath,
+  lineNo: number,
+  expectedText: string
+): Promise<void> {
   const doc = openDocFor(rel)
   if (!doc) {
     await lineEdit.deleteLine(rel, lineNo, expectedText)

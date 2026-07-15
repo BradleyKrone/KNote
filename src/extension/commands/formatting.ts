@@ -111,7 +111,8 @@ async function toggleInline(marker: string): Promise<void> {
   await editor.edit((b) => {
     for (const c of changes) {
       if (c.from === c.to) b.insert(doc.positionAt(c.from), c.insert)
-      else if (c.insert === '') b.delete(new vscode.Range(doc.positionAt(c.from), doc.positionAt(c.to)))
+      else if (c.insert === '')
+        b.delete(new vscode.Range(doc.positionAt(c.from), doc.positionAt(c.to)))
       else b.replace(new vscode.Range(doc.positionAt(c.from), doc.positionAt(c.to)), c.insert)
     }
   })

@@ -25,8 +25,7 @@ export function createHostHandlers(): HostHandlers {
       broadcast('configChanged', config)
     },
     searchVault: (query: string) => searchIndex.search(query),
-    findMentions: (strings: string[], excludePath: VaultPath) =>
-      findMentions(strings, excludePath),
+    findMentions: (strings: string[], excludePath: VaultPath) => findMentions(strings, excludePath),
     readFile: (path: VaultPath) => vault.readFile(path),
 
     replaceLine: verifiedEdit.replaceLine,

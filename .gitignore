@@ -7,3 +7,4 @@ test-vault/
 *.tsbuildinfo
 .DS_Store
 Copilot_*.png
+*.vsix

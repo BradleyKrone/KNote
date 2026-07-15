@@ -1,7 +1,36 @@
 # Release notes
 
-Reopen this any time from **Settings → Release notes**. The current version
-number is shown in the window's title bar, next to "KNote".
+The current version number is shown on the KNote entry in VS Code's
+Extensions view.
+
+## 0.13.0
+
+- **KNote is now a VS Code extension.** The standalone Electron app is
+  retired; your vault is any workspace folder containing `.knote/` (run
+  **KNote: Initialize Vault in This Workspace** on a fresh folder). All
+  data stays plain Markdown — existing vaults open unchanged.
+- Notes are edited in VS Code's native Markdown editor, enhanced by KNote:
+  clickable `[[wiki links]]` (create-on-click, `#heading`/`#^block`/alias
+  forms), `[[`/`#` autocomplete, link hover previews, tag/priority/
+  milestone decorations, paste-image into the attachments folder, and
+  bold/italic/strikethrough/inline-code toggles
+- The Kanban board, Timeline, Machine Log, Graph, and vault Settings open
+  as editor tabs; Search (with `path:`/`tag:`/`file:` operators),
+  Backlinks + unlinked mentions, Tags, and Properties live in the new
+  KNote Activity Bar container
+- Two-way sync got stronger: board/timeline/panel edits land directly in
+  your open editor buffer (even with unsaved changes) and fall back to
+  verified, conflict-refusing disk writes otherwise
+- Task hotkeys: `Ctrl+L` cycles a task's column, `Ctrl+Alt+L` picks one
+  (with require-reason prompts and `Status Changed` stamping),
+  `Ctrl+Alt+X` toggles a checkbox, `Ctrl+Alt+Enter` seeds a task note
+- Everything the app duplicated from VS Code is now native: file explorer,
+  tabs/splits, quick switcher, command palette, hotkey editor, themes,
+  spellcheck, and full-text search
+- New **KNote: Clean Up Orphaned Attachments** command
+- Dropped: the built-in live-preview editor (use VS Code's Markdown
+  preview alongside the editor), the in-app hotkey editor, and the
+  "Open in VS Code" bridge (you're already here)
 
 ## 0.12.0
 

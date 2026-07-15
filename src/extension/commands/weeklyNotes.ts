@@ -61,7 +61,7 @@ async function openWeeklyNote(): Promise<void> {
 
 async function quickCapture(): Promise<void> {
   const text = await vscode.window.showInputBox({
-    prompt: 'Quick capture — appended to this week\'s note',
+    prompt: "Quick capture — appended to this week's note",
     placeHolder: 'What happened?'
   })
   if (text === undefined) return

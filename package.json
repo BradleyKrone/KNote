@@ -8,6 +8,10 @@
   "private": true,
   "author": "Bradley Krone",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BradleyKrone/KNote.git"
+  },
   "engines": {
     "vscode": "^1.97.0"
   },
@@ -241,6 +245,47 @@
         "command": "knote.format.code",
         "key": "ctrl+alt+c",
         "when": "editorTextFocus && editorLangId == markdown"
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "knote.gettingStarted",
+        "title": "Get started with KNote",
+        "description": "A vault of plain Markdown notes with a Kanban board, wiki links, and a timeline built in.",
+        "steps": [
+          {
+            "id": "knote.step.vault",
+            "title": "Open or create a vault",
+            "description": "Open your notes folder, or initialize a fresh one.\n[Initialize Vault](command:knote.initializeVault)",
+            "media": {
+              "markdown": "resources/walkthrough/vault.md"
+            }
+          },
+          {
+            "id": "knote.step.board",
+            "title": "Open the Kanban board",
+            "description": "Every checkbox in your vault, as a draggable card.\n[Open Board](command:knote.openBoard)",
+            "media": {
+              "markdown": "resources/walkthrough/board.md"
+            }
+          },
+          {
+            "id": "knote.step.links",
+            "title": "Link your notes",
+            "description": "[[Wiki links]], backlinks, and the graph.",
+            "media": {
+              "markdown": "resources/walkthrough/links.md"
+            }
+          },
+          {
+            "id": "knote.step.weekly",
+            "title": "Weekly notes & quick capture",
+            "description": "One hotkey to this week's note, one to capture a thought.\n[Open This Week's Note](command:knote.openWeeklyNote)",
+            "media": {
+              "markdown": "resources/walkthrough/weekly.md"
+            }
+          }
+        ]
       }
     ],
     "configuration": {

@@ -85,8 +85,7 @@ export interface RpcRequest {
 }
 
 export type RpcResponse =
-  | { id: number; ok: true; result: unknown }
-  | { id: number; ok: false; error: { message: string } }
+  { id: number; ok: true; result: unknown } | { id: number; ok: false; error: { message: string } }
 
 export interface RpcEvent {
   event: keyof HostEvents

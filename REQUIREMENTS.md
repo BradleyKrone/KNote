@@ -1,5 +1,16 @@
 # KNote — Requirements Document
 
+> **Platform note (July 2026):** KNote was converted from a standalone
+> Electron desktop app into a **VS Code extension**. The data model, file
+> formats, and feature scope below are unchanged; anywhere this document
+> says "application window/pane/palette," read the VS Code equivalent
+> (editor tabs, webview panels, the native Command Palette). Features VS
+> Code provides natively (file explorer, tabs/splits, quick switcher,
+> hotkey editing, themes, full-text search UI) are deliberately no longer
+> implemented by KNote itself. The built-in live-preview editor was
+> retired in favor of VS Code's native Markdown editor plus KNote
+> enhancements (wiki links, completions, decorations).
+
 ## 1. Overview
 
 KNote is a personal note-taking application modeled closely on

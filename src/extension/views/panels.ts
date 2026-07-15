@@ -16,10 +16,25 @@ interface PanelDef {
 }
 
 const PANELS: PanelDef[] = [
-  { command: 'knote.openTimeline', viewType: 'knote.timeline', view: 'timeline', title: 'KNote Timeline' },
-  { command: 'knote.openMachineLog', viewType: 'knote.machineLog', view: 'machineLog', title: 'KNote Machine Log' },
+  {
+    command: 'knote.openTimeline',
+    viewType: 'knote.timeline',
+    view: 'timeline',
+    title: 'KNote Timeline'
+  },
+  {
+    command: 'knote.openMachineLog',
+    viewType: 'knote.machineLog',
+    view: 'machineLog',
+    title: 'KNote Machine Log'
+  },
   { command: 'knote.openGraph', viewType: 'knote.graph', view: 'graph', title: 'KNote Graph' },
-  { command: 'knote.openSettings', viewType: 'knote.settings', view: 'settings', title: 'KNote Settings' }
+  {
+    command: 'knote.openSettings',
+    viewType: 'knote.settings',
+    view: 'settings',
+    title: 'KNote Settings'
+  }
 ]
 
 export function registerPanels(context: vscode.ExtensionContext): void {
@@ -37,10 +52,15 @@ export function registerPanels(context: vscode.ExtensionContext): void {
           existing.reveal()
           return
         }
-        const panel = vscode.window.createWebviewPanel(def.viewType, def.title, vscode.ViewColumn.Active, {
-          enableScripts: true,
-          localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoot())
-        })
+        const panel = vscode.window.createWebviewPanel(
+          def.viewType,
+          def.title,
+          vscode.ViewColumn.Active,
+          {
+            enableScripts: true,
+            localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoot())
+          }
+        )
         open.set(def.viewType, panel)
         const rpc = attach(panel.webview, createHostHandlers())
         panel.webview.html = webviewHtml(panel.webview, context.extensionUri, def.view, def.title)

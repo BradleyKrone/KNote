@@ -4,9 +4,11 @@
 .github/**
 src/**
 tests/**
+test-vault/**
 node_modules/**
 out/**
 release/**
+*.vsix
 dist/**/*.map
 scripts/**
 *.md
