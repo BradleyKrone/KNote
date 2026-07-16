@@ -4,11 +4,9 @@
 
 import * as vscode from 'vscode'
 import dayjs from 'dayjs'
+import { machineEntryTemplate } from '@shared/machineEntry'
 import { getVaultConfig } from '../../core/vaultConfig'
 import { vaultNoteRel } from '../paths'
-
-/** Detail lines auto-added below every new machine work-log entry. */
-const MACHINE_ENTRY_TEMPLATE_LABELS = ['Base Machine Software', 'Testing Software', 'Notes']
 
 async function pickSerial(): Promise<string | undefined> {
   const config = await getVaultConfig()
@@ -47,7 +45,7 @@ async function insertMachineEntry(): Promise<void> {
   const hasTextBefore = pos.character > 0
   const hasTextAfter = pos.character < line.text.length
   const prefix = `${hasTextBefore ? '\n' : ''}🚜 ${serial} 📅 ${dayjs().format('YYYY-MM-DD')} `
-  const template = MACHINE_ENTRY_TEMPLATE_LABELS.map((label) => `\n- ${label}: `).join('')
+  const template = machineEntryTemplate()
   const suffix = hasTextAfter ? '\n' : ''
   await editor.edit((b) => b.insert(pos, prefix + template + suffix))
 

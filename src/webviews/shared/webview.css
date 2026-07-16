@@ -468,6 +468,24 @@ button {
   justify-content: center;
 }
 
+/* ---------- Right-click context menu (ContextMenuList) ---------- */
+
+.context-menu {
+  min-width: 168px;
+}
+.context-menu .picker-list {
+  max-height: none;
+}
+.menu-separator {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--vscode-editorWidget-border, var(--border-color));
+  opacity: 0.6;
+}
+.picker-row.danger .picker-row-label {
+  color: var(--danger);
+}
+
 /* ---------- Modal dialogs ---------- */
 
 .modal-overlay {

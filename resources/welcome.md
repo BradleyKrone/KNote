@@ -49,6 +49,25 @@ source control, and — from the raw text editor — KNote's wiki-link
 autocomplete, hover previews, and paste-image. VS Code's built-in Markdown
 preview (`Ctrl+Shift+V`) is still available too.
 
+### Right-click menu
+
+Right-click anywhere in a Live Preview note for a context menu that acts on
+the clicked line:
+
+| Item | Effect |
+|---|---|
+| Bold / Italic / Strikethrough / Inline code | Toggle the marker on the selection |
+| Insert wiki link | Insert `[[]]` (wraps the selection if any) |
+| Add checkbox | Insert a `- [ ]` task line |
+| Add milestone | Insert a dated `🏁 Milestone 📅 …` line |
+| Log machine work… | Pick a serial + date → insert a `🚜` entry with the detail template |
+| Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
+| Edit machine entry… | *(🚜 lines)* change the serial + date, keeping the activity text |
+
+**Right-click a checkbox glyph** for a quick Kanban switcher: pick any
+column (the current one is checked) or **Archived** — same behavior as
+`Ctrl+L`, including reason prompts and the `Status Changed:` stamp.
+
 ## Formatting & task hotkeys
 
 All in Markdown editors only:

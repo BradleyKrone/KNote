@@ -33,4 +33,4 @@ wireInboundSync(view)
 
 const dialogHost = document.createElement('div')
 document.body.appendChild(dialogHost)
-createRoot(dialogHost).render(<EditorDialogs />)
+createRoot(dialogHost).render(<EditorDialogs view={view} />)

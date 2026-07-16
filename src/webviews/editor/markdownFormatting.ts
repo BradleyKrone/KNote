@@ -7,7 +7,7 @@ import { EditorSelection } from '@codemirror/state'
 import type { EditorView, KeyBinding } from '@codemirror/view'
 
 /** Toggle a symmetric inline marker (`**`, `*`, `~~`, `` ` ``) around each selection. */
-function toggleWrap(view: EditorView, mark: string): boolean {
+export function toggleWrap(view: EditorView, mark: string): boolean {
   const changes = view.state.changeByRange((range) => {
     const doc = view.state.doc
     const before = doc.sliceString(Math.max(0, range.from - mark.length), range.from)

@@ -24,6 +24,7 @@ import {
   WidgetType
 } from '@codemirror/view'
 import { isStaleError } from '@shared/errors'
+import type { BoardColumn } from '@shared/types'
 import {
   ARCHIVED_CHAR,
   DATE_ENTERED_RE,
@@ -51,6 +52,40 @@ export function setNotePath(path: string | null): void {
 // Standard markdown image: ![alt](src)
 const MD_IMAGE_RE = /!\[[^\]]*\]\(([^)]+)\)/g
 
+/**
+ * Set a task line's checkbox to a specific Kanban column: a verified write that
+ * prompts for a reason when the column requires one and stamps `Status Changed`.
+ * Shared by the checkbox click (via cycleCheckbox) and the right-click status
+ * menu. No-op when the char is already `target.char`.
+ */
+export async function setCheckboxStatus(
+  line0: number,
+  rawLine: string,
+  target: BoardColumn
+): Promise<void> {
+  const m = TASK_LINE_RE.exec(rawLine)
+  if (!m || notePath === null) return
+  const current = m[3]
+  if (target.char === current) return
+
+  let reasonLine: string | undefined
+  if (target.requireReason) {
+    const res = await promptReason(target.name)
+    if (!res) return // user cancelled → abort the move
+    reasonLine = reasonLineForTask(rawLine, target.name, res.reason, res.date)
+  }
+  const statusChangedLine = statusChangedLineForTask(rawLine, dayjs().format('M/D/YYYY'))
+  try {
+    await host.setTaskStatusMeta(notePath, line0, rawLine, target.char, {
+      reasonLine,
+      statusChangedLine
+    })
+  } catch (err) {
+    if (isStaleError(err)) showToast('Note changed on disk — try again')
+    else throw err
+  }
+}
+
 /** Click a checkbox: advance the task to the next Kanban column (verified write). */
 async function cycleCheckbox(line0: number, rawLine: string): Promise<void> {
   const m = TASK_LINE_RE.exec(rawLine)
@@ -59,26 +94,7 @@ async function cycleCheckbox(line0: number, rawLine: string): Promise<void> {
   if (current === ARCHIVED_CHAR) return // archived cards don't cycle on click
   const next = nextColumn(useConfigStore.getState().vaultConfig.columns, current)
   if (!next) return
-
-  let reasonLine: string | undefined
-  if (next.requireReason) {
-    const res = await promptReason(next.name)
-    if (!res) return // user cancelled → abort the move
-    reasonLine = reasonLineForTask(rawLine, next.name, res.reason, res.date)
-  }
-  const statusChangedLine =
-    next.char !== current
-      ? statusChangedLineForTask(rawLine, dayjs().format('M/D/YYYY'))
-      : undefined
-  try {
-    await host.setTaskStatusMeta(notePath, line0, rawLine, next.char, {
-      reasonLine,
-      statusChangedLine
-    })
-  } catch (err) {
-    if (isStaleError(err)) showToast('Note changed on disk — try again')
-    else throw err
-  }
+  await setCheckboxStatus(line0, rawLine, next)
 }
 
 // ---------- Widgets ----------
