@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import type { NoteMeta, VaultPath } from '@shared/types'
-import { ARCHIVED_CHAR, DUE_RE, PRIORITY_RE } from '@shared/parser/patterns'
-import { stripInlineMarkers, toCard } from '../board/boardSelectors'
+import { ARCHIVED_CHAR, DUE_RE, PRIORITY_RE, stripInlineMarkers } from '@shared/parser/patterns'
+import { toCard } from '../board/boardSelectors'
 
 /**
  * Timeline items come from three sources:

@@ -2,7 +2,7 @@ import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import type { BoardColumn, NoteMeta, VaultPath } from '@shared/types'
 import { isInside, samePath, titleOf } from '@shared/pathUtils'
-import { ARCHIVED_CHAR, DUE_RE, PRIORITY_RE } from '@shared/parser/patterns'
+import { ARCHIVED_CHAR, DUE_RE, PRIORITY_RE, stripInlineMarkers } from '@shared/parser/patterns'
 
 dayjs.extend(isoWeek)
 
@@ -33,16 +33,6 @@ export function scopeLabel(scope: BoardScope): string {
   if (scope.kind === 'global') return 'All notes'
   if (scope.kind === 'folder') return scope.path + '/'
   return titleOf(scope.path)
-}
-
-/** Strip due-date/priority/tag markers out of raw task-or-milestone text, for display. */
-export function stripInlineMarkers(text: string): string {
-  return text
-    .replace(DUE_RE, '')
-    .replace(PRIORITY_RE, ' ')
-    .replace(/(^|[\s([{])#[A-Za-z0-9_][A-Za-z0-9_/-]*/g, '$1')
-    .replace(/\s{2,}/g, ' ')
-    .trim()
 }
 
 export function toCard(meta: NoteMeta, task: NoteMeta['tasks'][number]): BoardCard {

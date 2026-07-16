@@ -85,6 +85,10 @@ export function registerBoardPanel(context: vscode.ExtensionContext): void {
       }
       openBoard(context, { kind: 'note', path: rel })
     }),
+    // The Boards tree passes a path directly — no active editor involved.
+    vscode.commands.registerCommand('knote.openBoardForPath', (path: string) =>
+      openBoard(context, { kind: 'note', path })
+    ),
     vscode.window.registerWebviewPanelSerializer(VIEW_TYPE, {
       deserializeWebviewPanel: async (panel, state: { scope?: BoardScope } | undefined) => {
         if (!currentVaultRoot()) {

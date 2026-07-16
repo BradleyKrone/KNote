@@ -25,6 +25,15 @@ export interface HostApi {
   findMentions(strings: string[], excludePath: VaultPath): Promise<Mention[]>
   readFile(path: VaultPath): Promise<FileReadResult>
 
+  /**
+   * Resolve an image/embed reference (a `![[...]]` target or `![](...)` src,
+   * relative to the note that contains it) to a webview-safe URI string the
+   * live-preview editor can load, or null if it doesn't resolve inside the
+   * vault. Only meaningful for the editor's own webview, whose handler set
+   * closes over its panel; other webviews leave it unimplemented.
+   */
+  attachmentUri(src: string): Promise<string | null>
+
   // Verified line edits — routed through the host's verifiedEdit (live
   // buffer when the doc is open, atomic disk write otherwise); all fail
   // with KNOTE_STALE instead of writing when the expected text moved.

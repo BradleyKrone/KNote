@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- tractor, echoing the 🚜 machine-entry marker -->
+  <circle cx="7" cy="17" r="4"/>
+  <circle cx="18" cy="18" r="3"/>
+  <path d="M7 17h.01"/>
+  <path d="M18 18h.01"/>
+  <!-- body: cab over the rear wheel, hood reaching the front wheel -->
+  <path d="M4 13V7h5l2 5h4v3"/>
+  <path d="M13 12h5v3"/>
+  <line x1="9" y1="7" x2="9" y2="12"/>
+</svg>

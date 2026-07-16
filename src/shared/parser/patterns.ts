@@ -202,6 +202,20 @@ export function planTaskMetaEdit(
 /** !, !!, or !!! priority marker — must stand alone (whitespace/line boundaries) */
 export const PRIORITY_RE = /(?:^|\s)(!{1,3})(?=\s|$)/
 
+/**
+ * Strip due-date/priority/tag markers out of raw task-or-milestone-or-machine
+ * text, leaving just the prose. Used wherever an entry is rendered as a label:
+ * board cards, timeline rows, machine entries, and the activity-bar trees.
+ */
+export function stripInlineMarkers(text: string): string {
+  return text
+    .replace(DUE_RE, '')
+    .replace(PRIORITY_RE, ' ')
+    .replace(/(^|[\s([{])#[A-Za-z0-9_][A-Za-z0-9_/-]*/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
 /** 🏁 milestone line — a standalone dated timeline entry, deliberately not a checkbox so it never becomes a Kanban card */
 export const MILESTONE_LINE_RE = /^\s*🏁\s+(.*)$/
 

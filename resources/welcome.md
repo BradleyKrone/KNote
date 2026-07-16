@@ -22,22 +22,32 @@ everything native just works: the Explorer, tabs and split editors, `Ctrl+P`
 quick open, `Ctrl+Shift+F` full-text search, source control, and any other
 extension you run (Copilot, Vim, spell checkers, …).
 
-## Editing notes
+## Live Preview editing
 
-Notes open in VS Code's normal Markdown editor, enhanced by KNote:
+Notes open in **Live Preview** by default — an Obsidian-style editor that
+renders Markdown as you type while keeping the file byte-for-byte plain
+Markdown:
 
-- **`[[Wiki links]]`** are clickable (Ctrl+click) — including
-  `[[Note#Heading]]`, `[[Note#^block-id]]`, and `[[Note|alias]]` forms.
-  Clicking a link to a note that doesn't exist yet creates it.
-- **Autocomplete**: type `[[` for note titles and aliases, `[[Note#` for
-  headings/block IDs, and `#` for existing tags.
-- **Hover** a wiki link for a preview of the target note.
-- **Decorations** highlight `#tags`, `!`/`!!`/`!!!` priority markers, and 🏁
-  milestone lines, and dim task-meta lines. Toggle with the
-  `knote.decorations.enabled` setting.
-- **Paste an image** and it's saved into your configured attachments folder
-  and embedded as `![[/path]]` — same format the notes always used.
-- Reading view: VS Code's built-in Markdown preview (`Ctrl+Shift+V`).
+- Headings, **bold**/*italic*/~~strike~~, `code`, blockquotes and lists
+  render inline; the raw syntax reveals on the line your cursor is on, so
+  you always edit the source directly.
+- **Checkboxes are clickable** — a click advances the task to the next
+  Kanban column (stamping `Status Changed:`, and prompting for a reason on
+  Require-reason columns), exactly like dragging its card on the board.
+- **`[[Wiki links]]`** render as clickable chips (click to open, creating
+  the note if it doesn't exist), `#tags` as pills, and **`![[image]]`** /
+  `![](image)` embeds show inline.
+- `Ctrl+B` / `Ctrl+I` / `Ctrl+Shift+X` / `` Ctrl+E `` toggle bold / italic /
+  strikethrough / inline code on the selection.
+- Need the raw source? **KNote: Reopen as Raw Text** (or the `</>` button in
+  the editor title bar) switches this note to the plain text editor; **KNote:
+  Open in Live Preview** (the book button) switches back. Right-click a note →
+  **Reopen Editor With…** also works.
+
+Everything native still works on the underlying file: `Ctrl+P` quick open,
+source control, and — from the raw text editor — KNote's wiki-link
+autocomplete, hover previews, and paste-image. VS Code's built-in Markdown
+preview (`Ctrl+Shift+V`) is still available too.
 
 ## Formatting & task hotkeys
 
@@ -58,7 +68,8 @@ Shortcuts** (`Ctrl+K Ctrl+S`).
 
 ## The Kanban board
 
-**KNote: Open Kanban Board** (`Ctrl+Alt+K`) opens the board; **KNote: Open
+**KNote: Open Kanban Board** (`Ctrl+Alt+K`), or the Kanban icon in the
+Activity Bar, opens the board; **KNote: Open
 Board for This Note** scopes it to one note. Everything on it is a checkbox
 task somewhere in your vault:
 
@@ -77,6 +88,20 @@ task somewhere in your vault:
   board), delete, add-card (into the scoped note or your Inbox note), and
   same-note reordering.
 - Typing in a note updates the board live, and vice versa.
+
+## Activity Bar icons
+
+KNote adds four icons to the Activity Bar. The KNote icon holds the note
+panels; the other three are quick-access launchers — the top row of each
+opens the full panel, the rows under it jump straight to one thing.
+
+| Icon | Section | Top row opens | Rows below |
+| --- | --- | --- | --- |
+| Kanban columns | **Boards** | **All Tasks** — the whole-vault board | One row per note that has tasks, `open/total`, busiest first — click for that note's board |
+| Tractor | **Machines** | **Full Machine Log** | Registered machines (then any unregistered serial found in a note); expand for its 🚜 entries, newest first — click to jump to the line |
+| Timeline | **Milestones** | **Full Timeline** | Dated `🏁` milestones — upcoming soonest-first, then past — click to jump to the line |
+
+All three track the index live, so counts follow your edits.
 
 ## Sidebar: Search, Backlinks, Tags, Properties
 

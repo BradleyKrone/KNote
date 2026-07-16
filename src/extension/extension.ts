@@ -11,8 +11,10 @@ import { registerAllCommands } from './commands'
 import { registerRpcBroadcasts } from './rpc/webviewRpc'
 import { registerBoardPanel } from './views/boardPanel'
 import { registerPanels } from './views/panels'
+import { registerLiveEditor } from './views/liveEditorProvider'
 import { registerSidebarViews } from './views/sidebarViews'
 import { registerTagsTree } from './trees/tagsTree'
+import { registerQuickAccessTrees } from './trees/quickAccess'
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const log = vscode.window.createOutputChannel('KNote')
@@ -28,8 +30,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerAllCommands(context)
   registerBoardPanel(context)
   registerPanels(context)
+  registerLiveEditor(context)
   registerSidebarViews(context)
   registerTagsTree(context)
+  registerQuickAccessTrees(context)
   registerRpcBroadcasts(context)
 
   const start = async (root: string): Promise<void> => {

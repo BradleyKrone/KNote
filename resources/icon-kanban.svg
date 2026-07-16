@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- three kanban columns, each with a card stack of a different height -->
+  <rect x="3" y="4" width="5" height="16" rx="1"/>
+  <rect x="9.5" y="4" width="5" height="16" rx="1"/>
+  <rect x="16" y="4" width="5" height="16" rx="1"/>
+  <line x1="3" y1="8.5" x2="8" y2="8.5"/>
+  <line x1="3" y1="13" x2="8" y2="13"/>
+  <line x1="9.5" y1="8.5" x2="14.5" y2="8.5"/>
+  <line x1="16" y1="8.5" x2="21" y2="8.5"/>
+  <line x1="16" y1="13" x2="21" y2="13"/>
+  <line x1="16" y1="17.5" x2="21" y2="17.5"/>
+</svg>

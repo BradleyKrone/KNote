@@ -1,7 +1,6 @@
 import dayjs from 'dayjs'
 import type { MachineDef, NoteMeta, VaultPath } from '@shared/types'
-import { DUE_RE } from '@shared/parser/patterns'
-import { stripInlineMarkers } from '../board/boardSelectors'
+import { DUE_RE, stripInlineMarkers } from '@shared/parser/patterns'
 
 /**
  * The Machine Log joins two sources:
