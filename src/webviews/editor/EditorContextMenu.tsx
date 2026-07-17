@@ -240,17 +240,20 @@ function mainItems(
     { label: 'Log machine work…', onClick: openSub('machine') }
   ]
   if (ctx.isTask || ctx.isMilestone) {
-    const linkLabel = ctx.isTask ? 'Copy link to task' : 'Copy link to milestone'
     items.push(
       { separator: true },
       { label: 'Add tag…', onClick: openSub('tag') },
       { label: 'Set priority…', onClick: openSub('priority') },
-      { label: 'Set due date…', onClick: openSub('date') },
-      {
-        label: linkLabel,
-        onClick: run(() => copyTaskLink(view, ctx.line0, titleOf(getNotePath() ?? '')))
-      }
+      { label: 'Set due date…', onClick: openSub('date') }
     )
+    // Only top-level tasks and milestones are linkable — sub-tasks are plain
+    // toggles, not standalone items, so they get no anchor.
+    if (!ctx.isSubtask) {
+      items.push({
+        label: ctx.isMilestone ? 'Copy link to milestone' : 'Copy link to task',
+        onClick: run(() => copyTaskLink(view, ctx.line0, titleOf(getNotePath() ?? '')))
+      })
+    }
   }
   if (ctx.isMachine) {
     items.push(
