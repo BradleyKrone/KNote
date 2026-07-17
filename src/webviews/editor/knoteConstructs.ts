@@ -41,7 +41,7 @@ import {
   WIKI_LINK_RE
 } from '@shared/parser/patterns'
 import { host } from '../shared/rpc'
-import { promptReason, showToast } from '../shared/stores'
+import { promptReason, showToast, useConfigStore } from '../shared/stores'
 import { checkboxRange } from './constructLogic'
 
 // One webview edits exactly one note; its vault-relative path is set at init.
@@ -174,6 +174,40 @@ class CheckboxWidget extends WidgetType {
   }
 }
 
+/** The Kanban column a top-level task's status char maps to, or null if unknown. */
+function taskStateLabel(statusChar: string, columns: BoardColumn[]): string | null {
+  if (statusChar === ARCHIVED_CHAR) return 'Archived'
+  const norm = statusChar === 'X' ? 'x' : statusChar
+  return columns.find((c) => c.char === norm)?.name ?? null
+}
+
+/**
+ * A small pill trailing a top-level task line, naming the Kanban column its
+ * checkbox currently sits in (To Do / In Progress / Done / …), so a note's
+ * task states are readable at a glance without opening the board.
+ */
+class TaskStateWidget extends WidgetType {
+  constructor(
+    private readonly label: string,
+    private readonly statusChar: string
+  ) {
+    super()
+  }
+  eq(other: TaskStateWidget): boolean {
+    return other.label === this.label && other.statusChar === this.statusChar
+  }
+  toDOM(): HTMLElement {
+    const tag = document.createElement('span')
+    tag.className = 'cm-knote-state'
+    tag.dataset.status = this.statusChar === 'X' ? 'x' : this.statusChar
+    tag.textContent = this.label
+    return tag
+  }
+  ignoreEvent(): boolean {
+    return true
+  }
+}
+
 /** Renders a proper `•` in place of a `-`/`*`/`+` unordered-list marker. */
 class BulletWidget extends WidgetType {
   eq(): boolean {
@@ -283,12 +317,13 @@ function buildDecorations(view: EditorView): DecorationSet {
   const decorations: Range<Decoration>[] = []
   const revealed = revealedLines(view)
   const { doc } = view.state
+  const columns = useConfigStore.getState().vaultConfig.columns
 
   for (const visible of view.visibleRanges) {
     let pos = visible.from
     while (pos <= visible.to) {
       const line = doc.lineAt(pos)
-      decorateLine(view, line, revealed.has(line.number), decorations)
+      decorateLine(view, line, revealed.has(line.number), columns, decorations)
       pos = line.to + 1
     }
   }
@@ -299,6 +334,7 @@ function decorateLine(
   view: EditorView,
   line: { from: number; to: number; number: number; text: string },
   isRevealed: boolean,
+  columns: BoardColumn[],
   out: Range<Decoration>[]
 ): void {
   const text = line.text
@@ -321,6 +357,18 @@ function decorateLine(
   if (box) {
     if (box.statusChar === ARCHIVED_CHAR) {
       out.push(Decoration.line({ class: 'cm-knote-archived' }).range(line.from))
+    }
+    // Top-level tasks get a trailing pill naming their current Kanban column.
+    if (!box.isSubtask) {
+      const label = taskStateLabel(box.statusChar, columns)
+      if (label) {
+        out.push(
+          Decoration.widget({
+            widget: new TaskStateWidget(label, box.statusChar),
+            side: 1
+          }).range(line.to)
+        )
+      }
     }
     if (!isRevealed) {
       const from = line.from + box.from

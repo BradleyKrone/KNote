@@ -241,6 +241,30 @@ body {
   font-size: 0.9em;
 }
 
+/* State pill trailing a top-level task line — its current Kanban column. */
+.cm-knote-state {
+  display: inline-block;
+  margin-left: 0.6em;
+  padding: 0 0.5em;
+  border: 1px solid var(--vscode-badge-background);
+  border-radius: 8px;
+  font-size: 0.72em;
+  font-weight: 600;
+  line-height: 1.55;
+  vertical-align: 0.12em;
+  white-space: nowrap;
+  color: var(--vscode-descriptionForeground);
+  background-color: transparent;
+  user-select: none;
+}
+.cm-knote-state[data-status='x'] {
+  color: var(--vscode-testing-iconPassed, var(--vscode-charts-green, #3fb950));
+  border-color: currentColor;
+}
+.cm-knote-state[data-status='a'] {
+  opacity: 0.6;
+}
+
 .cm-knote-priority {
   color: var(--vscode-errorForeground);
   font-weight: 700;
