@@ -22,8 +22,10 @@ import { PriorityPickerContent } from '../shared/components/PriorityPickerConten
 import { TagPickerContent } from '../shared/components/TagPickerContent'
 import { MachineEntryPickerContent } from '../machineLog/MachineEntryPickerContent'
 import { useConfigStore } from '../shared/stores'
+import { titleOf } from '@shared/pathUtils'
 import { toggleWrap } from './markdownFormatting'
-import { setCheckboxStatus, setSubtaskChecked } from './knoteConstructs'
+import { setCheckboxStatus, setSubtaskChecked, getNotePath } from './knoteConstructs'
+import { copyTaskLink } from './taskLink'
 import { misspelledRangeAt, type WordSpan } from './spellcheck/spellCheck'
 import { suggestWords } from './spellcheck/dictionary'
 import { addToDictionary, ignoreSpelling, replaceWord } from './spellcheck/spellActions'
@@ -238,11 +240,16 @@ function mainItems(
     { label: 'Log machine work…', onClick: openSub('machine') }
   ]
   if (ctx.isTask || ctx.isMilestone) {
+    const linkLabel = ctx.isTask ? 'Copy link to task' : 'Copy link to milestone'
     items.push(
       { separator: true },
       { label: 'Add tag…', onClick: openSub('tag') },
       { label: 'Set priority…', onClick: openSub('priority') },
-      { label: 'Set due date…', onClick: openSub('date') }
+      { label: 'Set due date…', onClick: openSub('date') },
+      {
+        label: linkLabel,
+        onClick: run(() => copyTaskLink(view, ctx.line0, titleOf(getNotePath() ?? '')))
+      }
     )
   }
   if (ctx.isMachine) {

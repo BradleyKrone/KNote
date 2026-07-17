@@ -61,6 +61,9 @@ export interface HostApi {
   /** Open a note in a VS Code editor, optionally landing on a 0-based line. */
   openNote(path: VaultPath, line?: number): Promise<void>
 
+  /** Copy text to the system clipboard (VS Code's native clipboard). */
+  copyToClipboard(text: string): Promise<void>
+
   /**
    * Open a raw wiki target ("Note", "Note#Heading", "folder/Note"), creating
    * the note (Obsidian behavior) when it doesn't resolve.

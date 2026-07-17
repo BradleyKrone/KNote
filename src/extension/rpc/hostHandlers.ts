@@ -2,6 +2,7 @@
 // Thin delegation into core services and verifiedEdit; shared by every
 // webview through webviewRpc.attach.
 
+import * as vscode from 'vscode'
 import type { VaultConfig, VaultPath } from '@shared/types'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
 import * as searchIndex from '../../core/indexer/searchIndex'
@@ -42,6 +43,8 @@ export function createHostHandlers(): HostHandlers {
 
     openWikiTarget: (rawTarget: string) => openWikiTarget(rawTarget),
 
-    openNote: (path: VaultPath, line?: number) => openNoteInLiveEditor(uriForRel(path), line)
+    openNote: (path: VaultPath, line?: number) => openNoteInLiveEditor(uriForRel(path), line),
+
+    copyToClipboard: (text: string) => vscode.env.clipboard.writeText(text)
   } satisfies HostHandlers
 }

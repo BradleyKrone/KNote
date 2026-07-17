@@ -27,6 +27,7 @@ import { isStaleError } from '@shared/errors'
 import type { BoardColumn } from '@shared/types'
 import {
   ARCHIVED_CHAR,
+  BLOCK_ID_RE,
   DATE_ENTERED_RE,
   MACHINE_ENTRY_RE,
   MILESTONE_LINE_RE,
@@ -48,6 +49,9 @@ import { checkboxRange } from './constructLogic'
 let notePath: string | null = null
 export function setNotePath(path: string | null): void {
   notePath = path
+}
+export function getNotePath(): string | null {
+  return notePath
 }
 
 // Standard markdown image: ![alt](src)
@@ -437,6 +441,15 @@ function decorateLine(
     const from = line.from + hashIndex
     if (inCode(view, from)) continue
     out.push(Decoration.mark({ class: 'cm-knote-tag' }).range(from, from + 1 + tagName.length))
+  }
+
+  // Hide a trailing `^block-id` anchor (the target of a [[Note#^id]] link, added
+  // by "Copy link to task") in preview — it's link plumbing, not prose. The raw
+  // `^id` reveals on the line under the cursor so it stays editable/removable.
+  const anchor = BLOCK_ID_RE.exec(text)
+  if (anchor && !isRevealed) {
+    const from = line.from + anchor.index
+    out.push(Decoration.replace({}).range(from, from + anchor[0].length))
   }
 }
 

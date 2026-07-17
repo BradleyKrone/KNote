@@ -50,6 +50,11 @@ Markdown:
   after its checkbox naming the Kanban column it currently maps to (To Do, In
   Progress, Done, …), so you can read a note's task states at a glance without
   opening the board. It updates the moment the status changes.
+- **Link straight to a task** — right-click a task → **Copy link to task** to
+  put a `[[Note#^id]]` wiki link on the clipboard (a hidden `^anchor` is added
+  to the line the first time). Paste it into your daily "what I did" note and
+  click it to jump right back to that task. The `^anchor` stays out of sight in
+  Live Preview and only shows when your cursor is on the line.
 - **Click a sub-task to check it off** — an *indented* checkbox is a plain
   toggle, not a Kanban card: clicking its box flips checked/unchecked and
   stamps the completion date (`✅ 2026-07-16`) on the line. Unchecking it
@@ -103,6 +108,7 @@ the clicked line:
 | Add milestone | Insert a dated `🏁 Milestone 📅 …` line |
 | Log machine work… | Pick a serial + date → insert a `🚜` entry with the detail template |
 | Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
+| Copy link to task | *(task/milestone lines)* copy a `[[Note#^id]]` link to this task (adding a hidden `^anchor` if needed) — paste it elsewhere to jump back |
 | Edit machine entry… | *(🚜 lines)* change the serial + date, keeping the activity text |
 | *Suggestions* / Add to dictionary / Ignore | *(misspelled words)* replace with a correction, add the word to your vault dictionary, or ignore it this session |
 
