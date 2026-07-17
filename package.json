@@ -1,7 +1,7 @@
 {
   "name": "knote",
   "displayName": "KNote",
-  "version": "0.13.6",
+  "version": "0.13.7",
   "description": "KNote — a local-first Markdown vault with a checkbox-driven Kanban board, wiki links, and vault-wide search, as a VS Code extension",
   "publisher": "bradleykrone",
   "main": "./dist/extension.js",
@@ -462,5 +462,8 @@
     "vitest": "^2.1.0",
     "yaml": "^2.9.0",
     "zustand": "^5.0.0"
+  },
+  "dependencies": {
+    "typo-js": "^1.3.2"
   }
 }

@@ -24,6 +24,9 @@ import { MachineEntryPickerContent } from '../machineLog/MachineEntryPickerConte
 import { useConfigStore } from '../shared/stores'
 import { toggleWrap } from './markdownFormatting'
 import { setCheckboxStatus, setSubtaskChecked } from './knoteConstructs'
+import { misspelledRangeAt, type WordSpan } from './spellcheck/spellCheck'
+import { suggestWords } from './spellcheck/dictionary'
+import { addToDictionary, ignoreSpelling, replaceWord } from './spellcheck/spellActions'
 import {
   addLineTag,
   editMachineOnLine,
@@ -52,7 +55,7 @@ type Point = { x: number; y: number }
 type SubKind = 'machine' | 'edit-machine' | 'date' | 'priority' | 'tag'
 
 type OpenState =
-  | { stage: 'menu'; onCheckbox: boolean; point: Point; ctx: LineCtx }
+  | { stage: 'menu'; onCheckbox: boolean; spell: WordSpan | null; point: Point; ctx: LineCtx }
   | { stage: 'sub'; sub: SubKind; point: Point; ctx: LineCtx }
   | null
 
@@ -88,7 +91,8 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
       }
       const target = e.target as HTMLElement | null
       const onCheckbox = target?.closest('.cm-knote-check') != null
-      setOpen({ stage: 'menu', onCheckbox, point, ctx: readLineCtx(view, pos) })
+      const spell = onCheckbox ? null : misspelledRangeAt(view, pos)
+      setOpen({ stage: 'menu', onCheckbox, spell, point, ctx: readLineCtx(view, pos) })
     }
     dom.addEventListener('contextmenu', onContextMenu)
     return () => dom.removeEventListener('contextmenu', onContextMenu)
@@ -117,6 +121,8 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
         close()
         void setCheckboxStatus(ctx.line0, ctx.text, col)
       })
+    } else if (open.spell) {
+      items = [...spellItems(view, open.spell, close), ...mainItems(view, ctx, run, openSub)]
     } else {
       items = mainItems(view, ctx, run, openSub)
     }
@@ -175,6 +181,43 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
       )}
     </Popover>
   )
+}
+
+/**
+ * Spell-check items shown above the normal menu when the right-click lands on a
+ * misspelled word: up to a handful of suggested corrections, then "Add to
+ * dictionary" / "Ignore", closed off with a separator.
+ */
+function spellItems(view: EditorView, span: WordSpan, close: () => void): MenuEntry[] {
+  const suggestions = suggestWords(span.word)
+  const items: MenuEntry[] = suggestions.length
+    ? suggestions.map((s) => ({
+        label: s,
+        onClick: () => {
+          close()
+          replaceWord(view, span, s)
+        }
+      }))
+    : [{ label: 'No suggestions', detail: '', onClick: close }]
+  items.push(
+    { separator: true },
+    {
+      label: 'Add to dictionary',
+      onClick: () => {
+        close()
+        addToDictionary(span.word)
+      }
+    },
+    {
+      label: 'Ignore',
+      onClick: () => {
+        close()
+        ignoreSpelling(view, span.word)
+      }
+    },
+    { separator: true }
+  )
+  return items
 }
 
 function mainItems(

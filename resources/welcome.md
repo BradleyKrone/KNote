@@ -71,6 +71,11 @@ Markdown:
   clean list of top-level tasks; click the `…` or the arrow to expand.
   `Ctrl+Shift+[` / `Ctrl+Shift+]` fold / unfold the current line;
   `Ctrl+Alt+[` / `Ctrl+Alt+]` fold / unfold everything.
+- **Spell checking** — misspelled words get a red wavy underline as you type
+  (code, `[[wiki links]]`, `#tags`, URLs and frontmatter are skipped).
+  **Right-click a flagged word** for suggested corrections; pick one to
+  replace it, or **Add to dictionary** (saved to your vault) / **Ignore**
+  (this session). Runs fully offline on a bundled English dictionary.
 - Need the raw source? **KNote: Reopen as Raw Text** (or the `</>` button in
   the editor title bar) switches this note to the plain text editor; **KNote:
   Open in Live Preview** (the book button) switches back. Right-click a note →
@@ -95,6 +100,7 @@ the clicked line:
 | Log machine work… | Pick a serial + date → insert a `🚜` entry with the detail template |
 | Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
 | Edit machine entry… | *(🚜 lines)* change the serial + date, keeping the activity text |
+| *Suggestions* / Add to dictionary / Ignore | *(misspelled words)* replace with a correction, add the word to your vault dictionary, or ignore it this session |
 
 **Right-click a checkbox glyph** for a quick Kanban switcher: pick any
 column (the current one is checked) or **Archived** — same behavior as

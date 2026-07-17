@@ -24,6 +24,7 @@ import { formatKeymap } from './markdownFormatting'
 import { taskFold } from './taskFold'
 import { taskEnterKeymap } from './taskEnter'
 import { knoteAutocomplete } from './completions'
+import { spellCheck } from './spellcheck/spellCheck'
 import { fromHost } from './sync'
 
 // Sends each local edit to the host as minimal offset-based replacements.
@@ -51,6 +52,7 @@ export function createEditor(opts: { parent: HTMLElement; doc: string; eol: stri
       tableRender,
       livePreview,
       knoteConstructs,
+      spellCheck,
       taskFold,
       knoteAutocomplete,
       // Both keymaps run at highest precedence; array order breaks the tie, so

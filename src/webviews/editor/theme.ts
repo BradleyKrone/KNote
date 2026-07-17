@@ -83,5 +83,13 @@ export const knoteTheme = EditorView.theme({
     color: 'var(--vscode-descriptionForeground)',
     fontStyle: 'normal',
     marginLeft: '0.75em'
+  },
+  // Misspelled words: a red wavy underline, matching VS Code's own squiggles
+  // (see spellcheck/spellCheck.ts). Uses text-decoration so it follows the word
+  // across line wraps without disturbing layout.
+  '.cm-spell-error': {
+    textDecoration: 'underline wavy var(--vscode-editorError-foreground, #e51400)',
+    textDecorationSkipInk: 'none',
+    textUnderlineOffset: '0.2em'
   }
 })

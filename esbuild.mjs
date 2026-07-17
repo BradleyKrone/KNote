@@ -49,7 +49,12 @@ const webviewOptions = (() => {
     target: 'es2022',
     jsx: 'automatic',
     sourcemap: true,
-    alias,
+    // The bundled en_US spell dictionary is inlined as text (typo-js reads the
+    // .aff/.dic contents as strings — no runtime file/network load). `fs` is
+    // stubbed because typo-js references it only on its auto-load path, which
+    // KNote never takes (we always preload the data).
+    loader: { '.aff': 'text', '.dic': 'text' },
+    alias: { ...alias, fs: resolve('src/webviews/editor/spellcheck/fsStub.js') },
     logLevel: 'info'
   }
 })()
