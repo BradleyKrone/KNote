@@ -37,9 +37,11 @@ Markdown:
   construct.
 - **Enter seeds a task's note** — finish typing a top-level task line and
   press **Enter** to auto-insert its indented `Status Changed` / `Date
-  Entered` / `Notes` block, with the cursor left on the Notes line. Only fires
-  on a fresh, unseeded task; a normal newline runs everywhere else. (The
-  `Ctrl+Alt+Enter` command does the same on demand.)
+  Entered` / `Notes` block, with the cursor left on the Notes line. This also
+  stamps a hidden `^anchor` on the task line so it's immediately linkable (see
+  **Copy link to task** below). Only fires on a fresh, unseeded task; a normal
+  newline runs everywhere else. (The `Ctrl+Alt+Enter` command does the same on
+  demand.)
 - **Click a task to edit it** — clicking anywhere on a task line (checkbox
   included) drops your cursor in to edit the source, like every other
   construct. To change a task's status, **right-click the checkbox** for the
@@ -50,11 +52,12 @@ Markdown:
   after its checkbox naming the Kanban column it currently maps to (To Do, In
   Progress, Done, …), so you can read a note's task states at a glance without
   opening the board. It updates the moment the status changes.
-- **Link straight to a task** — right-click a task → **Copy link to task** to
-  put a `[[Note#^id]]` wiki link on the clipboard (a hidden `^anchor` is added
-  to the line the first time). Paste it into your daily "what I did" note and
-  click it to jump right back to that task. The `^anchor` stays out of sight in
-  Live Preview and only shows when your cursor is on the line.
+- **Link straight to a task** — every task you create is automatically given a
+  hidden `^anchor` (added when its note is seeded on Enter), so it's linkable
+  with no manual step. Right-click a task → **Copy link to task** to put a
+  `[[Note#^id]]` wiki link on the clipboard; paste it into your daily "what I
+  did" note and click it to jump right back to that task. The `^anchor` stays
+  out of sight in Live Preview and only shows when your cursor is on the line.
 - **Click a sub-task to check it off** — an *indented* checkbox is a plain
   toggle, not a Kanban card: clicking its box flips checked/unchecked and
   stamps the completion date (`✅ 2026-07-16`) on the line. Unchecking it

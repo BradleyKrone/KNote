@@ -17,6 +17,7 @@ import dayjs from 'dayjs'
 import { EditorSelection } from '@codemirror/state'
 import { EditorView, type KeyBinding } from '@codemirror/view'
 import { planTaskNoteSeed } from './taskNoteSeed'
+import { generateBlockId } from './taskLinkLogic'
 
 /** Enter handler: apply the seed plan, placing the caret after `- Notes: `. */
 function seedTaskNoteOnEnter(view: EditorView): boolean {
@@ -25,9 +26,23 @@ function seedTaskNoteOnEnter(view: EditorView): boolean {
   // file's EOL, `\r\n` on Windows), a lone `\n` is literal text, not a break.
   const plan = planTaskNoteSeed(view.state, dayjs().format('M/D/YYYY'), view.state.lineBreak)
   if (!plan) return false
+
+  // Auto-anchor the new task so it's linkable ("Copy link to task") without any
+  // manual step. The anchor is appended to the task line; the seed template
+  // follows. When both land at the same offset (no existing meta lines) the
+  // anchor must come first, so it's pushed ahead of the seed in the array.
+  const changes: { from: number; insert: string }[] = []
+  let anchorLen = 0
+  if (plan.anchorAt !== null) {
+    const anchor = ` ^${generateBlockId()}`
+    changes.push({ from: plan.anchorAt, insert: anchor })
+    anchorLen = anchor.length
+  }
+  changes.push({ from: plan.at, insert: plan.insert })
+
   view.dispatch({
-    changes: { from: plan.at, insert: plan.insert },
-    selection: EditorSelection.cursor(plan.at + plan.insert.length),
+    changes,
+    selection: EditorSelection.cursor(plan.at + anchorLen + plan.insert.length),
     scrollIntoView: true,
     userEvent: 'input'
   })

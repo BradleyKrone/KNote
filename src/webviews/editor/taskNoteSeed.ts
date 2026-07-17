@@ -9,12 +9,20 @@ import {
   STATUS_CHANGED_UNSET,
   TASK_LINE_RE
 } from '@shared/parser/patterns'
+import { blockIdOf } from './taskLinkLogic'
 
 export interface TaskNoteSeed {
   /** Document offset to insert at (end of the task line or its last meta line). */
   at: number
   /** Text to insert (leading newline + template lines). */
   insert: string
+  /**
+   * The task line's end offset, where a `^block-id` anchor should be appended
+   * so the freshly-created task is immediately linkable — or null when the line
+   * already carries one. The random id itself is minted by the keymap binding
+   * (taskEnter.ts) to keep this planner deterministic.
+   */
+  anchorAt: number | null
 }
 
 /**
@@ -63,5 +71,6 @@ export function planTaskNoteSeed(
     metaLen === 0 ? `${childIndent}- Status Changed: ${STATUS_CHANGED_UNSET}${nl}` : ''
   const insert = `${nl}${statusSeed}${childIndent}- Date Entered: ${today}${nl}${childIndent}- Notes: `
   const at = doc.line(line.number + metaLen).to
-  return { at, insert }
+  const anchorAt = blockIdOf(line.text) === null ? line.to : null
+  return { at, insert, anchorAt }
 }

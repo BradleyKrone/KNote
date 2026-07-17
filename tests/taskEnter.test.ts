@@ -72,6 +72,19 @@ describe('planTaskNoteSeed', () => {
     expect(planTaskNoteSeed(stateAt(doc, caret), TODAY)).not.toBeNull()
   })
 
+  it('marks the task line end for a ^block-id anchor on a fresh task', () => {
+    const doc = '- [ ] test'
+    const plan = planTaskNoteSeed(stateAt(doc), TODAY)
+    expect(plan!.anchorAt).toBe(doc.length) // end of the task line
+  })
+
+  it('does not re-anchor a task that already has a ^block-id', () => {
+    const doc = '- [ ] test ^abc123'
+    const plan = planTaskNoteSeed(stateAt(doc), TODAY)
+    expect(plan).not.toBeNull() // still seeds the note block
+    expect(plan!.anchorAt).toBeNull()
+  })
+
   it('builds the template with the given line break (CRLF)', () => {
     const doc = '- [ ] test'
     const plan = planTaskNoteSeed(stateAt(doc), TODAY, '\r\n')
