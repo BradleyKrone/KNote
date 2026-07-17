@@ -23,7 +23,7 @@ import { TagPickerContent } from '../shared/components/TagPickerContent'
 import { MachineEntryPickerContent } from '../machineLog/MachineEntryPickerContent'
 import { useConfigStore } from '../shared/stores'
 import { toggleWrap } from './markdownFormatting'
-import { setCheckboxStatus } from './knoteConstructs'
+import { setCheckboxStatus, setSubtaskChecked } from './knoteConstructs'
 import {
   addLineTag,
   editMachineOnLine,
@@ -41,6 +41,7 @@ interface LineCtx {
   line0: number
   text: string
   isTask: boolean
+  isSubtask: boolean
   isMilestone: boolean
   isMachine: boolean
   due: string | null
@@ -57,10 +58,12 @@ type OpenState =
 
 function readLineCtx(view: EditorView, pos: number): LineCtx {
   const line = view.state.doc.lineAt(pos)
+  const task = TASK_LINE_RE.exec(line.text)
   return {
     line0: line.number - 1,
     text: line.text,
-    isTask: TASK_LINE_RE.test(line.text),
+    isTask: task != null,
+    isSubtask: task != null && task[1].length > 0,
     isMilestone: MILESTONE_LINE_RE.test(line.text),
     isMachine: MACHINE_ENTRY_RE.test(line.text),
     due: lineDue(line.text),
@@ -103,12 +106,20 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
   const openSub = (sub: SubKind) => (): void => setOpen({ stage: 'sub', sub, point, ctx })
 
   if (open.stage === 'menu') {
-    const items: MenuEntry[] = open.onCheckbox
-      ? checkboxItems(ctx, columns, (col) => {
-          close()
-          void setCheckboxStatus(ctx.line0, ctx.text, col)
-        })
-      : mainItems(view, ctx, run, openSub)
+    let items: MenuEntry[]
+    if (open.onCheckbox && ctx.isSubtask) {
+      items = subtaskCheckboxItems(ctx, (checked) => {
+        close()
+        void setSubtaskChecked(ctx.line0, ctx.text, checked)
+      })
+    } else if (open.onCheckbox) {
+      items = checkboxItems(ctx, columns, (col) => {
+        close()
+        void setCheckboxStatus(ctx.line0, ctx.text, col)
+      })
+    } else {
+      items = mainItems(view, ctx, run, openSub)
+    }
     return (
       <Popover anchorPoint={point} onClose={close}>
         <ContextMenuList items={items} />
@@ -198,6 +209,16 @@ function mainItems(
     )
   }
   return items
+}
+
+/** A sub-task's checkbox menu: just the two plain states, no Kanban columns. */
+function subtaskCheckboxItems(ctx: LineCtx, choose: (checked: boolean) => void): MenuEntry[] {
+  const current = TASK_LINE_RE.exec(ctx.text)?.[3] ?? ' '
+  const done = current === 'x' || current === 'X'
+  return [
+    { label: 'Unchecked', checked: !done, onClick: () => choose(false) },
+    { label: 'Checked', checked: done, onClick: () => choose(true) }
+  ]
 }
 
 function checkboxItems(

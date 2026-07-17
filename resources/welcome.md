@@ -29,16 +29,48 @@ renders Markdown as you type while keeping the file byte-for-byte plain
 Markdown:
 
 - Headings, **bold**/*italic*/~~strike~~, `code`, blockquotes and lists
-  render inline; the raw syntax reveals on the line your cursor is on, so
-  you always edit the source directly.
-- **Checkboxes are clickable** — a click advances the task to the next
-  Kanban column (stamping `Status Changed:`, and prompting for a reason on
-  Require-reason columns), exactly like dragging its card on the board.
+  render as a styled document — proportional body text in a centered reading
+  column, boxed code blocks, tinted quotes — while the raw syntax reveals on
+  the line your cursor is on, so you always edit the source directly.
+- **Pipe tables render as real grids** (with column alignment); click a table
+  to drop your cursor in and edit the raw Markdown, exactly like every other
+  construct.
+- **Enter seeds a task's note** — finish typing a top-level task line and
+  press **Enter** to auto-insert its indented `Status Changed` / `Date
+  Entered` / `Notes` block, with the cursor left on the Notes line. Only fires
+  on a fresh, unseeded task; a normal newline runs everywhere else. (The
+  `Ctrl+Alt+Enter` command does the same on demand.)
+- **Click a task to edit it** — clicking anywhere on a task line (checkbox
+  included) drops your cursor in to edit the source, like every other
+  construct. To change a task's status, **right-click the checkbox** for the
+  Kanban switcher (it stamps `Status Changed:` and prompts for a reason on
+  Require-reason columns, exactly like dragging its card on the board), or use
+  `Ctrl+L` to advance the status on the cursor line.
+- **Click a sub-task to check it off** — an *indented* checkbox is a plain
+  toggle, not a Kanban card: clicking its box flips checked/unchecked and
+  stamps the completion date (`✅ 2026-07-16`) on the line. Unchecking it
+  removes the date again.
 - **`[[Wiki links]]`** render as clickable chips (click to open, creating
   the note if it doesn't exist), `#tags` as pills, and **`![[image]]`** /
   `![](image)` embeds show inline.
+- **Autocomplete for tags and links** — type `#` for a list of every tag
+  (most-used first), or `[[` for every note (and its aliases); the list
+  filters and re-sorts as you keep typing. `[[Note#` then suggests that
+  note's headings, `[[Note#^` its block anchors. `Enter`/`Tab` accepts,
+  arrows navigate, `Esc` dismisses; `Ctrl+Space` reopens the list.
 - `Ctrl+B` / `Ctrl+I` / `Ctrl+Shift+X` / `` Ctrl+E `` toggle bold / italic /
   strikethrough / inline code on the selection.
+- **Tasks group into cards** — a top-level task with indented detail beneath
+  it (its `Status Changed` / `Date Entered` / `Notes` block and any sub-tasks)
+  is wrapped in a light box, so it's clear at a glance what belongs to which
+  task. A lone task with no detail isn't boxed.
+- **Fold task detail out of the way** — any line with indented content below
+  it (a task's detail block and sub-tasks, nested lists, note bodies) gets a
+  collapse arrow in the left gutter on hover. Click it to fold the block to a
+  `…` (the card closes up around the single line), so a long note reads as a
+  clean list of top-level tasks; click the `…` or the arrow to expand.
+  `Ctrl+Shift+[` / `Ctrl+Shift+]` fold / unfold the current line;
+  `Ctrl+Alt+[` / `Ctrl+Alt+]` fold / unfold everything.
 - Need the raw source? **KNote: Reopen as Raw Text** (or the `</>` button in
   the editor title bar) switches this note to the plain text editor; **KNote:
   Open in Live Preview** (the book button) switches back. Right-click a note →
@@ -110,17 +142,18 @@ task somewhere in your vault:
 
 ## Activity Bar icons
 
-KNote adds four icons to the Activity Bar. The KNote icon holds the note
-panels; the other three are quick-access launchers — the top row of each
-opens the full panel, the rows under it jump straight to one thing.
+KNote adds five icons to the Activity Bar. The KNote icon holds the note
+panels; the rest are quick-access launchers — the top row of each opens
+the main thing, the rows under it jump straight to one item.
 
 | Icon | Section | Top row opens | Rows below |
 | --- | --- | --- | --- |
+| Calendar | **This Week** | **This Week's Note** — opens (creating if needed) the current ISO-week note; just clicking the icon opens it | Past weekly notes, newest first — click to open |
 | Kanban columns | **Boards** | **All Tasks** — the whole-vault board | One row per note that has tasks, `open/total`, busiest first — click for that note's board |
 | Tractor | **Machines** | **Full Machine Log** | Registered machines (then any unregistered serial found in a note); expand for its 🚜 entries, newest first — click to jump to the line |
 | Timeline | **Milestones** | **Full Timeline** | Dated `🏁` milestones — upcoming soonest-first, then past — click to jump to the line |
 
-All three track the index live, so counts follow your edits.
+These all track the index live, so counts and lists follow your edits.
 
 ## Sidebar: Search, Backlinks, Tags, Properties
 

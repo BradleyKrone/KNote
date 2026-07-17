@@ -2,7 +2,6 @@
 // Thin delegation into core services and verifiedEdit; shared by every
 // webview through webviewRpc.attach.
 
-import * as vscode from 'vscode'
 import type { VaultConfig, VaultPath } from '@shared/types'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
 import * as searchIndex from '../../core/indexer/searchIndex'
@@ -13,6 +12,7 @@ import * as vault from '../../core/vaultService'
 import * as verifiedEdit from '../verifiedEdit'
 import { setFrontmatter } from '../frontmatterEdit'
 import { openWikiTarget } from '../providers/wikiLinks'
+import { openNoteInLiveEditor } from '../views/liveEditorProvider'
 import { uriForRel } from '../paths'
 import { broadcast, type HostHandlers } from './webviewRpc'
 
@@ -42,10 +42,6 @@ export function createHostHandlers(): HostHandlers {
 
     openWikiTarget: (rawTarget: string) => openWikiTarget(rawTarget),
 
-    openNote: async (path: VaultPath, line?: number) => {
-      const options: vscode.TextDocumentShowOptions = { viewColumn: vscode.ViewColumn.One }
-      if (line !== undefined) options.selection = new vscode.Range(line, 0, line, 0)
-      await vscode.window.showTextDocument(uriForRel(path), options)
-    }
+    openNote: (path: VaultPath, line?: number) => openNoteInLiveEditor(uriForRel(path), line)
   } satisfies HostHandlers
 }

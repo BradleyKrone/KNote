@@ -33,6 +33,7 @@ import {
   PRIORITY_RE,
   REASON_FOR_RE,
   reasonLineForTask,
+  setTaskDone,
   STATUS_CHANGED_RE,
   statusChangedLineForTask,
   TAG_RE,
@@ -40,8 +41,8 @@ import {
   WIKI_LINK_RE
 } from '@shared/parser/patterns'
 import { host } from '../shared/rpc'
-import { promptReason, showToast, useConfigStore } from '../shared/stores'
-import { checkboxRange, nextColumn } from './constructLogic'
+import { promptReason, showToast } from '../shared/stores'
+import { checkboxRange } from './constructLogic'
 
 // One webview edits exactly one note; its vault-relative path is set at init.
 let notePath: string | null = null
@@ -55,8 +56,8 @@ const MD_IMAGE_RE = /!\[[^\]]*\]\(([^)]+)\)/g
 /**
  * Set a task line's checkbox to a specific Kanban column: a verified write that
  * prompts for a reason when the column requires one and stamps `Status Changed`.
- * Shared by the checkbox click (via cycleCheckbox) and the right-click status
- * menu. No-op when the char is already `target.char`.
+ * Driven by the right-click status menu. No-op when the char is already
+ * `target.char`.
  */
 export async function setCheckboxStatus(
   line0: number,
@@ -86,15 +87,40 @@ export async function setCheckboxStatus(
   }
 }
 
-/** Click a checkbox: advance the task to the next Kanban column (verified write). */
-async function cycleCheckbox(line0: number, rawLine: string): Promise<void> {
+/**
+ * Rewrite a sub-task line to checked/unchecked via a verified full-line
+ * replace, keeping a trailing `✅ <date>` completion marker in sync — added
+ * with today's date on check, removed on uncheck. Sub-tasks are simple
+ * toggles, not Kanban cards, so no reason prompt or `Status Changed` stamp.
+ * No-op when the line isn't a task or nothing changes.
+ */
+async function rewriteSubtask(line0: number, rawLine: string, done: boolean): Promise<void> {
+  if (notePath === null) return
+  const newLine = setTaskDone(rawLine, done, dayjs().format('YYYY-MM-DD'))
+  if (newLine === null || newLine === rawLine) return
+  try {
+    await host.replaceLine(notePath, line0, rawLine, newLine)
+  } catch (err) {
+    if (isStaleError(err)) showToast('Note changed on disk — try again')
+    else throw err
+  }
+}
+
+/** Flip a sub-task between checked and unchecked (stamping/clearing its date). Driven by a click. */
+export async function toggleSubtask(line0: number, rawLine: string): Promise<void> {
   const m = TASK_LINE_RE.exec(rawLine)
-  if (!m || notePath === null) return
-  const current = m[3]
-  if (current === ARCHIVED_CHAR) return // archived cards don't cycle on click
-  const next = nextColumn(useConfigStore.getState().vaultConfig.columns, current)
-  if (!next) return
-  await setCheckboxStatus(line0, rawLine, next)
+  if (!m) return
+  const done = m[3] === 'x' || m[3] === 'X'
+  await rewriteSubtask(line0, rawLine, !done)
+}
+
+/** Set a sub-task's checked state explicitly. Driven by the right-click menu. */
+export async function setSubtaskChecked(
+  line0: number,
+  rawLine: string,
+  checked: boolean
+): Promise<void> {
+  await rewriteSubtask(line0, rawLine, checked)
 }
 
 // ---------- Widgets ----------
@@ -102,6 +128,7 @@ async function cycleCheckbox(line0: number, rawLine: string): Promise<void> {
 class CheckboxWidget extends WidgetType {
   constructor(
     private readonly statusChar: string,
+    private readonly subtask: boolean,
     private readonly line0: number,
     private readonly rawLine: string
   ) {
@@ -110,6 +137,7 @@ class CheckboxWidget extends WidgetType {
   eq(other: CheckboxWidget): boolean {
     return (
       other.statusChar === this.statusChar &&
+      other.subtask === this.subtask &&
       other.line0 === this.line0 &&
       other.rawLine === this.rawLine
     )
@@ -120,17 +148,45 @@ class CheckboxWidget extends WidgetType {
     box.dataset.status = this.statusChar
     const done = this.statusChar === 'x' || this.statusChar === 'X'
     box.textContent = done ? '✓' : this.statusChar.trim() === '' ? '' : this.statusChar
-    box.title = 'Click to advance status'
-    // Don't let the click move the cursor into the line (which would reveal it).
-    box.addEventListener('mousedown', (e) => e.preventDefault())
-    box.addEventListener('click', (e) => {
-      e.preventDefault()
-      void cycleCheckbox(this.line0, this.rawLine)
-    })
+    if (this.subtask) {
+      // Sub-tasks are plain toggles: a click flips checked/unchecked directly
+      // (no caret placement, no Kanban status). preventDefault on mousedown
+      // keeps the editor from stealing focus / moving the caret first.
+      box.classList.add('cm-knote-check-subtask')
+      box.title = 'Click to toggle'
+      box.addEventListener('mousedown', (e) => e.preventDefault())
+      box.addEventListener('click', (e) => {
+        e.preventDefault()
+        void toggleSubtask(this.line0, this.rawLine)
+      })
+    } else {
+      box.title = 'Right-click to change status'
+    }
     return box
   }
+  // For a top-level task, let the editor handle clicks like any other
+  // character: a click places the caret and reveals the task line so it's
+  // directly editable. Status changes go through the right-click menu (or the
+  // board). A sub-task's box handles its own click (toggle) instead, so it
+  // swallows editor mouse events by returning true.
   ignoreEvent(): boolean {
-    return false
+    return this.subtask
+  }
+}
+
+/** Renders a proper `•` in place of a `-`/`*`/`+` unordered-list marker. */
+class BulletWidget extends WidgetType {
+  eq(): boolean {
+    return true
+  }
+  toDOM(): HTMLElement {
+    const b = document.createElement('span')
+    b.className = 'cm-knote-bullet'
+    b.textContent = '•'
+    return b
+  }
+  ignoreEvent(): boolean {
+    return true
   }
 }
 
@@ -156,8 +212,10 @@ class WikiLinkWidget extends WidgetType {
     })
     return a
   }
+  // Ignore editor-level mouse events (the default) so a click follows the link
+  // rather than placing the caret and revealing the raw `[[link]]` markdown.
   ignoreEvent(): boolean {
-    return false
+    return true
   }
 }
 
@@ -192,6 +250,15 @@ function revealedLines(view: EditorView): Set<number> {
     for (let n = first; n <= last; n++) lines.add(n)
   }
   return lines
+}
+
+/** True when pos sits inside a GFM table (rendered separately by tableRender). */
+function inTable(view: EditorView, pos: number): boolean {
+  for (let n = syntaxTree(view.state).resolveInner(pos, 1); n; n = n.parent!) {
+    if (n.name === 'Table') return true
+    if (!n.parent) break
+  }
+  return false
 }
 
 /** True when pos sits inside inline code or a fenced/indented code block. */
@@ -236,6 +303,10 @@ function decorateLine(
 ): void {
   const text = line.text
 
+  // Inside a table that's rendered as a widget, tableRender owns the line —
+  // don't add overlapping decorations (they'd clash with the block replace).
+  if (!isRevealed && inTable(view, line.from)) return
+
   // Whole-line styling (always applied, never hidden).
   if (REASON_FOR_RE.test(text) || STATUS_CHANGED_RE.test(text) || DATE_ENTERED_RE.test(text)) {
     out.push(Decoration.line({ class: 'cm-knote-meta' }).range(line.from))
@@ -255,9 +326,19 @@ function decorateLine(
       const from = line.from + box.from
       out.push(
         Decoration.replace({
-          widget: new CheckboxWidget(box.statusChar, line.number - 1, text)
+          widget: new CheckboxWidget(box.statusChar, box.isSubtask, line.number - 1, text)
         }).range(from, line.from + box.to)
       )
+    }
+  }
+
+  // Unordered-list bullets: swap `-`/`*`/`+` for a `•` (task lines keep their
+  // marker — they're handled by the checkbox widget above, so `box` is set).
+  if (!box) {
+    const bullet = /^(\s*)[-*+](\s)/.exec(text)
+    if (bullet && !isRevealed) {
+      const from = line.from + bullet[1].length
+      out.push(Decoration.replace({ widget: new BulletWidget() }).range(from, from + 1))
     }
   }
 

@@ -19,15 +19,17 @@ export function nextColumn(columns: BoardColumn[], char: string): BoardColumn | 
 }
 
 /**
- * The `[c]` bracket span within a task line (offsets relative to line start)
- * and its status char, or null when the line isn't a task. Used to place the
- * clickable checkbox widget.
+ * The `[c]` bracket span within a task line (offsets relative to line start),
+ * its status char, and whether it's a sub-task (indented under something),
+ * or null when the line isn't a task. Used to place the clickable checkbox
+ * widget. Sub-tasks are plain checked/unchecked toggles rather than Kanban
+ * status cyclers, so callers key off `isSubtask`.
  */
 export function checkboxRange(
   text: string
-): { from: number; to: number; statusChar: string } | null {
+): { from: number; to: number; statusChar: string; isSubtask: boolean } | null {
   const m = TASK_LINE_RE.exec(text)
   if (!m) return null
   const from = m[1].length + m[2].length + 1 // indent + bullet + the single space
-  return { from, to: from + 3, statusChar: m[3] }
+  return { from, to: from + 3, statusChar: m[3], isSubtask: m[1].length > 0 }
 }

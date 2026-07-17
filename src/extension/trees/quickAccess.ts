@@ -184,15 +184,45 @@ class TimelineTreeProvider implements vscode.TreeDataProvider<TimelineTreeNode> 
 
 // ---------- Registration ----------
 
+/**
+ * Clicking a KNote activity-bar icon reveals the tree, whose top row is really
+ * just a launcher for the full panel. Skip that extra click: when the view
+ * first becomes visible, open its panel automatically. We fire only on the
+ * hidden→visible transition (the panel commands dedupe/reveal, so revisiting
+ * an already-open panel is harmless) and only once a vault is open.
+ */
+function autoOpenOnReveal(view: vscode.TreeView<unknown>, command: string): vscode.Disposable {
+  let wasVisible = view.visible
+  const maybeOpen = (): void => {
+    if (currentVaultRoot()) void vscode.commands.executeCommand(command)
+  }
+  if (wasVisible) maybeOpen()
+  return view.onDidChangeVisibility((e) => {
+    if (e.visible && !wasVisible) maybeOpen()
+    wasVisible = e.visible
+  })
+}
+
 export function registerQuickAccessTrees(context: vscode.ExtensionContext): void {
   const boards = new BoardsTreeProvider()
   const machines = new MachinesTreeProvider()
   const timeline = new TimelineTreeProvider()
 
+  const boardsView = vscode.window.createTreeView('knote.boards', { treeDataProvider: boards })
+  const machinesView = vscode.window.createTreeView('knote.machines', {
+    treeDataProvider: machines
+  })
+  const timelineView = vscode.window.createTreeView('knote.milestones', {
+    treeDataProvider: timeline
+  })
+
   context.subscriptions.push(
-    vscode.window.createTreeView('knote.boards', { treeDataProvider: boards }),
-    vscode.window.createTreeView('knote.machines', { treeDataProvider: machines }),
-    vscode.window.createTreeView('knote.milestones', { treeDataProvider: timeline }),
+    boardsView,
+    machinesView,
+    timelineView,
+    autoOpenOnReveal(boardsView as vscode.TreeView<unknown>, 'knote.openBoard'),
+    autoOpenOnReveal(machinesView as vscode.TreeView<unknown>, 'knote.openMachineLog'),
+    autoOpenOnReveal(timelineView as vscode.TreeView<unknown>, 'knote.openTimeline'),
     debouncedRefresh(() => {
       boards.refresh()
       machines.refresh()

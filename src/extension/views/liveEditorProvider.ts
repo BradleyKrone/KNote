@@ -41,6 +41,36 @@ function attachmentUriFor(
 
 export const LIVE_EDITOR_VIEW_TYPE = 'knote.liveEditor'
 
+// Panels currently rendering a note in the live editor, keyed by document URI,
+// so openNoteInLiveEditor can reveal a line in an already-open note. Lines
+// requested before a panel exists are stashed here and read into the webview
+// bootstrap when resolveCustomTextEditor runs for that URI.
+const openPanels = new Map<string, vscode.WebviewPanel>()
+const pendingReveal = new Map<string, number>()
+
+/**
+ * Open a note in the live-preview editor (not the raw text editor), optionally
+ * jumping to a 0-based line. Used by the board/timeline/etc. so clicking a task
+ * lands in live preview. If the note is already open, it's focused and the line
+ * is revealed in place; otherwise the line rides along in the webview bootstrap.
+ */
+export async function openNoteInLiveEditor(uri: vscode.Uri, line?: number): Promise<void> {
+  const key = uri.toString()
+  const existing = openPanels.get(key)
+  if (existing) {
+    existing.reveal(vscode.ViewColumn.One)
+    if (line !== undefined) void existing.webview.postMessage({ type: 'knote:reveal-line', line })
+    return
+  }
+  if (line !== undefined) pendingReveal.set(key, line)
+  await vscode.commands.executeCommand(
+    'vscode.openWith',
+    uri,
+    LIVE_EDITOR_VIEW_TYPE,
+    vscode.ViewColumn.One
+  )
+}
+
 class LiveEditorProvider implements vscode.CustomTextEditorProvider {
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -109,13 +139,20 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
       attachmentUri: (src: string) => attachmentUriFor(src, document, webview)
     })
 
+    const key = document.uri.toString()
+    openPanels.set(key, panel)
+    const revealLine = pendingReveal.get(key)
+    pendingReveal.delete(key)
+
     webview.html = webviewHtml(webview, this.context.extensionUri, 'editor', 'KNote', {
       path: relForUri(document.uri),
       text: document.getText(),
-      eol: document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n'
+      eol: document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n',
+      ...(revealLine !== undefined ? { line: revealLine } : {})
     })
 
     panel.onDidDispose(() => {
+      if (openPanels.get(key) === panel) openPanels.delete(key)
       msgSub.dispose()
       changeSub.dispose()
       rpc.dispose()

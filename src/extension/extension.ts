@@ -15,6 +15,7 @@ import { registerLiveEditor } from './views/liveEditorProvider'
 import { registerSidebarViews } from './views/sidebarViews'
 import { registerTagsTree } from './trees/tagsTree'
 import { registerQuickAccessTrees } from './trees/quickAccess'
+import { registerWeeklyTree } from './trees/weeklyTree'
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const log = vscode.window.createOutputChannel('KNote')
@@ -34,6 +35,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   registerSidebarViews(context)
   registerTagsTree(context)
   registerQuickAccessTrees(context)
+  registerWeeklyTree(context)
   registerRpcBroadcasts(context)
 
   const start = async (root: string): Promise<void> => {

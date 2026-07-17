@@ -1,7 +1,7 @@
 {
   "name": "knote",
   "displayName": "KNote",
-  "version": "0.13.0",
+  "version": "0.13.6",
   "description": "KNote — a local-first Markdown vault with a checkbox-driven Kanban board, wiki links, and vault-wide search, as a VS Code extension",
   "publisher": "bradleykrone",
   "main": "./dist/extension.js",
@@ -172,6 +172,11 @@
           "icon": "resources/knote-icon.svg"
         },
         {
+          "id": "knoteWeekly",
+          "title": "This Week",
+          "icon": "resources/icon-weekly.svg"
+        },
+        {
           "id": "knoteBoards",
           "title": "KNote Kanban",
           "icon": "resources/icon-kanban.svg"
@@ -209,6 +214,12 @@
           "name": "Properties",
           "type": "webview",
           "visibility": "collapsed"
+        }
+      ],
+      "knoteWeekly": [
+        {
+          "id": "knote.weekly",
+          "name": "Weekly Notes"
         }
       ],
       "knoteBoards": [
@@ -277,6 +288,10 @@
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "knote.weekly",
+        "contents": "No KNote vault is open in this workspace.\n[Initialize Vault](command:knote.initializeVault)"
+      },
       {
         "view": "knote.boards",
         "contents": "No KNote vault is open in this workspace.\n[Initialize Vault](command:knote.initializeVault)"
@@ -397,6 +412,7 @@
     }
   },
   "scripts": {
+    "vscode:prepublish": "npm run build",
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.webviews.json",
@@ -408,6 +424,7 @@
     "package": "vsce package"
   },
   "devDependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.10.4",
     "@codemirror/lang-markdown": "^6.5.1",
     "@codemirror/language": "^6.12.4",

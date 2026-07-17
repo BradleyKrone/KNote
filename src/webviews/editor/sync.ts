@@ -2,7 +2,7 @@
 // updateListener in setupEditor.ts; this module handles inbound host updates
 // and defines the annotation that tells the two apart.
 
-import type { EditorView } from '@codemirror/view'
+import { EditorView } from '@codemirror/view'
 import { Annotation } from '@codemirror/state'
 import { isEditorSyncMessage } from '@shared/editorSync'
 
@@ -19,7 +19,23 @@ export function wireInboundSync(view: EditorView): void {
     const msg = e.data as unknown
     if (!isEditorSyncMessage(msg)) return
     if (msg.type === 'knote:host-update') applyHostText(view, msg.text)
+    else if (msg.type === 'knote:reveal-line') revealLine(view, msg.line)
   })
+}
+
+/**
+ * Scroll to a 0-based line and put the cursor at its start, centering it in
+ * the viewport. Used to jump to a task when the note is opened from the board.
+ */
+export function revealLine(view: EditorView, line: number): void {
+  const clamped = Math.max(0, Math.min(line, view.state.doc.lines - 1))
+  const pos = view.state.doc.line(clamped + 1).from
+  view.dispatch({
+    selection: { anchor: pos, head: pos },
+    effects: EditorView.scrollIntoView(pos, { y: 'center' }),
+    scrollIntoView: true
+  })
+  view.focus()
 }
 
 function applyHostText(view: EditorView, text: string): void {

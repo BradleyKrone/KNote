@@ -9,7 +9,7 @@ import { createRoot } from 'react-dom/client'
 import { bootstrap } from '../shared/rpc'
 import { initStores } from '../shared/stores'
 import { createEditor } from './setupEditor'
-import { wireInboundSync } from './sync'
+import { wireInboundSync, revealLine } from './sync'
 import { setNotePath } from './knoteConstructs'
 import { EditorDialogs } from './EditorDialogs'
 
@@ -17,9 +17,10 @@ interface EditorBootstrap {
   path: string | null
   text: string
   eol: string
+  line?: number
 }
 
-const { path = null, text = '', eol = '\n' } = bootstrap<EditorBootstrap>()
+const { path = null, text = '', eol = '\n', line } = bootstrap<EditorBootstrap>()
 
 setNotePath(path)
 initStores() // hydrates the vault config (Kanban columns) + index for the editor
@@ -30,6 +31,9 @@ const view = createEditor({
   eol
 })
 wireInboundSync(view)
+
+// Jump to the requested line when the note is opened to a specific task.
+if (typeof line === 'number') revealLine(view, line)
 
 const dialogHost = document.createElement('div')
 document.body.appendChild(dialogHost)

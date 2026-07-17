@@ -22,6 +22,26 @@ export const TASK_LINE_RE = /^(\s*)([-*+]|\d+[.)])\s\[(.)\](?:\s(.*))?$/
 /** @due(2026-07-10) or 📅 2026-07-10 */
 export const DUE_RE = /(?:@due\((\d{4}-\d{2}-\d{2})\)|📅\s*(\d{4}-\d{2}-\d{2}))/
 
+/** ✅ 2026-07-16 — completion-date marker appended to a checked sub-task line. Group 1 = the date. */
+export const DONE_DATE_RE = /\s*✅\s*(\d{4}-\d{2}-\d{2})/g
+
+/**
+ * Rewrite a task line's checkbox to done/undone while keeping a trailing
+ * `✅ <date>` completion marker in sync: appended when checking, stripped when
+ * unchecking. Returns the new line text, or null when `rawLine` isn't a task
+ * line. Idempotent — an existing marker is replaced, never duplicated — so
+ * re-checking an already-done line just refreshes the date.
+ */
+export function setTaskDone(rawLine: string, done: boolean, date: string): string | null {
+  const m = TASK_LINE_RE.exec(rawLine)
+  if (!m) return null
+  const [, indent, marker] = m
+  let text = (m[4] ?? '').replace(DONE_DATE_RE, '').replace(/\s+$/, '')
+  if (done) text = text ? `${text} ✅ ${date}` : `✅ ${date}`
+  const body = text ? ` ${text}` : ''
+  return `${indent}${marker} [${done ? 'x' : ' '}]${body}`
+}
+
 /**
  * `Reason for <Column>: <reason> 📅 <date>` — an indented line attached
  * under a task (same nesting convention as a plain task note), written when

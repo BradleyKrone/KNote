@@ -25,7 +25,16 @@ export interface HostUpdateMessage {
   text: string
 }
 
-export type EditorSyncMessage = CmEditsMessage | HostUpdateMessage
+/**
+ * Host → webview: scroll to and place the cursor on a line (0-based), used
+ * when a note is opened from the board/timeline/etc. to jump to a task.
+ */
+export interface RevealLineMessage {
+  type: 'knote:reveal-line'
+  line: number
+}
+
+export type EditorSyncMessage = CmEditsMessage | HostUpdateMessage | RevealLineMessage
 
 /** Type guard the sync listeners use to pick their messages off the channel. */
 export function isEditorSyncMessage(msg: unknown): msg is EditorSyncMessage {

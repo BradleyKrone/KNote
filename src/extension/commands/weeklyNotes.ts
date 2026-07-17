@@ -15,6 +15,7 @@ import * as verifiedEdit from '../verifiedEdit'
 import { notesMap } from '../engine'
 import { uriForRel } from '../paths'
 import { fillTemplate, readTemplateContent } from './templates'
+import { openNoteInLiveEditor } from '../views/liveEditorProvider'
 
 dayjs.extend(isoWeek)
 
@@ -56,7 +57,7 @@ async function ensureThisWeekNote(): Promise<VaultPath> {
 
 async function openWeeklyNote(): Promise<void> {
   const path = await ensureThisWeekNote()
-  await vscode.window.showTextDocument(uriForRel(path))
+  await openNoteInLiveEditor(uriForRel(path))
 }
 
 async function quickCapture(): Promise<void> {

@@ -36,11 +36,25 @@ describe('nextColumn', () => {
 describe('checkboxRange', () => {
   it('locates the [c] bracket and status char for a plain task', () => {
     // "- [ ] hi" → bracket at offsets 2..5
-    expect(checkboxRange('- [ ] hi')).toEqual({ from: 2, to: 5, statusChar: ' ' })
+    expect(checkboxRange('- [ ] hi')).toEqual({ from: 2, to: 5, statusChar: ' ', isSubtask: false })
   })
   it('accounts for indentation and different bullets', () => {
-    expect(checkboxRange('    * [x] done')).toEqual({ from: 6, to: 9, statusChar: 'x' })
-    expect(checkboxRange('1. [/] numbered')).toEqual({ from: 3, to: 6, statusChar: '/' })
+    expect(checkboxRange('    * [x] done')).toEqual({
+      from: 6,
+      to: 9,
+      statusChar: 'x',
+      isSubtask: true
+    })
+    expect(checkboxRange('1. [/] numbered')).toEqual({
+      from: 3,
+      to: 6,
+      statusChar: '/',
+      isSubtask: false
+    })
+  })
+  it('flags indented tasks as sub-tasks', () => {
+    expect(checkboxRange('  - [ ] nested')?.isSubtask).toBe(true)
+    expect(checkboxRange('- [ ] top level')?.isSubtask).toBe(false)
   })
   it('returns null for non-task lines', () => {
     expect(checkboxRange('just text')).toBeNull()
