@@ -4,7 +4,7 @@
 
 import { EditorView } from '@codemirror/view'
 import { Annotation } from '@codemirror/state'
-import { isEditorSyncMessage } from '@shared/editorSync'
+import { diffEdit, isEditorSyncMessage } from '@shared/editorSync'
 
 /**
  * Marks a transaction whose changes originated from the host (an external
@@ -39,12 +39,18 @@ export function revealLine(view: EditorView, line: number): void {
 }
 
 function applyHostText(view: EditorView, text: string): void {
-  if (view.state.doc.toString() === text) return
-  const sel = view.state.selection.main
-  const len = text.length
+  const current = view.state.doc.toString()
+  if (current === text) return
+
+  // Reconcile only the span that actually changed (diffEdit trims the common
+  // prefix/suffix) so positions outside it stay fixed and CodeMirror keeps its
+  // scroll position. Replacing the whole document (from 0) instead makes the
+  // viewport jump to the top, e.g. every time a sub-task checkbox is toggled
+  // (the host round-trips the full note text back). The selection is left to
+  // map through the change so the caret follows its surrounding text.
+  const { from, to, insert } = diffEdit(current, text)
   view.dispatch({
-    changes: { from: 0, to: view.state.doc.length, insert: text },
-    selection: { anchor: Math.min(sel.anchor, len), head: Math.min(sel.head, len) },
+    changes: { from, to, insert },
     annotations: fromHost.of(true)
   })
 }

@@ -36,6 +36,27 @@ export interface RevealLineMessage {
 
 export type EditorSyncMessage = CmEditsMessage | HostUpdateMessage | RevealLineMessage
 
+/**
+ * The single minimal replacement that turns `current` into `next`, found by
+ * trimming their common prefix and suffix. Applying only this span (rather than
+ * replacing the whole document) keeps every position outside it — and the
+ * editor's scroll anchor — fixed when the host pushes an updated note back.
+ * Returns a no-op edit (an empty range with an empty insert) when they're
+ * identical — though callers should short-circuit equal strings before calling.
+ */
+export function diffEdit(current: string, next: string): CmEdit {
+  let from = 0
+  const max = Math.min(current.length, next.length)
+  while (from < max && current.charCodeAt(from) === next.charCodeAt(from)) from++
+  let toOld = current.length
+  let toNew = next.length
+  while (toOld > from && toNew > from && current.charCodeAt(toOld - 1) === next.charCodeAt(toNew - 1)) {
+    toOld--
+    toNew--
+  }
+  return { from, to: toOld, insert: next.slice(from, toNew) }
+}
+
 /** Type guard the sync listeners use to pick their messages off the channel. */
 export function isEditorSyncMessage(msg: unknown): msg is EditorSyncMessage {
   return (
