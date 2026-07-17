@@ -46,8 +46,8 @@ Markdown:
   Kanban switcher (it stamps `Status Changed:` and prompts for a reason on
   Require-reason columns, exactly like dragging its card on the board), or use
   `Ctrl+L` to advance the status on the cursor line.
-- **Each task shows its state** — a top-level task carries a small pill after
-  it naming the Kanban column its checkbox currently maps to (To Do, In
+- **Each task shows its state** — a top-level task carries a small pill right
+  after its checkbox naming the Kanban column it currently maps to (To Do, In
   Progress, Done, …), so you can read a note's task states at a glance without
   opening the board. It updates the moment the status changes.
 - **Click a sub-task to check it off** — an *indented* checkbox is a plain

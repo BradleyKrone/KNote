@@ -244,7 +244,7 @@ body {
 /* State pill trailing a top-level task line — its current Kanban column. */
 .cm-knote-state {
   display: inline-block;
-  margin-left: 0.6em;
+  margin: 0 0.35em;
   padding: 0 0.5em;
   border: 1px solid var(--vscode-badge-background);
   border-radius: 8px;

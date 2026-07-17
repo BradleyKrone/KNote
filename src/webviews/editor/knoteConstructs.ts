@@ -358,7 +358,8 @@ function decorateLine(
     if (box.statusChar === ARCHIVED_CHAR) {
       out.push(Decoration.line({ class: 'cm-knote-archived' }).range(line.from))
     }
-    // Top-level tasks get a trailing pill naming their current Kanban column.
+    // Top-level tasks get a pill naming their current Kanban column, placed
+    // right after the checkbox.
     if (!box.isSubtask) {
       const label = taskStateLabel(box.statusChar, columns)
       if (label) {
@@ -366,7 +367,7 @@ function decorateLine(
           Decoration.widget({
             widget: new TaskStateWidget(label, box.statusChar),
             side: 1
-          }).range(line.to)
+          }).range(line.from + box.to)
         )
       }
     }
