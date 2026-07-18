@@ -3,17 +3,44 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.0.1
+
+- Repo cleanup — no feature changes: built `.vsix` packages are no longer
+  committed to git (`.gitignore` now excludes them); use `npm run package`
+  to build one locally when you need it
+
 ## 1.0.0
 
 - **KNote is now a VS Code extension.** The standalone Electron app is
   retired; your vault is any workspace folder containing `.knote/` (run
   **KNote: Initialize Vault in This Workspace** on a fresh folder). All
   data stays plain Markdown — existing vaults open unchanged.
-- Notes are edited in VS Code's native Markdown editor, enhanced by KNote:
-  clickable `[[wiki links]]` (create-on-click, `#heading`/`#^block`/alias
-  forms), `[[`/`#` autocomplete, link hover previews, tag/priority/
-  milestone decorations, paste-image into the attachments folder, and
-  bold/italic/strikethrough/inline-code toggles
+- **Live Preview is the default editor for every note** — an Obsidian-style
+  custom editor that renders Markdown as you type (styled headings/lists/
+  quotes/code, pipe tables as real grids) while revealing raw syntax on
+  your cursor's line, so you're always editing the plain-text source
+  directly; clickable `[[wiki links]]` (create-on-click, `#heading`/
+  `#^block`/alias forms), `[[`/`#` autocomplete, link hover previews,
+  tag/priority/milestone decorations, paste-image into the attachments
+  folder, and bold/italic/strikethrough/inline-code toggles all carry
+  over. **KNote: Reopen as Raw Text** drops to the plain text editor when
+  you want it; **KNote: Open in Live Preview** switches back
+- Each top-level task shows a **status pill** next to its checkbox naming
+  its Kanban column, updated live; right-click a checkbox for a quick
+  column switcher, or right-click anywhere on a line for a context menu
+  (formatting toggles, insert wiki link/checkbox/milestone/machine entry,
+  set tag/priority/due date, **copy link to task**)
+- **Copy link to task**: every task is auto-anchored the moment its note
+  is seeded, so its right-click menu always has a `[[Note#^id]]` link
+  ready to copy and click back to — no manual anchoring
+- **Offline spell check** in Live Preview — misspelled words get a wavy
+  underline; right-click for suggested corrections, **Add to dictionary**
+  (per-vault), or **Ignore** (this session)
+- Sub-tasks (indented checkboxes) are plain toggles, not Kanban cards —
+  clicking one stamps or clears a completion date instead of moving a card
+- Task detail blocks and other indented content (sub-tasks, nested lists,
+  note bodies) collapse behind a gutter arrow, so a long note reads as a
+  clean list of top-level tasks
 - The Kanban board, Timeline, Machine Log, Graph, and vault Settings open
   as editor tabs; Search (with `path:`/`tag:`/`file:` operators),
   Backlinks + unlinked mentions, Tags, and Properties live in the new
@@ -25,12 +52,12 @@ Extensions view.
   (with require-reason prompts and `Status Changed` stamping),
   `Ctrl+Alt+X` toggles a checkbox, `Ctrl+Alt+Enter` seeds a task note
 - Everything the app duplicated from VS Code is now native: file explorer,
-  tabs/splits, quick switcher, command palette, hotkey editor, themes,
-  spellcheck, and full-text search
+  tabs/splits, quick switcher, command palette, themes, and full-text
+  search
 - New **KNote: Clean Up Orphaned Attachments** command
-- Dropped: the built-in live-preview editor (use VS Code's Markdown
-  preview alongside the editor), the in-app hotkey editor, and the
-  "Open in VS Code" bridge (you're already here)
+- Dropped: the in-app hotkey editor (use VS Code's native Keyboard
+  Shortcuts editor, `Ctrl+K Ctrl+S`) and the "Open in VS Code" bridge
+  (you're already here)
 
 ## 0.12.0
 
