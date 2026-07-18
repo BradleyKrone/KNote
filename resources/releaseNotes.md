@@ -3,7 +3,7 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
-## 0.13.0
+## 1.0.0
 
 - **KNote is now a VS Code extension.** The standalone Electron app is
   retired; your vault is any workspace folder containing `.knote/` (run
