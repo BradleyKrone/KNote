@@ -1,0 +1,360 @@
+/* Live-preview editor: fill the whole webview viewport. */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  height: 100vh;
+}
+
+.cm-editor {
+  height: 100%;
+}
+
+/* --- Live-preview markdown styling (see livePreview.ts) ---
+   Inline `.cm-md-*` classes style the content; full-line `.cm-md-*-line`
+   classes carry block spacing, borders and backgrounds. */
+
+/* Headings: inline sets the type scale, the line class adds block rhythm. */
+.cm-md-h1 {
+  font-size: 1.9em;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.cm-md-h2 {
+  font-size: 1.55em;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.cm-md-h3 {
+  font-size: 1.3em;
+  font-weight: 600;
+}
+.cm-md-h4 {
+  font-size: 1.15em;
+  font-weight: 600;
+}
+.cm-md-h5 {
+  font-size: 1.05em;
+  font-weight: 600;
+}
+.cm-md-h6 {
+  font-size: 1em;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground, inherit);
+}
+
+.cm-md-h1-line,
+.cm-md-h2-line,
+.cm-md-h3-line,
+.cm-md-h4-line,
+.cm-md-h5-line,
+.cm-md-h6-line {
+  padding-top: 0.7em;
+  padding-bottom: 0.2em;
+}
+/* padding-bottom, not margin-bottom — line margins break CodeMirror's
+   click-to-position mapping (see the note on .cm-knote-group-first). */
+.cm-md-h1-line,
+.cm-md-h2-line {
+  border-bottom: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.35));
+  padding-bottom: 0.5em;
+}
+
+.cm-md-strong {
+  font-weight: 700;
+}
+.cm-md-em {
+  font-style: italic;
+}
+.cm-md-strike {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* Inline code: subtle boxed token. */
+.cm-md-code {
+  font-family: var(--vscode-editor-font-family, ui-monospace, monospace);
+  font-size: 0.9em;
+  background-color: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.15));
+  border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.3));
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+}
+
+/* Fenced/indented code: one contained, bordered, rounded block. */
+.cm-md-codeblock {
+  font-family: var(--vscode-editor-font-family, ui-monospace, monospace);
+}
+.cm-md-codeblock-line {
+  font-family: var(--vscode-editor-font-family, ui-monospace, monospace);
+  font-size: 0.9em;
+  line-height: 1.5;
+  background-color: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.1));
+  border-left: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.3));
+  border-right: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.3));
+  padding-left: 1em;
+  padding-right: 1em;
+}
+/* Padding, not margin — see the note on .cm-knote-group-first: line margins
+   break CodeMirror's click-to-position mapping. */
+.cm-md-codeblock-first {
+  border-top: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.3));
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  padding-top: 0.9em;
+}
+.cm-md-codeblock-last {
+  border-bottom: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.3));
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  padding-bottom: 0.9em;
+}
+
+/* Blockquote: full-width left bar + faint tint spanning the line. */
+.cm-md-quote {
+  color: var(--vscode-descriptionForeground, inherit);
+}
+.cm-md-quote-line {
+  border-left: 3px solid var(--vscode-textLink-foreground, rgba(127, 127, 127, 0.5));
+  background-color: rgba(127, 127, 127, 0.06);
+  padding-left: 0.9em;
+  color: var(--vscode-descriptionForeground, inherit);
+}
+
+/* Tables — editing view: raw pipes in monospace so columns align under the
+   proportional body font (shown when the cursor is on a table line). */
+.cm-md-table-line {
+  font-family: var(--vscode-editor-font-family, ui-monospace, monospace);
+  font-size: 0.9em;
+  background-color: rgba(127, 127, 127, 0.04);
+  border-left: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.3));
+  border-right: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.3));
+  padding-left: 0.6em;
+  padding-right: 0.6em;
+}
+.cm-md-table-header {
+  font-weight: 700;
+  background-color: rgba(127, 127, 127, 0.12);
+  border-top: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.3));
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  padding-top: 0.15em;
+}
+.cm-md-table-delim {
+  color: var(--vscode-panel-border, rgba(127, 127, 127, 0.5));
+}
+
+/* Tables — rendered view: a real HTML grid (see tableRender.ts). */
+.cm-md-table-wrap {
+  overflow-x: auto;
+  /* padding, not margin — a block widget's margin escapes CodeMirror's height
+     measurement and drifts clicks on lines below it (see .cm-knote-group-first). */
+  padding: 0.5em 0;
+  cursor: text;
+}
+.cm-md-rendered-table {
+  border-collapse: collapse;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+.cm-md-rendered-table th,
+.cm-md-rendered-table td {
+  border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.4));
+  padding: 0.35em 0.7em;
+  text-align: left;
+}
+.cm-md-rendered-table thead th {
+  background-color: rgba(127, 127, 127, 0.14);
+  font-weight: 700;
+}
+.cm-md-rendered-table tbody tr:nth-child(even) {
+  background-color: rgba(127, 127, 127, 0.05);
+}
+
+.cm-md-link {
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+}
+.cm-md-link:hover {
+  text-decoration: underline;
+}
+
+/* --- KNote constructs (see knoteConstructs.ts) --- */
+.cm-knote-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05em;
+  height: 1.05em;
+  margin: 0 0.25em 0 0;
+  border: 1.5px solid var(--vscode-checkbox-border, var(--vscode-foreground));
+  border-radius: 3px;
+  font-size: 0.85em;
+  line-height: 1;
+  cursor: text;
+  vertical-align: -0.15em;
+  color: var(--vscode-foreground);
+  background-color: var(--vscode-checkbox-background, transparent);
+  user-select: none;
+}
+.cm-knote-check[data-status='x'],
+.cm-knote-check[data-status='X'] {
+  color: var(--vscode-testing-iconPassed, var(--vscode-charts-green, #3fb950));
+  border-color: currentColor;
+}
+.cm-knote-check:hover {
+  border-color: var(--vscode-focusBorder);
+}
+.cm-knote-check-subtask {
+  cursor: pointer;
+}
+
+.cm-knote-archived {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.cm-knote-bullet {
+  display: inline-block;
+  color: var(--vscode-textLink-foreground);
+  font-weight: 700;
+}
+
+.cm-knote-wikilink {
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+  text-decoration: none;
+}
+.cm-knote-wikilink:hover {
+  text-decoration: underline;
+}
+
+.cm-knote-tag {
+  color: #000;
+  background-color: var(--vscode-badge-background);
+  border-radius: 8px;
+  padding: 0.05em 0.45em;
+  font-size: 0.9em;
+}
+
+/* State pill trailing a top-level task line — its current Kanban column. */
+.cm-knote-state {
+  display: inline-block;
+  margin: 0 0.35em;
+  padding: 0 0.5em;
+  border: 1px solid var(--vscode-badge-background);
+  border-radius: 8px;
+  font-size: 0.72em;
+  font-weight: 600;
+  line-height: 1.55;
+  vertical-align: 0.12em;
+  white-space: nowrap;
+  color: var(--vscode-descriptionForeground);
+  background-color: transparent;
+  user-select: none;
+}
+.cm-knote-state[data-status='x'] {
+  color: var(--vscode-testing-iconPassed, var(--vscode-charts-green, #3fb950));
+  border-color: currentColor;
+}
+.cm-knote-state[data-status='a'] {
+  opacity: 0.6;
+}
+
+.cm-knote-priority {
+  color: var(--vscode-errorForeground);
+  font-weight: 700;
+}
+
+.cm-knote-meta {
+  opacity: 0.6;
+  font-size: 0.92em;
+}
+.cm-knote-milestone {
+  font-weight: 700;
+}
+.cm-knote-machine {
+  color: var(--vscode-charts-orange, inherit);
+}
+
+.cm-knote-image img {
+  max-width: 100%;
+  max-height: 60vh;
+  border-radius: 4px;
+  vertical-align: bottom;
+}
+.cm-knote-image-missing::after {
+  content: '⚠ image not found';
+  color: var(--vscode-errorForeground);
+  font-size: 0.85em;
+}
+
+/* Fold gutter: reveal collapse arrows on hover so the gutter stays quiet,
+   Obsidian-style; folded lines keep their marker visible. */
+.cm-foldGutter {
+  min-width: 1.1em;
+}
+.cm-knote-fold-marker {
+  cursor: pointer;
+  opacity: 0;
+  color: var(--vscode-editorLineNumber-foreground);
+  transition: opacity 0.1s ease-in-out;
+}
+.cm-editor:hover .cm-knote-fold-marker,
+.cm-foldGutter .cm-gutterElement:hover .cm-knote-fold-marker {
+  opacity: 0.75;
+}
+.cm-knote-fold-marker:hover {
+  opacity: 1;
+  color: var(--vscode-editorLineNumber-activeForeground);
+}
+
+/* Task grouping card: a light box around a top-level task and its indented
+   detail block, so it's clear what belongs together. Mirrors the codeblock
+   box (side borders on every line, rounded top/bottom on the first/last). */
+/* Light gray card — gentle on the eyes and reads on both light and dark
+   themes. --knote-group-* are set once here so the shade is easy to retune in
+   one place. */
+.cm-editor {
+  --knote-group-border: rgba(127, 127, 127, 0.35);
+  --knote-group-bg: rgba(127, 127, 127, 0.06);
+}
+.cm-knote-group-line {
+  border-left: 1px solid var(--knote-group-border);
+  border-right: 1px solid var(--knote-group-border);
+  background: var(--knote-group-bg);
+  padding-left: 0.7em;
+  padding-right: 0.7em;
+}
+/* Spacing above/below the card must be PADDING, never margin: CodeMirror's
+   height model measures each line's box but not its margin, so a line margin
+   desyncs the layout from CM's model and makes clicks land on the wrong line
+   (the drift accumulates per card). Padding is inside the measured box, so it
+   stays in sync. */
+.cm-knote-group-first {
+  border-top: 1px solid var(--knote-group-border);
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  padding-top: 0.75em;
+}
+.cm-knote-group-last {
+  border-bottom: 1px solid var(--knote-group-border);
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  padding-bottom: 0.75em;
+}
+
+/* The "…" stand-in for a collapsed block. */
+.cm-foldPlaceholder {
+  margin: 0 0.3em;
+  padding: 0 0.4em;
+  border: none;
+  border-radius: 4px;
+  background: var(--vscode-editor-inlineValuesBackground, rgba(127, 127, 127, 0.18));
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+}

@@ -1,22 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { EditorState } from '@codemirror/state'
-import { planMetaChange } from '@/editor/formatting'
 import { planTaskMetaEdit, ownNoteBlockEnd } from '@shared/parser/patterns'
 
 /**
- * The editor (live-buffer) path is where the duplicate `Status Changed` line
- * showed up. `planMetaChange` translates the shared splice plan into a single
- * CodeMirror change; apply it to a real doc and assert the resulting text.
+ * The live-buffer path is where the duplicate `Status Changed` line showed
+ * up. Both write paths (the extension host's WorkspaceEdit translation in
+ * verifiedEdit.ts and core/lineEdit's disk rewrite) consume the shared
+ * `planTaskMetaEdit` splice; apply it to a document and assert the text.
  */
 function applyMeta(
   text: string,
   taskLineNumber: number,
   updates: { reasonLine?: string; statusChangedLine?: string }
 ): string {
-  const state = EditorState.create({ doc: text })
-  const change = planMetaChange(state.doc, taskLineNumber, updates)
-  if (!change) return text
-  return state.update({ changes: change }).state.doc.toString()
+  const lines = text.split('\n')
+  const plan = planTaskMetaEdit(lines, taskLineNumber - 1, updates)
+  lines.splice(plan.start, plan.deleteCount, ...plan.insert)
+  return lines.join('\n')
 }
 
 describe('planTaskMetaEdit / ownNoteBlockEnd', () => {
@@ -40,7 +39,7 @@ describe('planTaskMetaEdit / ownNoteBlockEnd', () => {
   })
 })
 
-describe('planMetaChange (editor buffer path)', () => {
+describe('planTaskMetaEdit applied to a document', () => {
   it('updates a seeded n/a status line in place', () => {
     const out = applyMeta(
       '- [ ] task\n  - Status Changed: n/a\n  - Date Entered: 7/13/2026\n  - Notes: \n',

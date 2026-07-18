@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mkdtemp, mkdir, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import * as vault from '../src/main/vaultService'
+import * as vault from '../src/core/vaultService'
 
 describe('buildTree ordering', () => {
   it('sorts numbered file names chronologically, not lexicographically', async () => {

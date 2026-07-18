@@ -1,348 +1,220 @@
 # Welcome to KNote
 
-KNote is a local-first, plain-Markdown notes app with a Kanban board and a
-timeline built in. Everything you write is a `.md` file on disk in your
-**vault** (a folder you choose) — no proprietary format, no account, no
-network calls of any kind.
+KNote is a local-first, plain-Markdown note system with a Kanban board and
+a timeline built in — now running as a **VS Code extension**. Everything
+you write is a `.md` file on disk in your **vault** (a workspace folder) —
+no proprietary format, no account, no network calls of any kind.
 
-This guide is bundled with the app itself, not stored in your vault — it
-won't show up in your file explorer or search results. Reopen it any time
-from **Settings → Welcome & feature guide**.
+This guide is bundled with the extension itself, not stored in your vault.
+Reopen it any time with **KNote: Open Welcome & Feature Guide** from the
+Command Palette (`Ctrl+Shift+P`).
 
-## The command palette
+## Your vault is a workspace folder
 
-`Ctrl+P` opens the **command palette** — the fastest way to reach every
-feature in KNote by name (search, board, timeline, settings, formatting,
-mode switches, and more). Skim it once and you'll rarely need a menu.
+Open your vault folder in VS Code (**File → Open Folder…**). A folder
+containing a `.knote/` directory is recognized as a vault automatically;
+for a fresh folder run **KNote: Initialize Vault in This Workspace** once.
+Per-vault settings live in `.knote/config.json` (edit them comfortably via
+**KNote: Open Vault Settings**).
 
-## Editing modes
+Because notes are ordinary Markdown files in an ordinary VS Code workspace,
+everything native just works: the Explorer, tabs and split editors, `Ctrl+P`
+quick open, `Ctrl+Shift+F` full-text search, source control, and any other
+extension you run (Copilot, Vim, spell checkers, …).
 
-Switch between them from the command palette (`Ctrl+P`) or the mode
-buttons in the toolbar:
+## Live Preview editing
 
-- **Live preview** — Markdown renders inline as you type (bold, links,
-  checkboxes) while staying editable, like Obsidian.
-- **Source mode** — raw Markdown text, no rendering.
-- **Reading mode** (`Ctrl+E`) — fully rendered, read-only view. Press
-  `Ctrl+E` again to jump back to live preview.
+Notes open in **Live Preview** by default — an Obsidian-style editor that
+renders Markdown as you type while keeping the file byte-for-byte plain
+Markdown:
 
-## Formatting
+- Headings, **bold**/*italic*/~~strike~~, `code`, blockquotes and lists
+  render as a styled document — proportional body text in a centered reading
+  column, boxed code blocks, tinted quotes — while the raw syntax reveals on
+  the line your cursor is on, so you always edit the source directly.
+- **Pipe tables render as real grids** (with column alignment); click a table
+  to drop your cursor in and edit the raw Markdown, exactly like every other
+  construct.
+- **Enter seeds a task's note** — finish typing a top-level task line and
+  press **Enter** to auto-insert its indented `Status Changed` / `Date
+  Entered` / `Notes` block, with the cursor left on the Notes line. This also
+  stamps a hidden `^anchor` on the task line so it's immediately linkable (see
+  **Copy link to task** below). Only fires on a fresh, unseeded task; a normal
+  newline runs everywhere else. (The `Ctrl+Alt+Enter` command does the same on
+  demand.)
+- **Click a task to edit it** — clicking anywhere on a task line (checkbox
+  included) drops your cursor in to edit the source, like every other
+  construct. To change a task's status, **right-click the checkbox** for the
+  Kanban switcher (it stamps `Status Changed:` and prompts for a reason on
+  Require-reason columns, exactly like dragging its card on the board), or use
+  `Ctrl+L` to advance the status on the cursor line.
+- **Each task shows its state** — a top-level task carries a small pill right
+  after its checkbox naming the Kanban column it currently maps to (To Do, In
+  Progress, Done, …), so you can read a note's task states at a glance without
+  opening the board. It updates the moment the status changes.
+- **Link straight to a task** — every task you create is automatically given a
+  hidden `^anchor` (added when its note is seeded on Enter), so it's linkable
+  with no manual step. Right-click a task → **Copy link to task** to put a
+  `[[Note#^id]]` wiki link on the clipboard; paste it into your daily "what I
+  did" note and click it to jump right back to that task. The `^anchor` stays
+  out of sight in Live Preview and only shows when your cursor is on the line.
+- **Click a sub-task to check it off** — an *indented* checkbox is a plain
+  toggle, not a Kanban card: clicking its box flips checked/unchecked and
+  stamps the completion date (`✅ 2026-07-16`) on the line. Unchecking it
+  removes the date again.
+- **`[[Wiki links]]`** render as clickable chips (click to open, creating
+  the note if it doesn't exist), `#tags` as pills, and **`![[image]]`** /
+  `![](image)` embeds show inline.
+- **Autocomplete for tags and links** — type `#` for a list of every tag
+  (most-used first), or `[[` for every note (and its aliases); the list
+  filters and re-sorts as you keep typing. `[[Note#` then suggests that
+  note's headings, `[[Note#^` its block anchors. `Enter`/`Tab` accepts,
+  arrows navigate, `Esc` dismisses; `Ctrl+Space` reopens the list.
+- `Ctrl+B` / `Ctrl+I` / `Ctrl+Shift+X` / `` Ctrl+E `` toggle bold / italic /
+  strikethrough / inline code on the selection.
+- **Tasks group into cards** — a top-level task with indented detail beneath
+  it (its `Status Changed` / `Date Entered` / `Notes` block and any sub-tasks)
+  is wrapped in a light box, so it's clear at a glance what belongs to which
+  task. A lone task with no detail isn't boxed.
+- **Fold task detail out of the way** — any line with indented content below
+  it (a task's detail block and sub-tasks, nested lists, note bodies) gets a
+  collapse arrow in the left gutter on hover. Click it to fold the block to a
+  `…` (the card closes up around the single line), so a long note reads as a
+  clean list of top-level tasks; click the `…` or the arrow to expand.
+  `Ctrl+Shift+[` / `Ctrl+Shift+]` fold / unfold the current line;
+  `Ctrl+Alt+[` / `Ctrl+Alt+]` fold / unfold everything.
+- **Spell checking** — misspelled words get a red wavy underline as you type
+  (code, `[[wiki links]]`, `#tags`, URLs and frontmatter are skipped).
+  **Right-click a flagged word** for suggested corrections; pick one to
+  replace it, or **Add to dictionary** (saved to your vault) / **Ignore**
+  (this session). Runs fully offline on a bundled English dictionary.
+- Need the raw source? **KNote: Reopen as Raw Text** (or the `</>` button in
+  the editor title bar) switches this note to the plain text editor; **KNote:
+  Open in Live Preview** (the book button) switches back. Right-click a note →
+  **Reopen Editor With…** also works.
 
-Select text and use these hotkeys (or the formatting toolbar above the
-editor) — they toggle the markers on/off, and with no selection they act
-on the word under the cursor:
+Everything native still works on the underlying file: `Ctrl+P` quick open,
+source control, and — from the raw text editor — KNote's wiki-link
+autocomplete, hover previews, and paste-image. VS Code's built-in Markdown
+preview (`Ctrl+Shift+V`) is still available too.
+
+### Right-click menu
+
+Right-click anywhere in a Live Preview note for a context menu that acts on
+the clicked line:
+
+| Item | Effect |
+|---|---|
+| Bold / Italic / Strikethrough / Inline code | Toggle the marker on the selection |
+| Insert wiki link | Insert `[[]]` (wraps the selection if any) |
+| Add checkbox | Insert a `- [ ]` task line |
+| Add milestone | Insert a dated `🏁 Milestone 📅 …` line |
+| Log machine work… | Pick a serial + date → insert a `🚜` entry with the detail template |
+| Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
+| Copy link to task | *(task/milestone lines)* copy a `[[Note#^id]]` link to this task (adding a hidden `^anchor` if needed) — paste it elsewhere to jump back |
+| Edit machine entry… | *(🚜 lines)* change the serial + date, keeping the activity text |
+| *Suggestions* / Add to dictionary / Ignore | *(misspelled words)* replace with a correction, add the word to your vault dictionary, or ignore it this session |
+
+**Right-click a checkbox glyph** for a quick Kanban switcher: pick any
+column (the current one is checked) or **Archived** — same behavior as
+`Ctrl+L`, including reason prompts and the `Status Changed:` stamp.
+
+## Formatting & task hotkeys
+
+All in Markdown editors only:
 
 | Hotkey | Effect |
 |---|---|
-| `Ctrl+B` | Bold |
-| `Ctrl+I` | Italic |
+| `Ctrl+B` / `Ctrl+I` | Bold / italic |
 | `Ctrl+Shift+X` | Strikethrough |
-| `` Ctrl+` `` | Inline code |
+| `Ctrl+Alt+C` | Inline code |
+| `Ctrl+L` | Cycle the task's status (column) on the cursor line |
+| `Ctrl+Alt+L` | Set task status from a list (includes Archive) |
+| `Ctrl+Alt+X` | Toggle a `- [ ]` checkbox on the current line |
+| `Ctrl+Alt+Enter` | Seed/extend the task's attached note (Status Changed / Date Entered / Notes) |
 
-Standard Markdown also works as you'd expect: `#` headings, `> ` quotes,
-` ``` ` fenced code blocks, `1.` ordered lists, and `-`/`*` bullets.
-Right-click a misspelled word (red squiggle) for spelling suggestions and
-"Add to dictionary." Right-click anywhere in the editor and choose
-**Insert link…** to wrap the current selection (or type fresh text) into a
-`[text](url)` Markdown link.
+All hotkeys are ordinary VS Code keybindings — rebind them in **Keyboard
+Shortcuts** (`Ctrl+K Ctrl+S`).
 
-## Keyboard shortcuts
+## The Kanban board
 
-| Hotkey | Effect |
+**KNote: Open Kanban Board** (`Ctrl+Alt+K`), or the Kanban icon in the
+Activity Bar, opens the board; **KNote: Open
+Board for This Note** scopes it to one note. Everything on it is a checkbox
+task somewhere in your vault:
+
+- Columns map to checkbox status chars (`- [ ]`, `- [/]`, `- [x]`, …) —
+  configure them in Vault Settings → Kanban board.
+- **Dragging a card rewrites exactly one line** in the source note. If the
+  note is open (even with unsaved edits) the change lands in your editor
+  buffer; otherwise it's a verified disk write that refuses to clobber
+  external changes.
+- Columns marked **Require reason** (e.g. Waiting) prompt for a reason +
+  date and stamp a `Reason for <Column>: … 📅 date` line under the task.
+  Every column change stamps/refreshes a `Status Changed:` line.
+- Filter by text, tag, and three date filters: **Status Changed**,
+  **Date Entered**, and **Due** (any / today / this week / date / range).
+- Cards support edit-in-place, archive (`- [a]` — struck through, off the
+  board), delete, add-card (into the scoped note or your Inbox note), and
+  same-note reordering.
+- Typing in a note updates the board live, and vice versa.
+
+## Activity Bar icons
+
+KNote adds five icons to the Activity Bar. The KNote icon holds the note
+panels; the rest are quick-access launchers — the top row of each opens
+the main thing, the rows under it jump straight to one item.
+
+| Icon | Section | Top row opens | Rows below |
+| --- | --- | --- | --- |
+| Calendar | **This Week** | **This Week's Note** — opens (creating if needed) the current ISO-week note; just clicking the icon opens it | Past weekly notes, newest first — click to open |
+| Kanban columns | **Boards** | **All Tasks** — the whole-vault board | One row per note that has tasks, `open/total`, busiest first — click for that note's board |
+| Tractor | **Machines** | **Full Machine Log** | Registered machines (then any unregistered serial found in a note); expand for its 🚜 entries, newest first — click to jump to the line |
+| Timeline | **Milestones** | **Full Timeline** | Dated `🏁` milestones — upcoming soonest-first, then past — click to jump to the line |
+
+These all track the index live, so counts and lists follow your edits.
+
+## Sidebar: Search, Backlinks, Tags, Properties
+
+The **KNote icon in the Activity Bar** opens four panels:
+
+- **Search** — full-text with operators: `path:`, `tag:`, `file:`, quoted
+  `"phrases"`, and `-excludes`. `tag:none` finds untagged notes.
+- **Backlinks** — every note linking to the active note, plus **unlinked
+  mentions** of its title/aliases with a one-click **Link** button.
+- **Tags** — every tag with usage counts; click to search, right-click to
+  rename across the vault or deprecate (hide from pickers).
+- **Properties** — form-style frontmatter editing for the active note.
+
+## Timeline, Machine Log, Graph
+
+- **KNote: Open Timeline** — everything dated, chronologically: tasks with
+  `📅 2026-07-15`, notes with `date:`/`due:`/`deadline:` frontmatter, and
+  standalone `🏁 Milestone 📅 date` lines (`!!!` renders large). Right-click
+  an item to change its date.
+- **KNote: Open Machine Log** — 🚜 work entries collected from every note,
+  filterable by serial, config attribute, tag, and text, optionally grouped
+  per machine. Insert entries with **KNote: Insert Machine Log Entry**;
+  register machines (serial → model + attributes) in Vault Settings →
+  Machines.
+- **KNote: Open Graph View** — force-directed map of your notes and their
+  wiki links, with unresolved-target ghosts and orphan toggles. Click a
+  node to open it.
+
+## Weekly notes, templates, capture
+
+| Command | Effect |
 |---|---|
-| `Ctrl+P` | Command palette |
-| `Ctrl+O` | Quick switcher |
-| `Ctrl+N` | New note |
-| `Ctrl+J` | Quick capture |
-| `Ctrl+E` | Toggle reading mode |
-| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
-| `Ctrl+B` / `Ctrl+I` / `Ctrl+Shift+X` / `` Ctrl+` `` | Bold / italic / strikethrough / code |
+| **KNote: Open This Week's Note** (`Ctrl+Alt+W`) | Opens/creates this ISO week's note from your weekly template |
+| **KNote: Quick Capture** (`Ctrl+Alt+J`) | Appends a timestamped bullet to this week's note from anywhere |
+| **KNote: Insert Template** | Inserts a template at the cursor with `{{date}}`, `{{time}}`, `{{title}}`, `{{weekdays}}` expanded |
+| **KNote: Insert Milestone** (± Important) | Inserts a dated 🏁 line |
+| **KNote: Clean Up Orphaned Attachments** | Finds images in the attachments folder no note references and moves them to the trash (after you confirm) |
 
-All of these (except the fixed text-formatting ones) are **customizable**
-under **Settings → Hotkeys**: click Record, press the new combination.
-Any command palette entry can be given a shortcut there, bound or not.
+## Data rules (unchanged)
 
-## Tabs & split panes
-
-Every note you open becomes a **tab** in the strip above the editor —
-click to switch, middle-click or the `×` to close, `Ctrl+Tab` /
-`Ctrl+Shift+Tab` to cycle. From the command palette:
-
-- **Split pane: vertical** — two panes side by side
-- **Split pane: horizontal** — two panes stacked
-- **Close split** — back to one pane
-
-Each pane has its own tabs and its own editor; clicking into a pane makes
-it the target for the file explorer, quick switcher, and toolbar. The
-same note open in both panes stays in sync as you save.
-
-## Tasks and the Kanban board
-
-Any line written as a checkbox becomes a task:
-
-```
-- [ ] An open task
-- [x] A completed task
-- [/] An in-progress task
-```
-
-The character inside the brackets is a **status**, not just done/undone —
-`x` = Done, `/` = In Progress, and a space = To Do by default. You can add
-your own custom statuses and column names in **Settings → Kanban board**.
-
-Open the board with the command palette ("Open Kanban board (all notes)")
-to see every task across the vault as cards grouped by column, or "Open
-Kanban board for current note" to scope it to just the open file. Drag
-cards between columns to change their status — it rewrites the checkbox
-character right back in the source file. Cards can carry:
-
-- **Tags** — `#project/knote`
-- **Due dates** — `📅 2026-07-15` or `@due(2026-07-15)`
-- **Priority** — `!`, `!!`, or `!!!`
-
-New cards added from the global board land in your configured **Inbox**
-note (default `Inbox.md`, changeable in **Settings**).
-
-Columns can be marked **Require reason** in **Settings → Kanban board** —
-moving a task into one of these (drag-and-drop, the checkbox right-click
-menu, or adding a card straight into the column) pops a dialog asking why
-and since when, and won't let the move through without both. The answer is
-written as an indented line right under the task:
-
-```
-- [w] Waiting on vendor reply
-  Reason for Waiting: Vendor quoted 2 weeks for the part 📅 2026-07-15
-```
-
-and shown on the card as a small badge (hover it to read the reason) —
-handy for a **Waiting** column, so you're never left wondering why
-something got parked there. It's on by default for the **Waiting** column.
-
-Every task also carries a `Status Changed` line, seeded as `n/a` when its
-note is created and updated **in place** (never duplicated) to today's date
-on each column move — drag-and-drop or the checkbox right-click menu:
-
-```
-- [w] Waiting on vendor reply
-  Reason for Waiting: Vendor quoted 2 weeks for the part 📅 2026-07-15
-  - Status Changed: 7/15/2026
-```
-
-Unlike `Reason for <Column>`, it fires for every column, not just ones
-marked **Require reason** — a running record of when a task last changed
-state, separate from `Date Entered` (when it was first added).
-
-The board's filter bar can narrow cards by **tag**, free-text search, and
-three date fields — **Status Changed**, **Date Entered**, and **Due
-date** — each with its own **Any / Today / This week / Date… / Range…**
-dropdown, so you can pull up e.g. everything whose status changed this
-week, or everything due in a custom date range.
-
-Board getting cluttered with finished work? Click a card's **archive**
-button to strike it through in the note (`- [a] ...`) and drop it off the
-board — nothing is deleted, and un-archiving is as simple as editing the
-`a` back to a space, `x`, or `/`. The **Done** column's header has an
-**Archive all** button to clear out finished cards in one click, instead of
-archiving each one individually.
-
-Indent a checkbox under another one to make it a **subtask**:
-
-```
-- [ ] Main task
-  - [ ] Subtask
-```
-
-Subtasks still work as normal checkboxes in the editor, but they never get
-their own card — only the top-level task shows on the Kanban board, so
-breaking work into steps doesn't clutter it up.
-
-Plain (non-checkbox) indented lines under a task are treated as that task's
-**attached note** instead, and render as a bordered box right under it in
-the live-preview editor:
-
-```
-- [ ] Main task
-    a note about the task, wrapped and indented under it
-    - can include plain bullets too
-```
-
-Click the arrow on the task line to fold the note away, or unfold it again —
-the task itself always stays visible, box and all, whether or not it has a
-note to expand.
-
-Press **Enter** at the end of a task line to start its attached note right
-away — instead of starting another `- [ ]` task, KNote seeds a small
-template indented under it and drops the caret on the Notes line:
-
-```
-- [ ] Main task
-  - Status Changed: n/a
-  - Date Entered: 7/7/2026
-  - Notes:
-```
-
-`Date Entered` is stamped with today's date; `Status Changed` starts at
-`n/a` and updates to a date the first time you move the task's Kanban
-column. Press **Enter** again on that task to add a further plain note line
-(the headers aren't duplicated).
-
-## Timeline
-
-"Open timeline" in the command palette shows every dated task (`📅`/`@due`),
-every `🏁` milestone, and every note with a `date:` frontmatter field, laid
-out chronologically with a marker for **today** — a quick way to see
-what's coming up across the whole vault. Use "Insert timeline milestone"
-(or "…important milestone" for one marked `!!!`) to drop a `🏁` marker with
-today's date at your cursor. Right-click any item in the timeline — task,
-milestone, or note — to change its date with a calendar picker, without
-leaving the timeline to find it in the note.
-
-## Weekly notes & templates
-
-- **Open this week's note** creates/opens a note named from your
-  configured week format (default `Weekly/GGGG-[W]WW.md`, e.g.
-  `Weekly/2026-W27.md`), optionally stamped from a template. The same note
-  opens all week — no more starting a fresh page every day.
-- **Insert template…** drops a template's contents at your cursor.
-- **Quick capture** (`Ctrl+J`) — jot a thought from anywhere, even with no
-  note open. It appends a timestamped line to this week's note (creating
-  it from your weekly template if it doesn't exist yet) and leaves you
-  right where you were — no navigating away to write it down.
-
-Every new note is automatically stamped with a `created` date in its
-frontmatter, so notes carry a reliable timestamp even if a sync tool later
-resets the file's modified time.
-
-Templates support placeholders: `{{date}}`, `{{time}}`, `{{title}}`, and
-`{{weekdays}}` — the latter expands to the seven days of the current week as
-headings (e.g. `### 7/7/2026 (Tuesday)`) so a weekly note comes prefilled with
-a dated spot for each day. The starter template puts it under **Notes**.
-Configure the weekly note folder/format/template and the templates folder
-in **Settings**. A brand-new vault (or any vault whose configured
-templates folder doesn't exist yet) is seeded with a starter `Note
-Template.md` — edit or delete it freely, it's a normal note. If the
-**Template note** setting for weekly notes is still empty at that point, it's
-automatically pointed at this starter note too, so weekly notes have a
-template from the start.
-
-By default, templates and attachments live under a shared **`Knote Resources/`**
-folder (`Knote Resources/Templates`, `Knote Resources/Attachments`) to keep
-app-managed files out of the way of your actual notes. Both folders are
-configurable independently in **Settings** and can point anywhere in the
-vault, nested or not.
-
-## Finding things
-
-- `Ctrl+O` — **Quick switcher**: jump to any note by name.
-- **Search in all files** (command palette) — full-vault text search.
-- The **Tags** panel (sidebar) browses every tag in the vault. A
-  **(no tags)** row at the top lists notes you haven't tagged yet — a
-  quick way to periodically review and process fleeting captures.
-- **Settings → Tags** lets you clean up tags vault-wide: click a tag to
-  rename it — every occurrence across every note (body text and
-  frontmatter) is rewritten, so it's the way to merge spelling/case
-  variants like `#knote` and `#KNOTE` into one. **Deprecate** a tag to
-  hide it from the Tag pane and the `#` picker without touching any
-  notes — it's still there on disk, just out of the quick-access lists;
-  restore it from the same screen any time.
-- The right panel (toggle from the command palette) shows an **outline**
-  (click a heading to jump to it, collapsible), **backlinks**, and
-  **properties** (frontmatter) for the open note.
-
-## Links, images, and embeds
-
-Wiki-links work like `[[Note Name]]`, `[[Note Name#Heading]]`,
-`[[Note Name#^block-id]]`, `[[Note Name|display text]]`, and
-`![[Note Name]]` to embed a note's content inline. Regular Markdown links
-(`[text](url)`) work too, though external links stay inert — KNote makes
-no network calls, ever.
-
-Typing `[[` suggests notes as you type; pick one and the cursor lands
-right before the closing `]]`, so typing `#` immediately suggests that
-note's headings — pick one to link straight to that section. Typing `#^`
-instead suggests the note's **block anchors**.
-
-**Block references**: end any line with a space and `^some-id` to give it
-an anchor (e.g. `The key insight. ^insight`), then link straight to that
-line from anywhere with `[[Note Name#^insight]]`.
-
-Paste an image (e.g. a screenshot) directly into the editor and KNote
-saves it into your configured **Attachments** folder and inserts an
-embed automatically — no manual file handling needed.
-
-## Graph view
-
-The **graph view** (ribbon button under the machine log, or "Open graph
-view" in the command palette) draws every note in the vault as a dot,
-connected by lines wherever one note `[[wiki-links]]` to another — an
-interactive map of how your notes relate, like Obsidian's graph.
-
-- **Scroll** to zoom, **drag the background** to pan, **drag a dot** to
-  rearrange the layout.
-- **Hover** a note to spotlight it and its direct connections.
-- **Click** a note to open it. Bigger dots = more connections; the note
-  you had open is highlighted.
-- The **Highlight notes…** box spotlights notes by name; the
-  **Unresolved** toggle shows faded dots for `[[links]]` whose note
-  doesn't exist yet (clicking one creates it), and **Orphans** shows
-  notes with no links at all.
-
-## Machine log
-
-If you track work against specific machines (serial number, model,
-config attributes), register them in **Settings → Machines**. "Log
-machine work" inserts a dated entry tied to a machine at your cursor,
-followed by a blank **Base Machine Software / Testing Software / Notes**
-template so you can fill in details right below it, and "Open machine
-log" gives you a filterable, searchable view of every logged entry
-across the vault, grouped by machine — registered models are listed
-first in the filter list, ahead of config attributes and inline tags.
-Right-click an entry — in the machine log view, or on its `🚜` line in a
-note itself — to edit its machine and date together with a calendar
-picker.
-
-## Vaults & appearance
-
-- Switch or open another vault from the ribbon or command palette
-  ("Open another vault…"). A vault is just a folder — open as many as
-  you like, one at a time.
-- Toggle light/dark theme from the command palette.
-- Everything above (and more) is reachable from the **command palette**
-  (`Ctrl+P`) — it's the fastest way to discover features.
-
-## Using GitHub Copilot with your notes
-
-Edit your vault in VS Code with GitHub Copilot and want it to understand
-KNote's task syntax, Kanban statuses, and wiki-links? **Settings → General →
-GitHub Copilot instructions** drops a ready-made instruction file into your
-`Knote Resources` folder and opens it. Copy that file to
-`.github/copilot-instructions.md` in the vault (VS Code loads it
-automatically) and Copilot will write notes in KNote's format — correct
-`- [ ]` tasks, `📅` due dates, `[[wiki-links]]`, and more. It's a plain
-Markdown file you can edit or share freely.
-
-## Opening a vault in VS Code
-
-Click the **code icon** in the ribbon (or **Settings → General → Open in
-VS Code**, or run "Open vault in VS Code" from the command palette) to
-open the current vault as a VS Code workspace. The first time you use it
-for a vault, KNote creates a blank `.code-workspace` file (stored in the
-vault's hidden `.knote` folder) pointing at the vault root; after that it
-just reopens the same one. Handy for editing notes' raw Markdown, running
-Copilot against the vault, or anything else you'd rather do in a text
-editor.
-
-## Settings
-
-Open **Settings** from the toolbar or command palette. It's laid out like
-Obsidian's — a category list on the left (General, Weekly notes,
-Templates, Attachments, Kanban board, Machines, Tags) and that category's
-options on the right. This guide is always reachable from **Settings →
-General**.
-
-## Version & release notes
-
-The current app version is shown in the window's title bar (next to
-"KNote") and on the **Settings → General** page. **Settings → General →
-Release notes** shows what changed in each version — bundled with the app
-itself, like this guide.
+- Your vault of `.md` files is the sole source of truth. The index is
+  in-memory only, rebuilt from files, never authoritative.
+- All board/timeline state persists as plain Markdown — checkboxes, status
+  chars, and indented meta lines you can read and edit by hand.
+- KNote makes **zero network calls**. Nothing leaves your machine.

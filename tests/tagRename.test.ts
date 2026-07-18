@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renameTagInContent } from '../src/main/tagRename'
+import { renameTagInContent } from '../src/core/tagRename'
 
 describe('renameTagInContent', () => {
   it('renames a body tag, case-insensitively matched', () => {

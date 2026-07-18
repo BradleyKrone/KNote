@@ -1,0 +1,25 @@
+# Everything runs from the bundled dist/ output — sources, tests, and
+# node_modules (esbuild inlines all runtime deps) stay out of the VSIX.
+.vscode/**
+.github/**
+src/**
+tests/**
+test-vault/**
+node_modules/**
+out/**
+release/**
+*.vsix
+dist/**/*.map
+scripts/**
+*.md
+!README.md
+electron.vite.config.ts
+vitest.config.ts
+tsconfig*.json
+esbuild.mjs
+eslint.config.*
+.prettierrc*
+.prettierignore
+.gitignore
+REQUIREMENTS.md
+CLAUDE.md

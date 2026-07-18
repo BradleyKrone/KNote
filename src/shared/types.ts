@@ -215,6 +215,8 @@ export interface VaultConfig {
   machines: MachineDef[]
   /** Tags hidden from the Tag pane and #-picker's quick-access lists, but left intact in notes */
   deprecatedTags: string[]
+  /** Words added to the personal spell-check dictionary (never flagged as misspelled) */
+  userDictionary: string[]
 }
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
@@ -232,5 +234,6 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
     { name: 'Done', char: 'x' }
   ],
   machines: [],
-  deprecatedTags: []
+  deprecatedTags: [],
+  userDictionary: []
 }
