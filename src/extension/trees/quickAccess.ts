@@ -11,6 +11,7 @@ import type { VaultPath } from '@shared/types'
 import { getVaultConfig } from '../../core/vaultConfig'
 import { currentVaultRoot, notesMap, onIndexDelta } from '../engine'
 import { uriForRel } from '../paths'
+import { openNoteInLiveEditor } from '../views/liveEditorProvider'
 import {
   collectBoards,
   collectMachines,
@@ -229,10 +230,7 @@ export function registerQuickAccessTrees(context: vscode.ExtensionContext): void
       timeline.refresh()
     }),
     vscode.commands.registerCommand('knote.openNoteAt', async (path: VaultPath, line: number) => {
-      await vscode.window.showTextDocument(uriForRel(path), {
-        viewColumn: vscode.ViewColumn.One,
-        selection: new vscode.Range(line, 0, line, 0)
-      })
+      await openNoteInLiveEditor(uriForRel(path), line)
     })
   )
 }

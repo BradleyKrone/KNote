@@ -12,4 +12,4 @@ Some intro prose that links to [[Other Note]].
 
 ## Notes
 
-Plain text under a heading.
+Plain text under a heading. ^note-block

@@ -91,6 +91,13 @@ describe('collectCards date filters', () => {
     expect(cards.map((c) => c.displayText)).toEqual(['in progress task'])
   })
 
+  it('strips a trailing ^block-id anchor from the card label', () => {
+    const anchored = new Map<string, NoteMeta>()
+    anchored.set('b.md', parseNote('b.md', '- [ ] test ^z2v9nn'))
+    const cards = collectCards(anchored, { kind: 'global' }, baseFilters)
+    expect(cards.map((c) => c.displayText)).toEqual(['test'])
+  })
+
   it('filters cards by an exact Due date', () => {
     const cards = collectCards(
       notes,

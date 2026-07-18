@@ -232,6 +232,7 @@ export function stripInlineMarkers(text: string): string {
     .replace(DUE_RE, '')
     .replace(PRIORITY_RE, ' ')
     .replace(/(^|[\s([{])#[A-Za-z0-9_][A-Za-z0-9_/-]*/g, '$1')
+    .replace(BLOCK_ID_RE, '')
     .replace(/\s{2,}/g, ' ')
     .trim()
 }

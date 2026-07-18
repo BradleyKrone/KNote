@@ -12,6 +12,7 @@ import * as vaultIndex from '../../core/indexer/vaultIndex'
 import * as vault from '../../core/vaultService'
 import { notesMap } from '../engine'
 import { uriForRel, vaultNoteRel } from '../paths'
+import { openNoteInLiveEditor } from '../views/liveEditorProvider'
 
 function commandUri(rawTarget: string): vscode.Uri {
   return vscode.Uri.parse(
@@ -53,18 +54,14 @@ export async function openWikiTarget(rawTarget: string): Promise<void> {
   if (resolved !== null) {
     let line: number | null = null
     if (section) line = sectionLine(vaultIndex.getNote(resolved), section)
-    const options: vscode.TextDocumentShowOptions = {}
-    if (line !== null) {
-      options.selection = new vscode.Range(line, 0, line, 0)
-    }
-    await vscode.window.showTextDocument(uriForRel(resolved), options)
+    await openNoteInLiveEditor(uriForRel(resolved), line ?? undefined)
     return
   }
 
   const clean = normalizeRel(target)
   const created = await vault.createFile(clean.endsWith('.md') ? clean : clean + '.md', '')
   await vaultIndex.indexFile(created)
-  await vscode.window.showTextDocument(uriForRel(created))
+  await openNoteInLiveEditor(uriForRel(created))
 }
 
 export function registerWikiLinks(context: vscode.ExtensionContext): void {
