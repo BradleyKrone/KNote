@@ -1,0 +1,18 @@
+{
+  "weeklyFolder": "Weekly",
+  "weeklyFormat": "YYYY-M-D",
+  "weeklyTemplate": "",
+  "templatesFolder": "Knote Resources/Templates",
+  "inboxNote": "Inbox.md",
+  "attachmentsFolder": "Knote Resources/Attachments",
+  "columns": [
+    { "name": "To Do", "char": " " },
+    { "name": "Ready to Work", "char": "r" },
+    { "name": "Waiting", "char": "w", "requireReason": true },
+    { "name": "In Progress", "char": "/" },
+    { "name": "Done", "char": "x" }
+  ],
+  "machines": [],
+  "deprecatedTags": [],
+  "userDictionary": []
+}

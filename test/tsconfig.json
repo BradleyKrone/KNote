@@ -1,0 +1,17 @@
+{
+  // Integration tests are compiled to plain CommonJS in ../out/test and loaded
+  // by Mocha inside the Extension Development Host (see ../.vscode-test.mjs).
+  // They are black-box: they import only `vscode` and Node built-ins, never app
+  // source, so nothing here needs the @shared/@core path aliases or bundling.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "outDir": "../out/test",
+    "rootDir": ".",
+    "noEmit": false,
+    "sourceMap": true,
+    "types": ["node", "mocha", "vscode"]
+  },
+  "include": ["integration/**/*.ts"]
+}

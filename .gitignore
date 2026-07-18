@@ -3,6 +3,8 @@ out/
 dist/
 release/
 test-vault/
+test/.tmp-vault/
+.vscode-test/
 *.log
 *.tsbuildinfo
 .DS_Store

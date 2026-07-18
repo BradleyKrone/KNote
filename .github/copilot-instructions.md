@@ -76,12 +76,39 @@ Key invariants:
 - `npm run watch` + F5 (Run KNote Extension) — Extension Development Host
 - `npm run build` — bundle host + all webviews to `dist/` (esbuild)
 - `npm run typecheck` — TypeScript check (host and webview tsconfigs)
-- `npm test` / `npm run test:watch` — vitest (`tests/`)
+- `npm test` / `npm run test:watch` — vitest unit tests (`tests/`, plural)
+- `npm run test:integration` — VS Code integration harness (`test/`, singular):
+  builds, compiles the tests, and runs `knote.*` commands inside a real
+  Extension Development Host against a disposable vault (`@vscode/test-cli`).
+  First run downloads a VS Code build into `.vscode-test/` (needs network
+  once; the extension itself stays offline).
 - `npm run package` — `vsce package`, produces the installable `.vsix`
 
-There is no automated end-to-end harness (the old Electron CDP harness was
-retired with the app); verify UI changes manually in the F5 dev host
-against a real vault.
+### Validating a change
+
+There are **two** test layers — mind the singular/plural directory split:
+
+- **`tests/` (plural) = vitest unit tests.** Pure `core`/`shared`/webview
+  logic and selectors, no `vscode` import. Fast; run constantly with
+  `npm test`. This is where parser, selector, line-edit, and watcher logic
+  is covered.
+- **`test/` (singular) = the VS Code integration harness.** Black-box Mocha
+  tests (import only `vscode` + Node, never app source) that activate the
+  extension, drive commands via `vscode.commands.executeCommand('knote.…')`,
+  and assert on the live editor buffer **and** on disk. See `test/README.md`.
+
+**What to run before calling a change done:**
+
+1. `npm run typecheck` and `npm test` — always.
+2. `npm run test:integration` — whenever the change touches runtime behavior
+   the unit tests can't see: activation, command wiring, verified edits,
+   two-way board/disk sync, the live-preview editor, or anything that only
+   manifests in a real `vscode` host. Add a `test/integration/*.test.ts`
+   case for the new behavior (use `test/integration/helpers.ts`); this is the
+   automated replacement for manual F5 verification, so prefer it over
+   "verified by hand." Pure-logic changes need only a `tests/` unit test.
+3. For UI/webview visuals that no assertion covers, still eyeball it in the
+   F5 dev host against a real vault.
 
 ## Documenting new features
 
