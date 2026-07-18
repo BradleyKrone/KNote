@@ -7,7 +7,12 @@
 // editor and this webview editor offer the same suggestions — but sourced from
 // the webview's in-memory index store rather than the extension host.
 
-import { autocompletion, type CompletionContext, type CompletionResult, type Completion } from '@codemirror/autocomplete'
+import {
+  autocompletion,
+  type CompletionContext,
+  type CompletionResult,
+  type Completion
+} from '@codemirror/autocomplete'
 import type { NoteMeta, VaultPath } from '@shared/types'
 import { noteCandidates, resolveTarget, tagCounts } from '@shared/wikiResolve'
 import { useIndexStore, useConfigStore } from '../shared/stores'
@@ -29,7 +34,11 @@ function closeBrackets(suffix: string): string {
   return suffix.startsWith(']]') ? '' : ']]'
 }
 
-function tagResult(m: RegExpExecArray, context: CompletionContext, notes: Map<VaultPath, NoteMeta>): CompletionResult {
+function tagResult(
+  m: RegExpExecArray,
+  context: CompletionContext,
+  notes: Map<VaultPath, NoteMeta>
+): CompletionResult {
   const partial = m[2]
   const from = context.pos - partial.length
   const deprecated = new Set(

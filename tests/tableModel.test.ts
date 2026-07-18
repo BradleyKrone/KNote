@@ -15,12 +15,7 @@ describe('splitRow', () => {
 
 describe('parseAligns', () => {
   it('reads left / center / right / default from the delimiter row', () => {
-    expect(parseAligns('| :--- | :--: | ---: | --- |')).toEqual([
-      'left',
-      'center',
-      'right',
-      ''
-    ])
+    expect(parseAligns('| :--- | :--: | ---: | --- |')).toEqual(['left', 'center', 'right', ''])
   })
 })
 

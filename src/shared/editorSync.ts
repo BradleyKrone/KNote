@@ -50,7 +50,11 @@ export function diffEdit(current: string, next: string): CmEdit {
   while (from < max && current.charCodeAt(from) === next.charCodeAt(from)) from++
   let toOld = current.length
   let toNew = next.length
-  while (toOld > from && toNew > from && current.charCodeAt(toOld - 1) === next.charCodeAt(toNew - 1)) {
+  while (
+    toOld > from &&
+    toNew > from &&
+    current.charCodeAt(toOld - 1) === next.charCodeAt(toNew - 1)
+  ) {
     toOld--
     toNew--
   }

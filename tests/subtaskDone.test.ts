@@ -9,11 +9,15 @@ import { setTaskDone } from '@shared/parser/patterns'
  */
 describe('setTaskDone', () => {
   it('stamps the completion date when checking', () => {
-    expect(setTaskDone('  - [ ] buy milk', true, '2026-07-16')).toBe('  - [x] buy milk ✅ 2026-07-16')
+    expect(setTaskDone('  - [ ] buy milk', true, '2026-07-16')).toBe(
+      '  - [x] buy milk ✅ 2026-07-16'
+    )
   })
 
   it('removes the completion date when unchecking', () => {
-    expect(setTaskDone('  - [x] buy milk ✅ 2026-07-16', false, '2026-07-17')).toBe('  - [ ] buy milk')
+    expect(setTaskDone('  - [x] buy milk ✅ 2026-07-16', false, '2026-07-17')).toBe(
+      '  - [ ] buy milk'
+    )
   })
 
   it('refreshes rather than duplicates an existing marker when re-checked', () => {

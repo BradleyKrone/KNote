@@ -14,9 +14,7 @@ import { uriForRel } from '../paths'
 
 dayjs.extend(isoWeek)
 
-type WeeklyNode =
-  | { kind: 'thisWeek' }
-  | { kind: 'past'; path: VaultPath; title: string }
+type WeeklyNode = { kind: 'thisWeek' } | { kind: 'past'; path: VaultPath; title: string }
 
 /** Vault-relative path of the current ISO-week note, per the vault config. */
 async function thisWeekPath(): Promise<VaultPath> {

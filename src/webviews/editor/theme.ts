@@ -75,7 +75,8 @@ export const knoteTheme = EditorView.theme({
       'var(--vscode-editorSuggestWidget-selectedForeground, var(--vscode-list-activeSelectionForeground))'
   },
   '.cm-completionMatchedText': {
-    color: 'var(--vscode-editorSuggestWidget-highlightForeground, var(--vscode-list-highlightForeground))',
+    color:
+      'var(--vscode-editorSuggestWidget-highlightForeground, var(--vscode-list-highlightForeground))',
     textDecoration: 'none',
     fontWeight: 'bold'
   },
