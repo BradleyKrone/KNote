@@ -38,7 +38,7 @@ export function lineDue(text: string): string | null {
 // ---------- View helpers ----------
 
 /** The document line under the caret. */
-export function caretLine(view: EditorView): Line {
+function caretLine(view: EditorView): Line {
   return view.state.doc.lineAt(view.state.selection.main.head)
 }
 

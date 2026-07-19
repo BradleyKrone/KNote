@@ -1,5 +1,4 @@
 import { promises as fs } from 'fs'
-import { join } from 'path'
 import pLimit from 'p-limit'
 import type { IndexDelta, NoteMeta, VaultPath } from '@shared/types'
 import { isInside, isMarkdown, joinRel, normalizeRel } from '@shared/pathUtils'
@@ -97,7 +96,7 @@ export async function indexFile(rel: VaultPath, emit = true): Promise<void> {
   }
 }
 
-export function removeFile(rel: VaultPath, emit = true): void {
+function removeFile(rel: VaultPath, emit = true): void {
   const key = normalizeRel(rel)
   if (!notes.has(key)) return
   notes.delete(key)
@@ -106,7 +105,7 @@ export function removeFile(rel: VaultPath, emit = true): void {
   if (emit) deltaListener({ path: key, meta: null })
 }
 
-export function removeFolder(rel: VaultPath): void {
+function removeFolder(rel: VaultPath): void {
   for (const key of [...notes.keys()]) {
     if (isInside(key, rel)) removeFile(key)
   }
@@ -133,26 +132,3 @@ export async function handleFsChange(rel: VaultPath, kind: string): Promise<void
   }
 }
 
-export async function moveIndexed(
-  oldRel: VaultPath,
-  newRel: VaultPath,
-  isFolder: boolean
-): Promise<void> {
-  if (isFolder) {
-    removeFolder(oldRel)
-    await reindexFolder(newRel)
-  } else {
-    removeFile(oldRel)
-    await indexFile(newRel)
-  }
-}
-
-async function statIsDir(rel: VaultPath): Promise<boolean> {
-  try {
-    return (await fs.stat(join(getVaultRoot(), normalizeRel(rel)))).isDirectory()
-  } catch {
-    return false
-  }
-}
-
-export { statIsDir }

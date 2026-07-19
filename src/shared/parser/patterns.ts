@@ -23,7 +23,7 @@ export const TASK_LINE_RE = /^(\s*)([-*+]|\d+[.)])\s\[(.)\](?:\s(.*))?$/
 export const DUE_RE = /(?:@due\((\d{4}-\d{2}-\d{2})\)|📅\s*(\d{4}-\d{2}-\d{2}))/
 
 /** ✅ 2026-07-16 — completion-date marker appended to a checked sub-task line. Group 1 = the date. */
-export const DONE_DATE_RE = /\s*✅\s*(\d{4}-\d{2}-\d{2})/g
+const DONE_DATE_RE = /\s*✅\s*(\d{4}-\d{2}-\d{2})/g
 
 /**
  * Rewrite a task line's checkbox to done/undone while keeping a trailing
@@ -144,7 +144,7 @@ export function mergeTaskMetaLines(
 }
 
 /** A list-item line (`- `, `* `, `1. `) — the meta/note lines under a task are these. */
-export const LIST_ITEM_RE = /^(\s*)([-*+]|\d+[.)])\s/
+const LIST_ITEM_RE = /^(\s*)([-*+]|\d+[.)])\s/
 
 /**
  * Exclusive end index of a task's *own* attached-note block within `lines`:

@@ -111,7 +111,7 @@ async function rewriteSubtask(line0: number, rawLine: string, done: boolean): Pr
 }
 
 /** Flip a sub-task between checked and unchecked (stamping/clearing its date). Driven by a click. */
-export async function toggleSubtask(line0: number, rawLine: string): Promise<void> {
+async function toggleSubtask(line0: number, rawLine: string): Promise<void> {
   const m = TASK_LINE_RE.exec(rawLine)
   if (!m) return
   const done = m[3] === 'x' || m[3] === 'X'

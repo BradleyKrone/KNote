@@ -18,16 +18,6 @@ export interface FileEntry {
   children?: FileEntry[]
 }
 
-/**
- * Spellcheck context delivered from the main process on right-click inside the
- * editor. Chromium's spellchecker (native OS checker on Windows) fills these in;
- * misspelledWord is '' when the click wasn't on a flagged word.
- */
-export interface SpellContextInfo {
-  misspelledWord: string
-  dictionarySuggestions: string[]
-}
-
 export interface FileReadResult {
   path: VaultPath
   content: string
@@ -173,20 +163,6 @@ export interface BlockRef {
   id: string
   /** 0-based line of the anchored block. */
   line: number
-}
-
-export type ThemeName = 'light' | 'dark'
-
-export interface AppSettings {
-  lastVault: string | null
-  theme: ThemeName
-  /** Cap note content to a readable column width instead of filling the pane. */
-  readableLineLength: boolean
-  /**
-   * Command hotkey overrides (commandId → combo like "Ctrl+Shift+P", or
-   * null to unbind a default). Commands not listed use their defaults.
-   */
-  hotkeyOverrides: Record<string, string | null>
 }
 
 // ---------- Per-vault configuration (.knote/config.json) ----------

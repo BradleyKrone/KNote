@@ -39,7 +39,7 @@ function attachmentUriFor(
   }
 }
 
-export const LIVE_EDITOR_VIEW_TYPE = 'knote.liveEditor'
+const LIVE_EDITOR_VIEW_TYPE = 'knote.liveEditor'
 
 // Panels currently rendering a note in the live editor, keyed by document URI,
 // so openNoteInLiveEditor can reveal a line in an already-open note. Lines
