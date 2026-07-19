@@ -22,6 +22,23 @@ everything native just works: the Explorer, tabs and split editors, `Ctrl+P`
 quick open, `Ctrl+Shift+F` full-text search, source control, and any other
 extension you run (Copilot, Vim, spell checkers, …).
 
+## Home dashboard
+
+**KNote: Open Home** (`Ctrl+Alt+H`), or the **$(home) KNote Home** button in the
+status bar, opens a one-page overview of your day. It reads live from the index,
+so it follows your edits as you make them.
+
+| Section | Shows |
+|---|---|
+| **Stats strip** | Open task count, a tile per Kanban column, and an overdue count |
+| **Overdue** | Not-done tasks and note `due:`/`deadline:` dates already in the past — click to jump to the source (hidden when nothing is overdue) |
+| **Upcoming deadlines** | Dated tasks (`📅`), note due/deadline props, and 🏁 milestones due today or later, soonest first |
+| **Working on** | Every task currently in the **In Progress** column |
+| **This week** | Today's and yesterday's `### M/D/YYYY` sections from this week's note, pulled out inline — header opens (or creates) the full note |
+| **Upcoming milestones** | Your dated 🏁 milestones, soonest first |
+| **Resources** | Pinned links to outside resources — click **+** to add a label + URL, click one to open it in your browser (via VS Code; KNote makes no network call itself), hover to remove. Stored in `.knote/config.json` so they travel with the vault |
+| **Quick capture** | Jot a line straight to this week's note, same as **KNote: Quick Capture** |
+
 ## Live Preview editing
 
 Notes open in **Live Preview** by default — an Obsidian-style editor that

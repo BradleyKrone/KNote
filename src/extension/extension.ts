@@ -22,6 +22,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const log = vscode.window.createOutputChannel('KNote')
   context.subscriptions.push(log)
 
+  // Always-visible launcher for the Home dashboard (also on Ctrl+Alt+H and in
+  // the Command Palette). The command itself warns when no vault is open.
+  const homeButton = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100)
+  homeButton.text = '$(home) KNote Home'
+  homeButton.tooltip = 'Open KNote Home (Ctrl+Alt+H)'
+  homeButton.command = 'knote.openDashboard'
+  homeButton.show()
+  context.subscriptions.push(homeButton)
+
   // Providers and commands are registered unconditionally (package.json
   // declares them); each one no-ops or warns when no vault is open.
   registerWikiLinks(context)

@@ -17,6 +17,12 @@ interface PanelDef {
 
 const PANELS: PanelDef[] = [
   {
+    command: 'knote.openDashboard',
+    viewType: 'knote.dashboard',
+    view: 'dashboard',
+    title: 'KNote Home'
+  },
+  {
     command: 'knote.openTimeline',
     viewType: 'knote.timeline',
     view: 'timeline',

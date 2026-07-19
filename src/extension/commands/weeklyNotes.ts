@@ -27,7 +27,7 @@ let pendingWeekNote: Promise<VaultPath> | null = null
  * concurrent callers (e.g. rapid quick-captures) can't race and create
  * duplicate weekly notes.
  */
-async function ensureThisWeekNote(): Promise<VaultPath> {
+export async function ensureThisWeekNote(): Promise<VaultPath> {
   if (pendingWeekNote) return pendingWeekNote
   pendingWeekNote = (async () => {
     const config = await getVaultConfig()
@@ -60,16 +60,25 @@ async function openWeeklyNote(): Promise<void> {
   await openNoteInLiveEditor(uriForRel(path))
 }
 
+/**
+ * Append a timestamped bullet to this week's note. Shared by the quick-capture
+ * command and the Home dashboard's inline capture (via the `quickCapture` RPC).
+ * No-ops on blank text.
+ */
+export async function captureToWeekNote(text: string): Promise<void> {
+  const trimmed = text.trim()
+  if (!trimmed) return
+  const path = await ensureThisWeekNote()
+  await verifiedEdit.appendToNote(path, `- ${dayjs().format('HH:mm')}  ${trimmed}`)
+}
+
 async function quickCapture(): Promise<void> {
   const text = await vscode.window.showInputBox({
     prompt: "Quick capture — appended to this week's note",
     placeHolder: 'What happened?'
   })
   if (text === undefined) return
-  const trimmed = text.trim()
-  if (!trimmed) return
-  const path = await ensureThisWeekNote()
-  await verifiedEdit.appendToNote(path, `- ${dayjs().format('HH:mm')}  ${trimmed}`)
+  await captureToWeekNote(text)
   void vscode.window.setStatusBarMessage('KNote: captured', 2000)
 }
 

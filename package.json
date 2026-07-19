@@ -1,7 +1,7 @@
 {
   "name": "knote",
   "displayName": "KNote",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "KNote — a local-first Markdown vault with a checkbox-driven Kanban board, wiki links, and vault-wide search, as a VS Code extension",
   "publisher": "bradleykrone",
   "main": "./dist/extension.js",
@@ -28,6 +28,10 @@
       {
         "command": "knote.initializeVault",
         "title": "KNote: Initialize Vault in This Workspace"
+      },
+      {
+        "command": "knote.openDashboard",
+        "title": "KNote: Open Home"
       },
       {
         "command": "knote.openBoard",
@@ -325,6 +329,10 @@
         "command": "knote.insertTaskNote",
         "key": "ctrl+alt+enter",
         "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "knote.openDashboard",
+        "key": "ctrl+alt+h"
       },
       {
         "command": "knote.openBoard",

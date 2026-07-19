@@ -152,7 +152,7 @@ export function SettingsApp(): React.JSX.Element {
 
   const field = (
     label: string,
-    key: keyof Omit<VaultConfig, 'columns' | 'machines' | 'deprecatedTags'>,
+    key: keyof Omit<VaultConfig, 'columns' | 'machines' | 'deprecatedTags' | 'bookmarks'>,
     hint?: string
   ): React.JSX.Element => (
     <div className="settings-field">

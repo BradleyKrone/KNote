@@ -175,6 +175,13 @@ export interface BoardColumn {
   requireReason?: boolean
 }
 
+/** A pinned link to an outside resource, shown on the Home dashboard. */
+export interface Bookmark {
+  label: string
+  /** Any URL VS Code can open externally (http(s), mailto, file, …) */
+  url: string
+}
+
 export interface VaultConfig {
   weeklyFolder: string
   /** dayjs format string applied to the Monday of the week for weekly note file names */
@@ -193,6 +200,8 @@ export interface VaultConfig {
   deprecatedTags: string[]
   /** Words added to the personal spell-check dictionary (never flagged as misspelled) */
   userDictionary: string[]
+  /** Pinned outside-resource links shown on the Home dashboard */
+  bookmarks: Bookmark[]
 }
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
@@ -211,5 +220,6 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   ],
   machines: [],
   deprecatedTags: [],
-  userDictionary: []
+  userDictionary: [],
+  bookmarks: []
 }

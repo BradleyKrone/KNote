@@ -13,6 +13,7 @@ import * as vault from '../../core/vaultService'
 import * as verifiedEdit from '../verifiedEdit'
 import { setFrontmatter } from '../frontmatterEdit'
 import { openWikiTarget } from '../providers/wikiLinks'
+import { captureToWeekNote } from '../commands/weeklyNotes'
 import { openNoteInLiveEditor } from '../views/liveEditorProvider'
 import { uriForRel } from '../paths'
 import { broadcast, type HostHandlers } from './webviewRpc'
@@ -45,6 +46,12 @@ export function createHostHandlers(): HostHandlers {
 
     openNote: (path: VaultPath, line?: number) => openNoteInLiveEditor(uriForRel(path), line),
 
-    copyToClipboard: (text: string) => vscode.env.clipboard.writeText(text)
+    copyToClipboard: (text: string) => vscode.env.clipboard.writeText(text),
+
+    openExternal: async (url: string) => {
+      await vscode.env.openExternal(vscode.Uri.parse(url))
+    },
+
+    quickCapture: (text: string) => captureToWeekNote(text)
   } satisfies HostHandlers
 }

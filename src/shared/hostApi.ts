@@ -65,6 +65,20 @@ export interface HostApi {
   copyToClipboard(text: string): Promise<void>
 
   /**
+   * Open a URL in the user's default external application (browser, mail
+   * client, …) via VS Code. KNote itself makes no network request — it hands
+   * the URL to the OS, and VS Code shows its own trust prompt first.
+   */
+  openExternal(url: string): Promise<void>
+
+  /**
+   * Append a timestamped bullet to this week's note (creating it from the
+   * configured template if needed) — the Home dashboard's inline quick capture,
+   * same behavior and format as the `knote.quickCapture` command.
+   */
+  quickCapture(text: string): Promise<void>
+
+  /**
    * Open a raw wiki target ("Note", "Note#Heading", "folder/Note"), creating
    * the note (Obsidian behavior) when it doesn't resolve.
    */
