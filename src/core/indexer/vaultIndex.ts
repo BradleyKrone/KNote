@@ -131,4 +131,3 @@ export async function handleFsChange(rel: VaultPath, kind: string): Promise<void
     await reindexFolder(rel)
   }
 }
-
