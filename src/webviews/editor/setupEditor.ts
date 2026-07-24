@@ -20,6 +20,7 @@ import { knoteTheme } from './theme'
 import { livePreview } from './livePreview'
 import { tableRender } from './tableRender'
 import { knoteConstructs } from './knoteConstructs'
+import { pasteImage } from './pasteImage'
 import { formatKeymap } from './markdownFormatting'
 import { taskFold } from './taskFold'
 import { taskEnterKeymap } from './taskEnter'
@@ -52,6 +53,7 @@ export function createEditor(opts: { parent: HTMLElement; doc: string; eol: stri
       tableRender,
       livePreview,
       knoteConstructs,
+      pasteImage,
       spellCheck,
       taskFold,
       knoteAutocomplete,

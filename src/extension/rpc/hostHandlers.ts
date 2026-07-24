@@ -4,6 +4,7 @@
 
 import * as vscode from 'vscode'
 import type { VaultConfig, VaultPath } from '@shared/types'
+import { saveImageAttachment } from '../../core/attachments'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
 import * as searchIndex from '../../core/indexer/searchIndex'
 import { findMentions } from '../../core/indexer/mentions'
@@ -28,6 +29,9 @@ export function createHostHandlers(): HostHandlers {
     searchVault: (query: string) => searchIndex.search(query),
     findMentions: (strings: string[], excludePath: VaultPath) => findMentions(strings, excludePath),
     readFile: (path: VaultPath) => vault.readFile(path),
+
+    saveImageAttachment: (mimeType: string, base64Data: string) =>
+      saveImageAttachment(mimeType, Buffer.from(base64Data, 'base64')),
 
     replaceLine: verifiedEdit.replaceLine,
     setTaskStatusMeta: verifiedEdit.setTaskStatusMeta,

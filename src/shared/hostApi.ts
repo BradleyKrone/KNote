@@ -34,6 +34,15 @@ export interface HostApi {
    */
   attachmentUri(src: string): Promise<string | null>
 
+  /**
+   * Save a pasted image's bytes (base64-encoded) into the vault's configured
+   * attachments folder and return the vault-relative path it was saved at.
+   * Used by the live-preview editor's paste handler, since a
+   * DocumentPasteEditProvider never fires for paste events inside a custom
+   * webview editor's own DOM.
+   */
+  saveImageAttachment(mimeType: string, base64Data: string): Promise<VaultPath>
+
   // Verified line edits — routed through the host's verifiedEdit (live
   // buffer when the doc is open, atomic disk write otherwise); all fail
   // with KNOTE_STALE instead of writing when the expected text moved.
