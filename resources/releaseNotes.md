@@ -18,6 +18,10 @@ Extensions view.
 - Fixed the date picker (tasks, milestones, due dates) applying and closing
   the moment you navigated the native calendar to a different month — it
   now only commits when you pick a quick option or click away.
+- Fixed pasting an image (screenshot, copied bitmap) doing nothing in Live
+  Preview, the default editor — it only worked in the raw text editor.
+  Paste now saves the image to the attachments folder and inserts its embed
+  in Live Preview too.
 
 ## 1.0.1
 
