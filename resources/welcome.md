@@ -211,6 +211,24 @@ The **KNote icon in the Activity Bar** opens four panels:
 | **KNote: Insert Milestone** (± Important) | Inserts a dated 🏁 line |
 | **KNote: Clean Up Orphaned Attachments** | Finds images in the attachments folder no note references and moves them to the trash (after you confirm) |
 
+## Attachments clean themselves up
+
+When you delete the last `![[embed]]` of an image from a note (and save), or
+delete a note that embedded images, KNote moves the now-orphaned files out of
+the attachments folder automatically:
+
+- **To the OS trash / Recycle Bin** — never permanently deleted; restore from
+  there if you change your mind.
+- **Shared images are safe** — an image still embedded by *any* other note is
+  left untouched.
+- Works for `![[wiki embeds]]` and `![](markdown)` images alike, and also when
+  a note is edited or deleted outside VS Code (the file watcher catches it).
+- Moving an embed between notes? Do the cut *and* the paste before saving the
+  first note — otherwise the image is trashed in between (recoverable from
+  the Recycle Bin).
+- **KNote: Clean Up Orphaned Attachments** still exists for a full manual
+  sweep of anything that predates this feature.
+
 ## Data rules (unchanged)
 
 - Your vault of `.md` files is the sole source of truth. The index is

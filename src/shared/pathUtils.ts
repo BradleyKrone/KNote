@@ -30,7 +30,7 @@ export function nameOf(rel: string): string {
   return idx === -1 ? n : n.slice(idx + 1)
 }
 
-export function extOf(rel: string): string {
+function extOf(rel: string): string {
   const name = nameOf(rel)
   const idx = name.lastIndexOf('.')
   return idx <= 0 ? '' : name.slice(idx + 1).toLowerCase()
@@ -46,7 +46,7 @@ export function isMarkdown(rel: string): boolean {
   return extOf(rel) === 'md'
 }
 
-export const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'avif'])
+const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'avif'])
 
 export function isImage(rel: string): boolean {
   return IMAGE_EXTS.has(extOf(rel))

@@ -63,7 +63,7 @@ export function setVault(root: string): VaultInfo {
   return currentVault()!
 }
 
-export function currentVault(): VaultInfo | null {
+function currentVault(): VaultInfo | null {
   if (!vaultRoot) return null
   const parts = vaultRoot.split(sep).filter(Boolean)
   return { root: vaultRoot, name: parts[parts.length - 1] ?? vaultRoot }
@@ -298,34 +298,6 @@ export async function createFolder(rel: VaultPath): Promise<VaultPath> {
   ownWriteMarker(abs)
   await fs.mkdir(abs, { recursive: true })
   return target
-}
-
-export async function renameEntry(rel: VaultPath, newName: string): Promise<VaultPath> {
-  if (/[\\/:*?"<>|]/.test(newName)) throw new Error(`Invalid name: ${newName}`)
-  const from = toAbs(rel)
-  const targetRel = joinRel(parentOf(rel), newName)
-  if (normalizeRel(targetRel) === normalizeRel(rel)) return normalizeRel(rel)
-  const to = toAbs(targetRel)
-  if (await exists(to)) throw new Error(`"${newName}" already exists`)
-  ownWriteMarker(from)
-  ownWriteMarker(to)
-  await fs.rename(from, to)
-  return targetRel
-}
-
-export async function moveEntry(rel: VaultPath, targetFolder: VaultPath): Promise<VaultPath> {
-  const from = toAbs(rel)
-  const name = nameOf(rel)
-  const targetRel = await uniquify(joinRel(targetFolder, name))
-  const to = toAbs(targetRel)
-  if (normalizeRel(targetRel) === normalizeRel(rel)) return normalizeRel(rel)
-  // Refuse moving a folder into itself/descendant
-  if ((to + sep).startsWith(from + sep)) throw new Error('Cannot move a folder into itself')
-  await fs.mkdir(dirname(to), { recursive: true })
-  ownWriteMarker(from)
-  ownWriteMarker(to)
-  await fs.rename(from, to)
-  return targetRel
 }
 
 export async function deleteEntry(rel: VaultPath): Promise<void> {

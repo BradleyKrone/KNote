@@ -1,0 +1,14 @@
+{
+  "entry": [
+    "src/extension/extension.ts",
+    "src/webviews/*/main.tsx",
+    "src/webviews/editor/spellcheck/fsStub.js",
+    "esbuild.mjs",
+    ".vscode-test.mjs",
+    "tests/**/*.test.ts",
+    "test/integration/*.test.ts"
+  ],
+  "project": ["src/**/*.{ts,tsx,js}", "tests/**/*.ts", "test/**/*.ts"],
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": ["@types/mocha", "@vscode/test-electron"]
+}

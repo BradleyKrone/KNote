@@ -2,6 +2,7 @@ import * as vscode from 'vscode'
 import { findVaultRoot, initializeVault, maybeSuggestInitialize } from './vault'
 import { startEngine, stopEngine } from './engine'
 import { registerDocSync } from './docSync'
+import { registerAttachmentAutoCleanup } from './attachmentAutoCleanup'
 import { registerWikiLinks } from './providers/wikiLinks'
 import { registerCompletions } from './providers/completions'
 import { registerHover } from './providers/hover'
@@ -42,6 +43,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     try {
       await startEngine(root, log)
       registerDocSync(context)
+      registerAttachmentAutoCleanup(context)
     } catch (err) {
       log.appendLine(`Failed to start: ${err instanceof Error ? err.message : String(err)}`)
       void vscode.window.showErrorMessage(

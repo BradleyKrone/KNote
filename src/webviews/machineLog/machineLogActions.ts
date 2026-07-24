@@ -1,12 +1,7 @@
 import { MACHINE_ENTRY_RE } from '@shared/parser/patterns'
 import { setDueDate } from '../shared/taskMeta'
-import { rewriteLine, setLineDate } from '../shared/dateLineEdit'
+import { rewriteLine } from '../shared/dateLineEdit'
 import type { MachineEntry } from './machineLogSelectors'
-
-/** Change a machine-log entry's 📅 date in place (or clear it when `date` is null). */
-export async function setMachineEntryDate(entry: MachineEntry, date: string | null): Promise<void> {
-  await setLineDate({ path: entry.path, line: entry.line, rawLine: entry.rawLine }, date)
-}
 
 /** Change a machine-log entry's serial and date together, leaving inline tags/text untouched. */
 export async function setMachineEntryFields(
