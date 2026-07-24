@@ -3,6 +3,22 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.1.0
+
+- **Attachments clean themselves up automatically**: delete the last
+  `![[embed]]`/`![](image)` of an image from a note (and save), or delete a
+  note that embedded images, and KNote moves the now-orphaned file out of
+  the attachments folder to the OS trash / Recycle Bin — never permanently
+  deleted, and an image still embedded by any other note is left untouched.
+  Also catches edits made outside VS Code (the file watcher). **KNote:
+  Clean Up Orphaned Attachments** still exists for a full manual sweep.
+- Fixed milestones in the Timeline view showing an **overdue** badge and
+  countdown once their date passed — they're now treated like completed
+  items, not open tasks.
+- Fixed the date picker (tasks, milestones, due dates) applying and closing
+  the moment you navigated the native calendar to a different month — it
+  now only commits when you pick a quick option or click away.
+
 ## 1.0.1
 
 - Repo cleanup — no feature changes: built `.vsix` packages are no longer

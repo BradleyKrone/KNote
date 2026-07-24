@@ -449,10 +449,6 @@ button {
   padding: 6px 8px;
 }
 
-.picker-date-custom {
-  padding: 2px 4px;
-}
-
 .picker-date-input {
   width: 100%;
   background: var(--vscode-input-background);

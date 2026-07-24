@@ -107,7 +107,7 @@ export function TimelineApp(): React.JSX.Element {
                   <span className="timeline-date-label">
                     {dayjs(date).format('ddd, MMM D YYYY')}
                     {isToday && <span className="timeline-today-badge">TODAY</span>}
-                    {isPast && items.some((i) => !i.done) && (
+                    {isPast && items.some((i) => !i.done && i.kind !== 'milestone') && (
                       <span className="timeline-overdue-badge">overdue</span>
                     )}
                   </span>
@@ -150,7 +150,11 @@ export function TimelineApp(): React.JSX.Element {
                         <span className="timeline-item-note">{item.noteTitle}</span>
                       )}
                       {!item.done && (
-                        <span className={`timeline-item-countdown${isPast ? ' overdue' : ''}`}>
+                        <span
+                          className={`timeline-item-countdown${
+                            isPast && item.kind !== 'milestone' ? ' overdue' : ''
+                          }`}
+                        >
                           {formatTimeUntil(item.date, today)}
                         </span>
                       )}
