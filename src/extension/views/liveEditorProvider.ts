@@ -16,7 +16,7 @@ import { isEditorSyncMessage } from '@shared/editorSync'
 import { isImage, resolveEmbedPath } from '@shared/pathUtils'
 import { relForUri } from '../paths'
 import { toAbs } from '../../core/vaultService'
-import { attach } from '../rpc/webviewRpc'
+import { attach, currentActiveNoteRel, setActiveNote } from '../rpc/webviewRpc'
 import { createHostHandlers } from '../rpc/hostHandlers'
 import { currentVaultRoot } from '../engine'
 import { webviewHtml, webviewResourceRoots } from './webviewHtml'
@@ -151,10 +151,22 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
       ...(revealLine !== undefined ? { line: revealLine } : {})
     })
 
+    // Custom editors never touch vscode.window.activeTextEditor, so the
+    // sidebar panels (Backlinks/Outline/Properties) — which key off that —
+    // would otherwise never learn a note is open here. Track active-note
+    // identity ourselves, on open and on every tab/split focus change.
+    const notePath = relForUri(document.uri)
+    setActiveNote(notePath)
+    const viewStateSub = panel.onDidChangeViewState((e) => {
+      if (e.webviewPanel.active) setActiveNote(notePath)
+    })
+
     panel.onDidDispose(() => {
       if (openPanels.get(key) === panel) openPanels.delete(key)
+      if (currentActiveNoteRel() === notePath) setActiveNote(null)
       msgSub.dispose()
       changeSub.dispose()
+      viewStateSub.dispose()
       rpc.dispose()
     })
   }

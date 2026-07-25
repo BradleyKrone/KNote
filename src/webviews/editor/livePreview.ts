@@ -16,6 +16,7 @@ import {
   ViewPlugin,
   type ViewUpdate
 } from '@codemirror/view'
+import { isCollapsedMermaidFence } from './mermaidRender'
 
 // Syntax-mark nodes to hide (the `#`, `**`, `` ` ``, `>`, `-`, `[`/`]`/`(`/`)`).
 const HIDE = new Set([
@@ -122,7 +123,11 @@ function buildDecorations(view: EditorView): DecorationSet {
       to,
       enter: (node) => {
         const name = node.name
-        const cls = contentClass(name)
+        // A collapsed mermaid fence is rendered as a diagram widget by
+        // mermaidRender.ts — skip content styling for the range it owns, the
+        // same way Table nodes are left out of contentClass() entirely.
+        const collapsedMermaid = name === 'FencedCode' && isCollapsedMermaidFence(view.state, node)
+        const cls = collapsedMermaid ? null : contentClass(name)
         if (cls && node.to > node.from) {
           decorations.push(Decoration.mark({ class: cls }).range(node.from, node.to))
         }
@@ -132,7 +137,7 @@ function buildDecorations(view: EditorView): DecorationSet {
         const hLine = headingLineClass(name)
         if (hLine) {
           decorations.push(Decoration.line({ class: hLine }).range(doc.lineAt(node.from).from))
-        } else if (name === 'FencedCode' || name === 'CodeBlock') {
+        } else if ((name === 'FencedCode' || name === 'CodeBlock') && !collapsedMermaid) {
           eachLine(doc, node.from, node.to, (line, first, last) => {
             let c = 'cm-md-codeblock-line'
             if (first) c += ' cm-md-codeblock-first'

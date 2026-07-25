@@ -44,6 +44,7 @@ import {
 import { host } from '../shared/rpc'
 import { promptReason, showToast, useConfigStore } from '../shared/stores'
 import { checkboxRange } from './constructLogic'
+import { isCollapsedMermaidFence } from './mermaidRender'
 
 // One webview edits exactly one note; its vault-relative path is set at init.
 let notePath: string | null = null
@@ -299,6 +300,15 @@ function inTable(view: EditorView, pos: number): boolean {
   return false
 }
 
+/** True when pos sits inside a collapsed mermaid fence (rendered separately by mermaidRender). */
+function inMermaidBlock(view: EditorView, pos: number): boolean {
+  for (let n = syntaxTree(view.state).resolveInner(pos, 1); n; n = n.parent!) {
+    if (n.name === 'FencedCode') return isCollapsedMermaidFence(view.state, n)
+    if (!n.parent) break
+  }
+  return false
+}
+
 /** True when pos sits inside inline code or a fenced/indented code block. */
 function inCode(view: EditorView, pos: number): boolean {
   for (let n = syntaxTree(view.state).resolveInner(pos, 1); n; n = n.parent!) {
@@ -343,9 +353,10 @@ function decorateLine(
 ): void {
   const text = line.text
 
-  // Inside a table that's rendered as a widget, tableRender owns the line —
-  // don't add overlapping decorations (they'd clash with the block replace).
-  if (!isRevealed && inTable(view, line.from)) return
+  // Inside a table or mermaid diagram that's rendered as a widget, tableRender/
+  // mermaidRender owns the line — don't add overlapping decorations (they'd
+  // clash with the block replace).
+  if (!isRevealed && (inTable(view, line.from) || inMermaidBlock(view, line.from))) return
 
   // Whole-line styling (always applied, never hidden).
   if (REASON_FOR_RE.test(text) || STATUS_CHANGED_RE.test(text) || DATE_ENTERED_RE.test(text)) {

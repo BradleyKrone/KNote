@@ -35,6 +35,11 @@ Markdown:
 - **Pipe tables render as real grids** (with column alignment); click a table
   to drop your cursor in and edit the raw Markdown, exactly like every other
   construct.
+- **`` ```mermaid `` code blocks render as real diagrams** (flowcharts,
+  sequence diagrams, and anything else Mermaid supports); click a diagram to
+  drop your cursor in and edit the raw source, exactly like every other
+  construct. An invalid diagram shows its error inline instead of breaking
+  the editor.
 - **Enter seeds a task's note** — finish typing a top-level task line and
   press **Enter** to auto-insert its indented `Status Changed` / `Date
   Entered` / `Notes` block, with the cursor left on the Notes line. This also
@@ -174,14 +179,16 @@ the main thing, the rows under it jump straight to one item.
 
 These all track the index live, so counts and lists follow your edits.
 
-## Sidebar: Search, Backlinks, Tags, Properties
+## Sidebar: Search, Backlinks, Outline, Tags, Properties
 
-The **KNote icon in the Activity Bar** opens four panels:
+The **KNote icon in the Activity Bar** opens five panels:
 
 - **Search** — full-text with operators: `path:`, `tag:`, `file:`, quoted
   `"phrases"`, and `-excludes`. `tag:none` finds untagged notes.
 - **Backlinks** — every note linking to the active note, plus **unlinked
   mentions** of its title/aliases with a one-click **Link** button.
+- **Outline** — heading tree (H1–H6) for the active note, indented by
+  level; click a heading to jump the editor there.
 - **Tags** — every tag with usage counts; click to search, right-click to
   rename across the vault or deprecate (hide from pickers).
 - **Properties** — form-style frontmatter editing for the active note.

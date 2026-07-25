@@ -671,6 +671,19 @@ button {
   border-color: var(--interactive-accent);
 }
 
+.outline-row {
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.outline-row:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
 .properties-note-title {
   font-size: 13px;
   font-weight: 700;

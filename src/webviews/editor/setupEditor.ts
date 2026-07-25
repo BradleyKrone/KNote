@@ -19,6 +19,7 @@ import { vscodeApi } from '../shared/rpc'
 import { knoteTheme } from './theme'
 import { livePreview } from './livePreview'
 import { tableRender } from './tableRender'
+import { mermaidRender } from './mermaidRender'
 import { knoteConstructs } from './knoteConstructs'
 import { pasteImage } from './pasteImage'
 import { formatKeymap } from './markdownFormatting'
@@ -51,6 +52,7 @@ export function createEditor(opts: { parent: HTMLElement; doc: string; eol: stri
       markdown({ extensions: [Strikethrough, Table, Autolink] }),
       syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
       tableRender,
+      mermaidRender,
       livePreview,
       knoteConstructs,
       pasteImage,
