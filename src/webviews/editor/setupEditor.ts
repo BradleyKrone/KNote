@@ -20,12 +20,14 @@ import { knoteTheme } from './theme'
 import { livePreview } from './livePreview'
 import { tableRender } from './tableRender'
 import { mermaidRender } from './mermaidRender'
+import { embedRender } from './embedRender'
 import { knoteConstructs } from './knoteConstructs'
 import { pasteImage } from './pasteImage'
 import { formatKeymap } from './markdownFormatting'
 import { taskFold } from './taskFold'
 import { taskEnterKeymap } from './taskEnter'
 import { knoteAutocomplete } from './completions'
+import { linkHover } from './linkHover'
 import { spellCheck } from './spellcheck/spellCheck'
 import { fromHost } from './sync'
 
@@ -53,12 +55,14 @@ export function createEditor(opts: { parent: HTMLElement; doc: string; eol: stri
       syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
       tableRender,
       mermaidRender,
+      embedRender,
       livePreview,
       knoteConstructs,
       pasteImage,
       spellCheck,
       taskFold,
       knoteAutocomplete,
+      linkHover,
       // Both keymaps run at highest precedence; array order breaks the tie, so
       // completion keys (Enter to accept a #tag/[[link, arrows to navigate,
       // Esc to dismiss) are tried before Enter-to-seed. acceptCompletion is a

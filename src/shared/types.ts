@@ -28,6 +28,24 @@ export interface FileWriteResult {
   mtimeMs: number
 }
 
+/**
+ * The note text an `![[embed]]` (or a link hover preview) should display —
+ * already narrowed to the requested `#Heading` / `#^block` section. `path` is
+ * the resolved note, so the caller can resolve that note's own relative image
+ * embeds and open it on click.
+ */
+export interface EmbedNote {
+  path: VaultPath
+  title: string
+  content: string
+  /**
+   * 0-based line the `#Heading` / `#^block` section starts on, so opening the
+   * note from an embed or hover preview lands on the part that was shown.
+   * Undefined for a whole-note target.
+   */
+  line?: number
+}
+
 export type ExternalChangeKind = 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir'
 
 export interface ExternalChange {
@@ -193,6 +211,12 @@ export interface VaultConfig {
   deprecatedTags: string[]
   /** Words added to the personal spell-check dictionary (never flagged as misspelled) */
   userDictionary: string[]
+  /**
+   * Whether renaming/moving a note rewrites the `[[wiki links]]` that point at
+   * it across the vault (Obsidian's "automatically update internal links").
+   * 'never' leaves links exactly as written, so they dangle after a rename.
+   */
+  linkUpdate: 'always' | 'never'
 }
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
@@ -211,5 +235,6 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   ],
   machines: [],
   deprecatedTags: [],
-  userDictionary: []
+  userDictionary: [],
+  linkUpdate: 'always'
 }

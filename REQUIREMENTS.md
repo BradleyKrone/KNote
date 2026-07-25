@@ -7,9 +7,15 @@
 > (editor tabs, webview panels, the native Command Palette). Features VS
 > Code provides natively (file explorer, tabs/splits, quick switcher,
 > hotkey editing, themes, full-text search UI) are deliberately no longer
-> implemented by KNote itself. The built-in live-preview editor was
-> retired in favor of VS Code's native Markdown editor plus KNote
-> enhancements (wiki links, completions, decorations).
+> implemented by KNote itself.
+>
+> **Corrections (July 2026):** two statements here went stale as the port
+> settled. A **graph view** shipped despite §3 listing it as a non-goal — that
+> line has been removed. And the built-in live-preview editor was *not* retired:
+> an Obsidian-style CodeMirror 6 live-preview editor is KNote's default `.md`
+> editor, with VS Code's native Markdown editor available via **KNote: Reopen as
+> Raw Text** and its Markdown preview (`Ctrl+Shift+V`, KNote-syntax aware)
+> serving as Reading mode (§5.2).
 
 ## 1. Overview
 
@@ -46,7 +52,6 @@ recommendations.
 - Mobile apps.
 - A plugin marketplace or plugin API.
 - Publishing/sharing notes to the web.
-- A graph view or any knowledge-graph visualization of note relationships.
 - Any built-in sync, telemetry, analytics, or cloud/network service of any
   kind. Users who want to sync a vault do so with their own external tool
   (Syncthing, Dropbox, git, etc.), entirely outside KNote.

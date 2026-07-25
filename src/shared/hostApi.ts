@@ -5,6 +5,7 @@
 // errors.ts) keep working on the webview side.
 
 import type {
+  EmbedNote,
   FileReadResult,
   IndexDelta,
   Mention,
@@ -24,6 +25,14 @@ export interface HostApi {
   /** Plain-text occurrences of the strings across the vault (unlinked mentions). */
   findMentions(strings: string[], excludePath: VaultPath): Promise<Mention[]>
   readFile(path: VaultPath): Promise<FileReadResult>
+
+  /**
+   * The note text behind an `![[embed]]` or a hovered `[[link]]`, narrowed to
+   * the target's `#Heading` / `#^block` section. Returns null when the note or
+   * the section doesn't resolve. Image targets never come here — the caller
+   * recognizes those by extension and renders them inline instead.
+   */
+  readEmbed(rawTarget: string): Promise<EmbedNote | null>
 
   /**
    * Resolve an image/embed reference (a `![[...]]` target or `![](...)` src,
@@ -90,6 +99,14 @@ export interface HostApi {
 /** Events the host pushes to every attached webview. */
 export interface HostEvents {
   indexDelta: IndexDelta
+  /**
+   * The vault-wide index has finished building. Webviews re-hydrate on this:
+   * the custom editor and sidebar views are registered before the index is
+   * built, so one that resolves during activation can call getIndexSnapshot()
+   * early and get back a partial (or empty) vault. Without this they'd stay
+   * that way until an indexDelta happened to mention each note.
+   */
+  indexReady: void
   configChanged: VaultConfig
   /** Vault-relative path of the note in the active editor, or null. */
   activeNoteChanged: VaultPath | null

@@ -42,25 +42,36 @@ A VS Code extension in four layers under `src/`:
   with own-write echo suppression and byte-identical dedupe),
   `lineEdit.ts` (verified single-line rewrites — the disk half of board
   sync), `vaultConfig.ts` (`.knote/config.json`), `indexer/` (note index,
-  MiniSearch, unlinked mentions), `tagRename.ts`, `attachmentCleanup.ts`.
+  MiniSearch, unlinked mentions), `tagRename.ts`, `linkRename.ts`
+  (vault-wide `[[link]]` rewrite when a note is renamed/moved),
+  `attachments.ts`, `attachmentCleanup.ts`.
 - **`src/extension/`** — the extension host. `extension.ts` (activation:
-  a workspace folder containing `.knote/` is the vault), `engine.ts`
-  (wires index + watcher, fans out index deltas), `docSync.ts` (editor →
-  index live sync), `verifiedEdit.ts` (the write half of two-way sync:
-  WorkspaceEdit on open buffers, `core/lineEdit` otherwise, KNOTE_STALE on
-  mismatch), `frontmatterEdit.ts`, `providers/` (wiki-link DocumentLinks,
-  completions, hover, decorations, paste-image), `commands/` (tasks,
-  formatting, weekly notes, templates, machine entries, maintenance),
-  `views/` (board/timeline/machineLog/graph/settings panels + sidebar
-  webview views), `trees/tagsTree.ts`, `rpc/` (webview RPC router +
-  HostApi handlers).
+  a workspace folder containing `.knote/` is the vault; returns the
+  `extendMarkdownIt` API VS Code's Markdown preview picks up), `engine.ts`
+  (wires index + watcher, fans out index deltas, `whenIndexBuilt()`),
+  `docSync.ts` (editor → index live sync), `verifiedEdit.ts` (the write
+  half of two-way sync: WorkspaceEdit on open buffers, `core/lineEdit`
+  otherwise, KNOTE_STALE on mismatch), `frontmatterEdit.ts`,
+  `renameLinks.ts` (onWillRenameFiles → one WorkspaceEdit, so the link
+  rewrite shares the rename's undo step), `markdownItKnote.ts` (KNote
+  syntax in Reading mode), `attachmentAutoCleanup.ts`, `providers/`
+  (wiki-link DocumentLinks, completions, hover, decorations, paste-image),
+  `commands/` (tasks, formatting, weekly notes, templates, machine
+  entries, maintenance), `views/` (board/timeline/machineLog/graph/settings
+  panels + the Live Preview custom editor + sidebar webview views),
+  `trees/tagsTree.ts`, `rpc/` (webview RPC router + HostApi handlers).
 - **`src/webviews/`** — React 18 apps bundled per view (board, timeline,
-  machineLog, graph, search, backlinks, properties, settings) plus
-  `shared/` (typed RPC client, Zustand stores mirrored from index deltas,
+  machineLog, graph, search, backlinks, outline, properties, settings)
+  plus `editor/` — the CodeMirror 6 Live Preview editor, which is *not*
+  React and is the default `.md` editor (live-preview decorations, tables,
+  mermaid, note embeds, hover previews, spell check) — and `shared/`
+  (typed RPC client, Zustand stores mirrored from index deltas,
   pickers/dialogs, `webview.css` mapped onto `--vscode-*` theme colors).
 - **`src/shared/`** — types, the parser (`parser/parseNote.ts`,
   `parser/patterns.ts`), `hostApi.ts` (the host ↔ webview RPC contract),
-  `wikiResolve.ts`, path/search utilities. Pure TS, used by all layers.
+  `wikiResolve.ts`, `renderMarkdown.ts` (markdown-it + KNote's wiki-link
+  and tag rules, shared by embeds, hover previews and Reading mode),
+  `embedSlice.ts`, path/search utilities. Pure TS, used by all layers.
 
 Key invariants:
 - A **vault** is just a folder on disk. That's the entire data model — no
@@ -70,6 +81,12 @@ Key invariants:
   text must still match (or the whole write is refused with `KNOTE_STALE`)
   — nothing ever clobbers an edit it didn't see.
 - `src/core/` must stay free of `vscode` imports.
+- **Providers, views and the custom editor are all registered before the
+  engine starts**, so anything that resolves during activation can be
+  handed an empty index. Whatever needs the whole vault must await
+  `engine.whenIndexBuilt()` — `getIndexSnapshot` does, which is what keeps
+  a restored Live Preview tab from hydrating its store with nothing and
+  leaving `[[` completion, backlinks and tags near-empty.
 
 ## Dev workflow
 

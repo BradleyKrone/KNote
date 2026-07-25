@@ -3,7 +3,9 @@
 // webview through webviewRpc.attach.
 
 import * as vscode from 'vscode'
-import type { VaultConfig, VaultPath } from '@shared/types'
+import type { EmbedNote, VaultConfig, VaultPath } from '@shared/types'
+import { sliceEmbedSection } from '@shared/embedSlice'
+import { resolveTarget, sectionLine, splitWikiTarget } from '@shared/wikiResolve'
 import { saveImageAttachment } from '../../core/attachments'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
 import * as searchIndex from '../../core/indexer/searchIndex'
@@ -15,12 +17,55 @@ import * as verifiedEdit from '../verifiedEdit'
 import { setFrontmatter } from '../frontmatterEdit'
 import { openWikiTarget } from '../providers/wikiLinks'
 import { openNoteInLiveEditor } from '../views/liveEditorProvider'
+import { whenIndexBuilt } from '../engine'
 import { uriForRel } from '../paths'
 import { broadcast, type HostHandlers } from './webviewRpc'
 
+/**
+ * Resolve an embed/hover target to the note text it should display. Reads the
+ * index's copy of the content (kept current with open buffers by docSync) and
+ * falls back to disk for a note the index somehow hasn't got.
+ */
+async function readEmbed(rawTarget: string): Promise<EmbedNote | null> {
+  const { target, section } = splitWikiTarget(rawTarget)
+  const notes = new Map(vaultIndex.getSnapshot().map((meta) => [meta.path, meta]))
+  const path = resolveTarget(target, notes)
+  if (path === null) return null
+  const meta = notes.get(path)
+  if (!meta) return null
+
+  let content = vaultIndex.getContent(path)
+  if (content === undefined) {
+    try {
+      content = (await vault.readFile(path)).content
+    } catch {
+      return null
+    }
+  }
+
+  const sliced = sliceEmbedSection(content, meta, section)
+  if (sliced === null) return null
+  // Where the shown section starts, so the caller can open the note right there.
+  const line = section === null ? null : sectionLine(meta, section)
+  return {
+    path,
+    title: meta.title,
+    content: sliced,
+    ...(line === null ? {} : { line })
+  }
+}
+
 export function createHostHandlers(): HostHandlers {
   return {
-    getIndexSnapshot: () => vaultIndex.getSnapshot(),
+    // Waits for the initial index build: this is registered (and reachable)
+    // before the engine starts, so a restored editor or sidebar view can ask
+    // during activation and would otherwise hydrate from an empty vault and
+    // stay that way — leaving [[ completion, backlinks and tags near-empty
+    // until each note happened to change. Resolves immediately once built.
+    getIndexSnapshot: async () => {
+      await whenIndexBuilt()
+      return vaultIndex.getSnapshot()
+    },
     getVaultConfig: () => getVaultConfig(),
     setVaultConfig: async (config: VaultConfig) => {
       await setVaultConfig(config)
@@ -29,6 +74,7 @@ export function createHostHandlers(): HostHandlers {
     searchVault: (query: string) => searchIndex.search(query),
     findMentions: (strings: string[], excludePath: VaultPath) => findMentions(strings, excludePath),
     readFile: (path: VaultPath) => vault.readFile(path),
+    readEmbed: (rawTarget: string) => readEmbed(rawTarget),
 
     saveImageAttachment: (mimeType: string, base64Data: string) =>
       saveImageAttachment(mimeType, Buffer.from(base64Data, 'base64')),

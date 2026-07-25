@@ -1,0 +1,39 @@
+/* Styles for KNote's syntax inside VS Code's built-in Markdown preview
+   (Reading mode). Contributed via contributes.markdown.previewStyles; the
+   markup itself comes from extension/markdownItKnote.ts, which mirrors the
+   class names the live-preview editor uses. */
+
+.knote-wikilink {
+  text-decoration: none;
+}
+
+.knote-wikilink:hover {
+  text-decoration: underline;
+}
+
+/* A link whose target doesn't exist in the vault: visible, but clearly not
+   navigable — same signal the graph view gives unresolved targets. */
+.knote-unresolved {
+  color: var(--vscode-descriptionForeground);
+  text-decoration: underline dotted;
+  cursor: default;
+}
+
+.knote-tag {
+  color: #000;
+  background-color: var(--vscode-badge-background, #ddd);
+  border-radius: 8px;
+  padding: 0.05em 0.45em;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.knote-embed-image {
+  max-width: 100%;
+}
+
+.knote-embed-missing::after {
+  content: ' ⚠ not found';
+  color: var(--vscode-errorForeground, #c00);
+  font-size: 0.85em;
+}

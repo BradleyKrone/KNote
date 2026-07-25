@@ -387,3 +387,204 @@ body {
   color: var(--vscode-descriptionForeground);
   cursor: pointer;
 }
+
+/* ---------------------------------------------------------------------------
+   Note transclusion — the card an `![[Note]]` on its own line renders as
+   (embedRender.ts). Padding, never vertical margin: a block widget's margin
+   escapes CodeMirror's height measurement and drifts clicks on the lines below
+   it, the same hazard .cm-knote-group-first documents.
+   --------------------------------------------------------------------------- */
+.cm-knote-embed {
+  border: 1px solid var(--knote-group-border);
+  border-left: 3px solid var(--vscode-textLink-foreground);
+  border-radius: 6px;
+  padding: 0.5em 0.9em;
+  overflow-x: auto;
+}
+/* Set once the embed resolves: the whole card is then a link to its note. */
+.cm-knote-embed-open {
+  cursor: pointer;
+}
+.cm-knote-embed-open:hover {
+  background: var(--vscode-list-hoverBackground, rgba(127, 127, 127, 0.08));
+}
+.cm-knote-embed-title {
+  color: var(--vscode-textLink-foreground);
+  font-size: 0.85em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  width: fit-content;
+}
+.cm-knote-embed-open:hover .cm-knote-embed-title {
+  text-decoration: underline;
+}
+.cm-knote-embed-loading {
+  min-height: 2em;
+  opacity: 0.5;
+}
+.cm-knote-embed-missing {
+  border-left-color: var(--vscode-errorForeground);
+}
+.cm-knote-embed-missing .cm-knote-embed-body {
+  color: var(--vscode-errorForeground);
+  font-size: 0.9em;
+}
+
+/* The embedded note's rendered markdown. Headings are scaled down so an
+   embedded note reads as a nested excerpt, not as a second document. */
+.cm-knote-embed-body > :first-child {
+  margin-top: 0.2em;
+}
+.cm-knote-embed-body > :last-child {
+  margin-bottom: 0;
+}
+.cm-knote-embed-body h1,
+.cm-knote-embed-body h2,
+.cm-knote-embed-body h3,
+.cm-knote-embed-body h4,
+.cm-knote-embed-body h5,
+.cm-knote-embed-body h6 {
+  font-size: 1.05em;
+  margin: 0.4em 0 0.2em;
+}
+.cm-knote-embed-body p,
+.cm-knote-embed-body ul,
+.cm-knote-embed-body ol {
+  margin: 0.3em 0;
+}
+.cm-knote-embed-body ul,
+.cm-knote-embed-body ol {
+  padding-left: 1.4em;
+}
+.cm-knote-embed-body pre {
+  overflow-x: auto;
+  padding: 0.5em 0.7em;
+  border-radius: 4px;
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.1));
+}
+.cm-knote-embed-body blockquote {
+  margin: 0.3em 0;
+  padding-left: 0.8em;
+  border-left: 3px solid var(--knote-group-border);
+  color: var(--vscode-descriptionForeground);
+}
+.cm-knote-embed-body table {
+  border-collapse: collapse;
+}
+.cm-knote-embed-body th,
+.cm-knote-embed-body td {
+  border: 1px solid var(--knote-group-border);
+  padding: 0.15em 0.5em;
+}
+.cm-knote-embed-body img {
+  max-width: 100%;
+  max-height: 40vh;
+  border-radius: 4px;
+}
+.cm-knote-embed-body .knote-wikilink {
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+  text-decoration: none;
+}
+.cm-knote-embed-body .knote-wikilink:hover {
+  text-decoration: underline;
+}
+.cm-knote-embed-body .knote-unresolved {
+  color: var(--vscode-descriptionForeground);
+  text-decoration: underline dotted;
+}
+.cm-knote-embed-body .knote-tag {
+  color: #000;
+  background-color: var(--vscode-badge-background);
+  border-radius: 8px;
+  padding: 0.05em 0.45em;
+  font-size: 0.9em;
+}
+.cm-knote-embed-body .knote-embed-missing::after {
+  content: '⚠ not found';
+  color: var(--vscode-errorForeground);
+  font-size: 0.85em;
+}
+
+/* ---------------------------------------------------------------------------
+   Link hover preview (linkHover.ts) — the note behind a `[[wiki link]]`.
+   --------------------------------------------------------------------------- */
+.cm-tooltip.cm-tooltip-hover {
+  border: 1px solid var(--vscode-editorHoverWidget-border, var(--knote-group-border));
+  border-radius: 6px;
+  background: var(--vscode-editorHoverWidget-background, var(--vscode-editor-background));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.cm-knote-hover {
+  max-width: 420px;
+  max-height: 340px;
+  overflow: auto;
+  padding: 0.5em 0.8em;
+  font-size: 0.95em;
+}
+.cm-knote-hover-title {
+  color: var(--vscode-textLink-foreground);
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-bottom: 0.2em;
+}
+.cm-knote-hover-loading {
+  min-width: 8em;
+  min-height: 1.5em;
+  opacity: 0.6;
+}
+.cm-knote-hover-missing .cm-knote-hover-body {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+}
+.cm-knote-hover-more {
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+}
+.cm-knote-hover-body > :first-child {
+  margin-top: 0;
+}
+.cm-knote-hover-body > :last-child {
+  margin-bottom: 0;
+}
+.cm-knote-hover-body h1,
+.cm-knote-hover-body h2,
+.cm-knote-hover-body h3,
+.cm-knote-hover-body h4,
+.cm-knote-hover-body h5,
+.cm-knote-hover-body h6 {
+  font-size: 1.05em;
+  margin: 0.4em 0 0.2em;
+}
+.cm-knote-hover-body p,
+.cm-knote-hover-body ul,
+.cm-knote-hover-body ol {
+  margin: 0.25em 0;
+}
+.cm-knote-hover-body ul,
+.cm-knote-hover-body ol {
+  padding-left: 1.3em;
+}
+.cm-knote-hover-body pre {
+  overflow-x: auto;
+  padding: 0.4em 0.6em;
+  border-radius: 4px;
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.1));
+}
+.cm-knote-hover-body img {
+  max-width: 100%;
+  max-height: 12em;
+  border-radius: 4px;
+}
+.cm-knote-hover-body .knote-wikilink,
+.cm-knote-hover-body .knote-unresolved {
+  color: var(--vscode-textLink-foreground);
+  text-decoration: none;
+}
+.cm-knote-hover-body .knote-tag {
+  color: #000;
+  background-color: var(--vscode-badge-background);
+  border-radius: 8px;
+  padding: 0.05em 0.45em;
+  font-size: 0.9em;
+}

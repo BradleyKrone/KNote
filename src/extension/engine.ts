@@ -20,6 +20,19 @@ export const onIndexDelta = deltaEmitter.event
 
 let vaultRoot: string | null = null
 
+// Providers, the custom editor and the sidebar views are all registered before
+// the engine starts, so a restored editor can ask for the index while it's
+// still being built and would otherwise be handed an empty vault. Callers that
+// need the whole index await this instead. Starts resolved: with no vault open
+// there is nothing to wait for.
+let indexBuilt: Promise<void> = Promise.resolve()
+let markIndexBuilt: () => void = () => {}
+
+/** Resolves once the vault-wide index has finished building (immediately when no vault is open). */
+export function whenIndexBuilt(): Promise<void> {
+  return indexBuilt
+}
+
 export function currentVaultRoot(): string | null {
   return vaultRoot
 }
@@ -30,35 +43,45 @@ export function notesMap(): Map<string, NoteMeta> {
 }
 
 export async function startEngine(root: string, log: vscode.OutputChannel): Promise<void> {
-  vault.setOwnWriteMarker(markOwnWrite)
-  vault.setKnownContentMarker(markKnownContent)
-  vault.setTrashHandler((abs) =>
-    Promise.resolve(
-      vscode.workspace.fs.delete(vscode.Uri.file(abs), { recursive: true, useTrash: true })
-    )
-  )
-
-  const info = vault.setVault(root)
-  vaultRoot = info.root
-
-  // Seed a starter template into new vaults, mirroring the old openVault flow
-  const config = await getVaultConfig()
-  const seededTemplate = await vault.ensureDefaultTemplate(config.templatesFolder)
-  if (seededTemplate && !config.weeklyTemplate) {
-    config.weeklyTemplate = seededTemplate
-    await setVaultConfig(config)
-  }
-
-  vaultIndex.onDelta((delta) => deltaEmitter.fire(delta))
-
-  const started = Date.now()
-  await startWatching(info.root, (change) => {
-    void handleWatcherEvent(change.path, change.kind)
+  indexBuilt = new Promise<void>((resolve) => {
+    markIndexBuilt = resolve
   })
-  await vaultIndex.initIndex()
-  log.appendLine(
-    `Vault "${info.name}" (${info.root}) — indexed ${vaultIndex.getSnapshot().length} notes in ${Date.now() - started}ms`
-  )
+  // Whatever happens below, `indexBuilt` must settle: anything awaiting it
+  // (getIndexSnapshot, and so every webview's hydrate) would hang forever on a
+  // failed start otherwise — a worse failure than the empty index it guards.
+  try {
+    vault.setOwnWriteMarker(markOwnWrite)
+    vault.setKnownContentMarker(markKnownContent)
+    vault.setTrashHandler((abs) =>
+      Promise.resolve(
+        vscode.workspace.fs.delete(vscode.Uri.file(abs), { recursive: true, useTrash: true })
+      )
+    )
+
+    const info = vault.setVault(root)
+    vaultRoot = info.root
+
+    // Seed a starter template into new vaults, mirroring the old openVault flow
+    const config = await getVaultConfig()
+    const seededTemplate = await vault.ensureDefaultTemplate(config.templatesFolder)
+    if (seededTemplate && !config.weeklyTemplate) {
+      config.weeklyTemplate = seededTemplate
+      await setVaultConfig(config)
+    }
+
+    vaultIndex.onDelta((delta) => deltaEmitter.fire(delta))
+
+    const started = Date.now()
+    await startWatching(info.root, (change) => {
+      void handleWatcherEvent(change.path, change.kind)
+    })
+    await vaultIndex.initIndex()
+    log.appendLine(
+      `Vault "${info.name}" (${info.root}) — indexed ${vaultIndex.getSnapshot().length} notes in ${Date.now() - started}ms`
+    )
+  } finally {
+    markIndexBuilt()
+  }
 }
 
 /**
