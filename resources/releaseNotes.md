@@ -3,6 +3,36 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.3.0
+
+- **`![[Another Note]]` embeds that note inline** in Live Preview — an embed
+  on its own line renders as a bordered card holding the note's content,
+  Obsidian-style. Click the card to open the embedded note (Alt+click to edit
+  the raw `![[…]]` instead); `![[Note#Heading]]` embeds one section and
+  `![[Note#^task-id]]` a single task with its detail block. Edit the embedded
+  note and the card follows along.
+- **Hover a `[[wiki link]]` for a preview of its note** — a card shows the
+  note's rendered content (about 15 lines' worth); a `[[Note#Heading]]` link
+  previews just that section, and a link to a note that doesn't exist yet says
+  so.
+- **Renaming or moving a note rewrites the `[[links]]` that point at it**
+  across the vault — from the Explorer, `F2`, drag-and-drop, anything.
+  It's part of the rename's own undo step, so `Ctrl+Z` puts both back;
+  renaming a folder updates the links to every note inside it; and your
+  writing style is kept (bare names stay bare, paths stay paths, `#headings`,
+  `|display text` and the `!` embed prefix survive untouched). Links in code
+  blocks and frontmatter are never touched, and neither are links written
+  through a note's `aliases:`, since those still resolve. Turn it off in
+  **Vault Settings → Links**.
+- **Reading mode understands KNote syntax**: VS Code's built-in Markdown
+  preview (`Ctrl+Shift+V`) now renders `[[wiki links]]` as real links you can
+  click to open the note (unresolved ones show dotted and inert), `#tags` as
+  pills, and `![[image]]` embeds inline.
+- Fixed a Live Preview tab restored on window reopen coming up with `[[`
+  completion, backlinks and the tag list near-empty — views that need the
+  whole vault now wait for the index to finish building instead of hydrating
+  from an empty one.
+
 ## 1.2.0
 
 - **`` ```mermaid `` code blocks render as real diagrams** in Live Preview

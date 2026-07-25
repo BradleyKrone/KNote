@@ -15,6 +15,7 @@ import {
   Hash,
   Image,
   Kanban,
+  Link2,
   Plus,
   X
 } from 'lucide-react'
@@ -23,7 +24,8 @@ import { tagCounts } from '@shared/wikiResolve'
 import { host } from '../shared/rpc'
 import { confirm, showToast, useConfigStore, useIndexStore } from '../shared/stores'
 
-type SettingsCategory = 'weekly' | 'templates' | 'attachments' | 'kanban' | 'machines' | 'tags'
+type SettingsCategory =
+  'weekly' | 'templates' | 'attachments' | 'kanban' | 'machines' | 'tags' | 'links'
 
 const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof Calendar }[] = [
   { id: 'weekly', label: 'Weekly notes', icon: Calendar },
@@ -31,7 +33,8 @@ const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof Calendar }
   { id: 'attachments', label: 'Attachments', icon: Image },
   { id: 'kanban', label: 'Kanban board', icon: Kanban },
   { id: 'machines', label: 'Machines', icon: HardDrive },
-  { id: 'tags', label: 'Tags', icon: Hash }
+  { id: 'tags', label: 'Tags', icon: Hash },
+  { id: 'links', label: 'Links', icon: Link2 }
 ]
 
 const VALID_TAG = /^[A-Za-z0-9_][A-Za-z0-9_/-]*$/
@@ -152,7 +155,7 @@ export function SettingsApp(): React.JSX.Element {
 
   const field = (
     label: string,
-    key: keyof Omit<VaultConfig, 'columns' | 'machines' | 'deprecatedTags'>,
+    key: keyof Omit<VaultConfig, 'columns' | 'machines' | 'deprecatedTags' | 'linkUpdate'>,
     hint?: string
   ): React.JSX.Element => (
     <div className="settings-field">
@@ -219,6 +222,27 @@ export function SettingsApp(): React.JSX.Element {
               'attachmentsFolder',
               'where pasted images are saved; can be a nested path'
             )}
+
+          {category === 'links' && (
+            <div className="settings-field">
+              <label>
+                <span className="settings-label">
+                  <input
+                    type="checkbox"
+                    checked={draft.linkUpdate === 'always'}
+                    onChange={(e) =>
+                      edit({ ...draft, linkUpdate: e.target.checked ? 'always' : 'never' })
+                    }
+                  />{' '}
+                  Update links on rename
+                </span>
+                <span className="settings-hint">
+                  when a note is renamed or moved, rewrite the [[wiki links]] that point at it
+                  across the vault — undone together with the rename by Ctrl+Z
+                </span>
+              </label>
+            </div>
+          )}
 
           {category === 'kanban' && (
             <>

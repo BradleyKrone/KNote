@@ -24,6 +24,7 @@ import {
   WidgetType
 } from '@codemirror/view'
 import { isStaleError } from '@shared/errors'
+import { isImage } from '@shared/pathUtils'
 import type { BoardColumn } from '@shared/types'
 import {
   ARCHIVED_CHAR,
@@ -44,6 +45,7 @@ import {
 import { host } from '../shared/rpc'
 import { promptReason, showToast, useConfigStore } from '../shared/stores'
 import { checkboxRange } from './constructLogic'
+import { isNoteEmbedLine } from './embedLogic'
 import { isCollapsedMermaidFence } from './mermaidRender'
 
 // One webview edits exactly one note; its vault-relative path is set at init.
@@ -353,10 +355,15 @@ function decorateLine(
 ): void {
   const text = line.text
 
-  // Inside a table or mermaid diagram that's rendered as a widget, tableRender/
-  // mermaidRender owns the line — don't add overlapping decorations (they'd
-  // clash with the block replace).
-  if (!isRevealed && (inTable(view, line.from) || inMermaidBlock(view, line.from))) return
+  // Inside a table, mermaid diagram or note-embed card that's rendered as a
+  // widget, tableRender/mermaidRender/embedRender owns the line — don't add
+  // overlapping decorations (they'd clash with the block replace).
+  if (
+    !isRevealed &&
+    (inTable(view, line.from) || inMermaidBlock(view, line.from) || isNoteEmbedLine(text))
+  ) {
+    return
+  }
 
   // Whole-line styling (always applied, never hidden).
   if (REASON_FOR_RE.test(text) || STATUS_CHANGED_RE.test(text) || DATE_ENTERED_RE.test(text)) {
@@ -424,7 +431,11 @@ function decorateLine(
     const isEmbed = m[1] === '!'
     const target = m[2] + (m[3] ?? '')
     if (isEmbed) {
-      if (!isRevealed) {
+      // Only *image* embeds render inline here. A note embed on its own line is
+      // a card owned by embedRender.ts (and this line was skipped above); one
+      // sharing a line with other text stays raw, which reads far better than
+      // the broken-image box an ImageWidget would draw for it.
+      if (!isRevealed && isImage(m[2])) {
         out.push(Decoration.replace({ widget: new ImageWidget(m[2]) }).range(from, to))
       }
     } else if (!isRevealed) {

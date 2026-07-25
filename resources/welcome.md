@@ -70,6 +70,18 @@ Markdown:
 - **`[[Wiki links]]`** render as clickable chips (click to open, creating
   the note if it doesn't exist), `#tags` as pills, and **`![[image]]`** /
   `![](image)` embeds show inline.
+- **Hover a link to preview its note** — pause on any `[[wiki link]]` and a
+  card shows the note's rendered content (about 15 lines' worth). A
+  `[[Note#Heading]]` link previews just that section; a link to a note that
+  doesn't exist yet says so.
+- **`![[Another Note]]` embeds it inline** — a note embed on its own line
+  renders as a bordered card holding that note's content, Obsidian-style.
+  Click the card to open the embedded note — an embed follows like a link,
+  just as `[[Note]]` does. **Alt+click** the card instead to drop your cursor
+  into the raw `![[…]]` source for editing.
+  `![[Note#Heading]]` embeds one section (down to the next same-or-higher
+  heading) and `![[Note#^task-id]]` embeds a single task with its detail
+  block. Edit the embedded note and the card follows along.
 - **Autocomplete for tags and links** — type `#` for a list of every tag
   (most-used first), or `[[` for every note (and its aliases); the list
   filters and re-sorts as you keep typing. `[[Note#` then suggests that
@@ -81,13 +93,15 @@ Markdown:
   it (its `Status Changed` / `Date Entered` / `Notes` block and any sub-tasks)
   is wrapped in a light box, so it's clear at a glance what belongs to which
   task. A lone task with no detail isn't boxed.
-- **Fold task detail out of the way** — any line with indented content below
-  it (a task's detail block and sub-tasks, nested lists, note bodies) gets a
-  collapse arrow in the left gutter on hover. Click it to fold the block to a
-  `…` (the card closes up around the single line), so a long note reads as a
-  clean list of top-level tasks; click the `…` or the arrow to expand.
-  `Ctrl+Shift+[` / `Ctrl+Shift+]` fold / unfold the current line;
-  `Ctrl+Alt+[` / `Ctrl+Alt+]` fold / unfold everything.
+- **Fold task detail — or a whole heading section — out of the way** — any line
+  with indented content below it (a task's detail block and sub-tasks, nested
+  lists, note bodies) gets a collapse arrow in the left gutter on hover, and so
+  does any heading: folding a heading collapses everything under it, down to the
+  next heading at the same or a higher level. Click the arrow to fold the block
+  to a `…` (a task's card closes up around the single line), so a long note
+  reads as a clean list of top-level tasks or headings; click the `…` or the
+  arrow to expand. `Ctrl+Shift+[` / `Ctrl+Shift+]` fold / unfold the current
+  line; `Ctrl+Alt+[` / `Ctrl+Alt+]` fold / unfold everything.
 - **Spell checking** — misspelled words get a red wavy underline as you type
   (code, `[[wiki links]]`, `#tags`, URLs and frontmatter are skipped).
   **Right-click a flagged word** for suggested corrections; pick one to
@@ -100,8 +114,32 @@ Markdown:
 
 Everything native still works on the underlying file: `Ctrl+P` quick open,
 source control, and — from the raw text editor — KNote's wiki-link
-autocomplete, hover previews, and paste-image. VS Code's built-in Markdown
-preview (`Ctrl+Shift+V`) is still available too.
+autocomplete, hover previews, and paste-image.
+
+**Reading mode** (`Ctrl+Shift+V`, VS Code's built-in Markdown preview) now
+understands KNote's syntax too: `[[wiki links]]` render as real links you can
+click to open the note (unresolved ones show dotted and inert), `#tags` as
+pills, and `![[image]]` embeds inline.
+
+## Renaming a note keeps its links
+
+Rename or move a note — in the Explorer, `F2`, drag-and-drop, anything — and
+every `[[link]]` pointing at it is rewritten across the vault:
+
+- **One undo.** The rewrite is part of the same operation as the rename, so
+  `Ctrl+Z` puts both back.
+- **Renaming a folder** updates the links to every note inside it.
+- **Your writing style is preserved** — `[[Note]]` stays a bare name,
+  `[[Folder/Note]]` stays a path, and `#headings`, `|display text` and the `!`
+  embed prefix all survive untouched. A pure *move* leaves bare links alone,
+  since they still resolve.
+- **Aliases are left alone.** A link written through a note's `aliases:` still
+  resolves after the rename, so it's not touched.
+- Links inside code blocks and frontmatter are never rewritten. Notes that were
+  closed get saved; a note you had unsaved edits in stays dirty, so your
+  in-progress work is still yours to save.
+
+Turn it off in **Vault Settings → Links** if you'd rather links never move.
 
 ### Right-click menu
 
