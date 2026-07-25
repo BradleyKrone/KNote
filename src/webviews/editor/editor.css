@@ -183,6 +183,35 @@ body {
   text-decoration: underline;
 }
 
+/* Mermaid diagrams — rendered view: a real SVG (see mermaidRender.ts). */
+.cm-md-mermaid-wrap {
+  overflow-x: auto;
+  /* padding, not margin — a block widget's margin escapes CodeMirror's height
+     measurement and drifts clicks on lines below it (see .cm-knote-group-first). */
+  padding: 0.5em 0;
+  cursor: text;
+  text-align: center;
+}
+.cm-md-mermaid-wrap svg {
+  max-width: 100%;
+  height: auto;
+}
+.cm-md-mermaid-loading {
+  min-height: 2em;
+  opacity: 0.5;
+}
+.cm-md-mermaid-error {
+  text-align: left;
+  font-family: var(--vscode-editor-font-family, ui-monospace, monospace);
+  font-size: 0.9em;
+  white-space: pre-wrap;
+  background-color: var(--vscode-inputValidation-errorBackground, rgba(200, 50, 50, 0.1));
+  border: 1px solid var(--vscode-inputValidation-errorBorder, rgba(200, 50, 50, 0.5));
+  border-radius: 4px;
+  padding: 0.6em 0.9em;
+  color: var(--vscode-errorForeground);
+}
+
 /* --- KNote constructs (see knoteConstructs.ts) --- */
 .cm-knote-check {
   display: inline-flex;

@@ -44,12 +44,35 @@ export function broadcast<E extends keyof HostEvents>(event: E, payload: HostEve
   }
 }
 
+// Tracked separately from vscode.window.activeTextEditor because that API
+// never reflects KNote's Live Preview custom editor (see liveEditorProvider,
+// which calls setActiveNote directly on panel focus). Sidebar views read
+// this for their bootstrap value so a view that resolves after a Live
+// Preview note is already open still starts with the right note.
+let currentActiveNote: string | null = null
+
+export function currentActiveNoteRel(): string | null {
+  return currentActiveNote
+}
+
+export function setActiveNote(path: string | null): void {
+  currentActiveNote = path
+  broadcast('activeNoteChanged', path)
+}
+
 /** Wire the host-side event sources into the broadcast channel. Call once at startup. */
 export function registerRpcBroadcasts(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     onIndexDelta((delta) => broadcast('indexDelta', delta)),
+    // Fires with `editor === undefined` whenever focus moves to *any*
+    // non-TextEditor surface — including KNote's own Live Preview panel,
+    // every time it's opened or focused. Only react when there's a real
+    // vault-note editor to switch to; clearing to null on a Live Preview
+    // note is liveEditorProvider's job (panel dispose), not this listener's
+    // — otherwise this fires right after it and clobbers the correct value.
     vscode.window.onDidChangeActiveTextEditor((editor) => {
-      broadcast('activeNoteChanged', editor ? relForUri(editor.document.uri) : null)
+      const rel = editor ? relForUri(editor.document.uri) : null
+      if (rel !== null) setActiveNote(rel)
     })
   )
 }

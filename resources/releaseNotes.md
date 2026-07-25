@@ -3,6 +3,17 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.2.0
+
+- **`` ```mermaid `` code blocks render as real diagrams** in Live Preview
+  (flowcharts, sequence diagrams, and anything else Mermaid supports); click
+  a diagram to drop your cursor in and edit the raw source. Invalid syntax
+  shows an inline error instead of breaking the editor.
+- **Outline panel moved to the KNote sidebar**: a new **Outline** view sits
+  alongside Search/Backlinks/Tags/Properties in the KNote Activity Bar
+  container — a heading tree (H1–H6) for the active note, indented by
+  level; click a heading to jump the editor there.
+
 ## 1.1.0
 
 - **Attachments clean themselves up automatically**: delete the last

@@ -1,20 +1,14 @@
-// The KNote activity-bar webview views: Search, Backlinks, Properties.
+// The KNote activity-bar webview views: Search, Backlinks, Outline, Properties.
 // Each is a small React app served through the shared webview shell + RPC.
 
 import * as vscode from 'vscode'
 import { currentVaultRoot } from '../engine'
-import { relForUri } from '../paths'
-import { attach, broadcast } from '../rpc/webviewRpc'
+import { attach, broadcast, currentActiveNoteRel } from '../rpc/webviewRpc'
 import { createHostHandlers } from '../rpc/hostHandlers'
 import { webviewHtml, webviewResourceRoots } from './webviewHtml'
 
 let lastSearchQuery = ''
 let searchViewInstance: vscode.WebviewView | undefined
-
-function activeNoteRel(): string | null {
-  const editor = vscode.window.activeTextEditor
-  return editor ? relForUri(editor.document.uri) : null
-}
 
 class KnoteViewProvider implements vscode.WebviewViewProvider {
   constructor(
@@ -67,13 +61,19 @@ export function registerSidebarViews(context: vscode.ExtensionContext): void {
     vscode.window.registerWebviewViewProvider(
       'knote.backlinks',
       new KnoteViewProvider(context, 'backlinks', 'Backlinks', () => ({
-        activeNote: activeNoteRel()
+        activeNote: currentActiveNoteRel()
+      }))
+    ),
+    vscode.window.registerWebviewViewProvider(
+      'knote.outline',
+      new KnoteViewProvider(context, 'outline', 'Outline', () => ({
+        activeNote: currentActiveNoteRel()
       }))
     ),
     vscode.window.registerWebviewViewProvider(
       'knote.properties',
       new KnoteViewProvider(context, 'properties', 'Properties', () => ({
-        activeNote: activeNoteRel()
+        activeNote: currentActiveNoteRel()
       }))
     ),
     vscode.commands.registerCommand('knote.searchVault', async () => {
