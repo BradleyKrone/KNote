@@ -178,19 +178,28 @@ describe('parseNote', () => {
     expect(meta.tasks[0]).toMatchObject({ statusChanged: null, dateEntered: null })
   })
 
-  it('extracts ^block-id anchors with their lines', () => {
+  it('extracts ^block-id anchors with their lines and prose', () => {
     const content = 'Intro paragraph. ^intro\n\n- [ ] a task ^task-1\nplain line\n'
     const meta = parseNote('a.md', content)
     expect(meta.blockIds).toEqual([
-      { id: 'intro', line: 0 },
-      { id: 'task-1', line: 2 }
+      { id: 'intro', line: 0, text: 'Intro paragraph.' },
+      { id: 'task-1', line: 2, text: 'a task' }
+    ])
+  })
+
+  it('strips checkbox/milestone markers off a block anchor’s text', () => {
+    const content = '- [/] Rewire the pump !! #urgent 📅 2026-08-01 ^rewire\n🏁 Shipped ^ship\n'
+    const meta = parseNote('a.md', content)
+    expect(meta.blockIds).toEqual([
+      { id: 'rewire', line: 0, text: 'Rewire the pump' },
+      { id: 'ship', line: 1, text: 'Shipped' }
     ])
   })
 
   it('ignores ^ids inside code fences and mid-line carets', () => {
     const content = '```\ncode ^notablock\n```\n\n2^10 is 1024\nreal ^yes\n'
     const meta = parseNote('a.md', content)
-    expect(meta.blockIds).toEqual([{ id: 'yes', line: 5 }])
+    expect(meta.blockIds).toEqual([{ id: 'yes', line: 5, text: 'real' }])
   })
 
   it('parses [[Note#^id]] links with the block ref in the heading slot', () => {

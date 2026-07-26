@@ -4,6 +4,7 @@
 import * as vscode from 'vscode'
 import { getVaultConfig } from '../../core/vaultConfig'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
+import { linkAlias } from '@shared/blockAnchor'
 import { noteCandidates, resolveTarget, tagCounts } from '@shared/wikiResolve'
 import { notesMap } from '../engine'
 import { vaultNoteRel } from '../paths'
@@ -82,9 +83,15 @@ class KnoteCompletionProvider implements vscode.CompletionItemProvider {
     )
     const close = closeBrackets(suffix)
     if (partial.startsWith('^')) {
+      // Block anchors are picked by reading the task, not by recognizing the
+      // id: the anchored line's text is the detail, and it's folded into
+      // filterText so even a legacy random `^k3f9d1` is findable by typing the
+      // task's words. Inserting auto-aliases the link to that same text.
       return meta.blockIds.map((b) => {
         const item = new vscode.CompletionItem(`^${b.id}`, vscode.CompletionItemKind.Reference)
-        item.insertText = `^${b.id}${close}`
+        item.detail = b.text
+        item.filterText = b.text ? `^${b.id} ${b.text}` : `^${b.id}`
+        item.insertText = `^${b.id}${b.text ? `|${linkAlias(b.text)}` : ''}${close}`
         item.range = replaceRange
         return item
       })

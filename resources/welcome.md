@@ -43,8 +43,9 @@ Markdown:
 - **Enter seeds a task's note** — finish typing a top-level task line and
   press **Enter** to auto-insert its indented `Status Changed` / `Date
   Entered` / `Notes` block, with the cursor left on the Notes line. This also
-  stamps a hidden `^anchor` on the task line so it's immediately linkable (see
-  **Copy link to task** below). Only fires on a fresh, unseeded task; a normal
+  stamps a hidden `^anchor` (named after the task) on the line so it's
+  immediately linkable — see **Link straight to a task** below. Only fires on a
+  fresh, unseeded task; a normal
   newline runs everywhere else. (The `Ctrl+Alt+Enter` command does the same on
   demand.)
 - **Click a task to edit it** — clicking anywhere on a task line (checkbox
@@ -58,11 +59,19 @@ Markdown:
   Progress, Done, …), so you can read a note's task states at a glance without
   opening the board. It updates the moment the status changes.
 - **Link straight to a task** — every task you create is automatically given a
-  hidden `^anchor` (added when its note is seeded on Enter), so it's linkable
-  with no manual step. Right-click a task → **Copy link to task** to put a
-  `[[Note#^id]]` wiki link on the clipboard; paste it into your daily "what I
-  did" note and click it to jump right back to that task. The `^anchor` stays
-  out of sight in Live Preview and only shows when your cursor is on the line.
+  hidden `^anchor` named after the task itself
+  (`- [ ] Rewire the pump ^rewire-the-pump`), so it's linkable with no manual
+  step and still readable if you ever open the file elsewhere. Three ways to
+  get a link, none of which require finding that anchor:
+  - Right-click a task → **Copy link to task**.
+  - On the **board**, hover a card and click the 🔗 button.
+  - From the note you're writing in, type `[[Note#^` and pick the task by its
+    **text** — see *Autocomplete* below.
+
+  Either way you get `[[Note#^id|The task's text]]` on the clipboard, which
+  renders as just the task's text — paste it into your daily "what I did" note
+  and click it to jump right back to that task. The `^anchor` stays out of
+  sight in Live Preview and only shows when your cursor is on the line.
 - **Click a sub-task to check it off** — an *indented* checkbox is a plain
   toggle, not a Kanban card: clicking its box flips checked/unchecked and
   stamps the completion date (`✅ 2026-07-16`) on the line. Unchecking it
@@ -85,8 +94,11 @@ Markdown:
 - **Autocomplete for tags and links** — type `#` for a list of every tag
   (most-used first), or `[[` for every note (and its aliases); the list
   filters and re-sorts as you keep typing. `[[Note#` then suggests that
-  note's headings, `[[Note#^` its block anchors. `Enter`/`Tab` accepts,
-  arrows navigate, `Esc` dismisses; `Ctrl+Space` reopens the list.
+  note's headings, `[[Note#^` its block anchors — **each one listed with its
+  task's text**, so you pick the task by reading it rather than by knowing its
+  id, and accepting one writes the aliased `[[Note#^id|Task text]]` form for
+  you. `Enter`/`Tab` accepts, arrows navigate, `Esc` dismisses; `Ctrl+Space`
+  reopens the list.
 - `Ctrl+B` / `Ctrl+I` / `Ctrl+Shift+X` / `` Ctrl+E `` toggle bold / italic /
   strikethrough / inline code on the selection.
 - **Tasks group into cards** — a top-level task with indented detail beneath
@@ -154,7 +166,7 @@ the clicked line:
 | Add milestone | Insert a dated `🏁 Milestone 📅 …` line |
 | Log machine work… | Pick a serial + date → insert a `🚜` entry with the detail template |
 | Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
-| Copy link to task | *(task/milestone lines)* copy a `[[Note#^id]]` link to this task (adding a hidden `^anchor` if needed) — paste it elsewhere to jump back |
+| Copy link to task | *(task/milestone lines)* copy a `[[Note#^id\|Task text]]` link to this task (adding a hidden `^anchor` named after the task if needed) — paste it elsewhere to jump back |
 | Edit machine entry… | *(🚜 lines)* change the serial + date, keeping the activity text |
 | *Suggestions* / Add to dictionary / Ignore | *(misspelled words)* replace with a correction, add the word to your vault dictionary, or ignore it this session |
 
@@ -200,6 +212,10 @@ task somewhere in your vault:
 - Cards support edit-in-place, archive (`- [a]` — struck through, off the
   board), delete, add-card (into the scoped note or your Inbox note), and
   same-note reordering.
+- **🔗 Copy link to task** — hovering a card shows a link button that copies a
+  `[[Note#^id|Task text]]` link to that task, adding the hidden `^anchor` to
+  the source note first if the line doesn't have one. Paste it into any note to
+  link back to the task, no need to open its note and hunt for the anchor.
 - Typing in a note updates the board live, and vice versa.
 
 ## Activity Bar icons

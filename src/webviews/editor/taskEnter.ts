@@ -16,8 +16,9 @@
 import dayjs from 'dayjs'
 import { EditorSelection } from '@codemirror/state'
 import { EditorView, type KeyBinding } from '@codemirror/view'
+import { makeBlockId } from '@shared/blockAnchor'
 import { planTaskNoteSeed } from './taskNoteSeed'
-import { generateBlockId } from './taskLinkLogic'
+import { docBlockIds } from './taskLinkLogic'
 
 /** Enter handler: apply the seed plan, placing the caret after `- Notes: `. */
 function seedTaskNoteOnEnter(view: EditorView): boolean {
@@ -34,7 +35,8 @@ function seedTaskNoteOnEnter(view: EditorView): boolean {
   const changes: { from: number; insert: string }[] = []
   let anchorLen = 0
   if (plan.anchorAt !== null) {
-    const anchor = ` ^${generateBlockId()}`
+    const taskLine = view.state.doc.lineAt(plan.anchorAt)
+    const anchor = ` ^${makeBlockId(taskLine.text, docBlockIds(view.state))}`
     changes.push({ from: plan.anchorAt, insert: anchor })
     anchorLen = anchor.length
   }
