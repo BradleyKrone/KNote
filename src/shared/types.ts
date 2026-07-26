@@ -181,6 +181,12 @@ export interface BlockRef {
   id: string
   /** 0-based line of the anchored block. */
   line: number
+  /**
+   * The anchored line's prose — checkbox/🏁 prefix and inline markers stripped
+   * (see `anchorText`). What the `[[Note#^` completion shows, so an anchor can
+   * be picked by reading the task rather than by recognizing its id.
+   */
+  text: string
 }
 
 // ---------- Per-vault configuration (.knote/config.json) ----------

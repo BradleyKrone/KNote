@@ -9,7 +9,7 @@ import {
   STATUS_CHANGED_UNSET,
   TASK_LINE_RE
 } from '@shared/parser/patterns'
-import { blockIdOf } from './taskLinkLogic'
+import { blockIdOf } from '@shared/blockAnchor'
 
 export interface TaskNoteSeed {
   /** Document offset to insert at (end of the task line or its last meta line). */
@@ -19,7 +19,7 @@ export interface TaskNoteSeed {
   /**
    * The task line's end offset, where a `^block-id` anchor should be appended
    * so the freshly-created task is immediately linkable — or null when the line
-   * already carries one. The random id itself is minted by the keymap binding
+   * already carries one. The id itself is minted by the keymap binding
    * (taskEnter.ts) to keep this planner deterministic.
    */
   anchorAt: number | null

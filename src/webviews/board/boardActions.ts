@@ -6,8 +6,16 @@
 import dayjs from 'dayjs'
 import { isStaleError } from '@shared/errors'
 import { ARCHIVED_CHAR, statusChangedLineForTask, TASK_LINE_RE } from '@shared/parser/patterns'
+import {
+  anchorLine,
+  blockIdOf,
+  blockLink,
+  linkAlias,
+  makeBlockId,
+  withoutAnchor
+} from '@shared/blockAnchor'
 import { host } from '../shared/rpc'
-import { showToast, useConfigStore } from '../shared/stores'
+import { showToast, useConfigStore, useIndexStore } from '../shared/stores'
 import type { BoardCard, BoardScope } from './boardSelectors'
 
 function staleToast(): void {
@@ -81,15 +89,22 @@ export async function reorderCard(card: BoardCard, before: BoardCard | null): Pr
   )
 }
 
-/** Replace a card's task text (status char and indentation preserved). */
+/**
+ * Replace a card's task text (status char and indentation preserved). The
+ * card's `^anchor` is carried over rather than taken from the new text: it's
+ * kept out of the edit box (see Card.tsx), so it isn't the editor's to lose —
+ * dropping it would silently break every link pointing at this task.
+ */
 export async function updateCardText(card: BoardCard, newText: string): Promise<void> {
   const m = TASK_LINE_RE.exec(card.rawLine)
   if (!m) return
-  const clean = newText.trim().replace(/\s*\n\s*/g, ' ')
-  if (!clean || clean === card.text) return
+  const clean = withoutAnchor(newText.trim().replace(/\s*\n\s*/g, ' '))
+  if (!clean || clean === withoutAnchor(card.text)) return
   // indent + bullet + " [c]" ends at m[1].len + m[2].len + 4
   const prefix = card.rawLine.slice(0, m[1].length + m[2].length + 4)
-  await guarded(host.replaceLine(card.path, card.line, card.rawLine, `${prefix} ${clean}`))
+  const id = blockIdOf(card.rawLine)
+  const rewritten = id ? anchorLine(`${prefix} ${clean}`, id) : `${prefix} ${clean}`
+  await guarded(host.replaceLine(card.path, card.line, card.rawLine, rewritten))
 }
 
 export async function deleteCard(card: BoardCard): Promise<void> {
@@ -118,4 +133,35 @@ export async function addCard(
 /** Open the card's source note in a VS Code editor, landing on its line. */
 export function openSource(card: BoardCard): void {
   void host.openNote(card.path, card.line)
+}
+
+/**
+ * Copy a `[[Note#^id|Task text]]` link to this card's task, minting the block
+ * anchor in the source note first if the line doesn't carry one yet. The board
+ * is where tasks actually get browsed, so this is the main way to grab a link
+ * without opening the note and hunting for the anchor.
+ *
+ * The anchor write is a normal verified edit, so it lands in the live buffer
+ * when the note is open and refuses (rather than clobbers) when it's stale.
+ */
+export async function copyCardLink(card: BoardCard): Promise<void> {
+  let id = blockIdOf(card.rawLine)
+  if (!id) {
+    const taken = useIndexStore.getState().notes.get(card.path)?.blockIds ?? []
+    id = makeBlockId(
+      card.rawLine,
+      taken.map((b) => b.id)
+    )
+    try {
+      await host.replaceLine(card.path, card.line, card.rawLine, anchorLine(card.rawLine, id))
+    } catch (err) {
+      // Nothing was written, so there's no anchor to link to — don't copy a
+      // link that would dangle.
+      if (isStaleError(err)) return staleToast()
+      throw err
+    }
+  }
+  const link = blockLink(card.noteTitle, id, linkAlias(card.displayText))
+  await host.copyToClipboard(link)
+  showToast(`Copied link: ${link}`)
 }

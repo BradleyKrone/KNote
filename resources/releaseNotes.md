@@ -3,6 +3,26 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.4.0
+
+- **Links to a task now read as the task.** The hidden `^anchor` on a task is
+  named after the task itself (`- [ ] Rewire the pump ^rewire-the-pump`)
+  instead of a random `^k3f9d1`, so the raw Markdown still makes sense opened
+  anywhere else, and **Copy link to task** copies
+  `[[Note#^rewire-the-pump|Rewire the pump]]` — which renders as just the
+  task's text rather than a cryptic `Note > ^k3f9d1`. Anchors you already have
+  keep working exactly as before; nothing is rewritten.
+- **Copy a task's link from the Kanban board** — hover a card and click the 🔗
+  button. If that task has no anchor yet, one is added to its note first, so
+  there's no need to open the note and hunt for it.
+- **`[[Note#^` autocomplete shows each anchor's task text**, so you pick the
+  task by reading it instead of by recognizing its id — typing the task's own
+  words finds it, including for older random anchors — and accepting a
+  suggestion writes the aliased `[[Note#^id|Task text]]` form for you.
+- Fixed editing a card on the board exposing that task's `^anchor` in the edit
+  box, where tidying it away would quietly break every link pointing at the
+  task. The anchor is now kept out of the box and reattached on save.
+
 ## 1.3.0
 
 - **`![[Another Note]]` embeds that note inline** in Live Preview — an embed

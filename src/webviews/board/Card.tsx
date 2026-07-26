@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { Archive, CalendarDays, Hourglass, Pencil, X } from 'lucide-react'
+import { Archive, CalendarDays, Hourglass, Link2, Pencil, X } from 'lucide-react'
+import { withoutAnchor } from '@shared/blockAnchor'
 import { confirm } from '../shared/stores'
-import { archiveCard, deleteCard, openSource, updateCardText } from './boardActions'
+import { archiveCard, copyCardLink, deleteCard, openSource, updateCardText } from './boardActions'
 import type { BoardCard } from './boardSelectors'
 import { TaskMetaToolbar, blurTargetIsPicker } from '../shared/components/TaskMetaToolbar'
 import { PRIORITY_LABELS } from '../shared/taskMeta'
@@ -57,11 +58,14 @@ export function Card({
   // Cards are also drop targets so same-note reordering can insert before them
   const drop = useDroppable({ id: `over:${id}`, data: { card }, disabled: drag.isDragging })
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(card.text)
+  const [draft, setDraft] = useState(withoutAnchor(card.text))
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const startEdit = (): void => {
-    setDraft(card.text)
+    // Without the `^anchor` — it's link plumbing, not task text, and tidying it
+    // away here would break every link pointing at this task. updateCardText
+    // puts it back.
+    setDraft(withoutAnchor(card.text))
     setEditing(true)
   }
 
@@ -143,6 +147,17 @@ export function Card({
             ))}
           </div>
           <div className="board-card-actions">
+            <button
+              className="board-card-action"
+              title="Copy link to task — paste it in any note to link straight back here"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                void copyCardLink(card)
+              }}
+            >
+              <Link2 size={12} />
+            </button>
             <button
               className="board-card-action"
               title="Edit task (add tags, dates…)"

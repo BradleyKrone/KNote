@@ -12,6 +12,7 @@ import type {
   VaultPath
 } from '../types'
 import { titleOf } from '../pathUtils'
+import { anchorText } from '../blockAnchor'
 import { extractTags, maskSource, type PositionedNode, type YamlBlock } from './mdScaffold'
 
 /**
@@ -223,8 +224,8 @@ function collectMilestones(meta: NoteMeta, maskedLines: string[], rawLines: stri
 
 /** ` ^block-id` line anchors — the targets of [[Note#^id]] block references. */
 function collectBlockIds(meta: NoteMeta, maskedLines: string[], rawLines: string[]): void {
-  scanLines(maskedLines, rawLines, BLOCK_ID_RE, (line, rawMatch) => {
-    meta.blockIds.push({ id: rawMatch[1], line })
+  scanLines(maskedLines, rawLines, BLOCK_ID_RE, (line, rawMatch, rawLine) => {
+    meta.blockIds.push({ id: rawMatch[1], line, text: anchorText(rawLine) })
   })
 }
 

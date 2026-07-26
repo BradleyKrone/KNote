@@ -14,6 +14,7 @@ import {
   type Completion
 } from '@codemirror/autocomplete'
 import type { NoteMeta, VaultPath } from '@shared/types'
+import { linkAlias } from '@shared/blockAnchor'
 import { noteCandidates, resolveTarget, tagCounts } from '@shared/wikiResolve'
 import { useIndexStore, useConfigStore } from '../shared/stores'
 
@@ -93,10 +94,16 @@ function sectionResult(
   const from = context.pos - partial.length
   const close = closeBrackets(suffix)
   if (partial.startsWith('^')) {
+    // CM6 fuzzy-matches on `label`, so the anchored line's text rides along in
+    // it (making even a legacy random `^k3f9d1` findable by typing the task's
+    // words) while `displayLabel` keeps the popup row showing just the id.
+    // Inserting auto-aliases the link to that same text.
     const options: Completion[] = meta.blockIds.map((b) => ({
-      label: `^${b.id}`,
+      label: b.text ? `^${b.id} ${b.text}` : `^${b.id}`,
+      displayLabel: `^${b.id}`,
+      detail: b.text,
       type: 'property',
-      apply: `^${b.id}${close}`
+      apply: `^${b.id}${b.text ? `|${linkAlias(b.text)}` : ''}${close}`
     }))
     return { from, options, validFor: BLOCK_VALID }
   }
