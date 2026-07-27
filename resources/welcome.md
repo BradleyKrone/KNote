@@ -209,6 +209,16 @@ task somewhere in your vault:
   Every column change stamps/refreshes a `Status Changed:` line.
 - Filter by text, tag, and three date filters: **Status Changed**,
   **Date Entered**, and **Due** (any / today / this week / date / range).
+- **Due dates colour themselves** so what's urgent stands out at a glance:
+
+  | Due | Chip |
+  | --- | --- |
+  | Overdue | 🔴 red |
+  | Today | 🟡 yellow |
+  | Within the next 7 days | 🟢 green |
+  | Further out, or the task is done | plain grey |
+
+  Hover the chip for the distance in words ("in 4 days", "3 days ago").
 - Cards support edit-in-place, archive (`- [a]` — struck through, off the
   board), delete, add-card (into the scoped note or your Inbox note), and
   same-note reordering.

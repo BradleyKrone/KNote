@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { collectCards, matchesDateFilter, type BoardFilters } from '@/board/boardSelectors'
+import {
+  collectCards,
+  dueState,
+  matchesDateFilter,
+  type BoardFilters
+} from '@/board/boardSelectors'
 import { parseNote } from '@shared/parser/parseNote'
 import type { NoteMeta } from '@shared/types'
 
@@ -49,6 +54,47 @@ describe('matchesDateFilter', () => {
     expect(matchesDateFilter('2026-06-01', { kind: 'range', from: '2026-07-01', to: '' })).toBe(
       false
     )
+  })
+})
+
+describe('dueState', () => {
+  const TODAY = '2026-07-08'
+  const at = (due: string | null, statusChar = ' '): ReturnType<typeof dueState> =>
+    dueState({ due, statusChar }, TODAY)
+
+  it('has no state for a card without a due date', () => {
+    expect(at(null)).toBe(null)
+  })
+
+  it('reads any past due date as overdue', () => {
+    expect(at('2026-07-07')).toBe('overdue')
+    expect(at('2026-01-01')).toBe('overdue')
+  })
+
+  it('reads the due date itself as today', () => {
+    expect(at('2026-07-08')).toBe('today')
+  })
+
+  it('reads the next seven days as soon, and anything beyond as later', () => {
+    expect(at('2026-07-09')).toBe('soon')
+    expect(at('2026-07-15')).toBe('soon') // exactly a week out
+    expect(at('2026-07-16')).toBe('later')
+    expect(at('2026-12-01')).toBe('later')
+  })
+
+  it('never flags a done card, however overdue it is', () => {
+    expect(at('2026-01-01', 'x')).toBe('later')
+    expect(at('2026-01-01', 'X')).toBe('later')
+    expect(at('2026-07-08', 'x')).toBe('later')
+    // …but other columns are still coloured
+    expect(at('2026-01-01', '/')).toBe('overdue')
+  })
+
+  it('reads the due date off a real parsed card', () => {
+    const notes = new Map<string, NoteMeta>()
+    notes.set('a.md', parseNote('a.md', '- [ ] ship it 📅 2026-07-07'))
+    const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
+    expect(dueState(card, TODAY)).toBe('overdue')
   })
 })
 

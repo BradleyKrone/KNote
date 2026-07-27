@@ -3,6 +3,15 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.5.0
+
+- **Kanban due dates now colour themselves by urgency.** A card's 📅 chip turns
+  red once the task is overdue, yellow on the day it's due, and green when it
+  falls inside the next week — anything further out stays plain grey, so the
+  colours only fire when something actually needs attention. Hovering the chip
+  spells out the distance ("in 4 days", "3 days ago"). Cards in a Done column
+  stay grey however overdue they are; finished work shouldn't nag.
+
 ## 1.4.0
 
 - **Links to a task now read as the task.** The hidden `^anchor` on a task is

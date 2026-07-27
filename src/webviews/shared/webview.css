@@ -13,6 +13,8 @@
   --border-color: var(--vscode-panel-border, var(--vscode-editorWidget-border));
   --interactive-accent: var(--vscode-focusBorder);
   --danger: var(--vscode-errorForeground);
+  --warning: var(--vscode-editorWarning-foreground, #d19a66);
+  --success: var(--vscode-testing-iconPassed, var(--vscode-charts-green, #3fb950));
 }
 
 * {
@@ -308,6 +310,29 @@ button {
   gap: 3px;
   font-size: 11px;
   color: var(--text-muted);
+}
+
+/* A due date close enough to matter becomes a coloured pill. `.due-later`
+ * has no rule, so anything further than a week out stays plain — as do done
+ * cards, which dueState() always reports as 'later'. */
+.board-card-due.due-overdue,
+.board-card-due.due-today,
+.board-card-due.due-soon {
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 0 6px;
+}
+.board-card-due.due-overdue {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.board-card-due.due-today {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+}
+.board-card-due.due-soon {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
 }
 
 .board-card-tag {
