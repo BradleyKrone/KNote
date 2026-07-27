@@ -8,12 +8,8 @@ import { host } from '../shared/rpc'
 import { useIndexStore } from '../shared/stores'
 import { Popover } from '../shared/components/Popover'
 import { DatePickerContent } from '../shared/components/DatePickerContent'
-import {
-  collectTimelineItems,
-  formatTimeUntil,
-  timelineTags,
-  type TimelineItem
-} from './timelineSelectors'
+import { formatTimeUntil } from '../shared/dates'
+import { collectTimelineItems, timelineTags, type TimelineItem } from './timelineSelectors'
 import { setTimelineItemDate } from './timelineActions'
 
 export function TimelineApp(): React.JSX.Element {

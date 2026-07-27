@@ -1,4 +1,3 @@
-import dayjs from 'dayjs'
 import type { NoteMeta, VaultPath } from '@shared/types'
 import { ARCHIVED_CHAR, DUE_RE, PRIORITY_RE, stripInlineMarkers } from '@shared/parser/patterns'
 import { toCard } from '../board/boardSelectors'
@@ -131,28 +130,4 @@ export function timelineTags(notes: Map<string, NoteMeta>): string[] {
     for (const item of list) for (const t of item.tags) tags.add(t)
   }
   return [...tags].sort()
-}
-
-/** Human countdown/countup label for a YYYY-MM-DD date relative to today, tiered by magnitude. */
-export function formatTimeUntil(date: string, today: string): string {
-  const days = dayjs(date).diff(dayjs(today), 'day')
-  if (days === 0) return 'today'
-  if (days === 1) return 'tomorrow'
-  if (days === -1) return 'yesterday'
-
-  const ago = days < 0
-  const n = Math.abs(days)
-  let amount: number
-  let unit: string
-  if (n >= 30) {
-    amount = Math.round(n / 30)
-    unit = amount === 1 ? 'month' : 'months'
-  } else if (n >= 7) {
-    amount = Math.round(n / 7)
-    unit = amount === 1 ? 'week' : 'weeks'
-  } else {
-    amount = n
-    unit = amount === 1 ? 'day' : 'days'
-  }
-  return ago ? `${amount} ${unit} ago` : `in ${amount} ${unit}`
 }

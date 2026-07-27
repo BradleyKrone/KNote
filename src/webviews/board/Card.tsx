@@ -1,15 +1,35 @@
 import { useRef, useState } from 'react'
+import dayjs from 'dayjs'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { Archive, CalendarDays, Hourglass, Link2, Pencil, X } from 'lucide-react'
 import { withoutAnchor } from '@shared/blockAnchor'
 import { confirm } from '../shared/stores'
 import { archiveCard, copyCardLink, deleteCard, openSource, updateCardText } from './boardActions'
-import type { BoardCard } from './boardSelectors'
+import { dueState, type BoardCard } from './boardSelectors'
 import { TaskMetaToolbar, blurTargetIsPicker } from '../shared/components/TaskMetaToolbar'
+import { formatTimeUntil } from '../shared/dates'
 import { PRIORITY_LABELS } from '../shared/taskMeta'
 
 export function cardId(card: BoardCard): string {
   return `${card.path} ${card.line} ${card.rawLine}`
+}
+
+/**
+ * The due date, coloured by how close it is: red once overdue, yellow on the
+ * day, green inside the next week, plain otherwise. `today` is read at render
+ * time, so a board left open past midnight recolours on its next update.
+ */
+function DueChip({ card }: { card: BoardCard }): React.JSX.Element | null {
+  if (!card.due) return null
+  const today = dayjs().format('YYYY-MM-DD')
+  return (
+    <span
+      className={`board-card-due due-${dueState(card, today)}`}
+      title={`Due ${card.due} — ${formatTimeUntil(card.due, today)}`}
+    >
+      <CalendarDays size={11} /> {card.due}
+    </span>
+  )
 }
 
 /** Static clone rendered in the DragOverlay so it floats above column scroll clipping. */
@@ -26,11 +46,7 @@ export function CardPreview({ card }: { card: BoardCard }): React.JSX.Element {
         <span className="board-card-note" title={card.path}>
           {card.noteTitle}
         </span>
-        {card.due && (
-          <span className="board-card-due">
-            <CalendarDays size={11} /> {card.due}
-          </span>
-        )}
+        <DueChip card={card} />
         {card.waitingSince && (
           <span className="board-card-waiting" title={card.waitingReason ?? undefined}>
             <Hourglass size={11} /> {card.waitingSince}
@@ -130,11 +146,7 @@ export function Card({
                 {card.noteTitle}
               </span>
             )}
-            {card.due && (
-              <span className="board-card-due">
-                <CalendarDays size={11} /> {card.due}
-              </span>
-            )}
+            <DueChip card={card} />
             {card.waitingSince && (
               <span className="board-card-waiting" title={card.waitingReason ?? undefined}>
                 <Hourglass size={11} /> {card.waitingSince}

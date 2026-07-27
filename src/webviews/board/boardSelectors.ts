@@ -57,6 +57,30 @@ export function toCard(meta: NoteMeta, task: NoteMeta['tasks'][number]): BoardCa
   }
 }
 
+/** How urgent a card's due date is — drives the colour of its due chip. */
+export type DueState = 'overdue' | 'today' | 'soon' | 'later'
+
+/** Days ahead of `today` a due date still counts as 'soon' (green). */
+const SOON_DAYS = 7
+
+/**
+ * Colour bucket for a card's due date, relative to `today` (YYYY-MM-DD).
+ * Null when the card has no due date at all. Done cards always read 'later' —
+ * work you've already finished shouldn't keep showing up as overdue.
+ */
+export function dueState(
+  card: Pick<BoardCard, 'due' | 'statusChar'>,
+  today: string
+): DueState | null {
+  if (!card.due) return null
+  if (/^[xX]$/.test(card.statusChar)) return 'later'
+  // card.due is always YYYY-MM-DD (DUE_RE), which dayjs parses natively.
+  const days = dayjs(card.due).diff(dayjs(today), 'day')
+  if (days < 0) return 'overdue'
+  if (days === 0) return 'today'
+  return days <= SOON_DAYS ? 'soon' : 'later'
+}
+
 /** A Status Changed / Date Entered / Due Date board filter. */
 export type DateRangeFilter =
   | { kind: 'any' }
