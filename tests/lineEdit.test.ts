@@ -176,6 +176,36 @@ describe('setTaskStatusMeta', () => {
     )
   })
 
+  it('deletes the reason line when the task moves to a column that needs no reason', async () => {
+    await seed(
+      'a.md',
+      '- [w] task\n  Reason for Waiting: parts 📅 2026-07-01\n  - Status Changed: 7/1/2026\n  - Notes: keep me\nnext\n'
+    )
+    await setTaskStatusMeta('a.md', 0, '- [w] task', '/', {
+      reasonLine: null,
+      statusChangedLine: '  - Status Changed: 7/13/2026'
+    })
+    expect(await read('a.md')).toBe(
+      '- [/] task\n  - Status Changed: 7/13/2026\n  - Notes: keep me\nnext\n'
+    )
+  })
+
+  it('leaves no blank line behind when the reason was the task’s whole note block', async () => {
+    await seed('a.md', '- [w] task\n  Reason for Waiting: parts 📅 2026-07-01\nnext\n')
+    await setTaskStatusMeta('a.md', 0, '- [w] task', '/', { reasonLine: null })
+    expect(await read('a.md')).toBe('- [/] task\nnext\n')
+  })
+
+  it('keeps an existing reason line when no reason update is supplied', async () => {
+    await seed('a.md', '- [w] task\n  Reason for Waiting: parts 📅 2026-07-01\nnext\n')
+    await setTaskStatusMeta('a.md', 0, '- [w] task', 'w', {
+      statusChangedLine: '  - Status Changed: 7/13/2026'
+    })
+    expect(await read('a.md')).toBe(
+      '- [w] task\n  Reason for Waiting: parts 📅 2026-07-01\n  - Status Changed: 7/13/2026\nnext\n'
+    )
+  })
+
   it('rejects with KNOTE_STALE when the line is not a task', async () => {
     await seed('a.md', 'not a task\n')
     await expect(

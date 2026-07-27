@@ -109,15 +109,17 @@ export function statusChangedLineForTask(taskLineText: string, date: string): st
  * immediately under a task into their canonical order (reason first, so it
  * stays adjacent to the task the way `collectTasks` expects, then status
  * changed), replacing whichever of `updates` supplies a value and preserving
- * whichever it doesn't — so a plain column move doesn't clobber an existing
- * reason, and re-stating a reason doesn't clobber the status-changed stamp.
- * `peekLines` are the (up to two) lines immediately following the task line,
- * read fresh from whatever the caller's source of truth is (a live editor
- * buffer or the file just read off disk).
+ * whichever it doesn't — so re-stating a reason doesn't clobber the
+ * status-changed stamp. `reasonLine` is three-state: a string sets it,
+ * `undefined` leaves whatever is there, and `null` removes it (what a move
+ * *out* of a `requireReason` column passes, so the reason doesn't outlive the
+ * column it belongs to). `peekLines` are the (up to two) lines immediately
+ * following the task line, read fresh from whatever the caller's source of
+ * truth is (a live editor buffer or the file just read off disk).
  */
 export function mergeTaskMetaLines(
   peekLines: string[],
-  updates: { reasonLine?: string; statusChangedLine?: string }
+  updates: { reasonLine?: string | null; statusChangedLine?: string }
 ): { consumed: number; lines: string[] } {
   let consumed = 0
   let existingReason: string | undefined
@@ -136,8 +138,8 @@ export function mergeTaskMetaLines(
     break
   }
   const lines: string[] = []
-  const reason = updates.reasonLine ?? existingReason
-  if (reason !== undefined) lines.push(reason)
+  const reason = updates.reasonLine === undefined ? existingReason : updates.reasonLine
+  if (reason != null) lines.push(reason)
   const status = updates.statusChangedLine ?? existingStatus
   if (status !== undefined) lines.push(status)
   return { consumed, lines }
@@ -177,13 +179,16 @@ export function ownNoteBlockEnd(lines: string[], taskIdx: number, taskIndentLen:
  * between it and the task — and any duplicate reason/status lines are
  * collapsed to one. Canonical order is reason first (kept on the line right
  * under the task, where `collectTasks` reads it), then status changed, then
- * the rest of the note untouched. Returns a splice: replace
- * `lines[start .. start+deleteCount)` with `insert`.
+ * the rest of the note untouched. `reasonLine` is three-state: a string sets
+ * it, `undefined` leaves the existing one alone, and `null` deletes it — the
+ * reason is auto-managed metadata that only exists while the task sits in a
+ * `requireReason` column, so moving out of one clears it in the same edit.
+ * Returns a splice: replace `lines[start .. start+deleteCount)` with `insert`.
  */
 export function planTaskMetaEdit(
   lines: string[],
   taskIdx: number,
-  updates: { reasonLine?: string; statusChangedLine?: string }
+  updates: { reasonLine?: string | null; statusChangedLine?: string }
 ): { start: number; deleteCount: number; insert: string[] } {
   const m = TASK_LINE_RE.exec(lines[taskIdx])
   const indentLen = m ? m[1].length : 0
@@ -211,8 +216,8 @@ export function planTaskMetaEdit(
   while (rest.length > 0 && /^\s*$/.test(rest[0])) rest.shift()
 
   const insert: string[] = []
-  const reason = updates.reasonLine ?? existingReason
-  if (reason !== undefined) insert.push(reason)
+  const reason = updates.reasonLine === undefined ? existingReason : updates.reasonLine
+  if (reason != null) insert.push(reason)
   const status = updates.statusChangedLine ?? existingStatus
   if (status !== undefined) insert.push(status)
   insert.push(...rest)

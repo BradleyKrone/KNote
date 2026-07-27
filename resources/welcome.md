@@ -206,7 +206,9 @@ task somewhere in your vault:
   external changes.
 - Columns marked **Require reason** (e.g. Waiting) prompt for a reason +
   date and stamp a `Reason for <Column>: … 📅 date` line under the task.
-  Every column change stamps/refreshes a `Status Changed:` line.
+  Moving the task back out (or archiving it) **deletes that line again** — the
+  reason only lives as long as the column it belongs to. Every column change
+  stamps/refreshes a `Status Changed:` line.
 - Filter by text, tag, and three date filters: **Status Changed**,
   **Date Entered**, and **Due** (any / today / this week / date / range).
 - **Due dates colour themselves** so what's urgent stands out at a glance:

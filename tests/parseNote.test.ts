@@ -145,6 +145,19 @@ describe('parseNote', () => {
     expect(meta.tasks[1]).toMatchObject({ waitingReason: null, waitingSince: null })
   })
 
+  it('reports no reason once the line has been cleared by a move out of Waiting', () => {
+    // The shape setTaskStatusMeta leaves behind: status char rewritten, reason
+    // line gone, Status Changed refreshed. The board's hourglass chip keys off
+    // waitingSince, so this must come back null or a moved card keeps the chip.
+    const content = '- [/] waiting task\n  - Status Changed: 7/13/2026\n'
+    const meta = parseNote('a.md', content)
+    expect(meta.tasks[0]).toMatchObject({
+      waitingReason: null,
+      waitingSince: null,
+      statusChanged: '7/13/2026'
+    })
+  })
+
   it('does not attach a Reason line indented at or below the task level', () => {
     const meta = parseNote(
       'a.md',

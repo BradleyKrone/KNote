@@ -10,7 +10,7 @@ import { planTaskMetaEdit, ownNoteBlockEnd } from '@shared/parser/patterns'
 function applyMeta(
   text: string,
   taskLineNumber: number,
-  updates: { reasonLine?: string; statusChangedLine?: string }
+  updates: { reasonLine?: string | null; statusChangedLine?: string }
 ): string {
   const lines = text.split('\n')
   const plan = planTaskMetaEdit(lines, taskLineNumber - 1, updates)
@@ -88,6 +88,33 @@ describe('planTaskMetaEdit applied to a document', () => {
     expect(out).toBe(
       '- [ ] dc\n  - Status Changed: 7/14/2026\n  - Date Entered: 7/13/2026\n  - Notes: \n'
     )
+  })
+
+  it('deletes the reason line on reasonLine: null, keeping the rest of the note', () => {
+    const out = applyMeta(
+      '- [w] task\n  Reason for Waiting: parts 📅 2026-07-01\n  - Status Changed: 7/1/2026\n  - Notes: keep\n',
+      1,
+      { reasonLine: null, statusChangedLine: '  - Status Changed: 7/14/2026' }
+    )
+    expect(out).toBe('- [w] task\n  - Status Changed: 7/14/2026\n  - Notes: keep\n')
+  })
+
+  it('clears every duplicate reason line, not just the first', () => {
+    const out = applyMeta(
+      '- [w] task\n  Reason for Waiting: a 📅 2026-07-01\n  Reason for Waiting: b 📅 2026-07-02\n  - Date Entered: 7/1/2026\n',
+      1,
+      { reasonLine: null }
+    )
+    expect(out).toBe('- [w] task\n  - Date Entered: 7/1/2026\n')
+  })
+
+  it('plans an empty insert when the reason was the whole note block', () => {
+    const plan = planTaskMetaEdit(
+      ['- [w] task', '  Reason for Waiting: parts 📅 2026-07-01', 'next'],
+      0,
+      { reasonLine: null }
+    )
+    expect(plan).toEqual({ start: 1, deleteCount: 1, insert: [] })
   })
 
   it('preserves blank lines inside the user note body', () => {

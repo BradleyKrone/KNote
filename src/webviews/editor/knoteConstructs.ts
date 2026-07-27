@@ -62,9 +62,9 @@ const MD_IMAGE_RE = /!\[[^\]]*\]\(([^)]+)\)/g
 
 /**
  * Set a task line's checkbox to a specific Kanban column: a verified write that
- * prompts for a reason when the column requires one and stamps `Status Changed`.
- * Driven by the right-click status menu. No-op when the char is already
- * `target.char`.
+ * prompts for a reason when the column requires one, clears any existing reason
+ * line when it doesn't, and stamps `Status Changed`. Driven by the right-click
+ * status menu. No-op when the char is already `target.char`.
  */
 export async function setCheckboxStatus(
   line0: number,
@@ -76,7 +76,9 @@ export async function setCheckboxStatus(
   const current = m[3]
   if (target.char === current) return
 
-  let reasonLine: string | undefined
+  // null when the target column needs no reason: clears whatever reason line
+  // the column being left had stamped under the task.
+  let reasonLine: string | null = null
   if (target.requireReason) {
     const res = await promptReason(target.name)
     if (!res) return // user cancelled → abort the move

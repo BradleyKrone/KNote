@@ -84,7 +84,7 @@ export async function setTaskStatusMeta(
   lineNo: number,
   expectedText: string,
   targetChar: string,
-  meta: { reasonLine?: string; statusChangedLine?: string }
+  meta: { reasonLine?: string | null; statusChangedLine?: string }
 ): Promise<void> {
   const doc = openDocFor(rel)
   if (!doc) {
@@ -118,11 +118,22 @@ export async function setTaskStatusMeta(
   } else {
     const first = plan.start
     const last = plan.start + plan.deleteCount - 1
-    edit.replace(
-      doc.uri,
-      new vscode.Range(first, 0, last, doc.lineAt(last).text.length),
-      plan.insert.join('\n')
-    )
+    if (plan.insert.length === 0) {
+      // Nothing left to write (e.g. the block was only the reason line, now
+      // cleared): take the preceding newline with it, or the delete would
+      // leave an empty line hanging under the task.
+      const prev = first - 1
+      edit.delete(
+        doc.uri,
+        new vscode.Range(prev, doc.lineAt(prev).text.length, last, doc.lineAt(last).text.length)
+      )
+    } else {
+      edit.replace(
+        doc.uri,
+        new vscode.Range(first, 0, last, doc.lineAt(last).text.length),
+        plan.insert.join('\n')
+      )
+    }
   }
   await applyAndMaybeSave(doc, edit)
 }

@@ -35,9 +35,9 @@ function activeVaultEditor(): { editor: vscode.TextEditor; rel: string } | null 
 
 /**
  * Rewrite the cursor line's status char to `column.char`, prompting for a
- * reason when the column requires one and stamping `Status Changed` whenever
- * the char actually changes — one verified edit, same semantics as a board
- * drag.
+ * reason when the column requires one (and clearing any existing reason line
+ * when it doesn't) and stamping `Status Changed` whenever the char actually
+ * changes — one verified edit, same semantics as a board drag.
  */
 async function applyStatus(
   editor: vscode.TextEditor,
@@ -53,7 +53,9 @@ async function applyStatus(
   }
   if (column.char === m[3]) return
 
-  let reasonLine: string | undefined
+  // null when the target column needs no reason: clears whatever reason line
+  // the column being left had stamped under the task.
+  let reasonLine: string | null = null
   if (column.requireReason) {
     const reason = await vscode.window.showInputBox({
       prompt: `Reason for ${column.name}`,
