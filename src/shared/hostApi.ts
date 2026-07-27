@@ -61,7 +61,7 @@ export interface HostApi {
     line: number,
     expectedText: string,
     targetChar: string,
-    meta: { reasonLine?: string; statusChangedLine?: string }
+    meta: { reasonLine?: string | null; statusChangedLine?: string }
   ): Promise<void>
   deleteLine(path: VaultPath, line: number, expectedText: string): Promise<void>
   moveLine(

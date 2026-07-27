@@ -125,6 +125,10 @@ an indented reason line directly under it in this exact format
   Reason for Waiting: Vendor quoted 2 weeks 📅 2026-07-15
 ```
 
+The line belongs to the column: when the task moves back out of `- [w]` into a
+column that needs no reason, **delete the reason line** in the same edit (KNote
+does this automatically on a board drag or a status change).
+
 ## Links and embeds
 
 KNote uses Obsidian-style wiki-links:
@@ -192,7 +196,8 @@ When the user asks you to…
 - **Add a task / to-do** → write a `- [ ]` checkbox line, with tags, `📅`
   due date, and `!`/`!!`/`!!!` priority if they gave any.
 - **Mark something done / in progress / waiting** → rewrite only that line's
-  bracket char (`x` / `/` / `w`), adding a Waiting reason line if it's `w`.
+  bracket char (`x` / `/` / `w`), adding a Waiting reason line if it's `w`,
+  and removing an existing one if it isn't.
 - **Link notes** → use `[[Note Name]]`.
 - **Add a project milestone / deadline marker** → use a `🏁 … 📅 date` line.
 - **Tag a note** → add `#tag` inline or a `tags:` list in frontmatter.

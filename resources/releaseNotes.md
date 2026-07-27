@@ -3,6 +3,16 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.6.0
+
+- **A Waiting reason no longer outlives the Waiting column.** Moving a card into
+  a require-reason column still asks why and stamps the
+  `Reason for Waiting: … 📅 date` line under the task — but moving it back out
+  (or archiving it) now deletes that line in the same edit, instead of leaving a
+  stale reason in the note and an hourglass chip on a card that isn't waiting on
+  anything any more. Applies wherever the status changes: a board drag, the
+  live-preview right-click status menu, and `Ctrl+L`.
+
 ## 1.5.0
 
 - **Kanban due dates now colour themselves by urgency.** A card's 📅 chip turns

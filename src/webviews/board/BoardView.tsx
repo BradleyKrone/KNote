@@ -116,10 +116,14 @@ export function BoardView({ scope }: { scope: BoardScope }): React.JSX.Element {
   }
 
   /** Column change committed: keep the preview until `cards` confirms the move. */
-  const commitColumnChange = (card: BoardCard, targetChar: string, appendText?: string): void => {
+  const commitColumnChange = (
+    card: BoardCard,
+    targetChar: string,
+    reasonLine: string | null
+  ): void => {
     const pending = { path: card.path, line: card.line, targetChar }
     pendingMoveRef.current = pending
-    void setCardStatus(card, targetChar, appendText).finally(() => {
+    void setCardStatus(card, targetChar, reasonLine).finally(() => {
       // Safety net: if the store never reflects the move (e.g. a stale-write
       // conflict that silently no-ops), don't leave the preview stuck forever.
       setTimeout(() => {
@@ -131,12 +135,14 @@ export function BoardView({ scope }: { scope: BoardScope }): React.JSX.Element {
   /**
    * Gate a column change on a reason + date when the target column requires
    * one (e.g. Waiting) — cancelling snaps the drag preview back instead of
-   * committing a bare status-char change.
+   * committing a bare status-char change. Moving into a column that doesn't
+   * require one clears any reason line the card picked up in the column it's
+   * leaving (`null`), so the note never keeps a stale "Reason for Waiting".
    */
   const attemptColumnChange = (card: BoardCard, targetChar: string): void => {
     const targetColumn = columns.find((c) => c.char === targetChar)
     if (!targetColumn?.requireReason) {
-      commitColumnChange(card, targetChar)
+      commitColumnChange(card, targetChar, null)
       return
     }
     void promptReason(targetColumn.name).then((result) => {

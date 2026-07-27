@@ -32,15 +32,17 @@ async function guarded(op: Promise<void>): Promise<void> {
 }
 
 /**
- * Change a task's status char. `reasonLine`, when given (a `Reason for
- * <Column>: ... 📅 <date>` line for a column that requires one), is
- * inserted directly under the task in the same rewrite. Whenever the char
+ * Change a task's status char. `reasonLine` is three-state: a `Reason for
+ * <Column>: ... 📅 <date>` line (for a column that requires one) is inserted
+ * directly under the task in the same rewrite, `null` deletes any existing
+ * reason line — the reason belongs to the column, so it goes when the card
+ * leaves one — and `undefined` leaves it untouched. Whenever the char
  * actually changes, a `Status Changed: <date>` line is stamped/refreshed.
  */
 export async function setCardStatus(
   card: BoardCard,
   targetChar: string,
-  reasonLine?: string
+  reasonLine?: string | null
 ): Promise<void> {
   const m = TASK_LINE_RE.exec(card.rawLine)
   if (!m) return
@@ -56,9 +58,12 @@ export async function setCardStatus(
   )
 }
 
-/** Archive a card: strikes through its line in the note and drops it off the board. */
+/**
+ * Archive a card: strikes through its line in the note and drops it off the
+ * board. Archived isn't a require-reason column, so any reason line goes too.
+ */
 export async function archiveCard(card: BoardCard): Promise<void> {
-  await setCardStatus(card, ARCHIVED_CHAR)
+  await setCardStatus(card, ARCHIVED_CHAR, null)
 }
 
 /**

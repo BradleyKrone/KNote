@@ -57,14 +57,15 @@ export async function replaceLine(
  * Verified status-char rewrite that also attaches the `Reason for <Column>:
  * ...` and/or `Status Changed: ...` lines under the task — updating an
  * existing line anywhere in the task's own-note block in place (never
- * duplicating it), inserting one only when absent — in one atomic write.
+ * duplicating it), inserting one only when absent, and deleting the reason
+ * line when `meta.reasonLine` is `null` — in one atomic write.
  */
 export async function setTaskStatusMeta(
   rel: VaultPath,
   lineNo: number,
   expectedText: string,
   targetChar: string,
-  meta: { reasonLine?: string; statusChangedLine?: string }
+  meta: { reasonLine?: string | null; statusChangedLine?: string }
 ): Promise<void> {
   const { eol, lines } = await readNoteLines(rel)
   const target = locateLine(lines, lineNo, expectedText)
