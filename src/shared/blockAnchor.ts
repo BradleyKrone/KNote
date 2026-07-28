@@ -97,7 +97,9 @@ export function anchorLine(lineText: string, id: string): string {
  * it out of an edit box would silently break every link pointing at that task.
  */
 export function withoutAnchor(lineText: string): string {
-  return lineText.replace(BLOCK_ID_RE, '').replace(/\s+$/, '')
+  // `$2` keeps any markers that had been appended after the anchor (see
+  // BLOCK_ID_RE) — dropping the anchor must not drop the task's due date too.
+  return lineText.replace(BLOCK_ID_RE, '$2').replace(/\s+$/, '')
 }
 
 /**

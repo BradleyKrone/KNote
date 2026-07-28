@@ -18,6 +18,15 @@ Extensions view.
   addresses will open; anything else is refused. `![](image)` embeds are
   untouched, and KNote still makes no network calls of its own — opening a link
   just hands it to your browser.
+- Fixed a task's hidden `^anchor` becoming visible once you gave the task a due
+  date. Every marker — due date, priority, tag, a sub-task's completion date —
+  is written by appending to the line, which pushed the anchor into the middle
+  of it. That didn't just look wrong: an anchor that isn't last isn't a block
+  anchor, so the task quietly stopped being linkable and existing
+  `[[Note#^anchor]]` links to it broke. Markers now go in front of the anchor,
+  and notes already affected are repaired the next time the line is written —
+  their links resolve and their anchors hide again straight away, without
+  waiting for that.
 
 ## 1.7.0
 

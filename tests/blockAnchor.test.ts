@@ -24,6 +24,17 @@ describe('blockIdOf', () => {
   it('ignores a ^ that is not at end of line', () => {
     expect(blockIdOf('- [ ] a^b in the middle')).toBeNull()
   })
+  // Notes written before preservingBlockId existed have the anchor buried
+  // behind whatever marker was appended after it. Those links must still work.
+  it('still finds an anchor a marker was appended after', () => {
+    expect(blockIdOf('- [ ] Do it ^xyz789 📅 2026-07-17')).toBe('xyz789')
+    expect(blockIdOf('- [x] Do it ^xyz789 ✅ 2026-07-17')).toBe('xyz789')
+    expect(blockIdOf('- [ ] Do it ^xyz789 !! #shop')).toBe('xyz789')
+    expect(blockIdOf('- [ ] Do it ^xyz789 📅 2026-07-17 !! #shop')).toBe('xyz789')
+  })
+  it('does not mistake a caret in prose for an anchor', () => {
+    expect(blockIdOf('- [ ] Solve a^2 + b^2 = c^2 📅 2026-07-17')).toBeNull()
+  })
 })
 
 describe('anchorText', () => {
@@ -119,6 +130,11 @@ describe('withoutAnchor', () => {
   it('round-trips with anchorLine', () => {
     const text = '- [ ] Ship it'
     expect(withoutAnchor(anchorLine(text, 'ship-it'))).toBe(text)
+  })
+  it('keeps markers that had been appended after a buried anchor', () => {
+    expect(withoutAnchor('- [/] Rewire the pump ^rewire-the-pump 📅 2026-08-01')).toBe(
+      '- [/] Rewire the pump 📅 2026-08-01'
+    )
   })
 })
 
