@@ -22,6 +22,43 @@ import { vaultNoteRel } from '../paths'
 /** A plain list line (`- `, `* `, `1. `) with no checkbox brackets yet. */
 const LIST_MARKER_RE = /^(\s*)([-*+]|\d+[.)])\s(.*)$/
 
+/** Days out the follow-up prompt is pre-filled to — matches the board's dialog. */
+const DEFAULT_FOLLOW_UP_DAYS = 7
+
+/**
+ * True for a real YYYY-MM-DD calendar date. The shape check alone would let
+ * `2026-02-31` through, and the round-trip catches it — the reason line's
+ * regex only recognises well-formed dates, so a bad one would write a line
+ * the parser then refuses to read back.
+ */
+function isValidFollowUp(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const d = dayjs(value)
+  return d.isValid() && d.format('YYYY-MM-DD') === value
+}
+
+/**
+ * The reason + follow-up date a require-reason column demands, gathered as two
+ * input boxes. Returns null if the user escapes out of either one, which the
+ * caller must treat as "abort the move" — no half-applied status change.
+ */
+async function promptReasonAndFollowUp(
+  columnName: string
+): Promise<{ reason: string; followUp: string } | null> {
+  const reason = await vscode.window.showInputBox({
+    prompt: `Reason for ${columnName}`,
+    placeHolder: 'Why is this task moving here?'
+  })
+  if (reason === undefined) return null
+  const followUp = await vscode.window.showInputBox({
+    prompt: `Follow up on this ${columnName} task by (YYYY-MM-DD)`,
+    value: dayjs().add(DEFAULT_FOLLOW_UP_DAYS, 'day').format('YYYY-MM-DD'),
+    validateInput: (v) => (isValidFollowUp(v.trim()) ? null : 'Enter a date as YYYY-MM-DD')
+  })
+  if (followUp === undefined) return null
+  return { reason: reason.trim(), followUp: followUp.trim() }
+}
+
 function activeVaultEditor(): { editor: vscode.TextEditor; rel: string } | null {
   const editor = vscode.window.activeTextEditor
   if (!editor) return null
@@ -35,9 +72,10 @@ function activeVaultEditor(): { editor: vscode.TextEditor; rel: string } | null 
 
 /**
  * Rewrite the cursor line's status char to `column.char`, prompting for a
- * reason when the column requires one (and clearing any existing reason line
- * when it doesn't) and stamping `Status Changed` whenever the char actually
- * changes — one verified edit, same semantics as a board drag.
+ * reason + follow-up date when the column requires them (and clearing any
+ * existing reason line when it doesn't) and stamping `Status Changed`
+ * whenever the char actually changes — one verified edit, same semantics as a
+ * board drag.
  */
 async function applyStatus(
   editor: vscode.TextEditor,
@@ -54,15 +92,13 @@ async function applyStatus(
   if (column.char === m[3]) return
 
   // null when the target column needs no reason: clears whatever reason line
-  // the column being left had stamped under the task.
+  // the column being left had stamped under the task — reason and follow-up
+  // date both, since they share the line.
   let reasonLine: string | null = null
   if (column.requireReason) {
-    const reason = await vscode.window.showInputBox({
-      prompt: `Reason for ${column.name}`,
-      placeHolder: 'Why is this task moving here?'
-    })
-    if (reason === undefined) return // cancelled
-    reasonLine = reasonLineForTask(text, column.name, reason.trim(), dayjs().format('YYYY-MM-DD'))
+    const answers = await promptReasonAndFollowUp(column.name)
+    if (!answers) return // cancelled
+    reasonLine = reasonLineForTask(text, column.name, answers.reason, answers.followUp)
   }
   const statusChangedLine = statusChangedLineForTask(text, dayjs().format('M/D/YYYY'))
   await verifiedEdit.setTaskStatusMeta(rel, lineNo, text, column.char, {

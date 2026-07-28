@@ -41,7 +41,7 @@ export function Column({ column, cards, scope, groupByNote }: Props): React.JSX.
         scope,
         column.char,
         value,
-        formatReasonLine('  ', column.name, result.reason, result.date)
+        formatReasonLine('  ', column.name, result.reason, result.followUp)
       )
     })
   }

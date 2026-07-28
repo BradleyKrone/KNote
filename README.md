@@ -47,8 +47,9 @@ readable and editable in any other text editor.
   the note is open, or as a verified disk write that refuses to clobber
   external edits; editing a checkbox in a note updates the board live.
 - Custom columns/statuses in **KNote Settings → Kanban board**, including
-  require-reason columns (`Reason for Waiting: … 📅 date`) and automatic
-  `Status Changed:` stamping.
+  require-reason columns, which demand a reason **and** a follow-up date
+  (`Reason for Waiting: … ⏳ date`) and show that date on the card coloured
+  like a due date, and automatic `Status Changed:` stamping.
 - Filter by text, tag, and Status Changed / Date Entered / Due date.
 - Cards carry tags, due dates (`📅 2026-07-15` / `@due(2026-07-15)`), and
   priority markers (`!`, `!!`, `!!!`); archive with `- [a]`.

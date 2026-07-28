@@ -114,20 +114,27 @@ A plain (non-checkbox) indented line under a task is treated as that task's
     - a plain bullet works here too
 ```
 
-### "Waiting" tasks need a reason
+### "Waiting" tasks need a reason and a follow-up date
 
-The **Waiting** column requires a reason. When you set a task to `- [w]`, add
-an indented reason line directly under it in this exact format
-(`Reason for <Column>: <text> 📅 <date>`):
+The **Waiting** column requires a reason **and** a follow-up date — the date to
+come back and chase it. When you set a task to `- [w]`, add an indented reason
+line directly under it in this exact format
+(`Reason for <Column>: <text> ⏳ <date>`, the date ISO `YYYY-MM-DD`):
 
 ```markdown
 - [w] Order the replacement part
-  Reason for Waiting: Vendor quoted 2 weeks 📅 2026-07-15
+  Reason for Waiting: Vendor quoted 2 weeks ⏳ 2026-07-15
 ```
 
+Use `⏳` here, not the `📅` that marks a due date in the task text itself — the
+two are different dates. (Older notes use `📅` on the reason line; KNote still
+reads those, but write `⏳`.) The follow-up date shows on the Kanban card,
+coloured red / yellow / green by how close it is, exactly like a due date.
+
 The line belongs to the column: when the task moves back out of `- [w]` into a
-column that needs no reason, **delete the reason line** in the same edit (KNote
-does this automatically on a board drag or a status change).
+column that needs no reason, **delete the whole reason line** — reason and
+follow-up date together — in the same edit (KNote does this automatically on a
+board drag or a status change).
 
 ## Links and embeds
 

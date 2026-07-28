@@ -1,5 +1,6 @@
 // Moving a task out of a require-reason column (Waiting) must delete the
-// `Reason for Waiting: ... 📅 <date>` line the move *into* that column stamped.
+// `Reason for Waiting: ... ⏳ <date>` line the move *into* that column stamped —
+// the reason text and the follow-up date both, since they share one line.
 // Unit tests cover the splice; this proves the live-buffer half — a real
 // WorkspaceEdit against an open TextEditor, then the auto-save to disk — which
 // is the path where a bad range would leave a stray blank line behind.
@@ -16,10 +17,11 @@ import {
 import * as vscode from 'vscode'
 
 const NOTE = 'WaitingReason.md'
+const FOLLOW_UP = '2026-08-04'
 const SEED =
   '# Waiting\n\n' +
   '- [w] Waiting task\n' +
-  '  Reason for Waiting: vendor quoted 2 weeks 📅 2026-07-01\n' +
+  `  Reason for Waiting: vendor quoted 2 weeks ⏳ ${FOLLOW_UP}\n` +
   '  - Status Changed: 7/1/2026\n' +
   '  - Notes: keep this line\n'
 
@@ -49,6 +51,13 @@ describe('reason line cleared when a task leaves Waiting', () => {
       message: 'the reason line to be removed from the buffer'
     })
 
+    // The follow-up date goes with the reason — a card that has left Waiting
+    // must not keep a date to chase it on.
+    assert.ok(
+      !editor.document.getText().includes(FOLLOW_UP),
+      'the follow-up date must be gone from the buffer along with the reason'
+    )
+
     // No blank line may be left where the reason line was.
     assert.ok(
       editor.document.lineAt(3).text.includes('Status Changed:'),
@@ -66,5 +75,7 @@ describe('reason line cleared when a task leaves Waiting', () => {
     const onDisk = await readNoteOnDisk(NOTE)
     assert.ok(onDisk.includes('- [/] Waiting task\n  - Status Changed:'), `unexpected note:\n${onDisk}`)
     assert.ok(onDisk.includes('  - Notes: keep this line'), `unexpected note:\n${onDisk}`)
+    assert.ok(!onDisk.includes(FOLLOW_UP), `follow-up date left on disk:\n${onDisk}`)
+    assert.ok(!onDisk.includes('⏳'), `follow-up marker left on disk:\n${onDisk}`)
   })
 })

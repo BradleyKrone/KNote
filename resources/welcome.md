@@ -204,23 +204,29 @@ task somewhere in your vault:
   note is open (even with unsaved edits) the change lands in your editor
   buffer; otherwise it's a verified disk write that refuses to clobber
   external changes.
-- Columns marked **Require reason** (e.g. Waiting) prompt for a reason +
-  date and stamp a `Reason for <Column>: … 📅 date` line under the task.
+- Columns marked **Require reason** (e.g. Waiting) prompt for a reason **and a
+  follow-up date** — when to come back to it — and stamp a
+  `Reason for <Column>: … ⏳ date` line under the task. Both fields are
+  mandatory; the date is pre-filled a week out. The follow-up date shows on the
+  card as an ⏳ chip, coloured on the same scale as due dates below, so a
+  Waiting card you've stopped chasing turns red.
   Moving the task back out (or archiving it) **deletes that line again** — the
-  reason only lives as long as the column it belongs to. Every column change
-  stamps/refreshes a `Status Changed:` line.
+  reason *and* its follow-up date only live as long as the column they belong
+  to. Every column change stamps/refreshes a `Status Changed:` line.
 - Filter by text, tag, and three date filters: **Status Changed**,
   **Date Entered**, and **Due** (any / today / this week / date / range).
-- **Due dates colour themselves** so what's urgent stands out at a glance:
+- **Due dates and Waiting follow-up dates colour themselves** on one shared
+  scale, so what's urgent stands out at a glance:
 
-  | Due | Chip |
+  | Date | Chip |
   | --- | --- |
   | Overdue | 🔴 red |
   | Today | 🟡 yellow |
   | Within the next 7 days | 🟢 green |
   | Further out, or the task is done | plain grey |
 
-  Hover the chip for the distance in words ("in 4 days", "3 days ago").
+  Hover either chip for the distance in words ("in 4 days", "3 days ago") —
+  the ⏳ follow-up chip also shows the reason the task is parked.
 - Cards support edit-in-place, archive (`- [a]` — struck through, off the
   board), delete, add-card (into the scoped note or your Inbox note), and
   same-note reordering.

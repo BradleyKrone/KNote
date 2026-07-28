@@ -93,8 +93,12 @@ export interface TaskItem {
   tags: string[]
   /** Exact full line text, used to verify targeted rewrites */
   rawLine: string
-  /** Date from an attached `Reason for <Column>: ... 📅 <date>` note line, if present */
-  waitingSince: string | null
+  /**
+   * Follow-up date (YYYY-MM-DD) from an attached
+   * `Reason for <Column>: ... ⏳ <date>` note line, if present — when to come
+   * back to the task. Cleared with the reason when the task leaves the column.
+   */
+  waitingFollowUp: string | null
   /** Reason text from an attached `Reason for <Column>: ...` note line, if present */
   waitingReason: string | null
   /** Date (M/D/YYYY) from an attached `Status Changed: <date>` note line; null if unset (`n/a`) or absent */
@@ -195,7 +199,7 @@ export interface BoardColumn {
   name: string
   /** The checkbox status char that maps to this column (' ', '/', 'x', ...) */
   char: string
-  /** Moving a card into this column prompts for a required reason + date (⏳), e.g. Waiting */
+  /** Moving a card into this column prompts for a required reason + follow-up date (⏳), e.g. Waiting */
   requireReason?: boolean
 }
 

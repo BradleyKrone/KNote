@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   collectCards,
   dueState,
+  followUpState,
   matchesDateFilter,
   type BoardFilters
 } from '@/board/boardSelectors'
@@ -95,6 +96,62 @@ describe('dueState', () => {
     notes.set('a.md', parseNote('a.md', '- [ ] ship it 📅 2026-07-07'))
     const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
     expect(dueState(card, TODAY)).toBe('overdue')
+  })
+})
+
+// A Waiting follow-up date is coloured on exactly the same scale as a due
+// date, so these mirror the dueState cases above one for one — if the two ever
+// drift apart, one of these pairs breaks.
+describe('followUpState', () => {
+  const TODAY = '2026-07-08'
+  const at = (waitingFollowUp: string | null, statusChar = 'w'): ReturnType<typeof followUpState> =>
+    followUpState({ waitingFollowUp, statusChar }, TODAY)
+
+  it('has no state for a card without a follow-up date', () => {
+    expect(at(null)).toBe(null)
+  })
+
+  it('reads a follow-up date you have blown past as overdue', () => {
+    expect(at('2026-07-07')).toBe('overdue')
+    expect(at('2026-01-01')).toBe('overdue')
+  })
+
+  it('reads the follow-up date itself as today', () => {
+    expect(at('2026-07-08')).toBe('today')
+  })
+
+  it('reads the next seven days as soon, and anything beyond as later', () => {
+    expect(at('2026-07-09')).toBe('soon')
+    expect(at('2026-07-15')).toBe('soon') // exactly a week out — the prompt's default
+    expect(at('2026-07-16')).toBe('later')
+    expect(at('2026-12-01')).toBe('later')
+  })
+
+  it('never flags a done card', () => {
+    expect(at('2026-01-01', 'x')).toBe('later')
+    expect(at('2026-01-01', 'X')).toBe('later')
+  })
+
+  it('reads the follow-up date off a real parsed card', () => {
+    const notes = new Map<string, NoteMeta>()
+    notes.set(
+      'a.md',
+      parseNote('a.md', '- [w] chase vendor\n  Reason for Waiting: parts on order ⏳ 2026-07-07\n')
+    )
+    const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
+    expect(card.waitingFollowUp).toBe('2026-07-07')
+    expect(followUpState(card, TODAY)).toBe('overdue')
+  })
+
+  it('goes null once the card leaves Waiting and the reason line is deleted', () => {
+    // The date lives on the reason line, so clearing the reason clears it too —
+    // this is what stops a moved card keeping a stale follow-up chip.
+    const notes = new Map<string, NoteMeta>()
+    notes.set('a.md', parseNote('a.md', '- [/] chase vendor\n  - Status Changed: 7/8/2026\n'))
+    const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
+    expect(card.waitingFollowUp).toBe(null)
+    expect(card.waitingReason).toBe(null)
+    expect(followUpState(card, TODAY)).toBe(null)
   })
 })
 

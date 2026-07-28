@@ -312,25 +312,32 @@ button {
   color: var(--text-muted);
 }
 
-/* A due date close enough to matter becomes a coloured pill. `.due-later`
- * has no rule, so anything further than a week out stays plain — as do done
- * cards, which dueState() always reports as 'later'. */
+/* A due date — or a Waiting follow-up date — close enough to matter becomes a
+ * coloured pill, on one shared scale. `.due-later`/`.follow-later` have no
+ * rule, so anything further than a week out stays plain, as do done cards,
+ * which dueState()/followUpState() always report as 'later'. */
 .board-card-due.due-overdue,
 .board-card-due.due-today,
-.board-card-due.due-soon {
+.board-card-due.due-soon,
+.board-card-waiting.follow-overdue,
+.board-card-waiting.follow-today,
+.board-card-waiting.follow-soon {
   font-weight: 600;
   border-radius: 8px;
   padding: 0 6px;
 }
-.board-card-due.due-overdue {
+.board-card-due.due-overdue,
+.board-card-waiting.follow-overdue {
   color: var(--danger);
   background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
-.board-card-due.due-today {
+.board-card-due.due-today,
+.board-card-waiting.follow-today {
   color: var(--warning);
   background: color-mix(in srgb, var(--warning) 12%, transparent);
 }
-.board-card-due.due-soon {
+.board-card-due.due-soon,
+.board-card-waiting.follow-soon {
   color: var(--success);
   background: color-mix(in srgb, var(--success) 12%, transparent);
 }

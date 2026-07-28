@@ -3,6 +3,21 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.7.0
+
+- **Waiting tasks now need a follow-up date, and it shows on the board.** Moving
+  a card into a require-reason column already asked why; it now also asks *when
+  you'll come back to it*, pre-filled a week out. Both fields are mandatory, and
+  the date is stamped on the same line as the reason
+  (`Reason for Waiting: … ⏳ date`). The card grows an ⏳ chip showing that date,
+  coloured on exactly the same scale as due dates — red once you've blown past
+  it, yellow on the day, green inside the next week, plain grey beyond — so a
+  Waiting card you've quietly stopped chasing turns red instead of sitting there
+  looking fine. Hovering the chip gives the distance in words plus the reason.
+  Moving the card back out (or archiving it) deletes the reason and its
+  follow-up date together, as before. `KNote: Set Task Status` asks for the date
+  too, rather than silently assuming today.
+
 ## 1.6.0
 
 - **A Waiting reason no longer outlives the Waiting column.** Moving a card into
