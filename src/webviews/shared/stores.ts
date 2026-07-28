@@ -98,7 +98,8 @@ export function confirm(message: string, opts: { danger?: boolean } = {}): Promi
 // ---------- Reason prompt ----------
 
 export interface ReasonResult {
-  date: string
+  /** Follow-up date (YYYY-MM-DD) — when to come back to the task */
+  followUp: string
   reason: string
 }
 
@@ -121,8 +122,9 @@ export const useReasonPromptStore = create<ReasonPromptState>((set, get) => ({
 }))
 
 /**
- * Blocks a column move until the user supplies a reason + date. Resolves
- * `null` if the user cancels, which callers must treat as "abort the move."
+ * Blocks a column move until the user supplies a reason + follow-up date.
+ * Resolves `null` if the user cancels, which callers must treat as "abort the
+ * move."
  */
 export function promptReason(columnName: string): Promise<ReasonResult | null> {
   return new Promise((resolve) => {
@@ -130,8 +132,15 @@ export function promptReason(columnName: string): Promise<ReasonResult | null> {
   })
 }
 
-export function defaultReasonDate(): string {
-  return dayjs().format('YYYY-MM-DD')
+/** Days out the follow-up date field is pre-filled to. */
+const DEFAULT_FOLLOW_UP_DAYS = 7
+
+/**
+ * What the follow-up field starts on: a week out, not today — a follow-up set
+ * for today would render yellow the moment you set it.
+ */
+export function defaultFollowUpDate(): string {
+  return dayjs().add(DEFAULT_FOLLOW_UP_DAYS, 'day').format('YYYY-MM-DD')
 }
 
 // ---------- Startup ----------

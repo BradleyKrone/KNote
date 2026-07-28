@@ -1,27 +1,29 @@
 import { useEffect, useRef, useState } from 'react'
-import { defaultReasonDate, useReasonPromptStore } from '../stores'
+import { defaultFollowUpDate, useReasonPromptStore } from '../stores'
 
 export function ReasonDialog(): React.JSX.Element | null {
   const request = useReasonPromptStore((s) => s.request)
   const answer = useReasonPromptStore((s) => s.answer)
   const [reason, setReason] = useState('')
-  const [date, setDate] = useState(defaultReasonDate())
+  const [followUp, setFollowUp] = useState(defaultFollowUpDate())
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (!request) return
     setReason('')
-    setDate(defaultReasonDate())
+    setFollowUp(defaultFollowUpDate())
     setTimeout(() => textareaRef.current?.focus(), 0)
   }, [request])
 
   if (!request) return null
 
-  const canSubmit = reason.trim().length > 0 && date.length > 0
+  // Both fields are mandatory: a parked task with no reason and no date to
+  // come back to it is exactly what this prompt exists to prevent.
+  const canSubmit = reason.trim().length > 0 && followUp.length > 0
 
   const submit = (): void => {
     if (!canSubmit) return
-    answer({ date, reason: reason.trim() })
+    answer({ followUp, reason: reason.trim() })
   }
 
   return (
@@ -46,12 +48,12 @@ export function ReasonDialog(): React.JSX.Element | null {
           }}
         />
         <label className="reason-date-field">
-          <span className="reason-date-label">Since</span>
+          <span className="reason-date-label">Follow up</span>
           <input
             type="date"
             className="panel-input small"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
+            value={followUp}
+            onChange={(e) => setFollowUp(e.target.value)}
           />
         </label>
         <div className="confirm-actions">

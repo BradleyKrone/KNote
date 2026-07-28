@@ -162,15 +162,17 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
     taskIndentStack.push(indent)
 
     // An immediately-following, more-indented `Reason for <Column>: ...` line
-    // is this task's attached waiting reason (same nesting as a task note).
-    let waitingSince: string | null = null
+    // is this task's attached waiting reason + follow-up date (same nesting as
+    // a task note). Both live on that one line, so both vanish together when
+    // the task leaves the column and the line is deleted.
+    let waitingFollowUp: string | null = null
     let waitingReason: string | null = null
     const nextRaw = line + 1 < rawLines.length ? cleanLines[line + 1] : null
     if (nextRaw !== null) {
       const reasonMatch = REASON_FOR_RE.exec(nextRaw)
       if (reasonMatch && reasonMatch[1].length > indent) {
         waitingReason = reasonMatch[3]
-        waitingSince = reasonMatch[4]
+        waitingFollowUp = reasonMatch[4]
       }
     }
 
@@ -206,7 +208,7 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
       isSubtask,
       tags: extractTags(text),
       rawLine,
-      waitingSince,
+      waitingFollowUp,
       waitingReason,
       statusChanged,
       dateEntered

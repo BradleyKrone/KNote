@@ -176,18 +176,34 @@ describe('setTaskStatusMeta', () => {
     )
   })
 
-  it('deletes the reason line when the task moves to a column that needs no reason', async () => {
+  it('deletes the reason line — follow-up date and all — on a move to a column that needs no reason', async () => {
     await seed(
       'a.md',
-      '- [w] task\n  Reason for Waiting: parts 📅 2026-07-01\n  - Status Changed: 7/1/2026\n  - Notes: keep me\nnext\n'
+      '- [w] task\n  Reason for Waiting: parts ⏳ 2026-08-04\n  - Status Changed: 7/1/2026\n  - Notes: keep me\nnext\n'
     )
     await setTaskStatusMeta('a.md', 0, '- [w] task', '/', {
       reasonLine: null,
       statusChangedLine: '  - Status Changed: 7/13/2026'
     })
-    expect(await read('a.md')).toBe(
-      '- [/] task\n  - Status Changed: 7/13/2026\n  - Notes: keep me\nnext\n'
+    const after = await read('a.md')
+    expect(after).toBe('- [/] task\n  - Status Changed: 7/13/2026\n  - Notes: keep me\nnext\n')
+    // The date rides on the reason line, so it must go with it — a follow-up
+    // date stranded on a card that has left Waiting is the stale-chip bug.
+    expect(after).not.toContain('⏳')
+    expect(after).not.toContain('2026-08-04')
+  })
+
+  it('deletes a legacy 📅 reason line on a move out just the same', async () => {
+    // Notes written before the date meant "follow up" must still be cleaned up
+    // on the way out, or they keep a chip forever.
+    await seed(
+      'a.md',
+      '- [w] task\n  Reason for Waiting: parts 📅 2026-07-01\n  - Notes: keep me\n'
     )
+    await setTaskStatusMeta('a.md', 0, '- [w] task', '/', { reasonLine: null })
+    const after = await read('a.md')
+    expect(after).toBe('- [/] task\n  - Notes: keep me\n')
+    expect(after).not.toContain('📅')
   })
 
   it('leaves no blank line behind when the reason was the task’s whole note block', async () => {

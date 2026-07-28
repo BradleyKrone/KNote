@@ -136,24 +136,36 @@ describe('parseNote', () => {
 
   it('attaches an indented Reason line to the task above it', () => {
     const content =
-      '- [w] waiting task\n  Reason for Waiting: parts on order 📅 2026-07-02\n- [ ] other\n'
+      '- [w] waiting task\n  Reason for Waiting: parts on order ⏳ 2026-08-04\n- [ ] other\n'
     const meta = parseNote('a.md', content)
     expect(meta.tasks[0]).toMatchObject({
       waitingReason: 'parts on order',
-      waitingSince: '2026-07-02'
+      waitingFollowUp: '2026-08-04'
     })
-    expect(meta.tasks[1]).toMatchObject({ waitingReason: null, waitingSince: null })
+    expect(meta.tasks[1]).toMatchObject({ waitingReason: null, waitingFollowUp: null })
   })
 
-  it('reports no reason once the line has been cleared by a move out of Waiting', () => {
+  it('still reads a legacy 📅 reason line, treating its date as the follow-up', () => {
+    // Notes written before the date meant "follow up" carry 📅. They must keep
+    // parsing rather than silently losing their reason chip on the board.
+    const content = '- [w] waiting task\n  Reason for Waiting: parts on order 📅 2026-07-02\n'
+    const meta = parseNote('a.md', content)
+    expect(meta.tasks[0]).toMatchObject({
+      waitingReason: 'parts on order',
+      waitingFollowUp: '2026-07-02'
+    })
+  })
+
+  it('reports no reason or follow-up once the line has been cleared by a move out of Waiting', () => {
     // The shape setTaskStatusMeta leaves behind: status char rewritten, reason
     // line gone, Status Changed refreshed. The board's hourglass chip keys off
-    // waitingSince, so this must come back null or a moved card keeps the chip.
+    // waitingFollowUp, so both it and the reason must come back null — the
+    // date shares the reason's line, so neither can outlive the column.
     const content = '- [/] waiting task\n  - Status Changed: 7/13/2026\n'
     const meta = parseNote('a.md', content)
     expect(meta.tasks[0]).toMatchObject({
       waitingReason: null,
-      waitingSince: null,
+      waitingFollowUp: null,
       statusChanged: '7/13/2026'
     })
   })
@@ -161,9 +173,9 @@ describe('parseNote', () => {
   it('does not attach a Reason line indented at or below the task level', () => {
     const meta = parseNote(
       'a.md',
-      '  - [w] nested task\n  Reason for Waiting: nope 📅 2026-07-02\n'
+      '  - [w] nested task\n  Reason for Waiting: nope ⏳ 2026-08-04\n'
     )
-    expect(meta.tasks[0]).toMatchObject({ waitingReason: null, waitingSince: null })
+    expect(meta.tasks[0]).toMatchObject({ waitingReason: null, waitingFollowUp: null })
   })
 
   it('extracts Status Changed and Date Entered dates from a task note block', () => {

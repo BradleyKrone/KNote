@@ -5,7 +5,7 @@ import { Archive, CalendarDays, Hourglass, Link2, Pencil, X } from 'lucide-react
 import { withoutAnchor } from '@shared/blockAnchor'
 import { confirm } from '../shared/stores'
 import { archiveCard, copyCardLink, deleteCard, openSource, updateCardText } from './boardActions'
-import { dueState, type BoardCard } from './boardSelectors'
+import { dueState, followUpState, type BoardCard } from './boardSelectors'
 import { TaskMetaToolbar, blurTargetIsPicker } from '../shared/components/TaskMetaToolbar'
 import { formatTimeUntil } from '../shared/dates'
 import { PRIORITY_LABELS } from '../shared/taskMeta'
@@ -32,6 +32,27 @@ function DueChip({ card }: { card: BoardCard }): React.JSX.Element | null {
   )
 }
 
+/**
+ * The follow-up date for a card sitting in a require-reason column (Waiting),
+ * coloured on the same scale as the due chip. The hover gives the distance in
+ * words plus the reason the card is parked. Only rendered while the card is in
+ * that column — moving out deletes the reason line, date and all.
+ */
+function WaitingChip({ card }: { card: BoardCard }): React.JSX.Element | null {
+  const followUp = card.waitingFollowUp
+  if (!followUp) return null
+  const today = dayjs().format('YYYY-MM-DD')
+  const when = `Follow up ${followUp} — ${formatTimeUntil(followUp, today)}`
+  return (
+    <span
+      className={`board-card-waiting follow-${followUpState(card, today)}`}
+      title={card.waitingReason ? `${when}\n${card.waitingReason}` : when}
+    >
+      <Hourglass size={11} /> {followUp}
+    </span>
+  )
+}
+
 /** Static clone rendered in the DragOverlay so it floats above column scroll clipping. */
 export function CardPreview({ card }: { card: BoardCard }): React.JSX.Element {
   return (
@@ -47,11 +68,7 @@ export function CardPreview({ card }: { card: BoardCard }): React.JSX.Element {
           {card.noteTitle}
         </span>
         <DueChip card={card} />
-        {card.waitingSince && (
-          <span className="board-card-waiting" title={card.waitingReason ?? undefined}>
-            <Hourglass size={11} /> {card.waitingSince}
-          </span>
-        )}
+        <WaitingChip card={card} />
         {card.tags.map((t) => (
           <span key={t} className="board-card-tag">
             #{t}
@@ -147,11 +164,7 @@ export function Card({
               </span>
             )}
             <DueChip card={card} />
-            {card.waitingSince && (
-              <span className="board-card-waiting" title={card.waitingReason ?? undefined}>
-                <Hourglass size={11} /> {card.waitingSince}
-              </span>
-            )}
+            <WaitingChip card={card} />
             {card.tags.map((t) => (
               <span key={t} className="board-card-tag">
                 #{t}

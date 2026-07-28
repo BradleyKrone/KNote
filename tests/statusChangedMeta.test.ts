@@ -92,16 +92,19 @@ describe('planTaskMetaEdit applied to a document', () => {
 
   it('deletes the reason line on reasonLine: null, keeping the rest of the note', () => {
     const out = applyMeta(
-      '- [w] task\n  Reason for Waiting: parts 📅 2026-07-01\n  - Status Changed: 7/1/2026\n  - Notes: keep\n',
+      '- [w] task\n  Reason for Waiting: parts ⏳ 2026-08-04\n  - Status Changed: 7/1/2026\n  - Notes: keep\n',
       1,
       { reasonLine: null, statusChangedLine: '  - Status Changed: 7/14/2026' }
     )
     expect(out).toBe('- [w] task\n  - Status Changed: 7/14/2026\n  - Notes: keep\n')
+    // Reason text and follow-up date share one line, so one splice takes both.
+    expect(out).not.toContain('⏳')
+    expect(out).not.toContain('2026-08-04')
   })
 
-  it('clears every duplicate reason line, not just the first', () => {
+  it('clears every duplicate reason line, not just the first, in either marker', () => {
     const out = applyMeta(
-      '- [w] task\n  Reason for Waiting: a 📅 2026-07-01\n  Reason for Waiting: b 📅 2026-07-02\n  - Date Entered: 7/1/2026\n',
+      '- [w] task\n  Reason for Waiting: a ⏳ 2026-08-04\n  Reason for Waiting: b 📅 2026-07-02\n  - Date Entered: 7/1/2026\n',
       1,
       { reasonLine: null }
     )

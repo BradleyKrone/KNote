@@ -153,7 +153,7 @@ export function BoardView({ scope }: { scope: BoardScope }): React.JSX.Element {
       commitColumnChange(
         card,
         targetChar,
-        reasonLineForTask(card.rawLine, targetColumn.name, result.reason, result.date)
+        reasonLineForTask(card.rawLine, targetColumn.name, result.reason, result.followUp)
       )
     })
   }

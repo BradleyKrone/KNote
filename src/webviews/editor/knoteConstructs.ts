@@ -82,7 +82,7 @@ export async function setCheckboxStatus(
   if (target.requireReason) {
     const res = await promptReason(target.name)
     if (!res) return // user cancelled → abort the move
-    reasonLine = reasonLineForTask(rawLine, target.name, res.reason, res.date)
+    reasonLine = reasonLineForTask(rawLine, target.name, res.reason, res.followUp)
   }
   const statusChangedLine = statusChangedLineForTask(rawLine, dayjs().format('M/D/YYYY'))
   try {

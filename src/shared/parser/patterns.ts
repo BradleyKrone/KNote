@@ -43,22 +43,28 @@ export function setTaskDone(rawLine: string, done: boolean, date: string): strin
 }
 
 /**
- * `Reason for <Column>: <reason> 📅 <date>` — an indented line attached
+ * `Reason for <Column>: <reason> ⏳ <date>` — an indented line attached
  * under a task (same nesting convention as a plain task note), written when
  * the task moves into a column configured with `requireReason` (e.g.
  * Waiting). Group 1 = indent, group 2 = column name, group 3 = reason,
- * group 4 = date.
+ * group 4 = the follow-up date — when to come back to the task.
+ *
+ * `📅` is accepted alongside `⏳` on read: notes written before the date
+ * meant "waiting since" still parse, and their date is simply read as the
+ * follow-up date (an old one reads as overdue, which is the right nudge).
+ * Writes always emit `⏳`, keeping the marker distinct from the `📅` due
+ * date that lives in the task text itself.
  */
-export const REASON_FOR_RE = /^(\s+)Reason for (.+?):\s*(.*?)\s*📅\s*(\d{4}-\d{2}-\d{2})\s*$/
+export const REASON_FOR_RE = /^(\s+)Reason for (.+?):\s*(.*?)\s*(?:⏳|📅)\s*(\d{4}-\d{2}-\d{2})\s*$/
 
-/** Builds the indented `Reason for <Column>: <reason> 📅 <date>` line attached under a task. */
+/** Builds the indented `Reason for <Column>: <reason> ⏳ <date>` line attached under a task. */
 export function formatReasonLine(
   indent: string,
   columnName: string,
   reason: string,
-  date: string
+  followUp: string
 ): string {
-  return `${indent}Reason for ${columnName}: ${reason} 📅 ${date}`
+  return `${indent}Reason for ${columnName}: ${reason} ⏳ ${followUp}`
 }
 
 /** Builds a reason line nested one level deeper than the given task line's own indent. */
@@ -66,11 +72,11 @@ export function reasonLineForTask(
   taskLineText: string,
   columnName: string,
   reason: string,
-  date: string
+  followUp: string
 ): string {
   const m = TASK_LINE_RE.exec(taskLineText)
   const indent = (m ? m[1] : '') + '  '
-  return formatReasonLine(indent, columnName, reason, date)
+  return formatReasonLine(indent, columnName, reason, followUp)
 }
 
 /** Value a `Status Changed` line holds before the task's first status change. */
@@ -182,7 +188,9 @@ export function ownNoteBlockEnd(lines: string[], taskIdx: number, taskIndentLen:
  * the rest of the note untouched. `reasonLine` is three-state: a string sets
  * it, `undefined` leaves the existing one alone, and `null` deletes it — the
  * reason is auto-managed metadata that only exists while the task sits in a
- * `requireReason` column, so moving out of one clears it in the same edit.
+ * `requireReason` column, so moving out of one clears it in the same edit —
+ * and because the follow-up date rides on that same line, the date goes with
+ * it rather than outliving the column it belongs to.
  * Returns a splice: replace `lines[start .. start+deleteCount)` with `insert`.
  */
 export function planTaskMetaEdit(

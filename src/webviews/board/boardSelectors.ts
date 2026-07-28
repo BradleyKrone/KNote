@@ -20,7 +20,8 @@ export interface BoardCard {
   tags: string[]
   due: string | null
   priority: number
-  waitingSince: string | null
+  /** Follow-up date (YYYY-MM-DD) for a card sitting in a require-reason column */
+  waitingFollowUp: string | null
   waitingReason: string | null
   rawLine: string
   /** Date (M/D/YYYY) the task last changed Kanban column, if it ever has */
@@ -49,7 +50,7 @@ export function toCard(meta: NoteMeta, task: NoteMeta['tasks'][number]): BoardCa
     tags: task.tags,
     due: due ? (due[1] ?? due[2]) : null,
     priority: prio ? prio[1].length : 0,
-    waitingSince: task.waitingSince,
+    waitingFollowUp: task.waitingFollowUp,
     waitingReason: task.waitingReason,
     rawLine: task.rawLine,
     statusChanged: task.statusChanged,
@@ -57,11 +58,23 @@ export function toCard(meta: NoteMeta, task: NoteMeta['tasks'][number]): BoardCa
   }
 }
 
-/** How urgent a card's due date is — drives the colour of its due chip. */
+/** How urgent a card's date is — drives the colour of its due / follow-up chip. */
 export type DueState = 'overdue' | 'today' | 'soon' | 'later'
 
-/** Days ahead of `today` a due date still counts as 'soon' (green). */
+/** Days ahead of `today` a date still counts as 'soon' (green). */
 const SOON_DAYS = 7
+
+/**
+ * The board's one date-urgency rule, shared by due dates and Waiting
+ * follow-up dates so they can never drift apart. `date` and `today` are both
+ * YYYY-MM-DD, which dayjs parses natively.
+ */
+function dateUrgency(date: string, today: string): DueState {
+  const days = dayjs(date).diff(dayjs(today), 'day')
+  if (days < 0) return 'overdue'
+  if (days === 0) return 'today'
+  return days <= SOON_DAYS ? 'soon' : 'later'
+}
 
 /**
  * Colour bucket for a card's due date, relative to `today` (YYYY-MM-DD).
@@ -74,11 +87,23 @@ export function dueState(
 ): DueState | null {
   if (!card.due) return null
   if (/^[xX]$/.test(card.statusChar)) return 'later'
-  // card.due is always YYYY-MM-DD (DUE_RE), which dayjs parses natively.
-  const days = dayjs(card.due).diff(dayjs(today), 'day')
-  if (days < 0) return 'overdue'
-  if (days === 0) return 'today'
-  return days <= SOON_DAYS ? 'soon' : 'later'
+  return dateUrgency(card.due, today)
+}
+
+/**
+ * Colour bucket for a card's Waiting follow-up date, on exactly the same
+ * scale as `dueState` — a follow-up you've blown past reads red the way an
+ * overdue task does. Null when the card carries no follow-up date, which is
+ * every card outside a require-reason column (the reason line, and the date
+ * on it, is deleted on the way out).
+ */
+export function followUpState(
+  card: Pick<BoardCard, 'waitingFollowUp' | 'statusChar'>,
+  today: string
+): DueState | null {
+  if (!card.waitingFollowUp) return null
+  if (/^[xX]$/.test(card.statusChar)) return 'later'
+  return dateUrgency(card.waitingFollowUp, today)
 }
 
 /** A Status Changed / Date Entered / Due Date board filter. */
