@@ -98,6 +98,8 @@ export function createHostHandlers(): HostHandlers {
 
     copyToClipboard: (text: string) => vscode.env.clipboard.writeText(text),
 
+    readClipboard: () => vscode.env.clipboard.readText(),
+
     // Scheme-checked again here, not just in the webview: note content is
     // arbitrary text on disk, and the host must never be the side that trusts
     // a `javascript:`/`file:` target it was simply handed.

@@ -36,6 +36,11 @@ export function lineDue(text: string): string | null {
   return m ? (m[1] ?? m[2]) : null
 }
 
+/** Normalize pasted line endings to the document's own, so a CRLF clipboard doesn't mix them in. */
+export function normalizePastedText(text: string, lineBreak: string): string {
+  return text.replace(/\r\n?/g, lineBreak)
+}
+
 // ---------- View helpers ----------
 
 /** The document line under the caret. */

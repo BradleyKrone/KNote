@@ -504,6 +504,32 @@ button {
 .context-menu .picker-list {
   max-height: none;
 }
+
+.context-menu .picker-row {
+  gap: 8px;
+}
+
+/* Fixed-width icon column so every label starts on the same vertical line. */
+.picker-row-icon {
+  flex: none;
+  width: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+}
+
+.context-menu .picker-row-label {
+  flex: 1;
+}
+
+.picker-row.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.picker-row.disabled:hover {
+  background: none;
+}
 .menu-separator {
   height: 1px;
   margin: 4px 2px;

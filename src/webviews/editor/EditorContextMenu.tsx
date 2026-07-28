@@ -8,6 +8,30 @@
 import { useEffect, useState } from 'react'
 import { EditorSelection } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
+import {
+  BookPlus,
+  Bold,
+  CalendarDays,
+  CheckSquare,
+  Clipboard,
+  Code,
+  Copy,
+  ExternalLink,
+  Eye,
+  Flag,
+  Italic,
+  Link,
+  Link2,
+  Milestone,
+  Pencil,
+  Scissors,
+  SpellCheck,
+  Strikethrough,
+  Tag,
+  Truck,
+  Unlink,
+  Wrench
+} from 'lucide-react'
 import type { BoardColumn } from '@shared/types'
 import {
   ARCHIVED_CHAR,
@@ -32,6 +56,7 @@ import { copyTaskLink } from './taskLink'
 import { misspelledRangeAt, type WordSpan } from './spellcheck/spellCheck'
 import { suggestWords } from './spellcheck/dictionary'
 import { addToDictionary, ignoreSpelling, replaceWord } from './spellcheck/spellActions'
+import { copySelection, cutSelection, pasteAtSelection } from './clipboard'
 import {
   addLineTag,
   editMachineOnLine,
@@ -225,15 +250,24 @@ function linkItems(
   openSub: (sub: SubKind) => () => void
 ): MenuEntry[] {
   return [
-    { label: 'Open link', onClick: run(() => void host.openExternal(link.url)) },
+    {
+      label: 'Open link',
+      icon: <ExternalLink size={ICON} />,
+      onClick: run(() => void host.openExternal(link.url))
+    },
     {
       label: 'Copy link',
+      icon: <Copy size={ICON} />,
       onClick: run(() => {
         void host.copyToClipboard(link.url).then(() => showToast(`Copied link: ${link.url}`))
       })
     },
-    { label: 'Edit link…', onClick: openSub('link') },
-    { label: 'Remove link', onClick: run(() => removeMarkdownLink(view, link)) },
+    { label: 'Edit link…', icon: <Pencil size={ICON} />, onClick: openSub('link') },
+    {
+      label: 'Remove link',
+      icon: <Unlink size={ICON} />,
+      onClick: run(() => removeMarkdownLink(view, link))
+    },
     { separator: true }
   ]
 }
@@ -248,16 +282,18 @@ function spellItems(view: EditorView, span: WordSpan, close: () => void): MenuEn
   const items: MenuEntry[] = suggestions.length
     ? suggestions.map((s) => ({
         label: s,
+        icon: <SpellCheck size={ICON} />,
         onClick: () => {
           close()
           replaceWord(view, span, s)
         }
       }))
-    : [{ label: 'No suggestions', detail: '', onClick: close }]
+    : [{ label: 'No suggestions', detail: '', disabled: true, onClick: close }]
   items.push(
     { separator: true },
     {
       label: 'Add to dictionary',
+      icon: <BookPlus size={ICON} />,
       onClick: () => {
         close()
         addToDictionary(span.word)
@@ -265,6 +301,7 @@ function spellItems(view: EditorView, span: WordSpan, close: () => void): MenuEn
     },
     {
       label: 'Ignore',
+      icon: <Eye size={ICON} />,
       onClick: () => {
         close()
         ignoreSpelling(view, span.word)
@@ -275,6 +312,41 @@ function spellItems(view: EditorView, span: WordSpan, close: () => void): MenuEn
   return items
 }
 
+const ICON = 14
+
+/**
+ * Cut / Copy / Paste, at the top of every menu the way a native editor menu
+ * has them. Cut and Copy grey out with nothing selected rather than vanishing,
+ * so the group keeps a constant shape. (Ctrl+X/C/V work regardless —
+ * CodeMirror handles those itself.)
+ */
+function clipboardItems(
+  view: EditorView,
+  hasSelection: boolean,
+  run: (fn: () => void) => () => void
+): MenuEntry[] {
+  return [
+    {
+      label: 'Cut',
+      icon: <Scissors size={ICON} />,
+      disabled: !hasSelection,
+      onClick: run(() => cutSelection(view))
+    },
+    {
+      label: 'Copy',
+      icon: <Copy size={ICON} />,
+      disabled: !hasSelection,
+      onClick: run(() => copySelection(view))
+    },
+    {
+      label: 'Paste',
+      icon: <Clipboard size={ICON} />,
+      onClick: run(() => void pasteAtSelection(view))
+    },
+    { separator: true }
+  ]
+}
+
 function mainItems(
   view: EditorView,
   ctx: LineCtx,
@@ -282,29 +354,47 @@ function mainItems(
   openSub: (sub: SubKind) => () => void
 ): MenuEntry[] {
   const items: MenuEntry[] = [
-    { label: 'Bold', onClick: run(() => toggleWrap(view, '**')) },
-    { label: 'Italic', onClick: run(() => toggleWrap(view, '*')) },
-    { label: 'Strikethrough', onClick: run(() => toggleWrap(view, '~~')) },
-    { label: 'Inline code', onClick: run(() => toggleWrap(view, '`')) },
-    { label: 'Insert wiki link', onClick: run(() => insertWikiLink(view)) },
-    { label: 'Insert link…', onClick: openSub('link') },
+    ...clipboardItems(view, ctx.selection.length > 0, run),
+    { label: 'Bold', icon: <Bold size={ICON} />, onClick: run(() => toggleWrap(view, '**')) },
+    { label: 'Italic', icon: <Italic size={ICON} />, onClick: run(() => toggleWrap(view, '*')) },
+    {
+      label: 'Strikethrough',
+      icon: <Strikethrough size={ICON} />,
+      onClick: run(() => toggleWrap(view, '~~'))
+    },
+    { label: 'Inline code', icon: <Code size={ICON} />, onClick: run(() => toggleWrap(view, '`')) },
+    {
+      label: 'Insert wiki link',
+      icon: <Link2 size={ICON} />,
+      onClick: run(() => insertWikiLink(view))
+    },
+    { label: 'Insert link…', icon: <Link size={ICON} />, onClick: openSub('link') },
     { separator: true },
-    { label: 'Add checkbox', onClick: run(() => insertCheckbox(view)) },
-    { label: 'Add milestone', onClick: run(() => insertMilestone(view)) },
-    { label: 'Log machine work…', onClick: openSub('machine') }
+    {
+      label: 'Add checkbox',
+      icon: <CheckSquare size={ICON} />,
+      onClick: run(() => insertCheckbox(view))
+    },
+    {
+      label: 'Add milestone',
+      icon: <Milestone size={ICON} />,
+      onClick: run(() => insertMilestone(view))
+    },
+    { label: 'Log machine work…', icon: <Truck size={ICON} />, onClick: openSub('machine') }
   ]
   if (ctx.isTask || ctx.isMilestone) {
     items.push(
       { separator: true },
-      { label: 'Add tag…', onClick: openSub('tag') },
-      { label: 'Set priority…', onClick: openSub('priority') },
-      { label: 'Set due date…', onClick: openSub('date') }
+      { label: 'Add tag…', icon: <Tag size={ICON} />, onClick: openSub('tag') },
+      { label: 'Set priority…', icon: <Flag size={ICON} />, onClick: openSub('priority') },
+      { label: 'Set due date…', icon: <CalendarDays size={ICON} />, onClick: openSub('date') }
     )
     // Only top-level tasks and milestones are linkable — sub-tasks are plain
     // toggles, not standalone items, so they get no anchor.
     if (!ctx.isSubtask) {
       items.push({
         label: ctx.isMilestone ? 'Copy link to milestone' : 'Copy link to task',
+        icon: <Link2 size={ICON} />,
         onClick: run(() => copyTaskLink(view, ctx.line0, titleOf(getNotePath() ?? '')))
       })
     }
@@ -312,7 +402,11 @@ function mainItems(
   if (ctx.isMachine) {
     items.push(
       { separator: true },
-      { label: 'Edit machine entry…', onClick: openSub('edit-machine') }
+      {
+        label: 'Edit machine entry…',
+        icon: <Wrench size={ICON} />,
+        onClick: openSub('edit-machine')
+      }
     )
   }
   return items

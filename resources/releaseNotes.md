@@ -18,6 +18,12 @@ Extensions view.
   addresses will open; anything else is refused. `![](image)` embeds are
   untouched, and KNote still makes no network calls of its own — opening a link
   just hands it to your browser.
+- **The right-click menu has Cut / Copy / Paste, and icons.** The clipboard
+  actions sit at the top of the menu where a native editor puts them — Cut and
+  Copy grey out when nothing is selected rather than disappearing, and
+  `Ctrl+X`/`C`/`V` keep working as they always did. Every entry in the menu now
+  also carries an icon on the left, so you can find the one you want by shape
+  instead of reading the whole list.
 - Fixed a task's hidden `^anchor` becoming visible once you gave the task a due
   date. Every marker — due date, priority, tag, a sub-task's completion date —
   is written by appending to the line, which pushed the anchor into the middle

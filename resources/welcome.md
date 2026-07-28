@@ -164,10 +164,12 @@ Turn it off in **Vault Settings → Links** if you'd rather links never move.
 ### Right-click menu
 
 Right-click anywhere in a Live Preview note for a context menu that acts on
-the clicked line:
+the clicked line. Every entry carries an icon on the left, so you can pick one
+out at a glance instead of reading down the list:
 
 | Item | Effect |
 |---|---|
+| Cut / Copy / Paste | The usual clipboard actions (Cut and Copy grey out with nothing selected). `Ctrl+X`/`C`/`V` work as always |
 | Bold / Italic / Strikethrough / Inline code | Toggle the marker on the selection |
 | Insert wiki link | Insert `[[]]` (wraps the selection if any) |
 | Insert link… | Enter link text + a URL → insert a `[text](url)` hyperlink (pre-fills from the selection) |
