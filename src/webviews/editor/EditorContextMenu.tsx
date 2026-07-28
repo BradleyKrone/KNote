@@ -17,13 +17,16 @@ import {
 } from '@shared/parser/patterns'
 import { Popover } from '../shared/components/Popover'
 import { ContextMenuList, type MenuEntry } from '../shared/components/ContextMenuList'
+import { LinkPickerContent } from '../shared/components/LinkPickerContent'
 import { DatePickerContent } from '../shared/components/DatePickerContent'
 import { PriorityPickerContent } from '../shared/components/PriorityPickerContent'
 import { TagPickerContent } from '../shared/components/TagPickerContent'
 import { MachineEntryPickerContent } from '../machineLog/MachineEntryPickerContent'
-import { useConfigStore } from '../shared/stores'
+import { useConfigStore, showToast } from '../shared/stores'
 import { titleOf } from '@shared/pathUtils'
+import { host } from '../shared/rpc'
 import { toggleWrap } from './markdownFormatting'
+import { mdLinkAt, type MdLink } from './mdLinkLogic'
 import { setCheckboxStatus, setSubtaskChecked, getNotePath } from './knoteConstructs'
 import { copyTaskLink } from './taskLink'
 import { misspelledRangeAt, type WordSpan } from './spellcheck/spellCheck'
@@ -34,9 +37,12 @@ import {
   editMachineOnLine,
   insertCheckbox,
   insertMachineEntry,
+  insertMarkdownLink,
   insertMilestone,
   insertWikiLink,
   lineDue,
+  removeMarkdownLink,
+  replaceMarkdownLink,
   setLineDue,
   setLinePriority
 } from './editorActions'
@@ -51,10 +57,14 @@ interface LineCtx {
   isMachine: boolean
   due: string | null
   serial: string
+  /** The `[text](url)` hyperlink under the click, if any. */
+  link: MdLink | null
+  /** Selected text when the menu opened — pre-fills a new link's label. */
+  selection: string
 }
 
 type Point = { x: number; y: number }
-type SubKind = 'machine' | 'edit-machine' | 'date' | 'priority' | 'tag'
+type SubKind = 'machine' | 'edit-machine' | 'date' | 'priority' | 'tag' | 'link'
 
 type OpenState =
   | { stage: 'menu'; onCheckbox: boolean; spell: WordSpan | null; point: Point; ctx: LineCtx }
@@ -64,7 +74,10 @@ type OpenState =
 function readLineCtx(view: EditorView, pos: number): LineCtx {
   const line = view.state.doc.lineAt(pos)
   const task = TASK_LINE_RE.exec(line.text)
+  const { from, to } = view.state.selection.main
   return {
+    link: mdLinkAt(line.text, line.from, pos),
+    selection: view.state.sliceDoc(from, to),
     line0: line.number - 1,
     text: line.text,
     isTask: task != null,
@@ -125,6 +138,8 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
       })
     } else if (open.spell) {
       items = [...spellItems(view, open.spell, close), ...mainItems(view, ctx, run, openSub)]
+    } else if (ctx.link) {
+      items = [...linkItems(view, ctx.link, run, openSub), ...mainItems(view, ctx, run, openSub)]
     } else {
       items = mainItems(view, ctx, run, openSub)
     }
@@ -173,6 +188,18 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
           }}
         />
       )}
+      {open.sub === 'link' && (
+        <LinkPickerContent
+          initialText={ctx.link ? ctx.link.text : ctx.selection}
+          initialUrl={ctx.link?.url}
+          submitLabel={ctx.link ? 'Save' : 'Insert link'}
+          onSubmit={(text, url) => {
+            close()
+            if (ctx.link) replaceMarkdownLink(view, ctx.link, text, url)
+            else insertMarkdownLink(view, text, url)
+          }}
+        />
+      )}
       {open.sub === 'tag' && (
         <TagPickerContent
           onSelect={(tag) => {
@@ -183,6 +210,32 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
       )}
     </Popover>
   )
+}
+
+/**
+ * Items shown above the normal menu when the right-click lands on a
+ * `[text](url)` hyperlink, closed off with a separator (same shape as
+ * spellItems). "Copy link" puts the bare URL on the clipboard — the target,
+ * not the markdown — so it can be pasted anywhere.
+ */
+function linkItems(
+  view: EditorView,
+  link: MdLink,
+  run: (fn: () => void) => () => void,
+  openSub: (sub: SubKind) => () => void
+): MenuEntry[] {
+  return [
+    { label: 'Open link', onClick: run(() => void host.openExternal(link.url)) },
+    {
+      label: 'Copy link',
+      onClick: run(() => {
+        void host.copyToClipboard(link.url).then(() => showToast(`Copied link: ${link.url}`))
+      })
+    },
+    { label: 'Edit link…', onClick: openSub('link') },
+    { label: 'Remove link', onClick: run(() => removeMarkdownLink(view, link)) },
+    { separator: true }
+  ]
 }
 
 /**
@@ -234,6 +287,7 @@ function mainItems(
     { label: 'Strikethrough', onClick: run(() => toggleWrap(view, '~~')) },
     { label: 'Inline code', onClick: run(() => toggleWrap(view, '`')) },
     { label: 'Insert wiki link', onClick: run(() => insertWikiLink(view)) },
+    { label: 'Insert link…', onClick: openSub('link') },
     { separator: true },
     { label: 'Add checkbox', onClick: run(() => insertCheckbox(view)) },
     { label: 'Add milestone', onClick: run(() => insertMilestone(view)) },

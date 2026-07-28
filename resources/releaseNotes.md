@@ -3,6 +3,22 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.8.0
+
+- **Hyperlinks are a real construct now.** `[text](https://…)` links used to
+  render with the URL sitting in the middle of your prose and did nothing when
+  clicked. They now show as just their link text — hover to see where they
+  point, and the raw Markdown reappears when your cursor is on the line, like
+  every other construct — and clicking one opens it in your browser. To make
+  one, right-click → **Insert link…** and fill in the text and URL (the text
+  pre-fills from whatever you had selected, and a bare `example.com` is treated
+  as `https://`). Right-click an existing link for **Open link**, **Copy link**
+  (the bare URL, ready to paste anywhere), **Edit link…** or **Remove link**,
+  which unwraps it back to plain text. Only `http`, `https` and `mailto`
+  addresses will open; anything else is refused. `![](image)` embeds are
+  untouched, and KNote still makes no network calls of its own — opening a link
+  just hands it to your browser.
+
 ## 1.7.0
 
 - **Waiting tasks now need a follow-up date, and it shows on the board.** Moving
