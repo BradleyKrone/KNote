@@ -470,10 +470,13 @@ function decorateLine(
   // Hide a trailing `^block-id` anchor (the target of a [[Note#^id]] link, added
   // by "Copy link to task") in preview — it's link plumbing, not prose. The raw
   // `^id` reveals on the line under the cursor so it stays editable/removable.
+  // On a line written before preservingBlockId existed the anchor can sit
+  // *behind* a due date or tag (BLOCK_ID_RE group 2); hide only the ` ^id`
+  // itself, so those markers stay on screen.
   const anchor = BLOCK_ID_RE.exec(text)
   if (anchor && !isRevealed) {
     const from = line.from + anchor.index
-    out.push(Decoration.replace({}).range(from, from + anchor[0].length))
+    out.push(Decoration.replace({}).range(from, from + anchor[0].length - anchor[2].length))
   }
 }
 

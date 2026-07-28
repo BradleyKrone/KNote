@@ -5,6 +5,7 @@
 import * as vscode from 'vscode'
 import type { EmbedNote, VaultConfig, VaultPath } from '@shared/types'
 import { sliceEmbedSection } from '@shared/embedSlice'
+import { isExternalUrl } from '@shared/externalUrl'
 import { resolveTarget, sectionLine, splitWikiTarget } from '@shared/wikiResolve'
 import { saveImageAttachment } from '../../core/attachments'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
@@ -95,6 +96,19 @@ export function createHostHandlers(): HostHandlers {
 
     openNote: (path: VaultPath, line?: number) => openNoteInLiveEditor(uriForRel(path), line),
 
-    copyToClipboard: (text: string) => vscode.env.clipboard.writeText(text)
+    copyToClipboard: (text: string) => vscode.env.clipboard.writeText(text),
+
+    readClipboard: () => vscode.env.clipboard.readText(),
+
+    // Scheme-checked again here, not just in the webview: note content is
+    // arbitrary text on disk, and the host must never be the side that trusts
+    // a `javascript:`/`file:` target it was simply handed.
+    openExternal: async (url: string) => {
+      if (!isExternalUrl(url)) {
+        void vscode.window.showWarningMessage(`KNote: refusing to open ${url}`)
+        return
+      }
+      await vscode.env.openExternal(vscode.Uri.parse(url))
+    }
   } satisfies HostHandlers
 }

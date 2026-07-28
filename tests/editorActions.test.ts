@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { buildMachineEntryLine, editMachineLine, lineDue } from '@/editor/editorActions'
+import {
+  buildMachineEntryLine,
+  editMachineLine,
+  lineDue,
+  normalizePastedText
+} from '@/editor/editorActions'
+
+describe('normalizePastedText', () => {
+  it('rewrites CRLF and lone CR to the document’s own line ending', () => {
+    expect(normalizePastedText('a\r\nb\rc', '\n')).toBe('a\nb\nc')
+    expect(normalizePastedText('a\nb', '\r\n')).toBe('a\nb')
+    expect(normalizePastedText('a\r\nb', '\r\n')).toBe('a\r\nb')
+  })
+  it('leaves text without line breaks alone', () => {
+    expect(normalizePastedText('plain text', '\n')).toBe('plain text')
+    expect(normalizePastedText('', '\n')).toBe('')
+  })
+})
 
 describe('buildMachineEntryLine', () => {
   it('builds a dated 🚜 entry line', () => {

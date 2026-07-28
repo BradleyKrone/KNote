@@ -8,10 +8,46 @@
 export const WIKI_LINK_RE = /(!?)\[\[([^[\]|#\n]+)(#[^[\]|\n]+)?(\|[^[\]\n]+)?\]\]/g
 
 /**
+ * Inline markers that can end up *after* a block anchor, burying it: a due
+ * date, a completion date, a priority marker, a tag. Every one of these is
+ * appended to the end of a task line, so setting one on an already-anchored
+ * task used to push the anchor into the middle of the line.
+ */
+const AFTER_ANCHOR = String.raw`(?:\s*(?:📅\s*\d{4}-\d{2}-\d{2}|@due\(\d{4}-\d{2}-\d{2}\)|✅\s*\d{4}-\d{2}-\d{2}|!{1,3}|#[A-Za-z0-9_][A-Za-z0-9_/-]*))*`
+
+/**
  * ` ^block-id` at the end of a line — an Obsidian-style block anchor that
  * `[[Note#^block-id]]` links can jump to. Group 1 = the id.
+ *
+ * Group 2 is any run of markers that displaced the anchor (empty in the normal
+ * case). Tolerating those keeps a note written before `preservingBlockId`
+ * existed working: its anchor still indexes, still resolves and still hides in
+ * live preview instead of showing up as raw `^id` text mid-line. Callers that
+ * *remove* the anchor must substitute `'$2'`, not `''`, or they'll take the
+ * markers with it.
  */
-export const BLOCK_ID_RE = /(?:^|\s)\^([A-Za-z0-9_-]+)\s*$/
+export const BLOCK_ID_RE = new RegExp(String.raw`(?:^|\s)\^([A-Za-z0-9_-]+)(${AFTER_ANCHOR})\s*$`)
+
+/**
+ * Run `fn` over a line's text with any trailing ` ^anchor` held aside, then put
+ * the anchor back at the end.
+ *
+ * Every inline marker is written by appending to the line, so without this a
+ * task that already had an anchor ended up as `… ^id 📅 2026-07-28` — and an
+ * anchor that isn't last is not a block anchor: it stops being indexed, every
+ * `[[Note#^id]]` link to the task breaks, and the raw `^id` becomes visible in
+ * live preview. Anything that appends to a task line goes through here.
+ *
+ * Also repairs a line that was already broken this way, since BLOCK_ID_RE now
+ * matches a buried anchor: the markers come back in the body and the anchor
+ * lands at the end where it belongs.
+ */
+export function preservingBlockId(text: string, fn: (text: string) => string): string {
+  const m = BLOCK_ID_RE.exec(text)
+  if (!m) return fn(text)
+  const body = fn((text.slice(0, m.index) + m[2]).replace(/\s+$/, ''))
+  return body ? `${body} ^${m[1]}` : `^${m[1]}`
+}
 
 /** #tag — must follow start-of-line/whitespace/bracket; purely numeric tags excluded by callers */
 export const TAG_RE = /(^|[\s([{])#([A-Za-z0-9_][A-Za-z0-9_/-]*)/g
@@ -36,8 +72,11 @@ export function setTaskDone(rawLine: string, done: boolean, date: string): strin
   const m = TASK_LINE_RE.exec(rawLine)
   if (!m) return null
   const [, indent, marker] = m
-  let text = (m[4] ?? '').replace(DONE_DATE_RE, '').replace(/\s+$/, '')
-  if (done) text = text ? `${text} ✅ ${date}` : `✅ ${date}`
+  const text = preservingBlockId(m[4] ?? '', (t) => {
+    const stripped = t.replace(DONE_DATE_RE, '').replace(/\s+$/, '')
+    if (!done) return stripped
+    return stripped ? `${stripped} ✅ ${date}` : `✅ ${date}`
+  })
   const body = text ? ` ${text}` : ''
   return `${indent}${marker} [${done ? 'x' : ' '}]${body}`
 }
@@ -241,13 +280,16 @@ export const PRIORITY_RE = /(?:^|\s)(!{1,3})(?=\s|$)/
  * board cards, timeline rows, machine entries, and the activity-bar trees.
  */
 export function stripInlineMarkers(text: string): string {
-  return text
-    .replace(DUE_RE, '')
-    .replace(PRIORITY_RE, ' ')
-    .replace(/(^|[\s([{])#[A-Za-z0-9_][A-Za-z0-9_/-]*/g, '$1')
-    .replace(BLOCK_ID_RE, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim()
+  return (
+    text
+      .replace(DUE_RE, '')
+      .replace(PRIORITY_RE, ' ')
+      .replace(/(^|[\s([{])#[A-Za-z0-9_][A-Za-z0-9_/-]*/g, '$1')
+      // `$2`, not `''` — a buried anchor's trailing markers belong to the label.
+      .replace(BLOCK_ID_RE, '$2')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+  )
 }
 
 /** 🏁 milestone line — a standalone dated timeline entry, deliberately not a checkbox so it never becomes a Kanban card */

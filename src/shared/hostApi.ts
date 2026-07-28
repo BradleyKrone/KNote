@@ -83,6 +83,20 @@ export interface HostApi {
   copyToClipboard(text: string): Promise<void>
 
   /**
+   * Read the system clipboard. Webviews can't use `navigator.clipboard.read*`
+   * (it needs a permission prompt VS Code never shows), so the paste menu item
+   * goes through the host.
+   */
+  readClipboard(): Promise<string>
+
+  /**
+   * Hand an http/https/mailto URL to the OS default browser. Other schemes are
+   * refused host-side. KNote makes no request of its own — see
+   * shared/externalUrl.ts.
+   */
+  openExternal(url: string): Promise<void>
+
+  /**
    * Open a raw wiki target ("Note", "Note#Heading", "folder/Note"), creating
    * the note (Obsidian behavior) when it doesn't resolve.
    */

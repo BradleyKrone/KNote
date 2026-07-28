@@ -8,6 +8,30 @@
 import { useEffect, useState } from 'react'
 import { EditorSelection } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
+import {
+  BookPlus,
+  Bold,
+  CalendarDays,
+  CheckSquare,
+  Clipboard,
+  Code,
+  Copy,
+  ExternalLink,
+  Eye,
+  Flag,
+  Italic,
+  Link,
+  Link2,
+  Milestone,
+  Pencil,
+  Scissors,
+  SpellCheck,
+  Strikethrough,
+  Tag,
+  Truck,
+  Unlink,
+  Wrench
+} from 'lucide-react'
 import type { BoardColumn } from '@shared/types'
 import {
   ARCHIVED_CHAR,
@@ -17,26 +41,33 @@ import {
 } from '@shared/parser/patterns'
 import { Popover } from '../shared/components/Popover'
 import { ContextMenuList, type MenuEntry } from '../shared/components/ContextMenuList'
+import { LinkPickerContent } from '../shared/components/LinkPickerContent'
 import { DatePickerContent } from '../shared/components/DatePickerContent'
 import { PriorityPickerContent } from '../shared/components/PriorityPickerContent'
 import { TagPickerContent } from '../shared/components/TagPickerContent'
 import { MachineEntryPickerContent } from '../machineLog/MachineEntryPickerContent'
-import { useConfigStore } from '../shared/stores'
+import { useConfigStore, showToast } from '../shared/stores'
 import { titleOf } from '@shared/pathUtils'
+import { host } from '../shared/rpc'
 import { toggleWrap } from './markdownFormatting'
+import { mdLinkAt, type MdLink } from './mdLinkLogic'
 import { setCheckboxStatus, setSubtaskChecked, getNotePath } from './knoteConstructs'
 import { copyTaskLink } from './taskLink'
 import { misspelledRangeAt, type WordSpan } from './spellcheck/spellCheck'
 import { suggestWords } from './spellcheck/dictionary'
 import { addToDictionary, ignoreSpelling, replaceWord } from './spellcheck/spellActions'
+import { copySelection, cutSelection, pasteAtSelection } from './clipboard'
 import {
   addLineTag,
   editMachineOnLine,
   insertCheckbox,
   insertMachineEntry,
+  insertMarkdownLink,
   insertMilestone,
   insertWikiLink,
   lineDue,
+  removeMarkdownLink,
+  replaceMarkdownLink,
   setLineDue,
   setLinePriority
 } from './editorActions'
@@ -51,10 +82,14 @@ interface LineCtx {
   isMachine: boolean
   due: string | null
   serial: string
+  /** The `[text](url)` hyperlink under the click, if any. */
+  link: MdLink | null
+  /** Selected text when the menu opened — pre-fills a new link's label. */
+  selection: string
 }
 
 type Point = { x: number; y: number }
-type SubKind = 'machine' | 'edit-machine' | 'date' | 'priority' | 'tag'
+type SubKind = 'machine' | 'edit-machine' | 'date' | 'priority' | 'tag' | 'link'
 
 type OpenState =
   | { stage: 'menu'; onCheckbox: boolean; spell: WordSpan | null; point: Point; ctx: LineCtx }
@@ -64,7 +99,10 @@ type OpenState =
 function readLineCtx(view: EditorView, pos: number): LineCtx {
   const line = view.state.doc.lineAt(pos)
   const task = TASK_LINE_RE.exec(line.text)
+  const { from, to } = view.state.selection.main
   return {
+    link: mdLinkAt(line.text, line.from, pos),
+    selection: view.state.sliceDoc(from, to),
     line0: line.number - 1,
     text: line.text,
     isTask: task != null,
@@ -125,6 +163,8 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
       })
     } else if (open.spell) {
       items = [...spellItems(view, open.spell, close), ...mainItems(view, ctx, run, openSub)]
+    } else if (ctx.link) {
+      items = [...linkItems(view, ctx.link, run, openSub), ...mainItems(view, ctx, run, openSub)]
     } else {
       items = mainItems(view, ctx, run, openSub)
     }
@@ -173,6 +213,18 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
           }}
         />
       )}
+      {open.sub === 'link' && (
+        <LinkPickerContent
+          initialText={ctx.link ? ctx.link.text : ctx.selection}
+          initialUrl={ctx.link?.url}
+          submitLabel={ctx.link ? 'Save' : 'Insert link'}
+          onSubmit={(text, url) => {
+            close()
+            if (ctx.link) replaceMarkdownLink(view, ctx.link, text, url)
+            else insertMarkdownLink(view, text, url)
+          }}
+        />
+      )}
       {open.sub === 'tag' && (
         <TagPickerContent
           onSelect={(tag) => {
@@ -186,6 +238,41 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
 }
 
 /**
+ * Items shown above the normal menu when the right-click lands on a
+ * `[text](url)` hyperlink, closed off with a separator (same shape as
+ * spellItems). "Copy link" puts the bare URL on the clipboard — the target,
+ * not the markdown — so it can be pasted anywhere.
+ */
+function linkItems(
+  view: EditorView,
+  link: MdLink,
+  run: (fn: () => void) => () => void,
+  openSub: (sub: SubKind) => () => void
+): MenuEntry[] {
+  return [
+    {
+      label: 'Open link',
+      icon: <ExternalLink size={ICON} />,
+      onClick: run(() => void host.openExternal(link.url))
+    },
+    {
+      label: 'Copy link',
+      icon: <Copy size={ICON} />,
+      onClick: run(() => {
+        void host.copyToClipboard(link.url).then(() => showToast(`Copied link: ${link.url}`))
+      })
+    },
+    { label: 'Edit link…', icon: <Pencil size={ICON} />, onClick: openSub('link') },
+    {
+      label: 'Remove link',
+      icon: <Unlink size={ICON} />,
+      onClick: run(() => removeMarkdownLink(view, link))
+    },
+    { separator: true }
+  ]
+}
+
+/**
  * Spell-check items shown above the normal menu when the right-click lands on a
  * misspelled word: up to a handful of suggested corrections, then "Add to
  * dictionary" / "Ignore", closed off with a separator.
@@ -195,16 +282,18 @@ function spellItems(view: EditorView, span: WordSpan, close: () => void): MenuEn
   const items: MenuEntry[] = suggestions.length
     ? suggestions.map((s) => ({
         label: s,
+        icon: <SpellCheck size={ICON} />,
         onClick: () => {
           close()
           replaceWord(view, span, s)
         }
       }))
-    : [{ label: 'No suggestions', detail: '', onClick: close }]
+    : [{ label: 'No suggestions', detail: '', disabled: true, onClick: close }]
   items.push(
     { separator: true },
     {
       label: 'Add to dictionary',
+      icon: <BookPlus size={ICON} />,
       onClick: () => {
         close()
         addToDictionary(span.word)
@@ -212,6 +301,7 @@ function spellItems(view: EditorView, span: WordSpan, close: () => void): MenuEn
     },
     {
       label: 'Ignore',
+      icon: <Eye size={ICON} />,
       onClick: () => {
         close()
         ignoreSpelling(view, span.word)
@@ -222,6 +312,41 @@ function spellItems(view: EditorView, span: WordSpan, close: () => void): MenuEn
   return items
 }
 
+const ICON = 14
+
+/**
+ * Cut / Copy / Paste, at the top of every menu the way a native editor menu
+ * has them. Cut and Copy grey out with nothing selected rather than vanishing,
+ * so the group keeps a constant shape. (Ctrl+X/C/V work regardless —
+ * CodeMirror handles those itself.)
+ */
+function clipboardItems(
+  view: EditorView,
+  hasSelection: boolean,
+  run: (fn: () => void) => () => void
+): MenuEntry[] {
+  return [
+    {
+      label: 'Cut',
+      icon: <Scissors size={ICON} />,
+      disabled: !hasSelection,
+      onClick: run(() => cutSelection(view))
+    },
+    {
+      label: 'Copy',
+      icon: <Copy size={ICON} />,
+      disabled: !hasSelection,
+      onClick: run(() => copySelection(view))
+    },
+    {
+      label: 'Paste',
+      icon: <Clipboard size={ICON} />,
+      onClick: run(() => void pasteAtSelection(view))
+    },
+    { separator: true }
+  ]
+}
+
 function mainItems(
   view: EditorView,
   ctx: LineCtx,
@@ -229,28 +354,47 @@ function mainItems(
   openSub: (sub: SubKind) => () => void
 ): MenuEntry[] {
   const items: MenuEntry[] = [
-    { label: 'Bold', onClick: run(() => toggleWrap(view, '**')) },
-    { label: 'Italic', onClick: run(() => toggleWrap(view, '*')) },
-    { label: 'Strikethrough', onClick: run(() => toggleWrap(view, '~~')) },
-    { label: 'Inline code', onClick: run(() => toggleWrap(view, '`')) },
-    { label: 'Insert wiki link', onClick: run(() => insertWikiLink(view)) },
+    ...clipboardItems(view, ctx.selection.length > 0, run),
+    { label: 'Bold', icon: <Bold size={ICON} />, onClick: run(() => toggleWrap(view, '**')) },
+    { label: 'Italic', icon: <Italic size={ICON} />, onClick: run(() => toggleWrap(view, '*')) },
+    {
+      label: 'Strikethrough',
+      icon: <Strikethrough size={ICON} />,
+      onClick: run(() => toggleWrap(view, '~~'))
+    },
+    { label: 'Inline code', icon: <Code size={ICON} />, onClick: run(() => toggleWrap(view, '`')) },
+    {
+      label: 'Insert wiki link',
+      icon: <Link2 size={ICON} />,
+      onClick: run(() => insertWikiLink(view))
+    },
+    { label: 'Insert link…', icon: <Link size={ICON} />, onClick: openSub('link') },
     { separator: true },
-    { label: 'Add checkbox', onClick: run(() => insertCheckbox(view)) },
-    { label: 'Add milestone', onClick: run(() => insertMilestone(view)) },
-    { label: 'Log machine work…', onClick: openSub('machine') }
+    {
+      label: 'Add checkbox',
+      icon: <CheckSquare size={ICON} />,
+      onClick: run(() => insertCheckbox(view))
+    },
+    {
+      label: 'Add milestone',
+      icon: <Milestone size={ICON} />,
+      onClick: run(() => insertMilestone(view))
+    },
+    { label: 'Log machine work…', icon: <Truck size={ICON} />, onClick: openSub('machine') }
   ]
   if (ctx.isTask || ctx.isMilestone) {
     items.push(
       { separator: true },
-      { label: 'Add tag…', onClick: openSub('tag') },
-      { label: 'Set priority…', onClick: openSub('priority') },
-      { label: 'Set due date…', onClick: openSub('date') }
+      { label: 'Add tag…', icon: <Tag size={ICON} />, onClick: openSub('tag') },
+      { label: 'Set priority…', icon: <Flag size={ICON} />, onClick: openSub('priority') },
+      { label: 'Set due date…', icon: <CalendarDays size={ICON} />, onClick: openSub('date') }
     )
     // Only top-level tasks and milestones are linkable — sub-tasks are plain
     // toggles, not standalone items, so they get no anchor.
     if (!ctx.isSubtask) {
       items.push({
         label: ctx.isMilestone ? 'Copy link to milestone' : 'Copy link to task',
+        icon: <Link2 size={ICON} />,
         onClick: run(() => copyTaskLink(view, ctx.line0, titleOf(getNotePath() ?? '')))
       })
     }
@@ -258,7 +402,11 @@ function mainItems(
   if (ctx.isMachine) {
     items.push(
       { separator: true },
-      { label: 'Edit machine entry…', onClick: openSub('edit-machine') }
+      {
+        label: 'Edit machine entry…',
+        icon: <Wrench size={ICON} />,
+        onClick: openSub('edit-machine')
+      }
     )
   }
   return items

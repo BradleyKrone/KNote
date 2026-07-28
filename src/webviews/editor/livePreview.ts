@@ -8,7 +8,7 @@
 // (checkboxes, wiki-links, tags, embeds) are layered on in knoteConstructs.ts.
 
 import { syntaxTree } from '@codemirror/language'
-import type { Line, Range, Text } from '@codemirror/state'
+import type { EditorState, Line, Range, Text } from '@codemirror/state'
 import {
   Decoration,
   type DecorationSet,
@@ -112,6 +112,17 @@ function revealedLines(view: EditorView): Set<number> {
   return lines
 }
 
+/**
+ * True when line `n` (1-based) has its raw markdown revealed because the
+ * selection touches it. mdLink.ts uses this to leave clicks alone on the line
+ * you're editing, where the `(url)` is visible and directly editable.
+ */
+export function isLineRevealed(state: EditorState, n: number): boolean {
+  return state.selection.ranges.some(
+    (r) => state.doc.lineAt(r.from).number <= n && n <= state.doc.lineAt(r.to).number
+  )
+}
+
 function buildDecorations(view: EditorView): DecorationSet {
   const decorations: Range<Decoration>[] = []
   const revealed = revealedLines(view)
@@ -151,6 +162,20 @@ function buildDecorations(view: EditorView): DecorationSet {
         }
         // Tables are rendered separately (tableRender.ts) — as a block widget
         // that can't be provided from a view plugin.
+
+        // A hyperlink's `(url)` is hidden too, so live preview shows just the
+        // link text (mdLink.ts makes it clickable). `URL` can't go in HIDE:
+        // the same node type sits under `Image` — whose src knoteConstructs
+        // needs — and under `Autolink`, where the URL *is* the visible text.
+        if (name === 'Link' && !revealed.has(doc.lineAt(node.from).number)) {
+          const url = node.node.getChild('URL')
+          if (url && url.to > url.from) {
+            decorations.push(Decoration.replace({}).range(url.from, url.to))
+            // The target is invisible once hidden, so surface it on hover.
+            const title = doc.sliceString(url.from, url.to)
+            decorations.push(Decoration.mark({ attributes: { title } }).range(node.from, node.to))
+          }
+        }
 
         if (HIDE.has(name)) {
           const line = doc.lineAt(node.from).number

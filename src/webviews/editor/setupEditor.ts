@@ -28,6 +28,7 @@ import { taskFold } from './taskFold'
 import { taskEnterKeymap } from './taskEnter'
 import { knoteAutocomplete } from './completions'
 import { linkHover } from './linkHover'
+import { mdLink } from './mdLink'
 import { spellCheck } from './spellcheck/spellCheck'
 import { fromHost } from './sync'
 
@@ -63,6 +64,7 @@ export function createEditor(opts: { parent: HTMLElement; doc: string; eol: stri
       taskFold,
       knoteAutocomplete,
       linkHover,
+      mdLink,
       // Both keymaps run at highest precedence; array order breaks the tie, so
       // completion keys (Enter to accept a #tag/[[link, arrows to navigate,
       // Esc to dismiss) are tried before Enter-to-seed. acceptCompletion is a

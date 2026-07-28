@@ -12,6 +12,7 @@ import type { EditorView } from '@codemirror/view'
 import { machineEntryTemplate } from '@shared/machineEntry'
 import { DUE_RE, MACHINE_ENTRY_RE } from '@shared/parser/patterns'
 import { insertTag, setDueDate, setPriority } from '../shared/taskMeta'
+import { buildMdLink, type MdLink } from './mdLinkLogic'
 
 // ---------- Pure line builders (unit-tested) ----------
 
@@ -33,6 +34,11 @@ export function editMachineLine(rawLine: string, serial: string, date: string | 
 export function lineDue(text: string): string | null {
   const m = DUE_RE.exec(text)
   return m ? (m[1] ?? m[2]) : null
+}
+
+/** Normalize pasted line endings to the document's own, so a CRLF clipboard doesn't mix them in. */
+export function normalizePastedText(text: string, lineBreak: string): string {
+  return text.replace(/\r\n?/g, lineBreak)
 }
 
 // ---------- View helpers ----------
@@ -114,6 +120,41 @@ export function insertWikiLink(view: EditorView): void {
       : EditorSelection.cursor(range.to + 4)
   }))
   view.dispatch(tr)
+  view.focus()
+}
+
+/** Insert a `[text](url)` hyperlink, replacing the selection when there is one. */
+export function insertMarkdownLink(view: EditorView, text: string, url: string): void {
+  const link = buildMdLink(text, url)
+  const { from, to } = view.state.selection.main
+  view.dispatch({
+    changes: { from, to, insert: link },
+    selection: EditorSelection.cursor(from + link.length)
+  })
+  view.focus()
+}
+
+/** Rewrite an existing hyperlink's text and target in place. */
+export function replaceMarkdownLink(
+  view: EditorView,
+  span: MdLink,
+  text: string,
+  url: string
+): void {
+  const link = buildMdLink(text, url)
+  view.dispatch({
+    changes: { from: span.from, to: span.to, insert: link },
+    selection: EditorSelection.cursor(span.from + link.length)
+  })
+  view.focus()
+}
+
+/** Unwrap a hyperlink back to its plain display text, dropping the target. */
+export function removeMarkdownLink(view: EditorView, span: MdLink): void {
+  view.dispatch({
+    changes: { from: span.from, to: span.to, insert: span.text },
+    selection: EditorSelection.cursor(span.from + span.text.length)
+  })
   view.focus()
 }
 

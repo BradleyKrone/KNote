@@ -79,6 +79,14 @@ Markdown:
 - **`[[Wiki links]]`** render as clickable chips (click to open, creating
   the note if it doesn't exist), `#tags` as pills, and **`![[image]]`** /
   `![](image)` embeds show inline.
+- **`[Hyperlinks](https://…)`** render as just their link text — the URL is
+  tucked away (hover to see it) and reappears when your cursor is on the line,
+  like every other construct. Click one to open it in your browser. To make
+  one, right-click → **Insert link…**; right-click an existing link for
+  **Copy link** (the bare URL, ready to paste anywhere), **Edit link…** or
+  **Remove link**. Only `http`, `https` and `mailto` addresses will open —
+  anything else is refused. Opening a link hands it to your browser; KNote
+  itself still never touches the network.
 - **Hover a link to preview its note** — pause on any `[[wiki link]]` and a
   card shows the note's rendered content (about 15 lines' worth). A
   `[[Note#Heading]]` link previews just that section; a link to a note that
@@ -156,12 +164,16 @@ Turn it off in **Vault Settings → Links** if you'd rather links never move.
 ### Right-click menu
 
 Right-click anywhere in a Live Preview note for a context menu that acts on
-the clicked line:
+the clicked line. Every entry carries an icon on the left, so you can pick one
+out at a glance instead of reading down the list:
 
 | Item | Effect |
 |---|---|
+| Cut / Copy / Paste | The usual clipboard actions (Cut and Copy grey out with nothing selected). `Ctrl+X`/`C`/`V` work as always |
 | Bold / Italic / Strikethrough / Inline code | Toggle the marker on the selection |
 | Insert wiki link | Insert `[[]]` (wraps the selection if any) |
+| Insert link… | Enter link text + a URL → insert a `[text](url)` hyperlink (pre-fills from the selection) |
+| Open link / Copy link / Edit link… / Remove link | *(on a hyperlink)* open it in your browser, copy the bare URL, change its text/target, or unwrap it back to plain text |
 | Add checkbox | Insert a `- [ ]` task line |
 | Add milestone | Insert a dated `🏁 Milestone 📅 …` line |
 | Log machine work… | Pick a serial + date → insert a `🚜` entry with the detail template |
