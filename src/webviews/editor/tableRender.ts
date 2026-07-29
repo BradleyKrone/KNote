@@ -61,6 +61,11 @@ class TableWidget extends WidgetType {
     wrap.appendChild(table)
 
     wrap.addEventListener('mousedown', (e) => {
+      // A right-click only opens the context menu, which reads the clicked cell
+      // straight off this DOM (see tableEdit.readTableCtx). Activating a cell
+      // here would rebuild this widget out from under the contextmenu event
+      // that follows, leaving the menu to guess at which cell was clicked.
+      if (e.button !== 0) return
       const target = e.target as HTMLElement | null
       // Inside the live cell editor the nested view owns the click — touching it
       // here would break caret placement and drag-selection within the cell.
@@ -78,7 +83,10 @@ class TableWidget extends WidgetType {
         view.focus()
         return
       }
-      const row = cell.closest('thead') ? -1 : (cell.closest('tr')?.sectionRowIndex ?? 0)
+      const inHeader = cell.closest('thead') != null
+      const tr = inHeader ? null : cell.closest('tr')
+      if (!inHeader && !tr) return
+      const row = tr ? tr.sectionRowIndex : -1
       setPendingCellClick(e.clientX, e.clientY)
       activateCell(view, { tableFrom, row, col: cell.cellIndex })
     })

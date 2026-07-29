@@ -6,6 +6,7 @@
 // parseTable, per the GFM spec) are dropped for good the first time a table
 // with that quirk is touched here.
 
+import type { EditorState } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import { activateCell, findTableAt } from './tableCellEdit'
 import {
@@ -30,11 +31,58 @@ export interface TableCtx {
 }
 
 /**
- * Row/column context for a click at `pos` inside a table — from DOM hit-testing
- * when it's rendered as a real `<table>` (see tableRender.ts), or from raw
- * pipe-text offsets when it's in the cursor-revealed editing view. Null when
- * `pos` isn't inside a table, or lands in the rendered widget's own padding
- * rather than on a cell.
+ * The row/column a rendered grid's `<td>`/`<th>` stands for, resolved against
+ * the table that actually lives at `tableFrom` in the document. Null when the
+ * cell isn't in a row at all — never a silent "row 0", which is how a lookup
+ * miss used to end up editing the top of the table.
+ */
+export function tableCtxFromCell(
+  state: EditorState,
+  tableFrom: number,
+  cell: HTMLTableCellElement
+): TableCtx | null {
+  const found = findTableAt(state, tableFrom)
+  if (!found) return null
+  const table = parseTable(found.raw)
+  let rowIndex = -1
+  if (cell.closest('thead') == null) {
+    const tr = cell.closest('tr')
+    if (!tr) return null
+    // Clamp against the parsed table, not the DOM: the two can disagree if the
+    // document moved on since this widget was built, and an out-of-range row
+    // would make Delete row a silent no-op (see removeTableRow).
+    rowIndex = Math.min(tr.sectionRowIndex, table.rows.length - 1)
+  }
+  const colIndex = Math.min(cell.cellIndex, Math.max(table.header.length - 1, 0))
+  return { tableFrom: found.from, tableTo: found.to, table, rowIndex, colIndex }
+}
+
+/** The row/column at `pos` in a table shown as raw pipe text. */
+export function tableCtxFromSource(state: EditorState, pos: number): TableCtx | null {
+  const found = findTableAt(state, pos)
+  if (!found) return null
+  const table = parseTable(found.raw)
+  const line = state.doc.lineAt(pos)
+  const startLine = state.doc.lineAt(found.from).number
+  const lineOffset = line.number - startLine // 0 = header, 1 = delimiter, 2+ = data row
+  const rowIndex = lineOffset < 2 ? -1 : Math.min(lineOffset - 2, table.rows.length - 1)
+  const colIndex = Math.min(
+    columnAtOffset(line.text, pos - line.from),
+    Math.max(table.header.length - 1, 0)
+  )
+  return { tableFrom: found.from, tableTo: found.to, table, rowIndex, colIndex }
+}
+
+/**
+ * Row/column context for a right-click at `pos` on `targetEl` — from DOM
+ * hit-testing when the table is rendered as a real `<table>` (see
+ * tableRender.ts), or from raw pipe-text offsets when it's in the
+ * source-revealed editing view. Null when the click isn't inside a table, or
+ * lands in the rendered widget's own padding rather than on a cell.
+ *
+ * Must be called before anything dispatches: `posAtDOM` only answers for DOM
+ * CodeMirror still owns, and any transaction that changes the active cell
+ * rebuilds the whole table widget, orphaning `targetEl`.
  */
 export function readTableCtx(
   view: EditorView,
@@ -43,33 +91,27 @@ export function readTableCtx(
 ): TableCtx | null {
   const wrap = targetEl?.closest('.cm-md-table-wrap')
   if (wrap) {
-    const cell = targetEl?.closest('td, th')
+    const cell = targetEl?.closest('td, th') as HTMLTableCellElement | null
     if (!cell) return null
-    const found = findTableAt(view.state, view.posAtDOM(wrap))
-    if (!found) return null
-    const table = parseTable(found.raw)
-    const tr = cell.closest('tr')
-    const isHeader = cell.closest('thead') != null
-    const colIndex = Math.min(
-      (cell as HTMLTableCellElement).cellIndex,
-      Math.max(table.header.length - 1, 0)
-    )
-    const rowIndex = isHeader ? -1 : (tr?.sectionRowIndex ?? 0)
-    return { tableFrom: found.from, tableTo: found.to, table, rowIndex, colIndex }
+    const tableFrom = posAtDOMSafe(view, wrap)
+    // Fall back to the mouse position when the widget's DOM can't be placed:
+    // better a table resolved from coordinates than the wrong table entirely.
+    const ctx = tableFrom == null ? null : tableCtxFromCell(view.state, tableFrom, cell)
+    if (ctx) return ctx
+    const from = findTableAt(view.state, pos)?.from
+    return from == null ? null : tableCtxFromCell(view.state, from, cell)
   }
+  return tableCtxFromSource(view.state, pos)
+}
 
-  const found = findTableAt(view.state, pos)
-  if (!found) return null
-  const table = parseTable(found.raw)
-  const line = view.state.doc.lineAt(pos)
-  const startLine = view.state.doc.lineAt(found.from).number
-  const lineOffset = line.number - startLine // 0 = header, 1 = delimiter, 2+ = data row
-  const rowIndex = lineOffset < 2 ? -1 : lineOffset - 2
-  const colIndex = Math.min(
-    columnAtOffset(line.text, pos - line.from),
-    Math.max(table.header.length - 1, 0)
-  )
-  return { tableFrom: found.from, tableTo: found.to, table, rowIndex, colIndex }
+/** `view.posAtDOM`, but null instead of a throw for DOM the view no longer owns. */
+function posAtDOMSafe(view: EditorView, dom: Element): number | null {
+  if (!dom.isConnected) return null
+  try {
+    return view.posAtDOM(dom)
+  } catch {
+    return null
+  }
 }
 
 function applyTableEdit(

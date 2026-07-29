@@ -144,21 +144,25 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
     const dom = view.dom
     const onContextMenu = (e: MouseEvent): void => {
       e.preventDefault()
-      // Flush any live table cell first: the Popover is about to take focus,
-      // and a commit landing after the context below was captured would leave
-      // every table offset in it stale.
-      commitActiveCell(view)
       const point = { x: e.clientX, y: e.clientY }
       const pos = view.posAtCoords(point) ?? view.state.selection.main.head
+      const target = e.target as HTMLElement | null
+      const onCheckbox = target?.closest('.cm-knote-check') != null
+      // Read the clicked table cell before anything dispatches: closing the
+      // live cell below rebuilds the table widget, and `target` would then
+      // point at DOM CodeMirror no longer places — which is how every row and
+      // column op used to land on the header/first column instead.
+      const table = onCheckbox ? null : readTableCtx(view, pos, target)
+      // Flush any live table cell: the Popover is about to take focus. Safe
+      // for the offsets just captured — this only clears the active cell, it
+      // makes no document change (see tableCellEdit.deactivate).
+      commitActiveCell(view)
       // Place the caret where the user clicked (unless they have a selection),
       // so inserts and line edits land on the clicked line.
       if (view.state.selection.main.empty) {
         view.dispatch({ selection: EditorSelection.cursor(pos) })
       }
-      const target = e.target as HTMLElement | null
-      const onCheckbox = target?.closest('.cm-knote-check') != null
       const spell = onCheckbox ? null : misspelledRangeAt(view, pos)
-      const table = onCheckbox ? null : readTableCtx(view, pos, target)
       setOpen({ stage: 'menu', onCheckbox, spell, table, point, ctx: readLineCtx(view, pos) })
     }
     dom.addEventListener('contextmenu', onContextMenu)

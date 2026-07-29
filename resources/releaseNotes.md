@@ -3,6 +3,13 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.9.1
+
+- Fixed the table right-click menu acting on the wrong cell: Insert row
+  above/below, Delete row and the column actions all landed on the header row
+  and the first column instead of the cell that was clicked. A right-click on a
+  table now opens the menu only — it no longer opens that cell for editing.
+
 ## 1.9.0
 
 - **Tables are edited by clicking straight into a cell**, the way Obsidian
