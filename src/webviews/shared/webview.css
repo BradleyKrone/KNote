@@ -503,6 +503,9 @@ button {
 }
 .context-menu .picker-list {
   max-height: none;
+  /* .picker-list scrolls; a submenu flying out past this box must not be
+     clipped to it. */
+  overflow: visible;
 }
 
 .context-menu .picker-row {
@@ -538,6 +541,30 @@ button {
 }
 .picker-row.danger .picker-row-label {
   color: var(--danger);
+}
+
+/* Submenus: the flyout hangs off its own row, so the pointer can travel from
+   one to the other without leaving it. */
+.picker-row.has-submenu {
+  position: relative;
+}
+
+.picker-row-chevron {
+  flex: none;
+  display: flex;
+  align-items: center;
+  color: var(--text-faint);
+}
+
+.submenu-flyout {
+  position: absolute;
+  left: 100%;
+  top: -7px;
+  z-index: 1;
+}
+.submenu-flyout.flip-left {
+  left: auto;
+  right: 100%;
 }
 
 /* ---------- Modal dialogs ---------- */
