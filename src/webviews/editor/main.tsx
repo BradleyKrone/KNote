@@ -17,19 +17,17 @@ import { EditorDialogs } from './EditorDialogs'
 interface EditorBootstrap {
   path: string | null
   text: string
-  eol: string
   line?: number
 }
 
-const { path = null, text = '', eol = '\n', line } = bootstrap<EditorBootstrap>()
+const { path = null, text = '', line } = bootstrap<EditorBootstrap>()
 
 setNotePath(path)
 initStores() // hydrates the vault config (Kanban columns) + index for the editor
 
 const view = createEditor({
   parent: document.getElementById('root')!,
-  doc: text,
-  eol
+  doc: text
 })
 wireInboundSync(view)
 

@@ -3,6 +3,21 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.8.1
+
+- Fixed notes being corrupted on save, with characters dropped in scattered
+  places throughout the file while the editor itself still showed the text
+  correctly. It affected any note using Windows line endings — which is most of
+  them — and only when typing directly in the editor; edits made from the board,
+  or by ticking a checkbox, were never affected. The editor and the file
+  underneath it counted a line ending differently, so each edit was written a
+  little further off the mark the further down the note it was. Anything typed
+  in a note now lands exactly where it was typed.
+- Fixed the editor silently missing a change made to the note from somewhere
+  else — a card moved on the board, an undo, or the file changing on disk —
+  if it arrived at the same moment you were typing. The editor kept showing the
+  old text and drifted out of step with the note from then on.
+
 ## 1.8.0
 
 - **Hyperlinks are a real construct now.** `[text](https://…)` links used to

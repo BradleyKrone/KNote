@@ -39,8 +39,14 @@ export function revealLine(view: EditorView, line: number): void {
 }
 
 function applyHostText(view: EditorView, text: string): void {
+  // The host sends the note's raw text, which on Windows is usually CRLF; the
+  // CodeMirror document is LF (see createEditor). Normalize before comparing,
+  // or `current === next` can never hold — every host update would then be
+  // diffed against a string it structurally disagrees with, replacing most of
+  // the document with LF-space offsets that don't address the CRLF text.
+  const next = text.replace(/\r\n/g, '\n')
   const current = view.state.doc.toString()
-  if (current === text) return
+  if (current === next) return
 
   // Reconcile only the span that actually changed (diffEdit trims the common
   // prefix/suffix) so positions outside it stay fixed and CodeMirror keeps its
@@ -48,7 +54,7 @@ function applyHostText(view: EditorView, text: string): void {
   // viewport jump to the top, e.g. every time a sub-task checkbox is toggled
   // (the host round-trips the full note text back). The selection is left to
   // map through the change so the caret follows its surrounding text.
-  const { from, to, insert } = diffEdit(current, text)
+  const { from, to, insert } = diffEdit(current, next)
   view.dispatch({
     changes: { from, to, insert },
     annotations: fromHost.of(true)

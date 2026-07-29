@@ -9,10 +9,16 @@
 // and applies a WorkspaceEdit — which lands here as an external change and is
 // pushed back into CodeMirror. VS Code owns the undo/redo stack for the
 // document; CodeMirror does not keep a competing history.
+//
+// The load-bearing invariant of that sync: positions cross this boundary as
+// line/character, never as absolute offsets. CodeMirror's document is LF and
+// counts a line break as one character; the TextDocument keeps the note's real
+// EOL and counts `\r\n` as two. They agree on line and column but not on
+// offsets, so EOL translation happens here — at the edge — and nowhere else.
 
 import * as vscode from 'vscode'
 import type { CmEdit, EditorSyncMessage } from '@shared/editorSync'
-import { isEditorSyncMessage } from '@shared/editorSync'
+import { applyCmEdits, isEditorSyncMessage } from '@shared/editorSync'
 import { isImage, resolveEmbedPath } from '@shared/pathUtils'
 import { relForUri } from '../paths'
 import { toAbs } from '../../core/vaultService'
@@ -81,14 +87,23 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
       localResourceRoots: webviewResourceRoots(this.context.extensionUri, currentVaultRoot())
     }
 
-    // Host-side text mirror. When CodeMirror sends edits we apply them and
-    // remember the resulting text; the change event that echoes back then
-    // matches and is not pushed to the webview. Any change whose result does
-    // NOT match is an external edit (board write, undo, another tab, disk)
-    // and is forwarded to CodeMirror.
+    // Host-side text mirror. When CodeMirror sends edits we predict the text
+    // they will produce and stash it in `expectedText`; the change event that
+    // echoes back matches it exactly and is not pushed to the webview. Any
+    // change that does NOT match is an external edit (board write, undo,
+    // another tab, disk) and is forwarded to CodeMirror.
+    //
+    // The prediction has to be exact rather than a "we are applying" flag: such
+    // a flag has to be held across the applyEdit await, and anything else that
+    // changed the document inside that window would be misread as our own echo,
+    // silently dropped, and leave the webview permanently diverged from the
+    // buffer — with every later edit then addressing a document the host no
+    // longer has.
     let lastText = document.getText()
-    let applyingWebviewEdit = false
+    let expectedText: string | null = null
     let editQueue: Promise<void> = Promise.resolve()
+
+    const eol = (): string => (document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n')
 
     const post = (msg: EditorSyncMessage): void => {
       void webview.postMessage(msg)
@@ -96,19 +111,26 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
 
     const applyWebviewEdits = (edits: CmEdit[]): void => {
       editQueue = editQueue.then(async () => {
+        const nl = eol()
+        // Computed synchronously right before applyEdit, so nothing can slip in
+        // between the read and the write and make the prediction wrong.
+        expectedText = applyCmEdits(document.getText(), edits, nl)
         const edit = new vscode.WorkspaceEdit()
         for (const e of edits) {
+          // Line/character, not offsets — CodeMirror counts a line break as one
+          // character while VS Code counts `\r\n` as two, so document.positionAt
+          // on a CodeMirror offset lands one character early per preceding line
+          // and scatters dropped characters through a CRLF note.
           edit.replace(
             document.uri,
-            new vscode.Range(document.positionAt(e.from), document.positionAt(e.to)),
-            e.insert
+            new vscode.Range(e.from.line, e.from.ch, e.to.line, e.to.ch),
+            nl === '\r\n' ? e.insert.replace(/\n/g, nl) : e.insert
           )
         }
-        applyingWebviewEdit = true
         try {
           await vscode.workspace.applyEdit(edit)
         } finally {
-          applyingWebviewEdit = false
+          expectedText = null
         }
         lastText = document.getText()
       })
@@ -122,13 +144,12 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
     const changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
       if (e.document.uri.toString() !== document.uri.toString()) return
       const current = e.document.getText()
-      if (applyingWebviewEdit) {
-        // Echo of our own edit — already reflected in CodeMirror.
-        lastText = current
-        return
-      }
       if (current === lastText) return
       lastText = current
+      // Echo of our own edit — already reflected in CodeMirror. Anything else
+      // that lands while we're applying is a genuine external edit and still
+      // gets forwarded.
+      if (expectedText !== null && current === expectedText) return
       post({ type: 'knote:host-update', text: current })
     })
 
@@ -146,8 +167,8 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
 
     webview.html = webviewHtml(webview, this.context.extensionUri, 'editor', 'KNote', {
       path: relForUri(document.uri),
+      // Raw text, EOL and all — CodeMirror normalizes it to LF on the way in.
       text: document.getText(),
-      eol: document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n',
       ...(revealLine !== undefined ? { line: revealLine } : {})
     })
 

@@ -52,4 +52,42 @@ describe('diffEdit', () => {
   it('replaces the whole string when nothing is common', () => {
     expect(diffEdit('abc', 'xyz')).toEqual({ from: 0, to: 3, insert: 'xyz' })
   })
+
+  // applyHostText (src/webviews/editor/sync.ts) normalizes the host's text to
+  // CodeMirror's LF before diffing. Without that, a CRLF note's first `\r` is
+  // the first difference on every update, so the "minimal" edit spans the rest
+  // of the document — in LF offsets that don't address the CRLF string.
+  describe('with a CRLF note (host text normalized first)', () => {
+    const normalize = (text: string): string => text.replace(/\r\n/g, '\n')
+
+    it('short-circuits when the host echoes back identical text', () => {
+      const cm = '- [ ] parent\n  - [ ] sub\nmore notes below'
+      const host = '- [ ] parent\r\n  - [ ] sub\r\nmore notes below'
+      expect(normalize(host)).toBe(cm)
+    })
+
+    it('localizes a sub-task toggle instead of replacing the tail', () => {
+      const cm = '- [ ] parent\n  - [ ] sub\nmore notes below'
+      const host = '- [ ] parent\r\n  - [x] sub ✅ 2026-07-17\r\nmore notes below'
+
+      const edit = diffEdit(cm, normalize(host))
+
+      // Starts on the sub-task line and leaves the trailing line alone — the
+      // scroll anchor is preserved. Un-normalized, `from` would land at the
+      // end of line 1 and `to` at the end of the document.
+      expect(cm.slice(0, edit.from).startsWith('- [ ] parent\n')).toBe(true)
+      expect(edit.to).toBeLessThan(cm.indexOf('more notes below'))
+      expect(apply(cm, edit)).toBe(normalize(host))
+    })
+
+    it('produces offsets valid against the CodeMirror document', () => {
+      const cm = 'alpha\nbeta\ngamma\ndelta'
+      const host = 'alpha\r\nbeta\r\nGAMMA\r\ndelta'
+
+      const edit = diffEdit(cm, normalize(host))
+
+      expect(edit.to).toBeLessThanOrEqual(cm.length)
+      expect(apply(cm, edit)).toBe('alpha\nbeta\nGAMMA\ndelta')
+    })
+  })
 })
