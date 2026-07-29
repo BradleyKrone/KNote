@@ -15,6 +15,7 @@ import {
   CheckSquare,
   Clipboard,
   Code,
+  Columns3,
   Copy,
   ExternalLink,
   Eye,
@@ -24,10 +25,13 @@ import {
   Link2,
   Milestone,
   Pencil,
+  Rows3,
   Scissors,
   SpellCheck,
   Strikethrough,
+  Table2,
   Tag,
+  Trash2,
   Truck,
   Unlink,
   Wrench
@@ -46,6 +50,7 @@ import { DatePickerContent } from '../shared/components/DatePickerContent'
 import { PriorityPickerContent } from '../shared/components/PriorityPickerContent'
 import { TagPickerContent } from '../shared/components/TagPickerContent'
 import { MachineEntryPickerContent } from '../machineLog/MachineEntryPickerContent'
+import { TablePickerContent } from './TablePickerContent'
 import { useConfigStore, showToast } from '../shared/stores'
 import { titleOf } from '@shared/pathUtils'
 import { host } from '../shared/rpc'
@@ -71,6 +76,16 @@ import {
   setLineDue,
   setLinePriority
 } from './editorActions'
+import { commitActiveCell, setTableSource } from './tableCellEdit'
+import {
+  deleteColumn,
+  deleteRow,
+  insertColumn,
+  insertRow,
+  insertTableAt,
+  readTableCtx,
+  type TableCtx
+} from './tableEdit'
 
 /** The line under the right-click, captured when the menu opens. */
 interface LineCtx {
@@ -89,10 +104,17 @@ interface LineCtx {
 }
 
 type Point = { x: number; y: number }
-type SubKind = 'machine' | 'edit-machine' | 'date' | 'priority' | 'tag' | 'link'
+type SubKind = 'machine' | 'edit-machine' | 'date' | 'priority' | 'tag' | 'link' | 'table'
 
 type OpenState =
-  | { stage: 'menu'; onCheckbox: boolean; spell: WordSpan | null; point: Point; ctx: LineCtx }
+  | {
+      stage: 'menu'
+      onCheckbox: boolean
+      spell: WordSpan | null
+      table: TableCtx | null
+      point: Point
+      ctx: LineCtx
+    }
   | { stage: 'sub'; sub: SubKind; point: Point; ctx: LineCtx }
   | null
 
@@ -122,6 +144,10 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
     const dom = view.dom
     const onContextMenu = (e: MouseEvent): void => {
       e.preventDefault()
+      // Flush any live table cell first: the Popover is about to take focus,
+      // and a commit landing after the context below was captured would leave
+      // every table offset in it stale.
+      commitActiveCell(view)
       const point = { x: e.clientX, y: e.clientY }
       const pos = view.posAtCoords(point) ?? view.state.selection.main.head
       // Place the caret where the user clicked (unless they have a selection),
@@ -132,7 +158,8 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
       const target = e.target as HTMLElement | null
       const onCheckbox = target?.closest('.cm-knote-check') != null
       const spell = onCheckbox ? null : misspelledRangeAt(view, pos)
-      setOpen({ stage: 'menu', onCheckbox, spell, point, ctx: readLineCtx(view, pos) })
+      const table = onCheckbox ? null : readTableCtx(view, pos, target)
+      setOpen({ stage: 'menu', onCheckbox, spell, table, point, ctx: readLineCtx(view, pos) })
     }
     dom.addEventListener('contextmenu', onContextMenu)
     return () => dom.removeEventListener('contextmenu', onContextMenu)
@@ -168,6 +195,7 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
     } else {
       items = mainItems(view, ctx, run, openSub)
     }
+    if (open.table) items = [...items, ...tableItems(view, open.table, run)]
     return (
       <Popover anchorPoint={point} onClose={close}>
         <ContextMenuList items={items} />
@@ -225,6 +253,14 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
           }}
         />
       )}
+      {open.sub === 'table' && (
+        <TablePickerContent
+          onSubmit={(rows, cols) => {
+            close()
+            insertTableAt(view, rows, cols)
+          }}
+        />
+      )}
       {open.sub === 'tag' && (
         <TagPickerContent
           onSelect={(tag) => {
@@ -270,6 +306,73 @@ function linkItems(
     },
     { separator: true }
   ]
+}
+
+/**
+ * Row/column items appended when the right-click lands inside a table (either
+ * the rendered `<table>` or the raw pipes shown while it's being edited).
+ * The header/delimiter line only gets column actions plus "insert row below"
+ * — there's no row above the header to insert, and the header can't be deleted.
+ */
+function tableItems(
+  view: EditorView,
+  table: TableCtx,
+  run: (fn: () => void) => () => void
+): MenuEntry[] {
+  const items: MenuEntry[] = [{ separator: true }]
+  if (table.rowIndex >= 0) {
+    items.push({
+      label: 'Insert row above',
+      icon: <Rows3 size={ICON} />,
+      onClick: run(() => insertRow(view, table, table.rowIndex))
+    })
+  }
+  items.push({
+    label: 'Insert row below',
+    icon: <Rows3 size={ICON} />,
+    onClick: run(() => insertRow(view, table, table.rowIndex + 1))
+  })
+  if (table.rowIndex >= 0) {
+    items.push({
+      label: 'Delete row',
+      icon: <Trash2 size={ICON} />,
+      onClick: run(() => deleteRow(view, table, table.rowIndex))
+    })
+  }
+  items.push(
+    { separator: true },
+    {
+      label: 'Insert column left',
+      icon: <Columns3 size={ICON} />,
+      onClick: run(() => insertColumn(view, table, table.colIndex))
+    },
+    {
+      label: 'Insert column right',
+      icon: <Columns3 size={ICON} />,
+      onClick: run(() => insertColumn(view, table, table.colIndex + 1))
+    },
+    {
+      label: 'Delete column',
+      icon: <Trash2 size={ICON} />,
+      disabled: table.table.header.length <= 1,
+      onClick: run(() => deleteColumn(view, table, table.colIndex))
+    },
+    { separator: true },
+    {
+      // The escape hatch out of cell-by-cell editing: a rendered table never
+      // falls back to raw pipes on its own any more.
+      label: 'Edit table source',
+      icon: <Code size={ICON} />,
+      onClick: run(() => {
+        view.dispatch({
+          effects: setTableSource.of(table.tableFrom),
+          selection: EditorSelection.cursor(table.tableFrom)
+        })
+        view.focus()
+      })
+    }
+  )
+  return items
 }
 
 /**
@@ -380,7 +483,8 @@ function mainItems(
       icon: <Milestone size={ICON} />,
       onClick: run(() => insertMilestone(view))
     },
-    { label: 'Log machine work…', icon: <Truck size={ICON} />, onClick: openSub('machine') }
+    { label: 'Log machine work…', icon: <Truck size={ICON} />, onClick: openSub('machine') },
+    { label: 'Insert table…', icon: <Table2 size={ICON} />, onClick: openSub('table') }
   ]
   if (ctx.isTask || ctx.isMilestone) {
     items.push(

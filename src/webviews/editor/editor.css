@@ -125,14 +125,19 @@ body {
   color: var(--vscode-descriptionForeground, inherit);
 }
 
-/* Tables — editing view: raw pipes in monospace so columns align under the
-   proportional body font (shown when the cursor is on a table line). */
+/* Tables — source view: raw pipes in monospace, each cell held to a fixed
+   min-width (see tableRender.ts's cm-md-table-cell-inline marks, sized from
+   tableModel's columnWidths) so it still reads as a grid while being typed
+   into, instead of drifting out of alignment with the other rows. Reached only
+   via the right-click "Edit table source", or a selection covering the table —
+   the caret alone renders cells editable in place instead. */
 .cm-md-table-line {
   font-family: var(--vscode-editor-font-family, ui-monospace, monospace);
   font-size: 0.9em;
   background-color: rgba(127, 127, 127, 0.04);
   border-left: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.3));
   border-right: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.3));
+  border-bottom: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.15));
   padding-left: 0.6em;
   padding-right: 0.6em;
 }
@@ -146,6 +151,9 @@ body {
 }
 .cm-md-table-delim {
   color: var(--vscode-panel-border, rgba(127, 127, 127, 0.5));
+}
+.cm-md-table-cell-inline {
+  display: inline-block;
 }
 
 /* Tables — rendered view: a real HTML grid (see tableRender.ts). */
@@ -173,6 +181,44 @@ body {
 }
 .cm-md-rendered-table tbody tr:nth-child(even) {
   background-color: rgba(127, 127, 127, 0.05);
+}
+.cm-md-rendered-table th:hover,
+.cm-md-rendered-table td:hover {
+  background-color: rgba(127, 127, 127, 0.08);
+}
+
+/* The active cell hosts its own CodeMirror view (see tableCellEdit.ts). These
+   rules undo the outer editor's page-level styling — theme.ts sizes .cm-content
+   for a full note and CodeMirror's base theme adds its own line padding and
+   focus outline — so the cell keeps the table's own metrics and doesn't reflow
+   the grid the moment it's clicked into. */
+.cm-md-rendered-table td:has(> .cm-md-table-cell-editor),
+.cm-md-rendered-table th:has(> .cm-md-table-cell-editor) {
+  padding: 0;
+  outline: 2px solid var(--vscode-focusBorder, rgba(127, 127, 127, 0.8));
+  outline-offset: -2px;
+}
+.cm-md-table-cell-editor .cm-editor {
+  height: auto;
+  background: transparent;
+}
+.cm-md-table-cell-editor .cm-editor.cm-focused {
+  outline: none;
+}
+.cm-md-table-cell-editor .cm-scroller {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  overflow: visible;
+}
+.cm-md-table-cell-editor .cm-content {
+  /* Matches the cell padding the editor replaces, so nothing shifts. */
+  padding: 0.35em 0.7em;
+  min-height: 0;
+  caret-color: var(--vscode-editorCursor-foreground, currentColor);
+}
+.cm-md-table-cell-editor .cm-line {
+  padding: 0;
 }
 
 .cm-md-link {
