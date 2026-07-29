@@ -4,6 +4,26 @@
 // glyph → the Kanban status switcher), and renders the menu — plus any picker an
 // item opens — inside the shared Popover. Reproduces the old Electron app's
 // editor context menu (src/renderer/src/editor/contextMenu.ts).
+//
+// Everything but the clipboard actions lives in a Format / Insert / Task /
+// Table submenu, the way Obsidian groups its editor menu: flat, the menu ran to
+// ~25 rows on a table cell in a task line. Contextual items stay flat above the
+// groups — spell suggestions and hyperlink actions are what a right-click there
+// was for, so they shouldn't cost a hover.
+//
+// A webview menu is DOM behavior the integration harness can't drive, so it's
+// checked by hand in the F5 dev host:
+//
+//   - plain text: Cut/Copy/Paste, then Format ▸ and Insert ▸, nothing else
+//   - hovering a group opens its flyout; hovering another row closes it;
+//     leaving the menu closes it; clicking a leaf acts and closes everything
+//   - a task line adds Task ▸ (Milestone ▸ on a 🏁 line); a sub-task's Task ▸
+//     has no "Copy link to task"
+//   - a table cell adds Table ▸; a 🚜 line keeps Edit machine entry… flat
+//   - a misspelled word and a hyperlink keep their items flat at the top
+//   - right-click near the window's right edge / bottom: the flyout flips to
+//     the left / slides up instead of running off-screen
+//   - right-click a checkbox glyph: the Kanban switcher is unchanged
 
 import { useEffect, useState } from 'react'
 import { EditorSelection } from '@codemirror/state'
@@ -25,6 +45,7 @@ import {
   Link2,
   Milestone,
   Pencil,
+  Plus,
   Rows3,
   Scissors,
   SpellCheck,
@@ -33,6 +54,7 @@ import {
   Tag,
   Trash2,
   Truck,
+  Type,
   Unlink,
   Wrench
 } from 'lucide-react'
@@ -144,21 +166,25 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
     const dom = view.dom
     const onContextMenu = (e: MouseEvent): void => {
       e.preventDefault()
-      // Flush any live table cell first: the Popover is about to take focus,
-      // and a commit landing after the context below was captured would leave
-      // every table offset in it stale.
-      commitActiveCell(view)
       const point = { x: e.clientX, y: e.clientY }
       const pos = view.posAtCoords(point) ?? view.state.selection.main.head
+      const target = e.target as HTMLElement | null
+      const onCheckbox = target?.closest('.cm-knote-check') != null
+      // Read the clicked table cell before anything dispatches: closing the
+      // live cell below rebuilds the table widget, and `target` would then
+      // point at DOM CodeMirror no longer places — which is how every row and
+      // column op used to land on the header/first column instead.
+      const table = onCheckbox ? null : readTableCtx(view, pos, target)
+      // Flush any live table cell: the Popover is about to take focus. Safe
+      // for the offsets just captured — this only clears the active cell, it
+      // makes no document change (see tableCellEdit.deactivate).
+      commitActiveCell(view)
       // Place the caret where the user clicked (unless they have a selection),
       // so inserts and line edits land on the clicked line.
       if (view.state.selection.main.empty) {
         view.dispatch({ selection: EditorSelection.cursor(pos) })
       }
-      const target = e.target as HTMLElement | null
-      const onCheckbox = target?.closest('.cm-knote-check') != null
       const spell = onCheckbox ? null : misspelledRangeAt(view, pos)
-      const table = onCheckbox ? null : readTableCtx(view, pos, target)
       setOpen({ stage: 'menu', onCheckbox, spell, table, point, ctx: readLineCtx(view, pos) })
     }
     dom.addEventListener('contextmenu', onContextMenu)
@@ -178,6 +204,7 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
 
   if (open.stage === 'menu') {
     let items: MenuEntry[]
+    const main = (): MenuEntry[] => mainItems(view, ctx, open.table, run, openSub)
     if (open.onCheckbox && ctx.isSubtask) {
       items = subtaskCheckboxItems(ctx, (checked) => {
         close()
@@ -189,13 +216,12 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
         void setCheckboxStatus(ctx.line0, ctx.text, col)
       })
     } else if (open.spell) {
-      items = [...spellItems(view, open.spell, close), ...mainItems(view, ctx, run, openSub)]
+      items = [...spellItems(view, open.spell, close), ...main()]
     } else if (ctx.link) {
-      items = [...linkItems(view, ctx.link, run, openSub), ...mainItems(view, ctx, run, openSub)]
+      items = [...linkItems(view, ctx.link, run, openSub), ...main()]
     } else {
-      items = mainItems(view, ctx, run, openSub)
+      items = main()
     }
-    if (open.table) items = [...items, ...tableItems(view, open.table, run)]
     return (
       <Popover anchorPoint={point} onClose={close}>
         <ContextMenuList items={items} />
@@ -309,17 +335,18 @@ function linkItems(
 }
 
 /**
- * Row/column items appended when the right-click lands inside a table (either
- * the rendered `<table>` or the raw pipes shown while it's being edited).
- * The header/delimiter line only gets column actions plus "insert row below"
- * — there's no row above the header to insert, and the header can't be deleted.
+ * The Table submenu's items, shown when the right-click lands inside a table
+ * (either the rendered `<table>` or the raw pipes shown while it's being
+ * edited). The header/delimiter line only gets column actions plus "insert row
+ * below" — there's no row above the header to insert, and the header can't be
+ * deleted.
  */
 function tableItems(
   view: EditorView,
   table: TableCtx,
   run: (fn: () => void) => () => void
 ): MenuEntry[] {
-  const items: MenuEntry[] = [{ separator: true }]
+  const items: MenuEntry[] = []
   if (table.rowIndex >= 0) {
     items.push({
       label: 'Insert row above',
@@ -450,14 +477,9 @@ function clipboardItems(
   ]
 }
 
-function mainItems(
-  view: EditorView,
-  ctx: LineCtx,
-  run: (fn: () => void) => () => void,
-  openSub: (sub: SubKind) => () => void
-): MenuEntry[] {
-  const items: MenuEntry[] = [
-    ...clipboardItems(view, ctx.selection.length > 0, run),
+/** The Format submenu: the marker toggles, on the selection or the word. */
+function formatItems(view: EditorView, run: (fn: () => void) => () => void): MenuEntry[] {
+  return [
     { label: 'Bold', icon: <Bold size={ICON} />, onClick: run(() => toggleWrap(view, '**')) },
     { label: 'Italic', icon: <Italic size={ICON} />, onClick: run(() => toggleWrap(view, '*')) },
     {
@@ -465,43 +487,94 @@ function mainItems(
       icon: <Strikethrough size={ICON} />,
       onClick: run(() => toggleWrap(view, '~~'))
     },
-    { label: 'Inline code', icon: <Code size={ICON} />, onClick: run(() => toggleWrap(view, '`')) },
+    { label: 'Inline code', icon: <Code size={ICON} />, onClick: run(() => toggleWrap(view, '`')) }
+  ]
+}
+
+/** The Insert submenu: everything that adds a new construct at the caret. */
+function insertItems(
+  view: EditorView,
+  run: (fn: () => void) => () => void,
+  openSub: (sub: SubKind) => () => void
+): MenuEntry[] {
+  return [
     {
-      label: 'Insert wiki link',
+      label: 'Wiki link',
       icon: <Link2 size={ICON} />,
       onClick: run(() => insertWikiLink(view))
     },
-    { label: 'Insert link…', icon: <Link size={ICON} />, onClick: openSub('link') },
+    { label: 'Link…', icon: <Link size={ICON} />, onClick: openSub('link') },
     { separator: true },
     {
-      label: 'Add checkbox',
+      label: 'Checkbox',
       icon: <CheckSquare size={ICON} />,
       onClick: run(() => insertCheckbox(view))
     },
     {
-      label: 'Add milestone',
+      label: 'Milestone',
       icon: <Milestone size={ICON} />,
       onClick: run(() => insertMilestone(view))
     },
-    { label: 'Log machine work…', icon: <Truck size={ICON} />, onClick: openSub('machine') },
-    { label: 'Insert table…', icon: <Table2 size={ICON} />, onClick: openSub('table') }
+    { label: 'Table…', icon: <Table2 size={ICON} />, onClick: openSub('table') },
+    { label: 'Machine work…', icon: <Truck size={ICON} />, onClick: openSub('machine') }
+  ]
+}
+
+/** The Task/Milestone submenu: everything that edits the clicked line's metadata. */
+function taskItems(
+  view: EditorView,
+  ctx: LineCtx,
+  run: (fn: () => void) => () => void,
+  openSub: (sub: SubKind) => () => void
+): MenuEntry[] {
+  const items: MenuEntry[] = [
+    { label: 'Add tag…', icon: <Tag size={ICON} />, onClick: openSub('tag') },
+    { label: 'Set priority…', icon: <Flag size={ICON} />, onClick: openSub('priority') },
+    { label: 'Set due date…', icon: <CalendarDays size={ICON} />, onClick: openSub('date') }
+  ]
+  // Only top-level tasks and milestones are linkable — sub-tasks are plain
+  // toggles, not standalone items, so they get no anchor.
+  if (!ctx.isSubtask) {
+    items.push({
+      label: ctx.isMilestone ? 'Copy link to milestone' : 'Copy link to task',
+      icon: <Link2 size={ICON} />,
+      onClick: run(() => copyTaskLink(view, ctx.line0, titleOf(getNotePath() ?? '')))
+    })
+  }
+  return items
+}
+
+/**
+ * The menu proper: clipboard actions flat at the top the way a native editor
+ * menu has them, then one row per group. Grouping is what keeps this readable
+ * — flat, a right-click on a table cell in a task line ran to ~25 rows.
+ * A group is only offered when the clicked line can use it.
+ */
+function mainItems(
+  view: EditorView,
+  ctx: LineCtx,
+  table: TableCtx | null,
+  run: (fn: () => void) => () => void,
+  openSub: (sub: SubKind) => () => void
+): MenuEntry[] {
+  const items: MenuEntry[] = [
+    ...clipboardItems(view, ctx.selection.length > 0, run),
+    { label: 'Format', icon: <Type size={ICON} />, submenu: formatItems(view, run) },
+    { label: 'Insert', icon: <Plus size={ICON} />, submenu: insertItems(view, run, openSub) }
   ]
   if (ctx.isTask || ctx.isMilestone) {
-    items.push(
-      { separator: true },
-      { label: 'Add tag…', icon: <Tag size={ICON} />, onClick: openSub('tag') },
-      { label: 'Set priority…', icon: <Flag size={ICON} />, onClick: openSub('priority') },
-      { label: 'Set due date…', icon: <CalendarDays size={ICON} />, onClick: openSub('date') }
-    )
-    // Only top-level tasks and milestones are linkable — sub-tasks are plain
-    // toggles, not standalone items, so they get no anchor.
-    if (!ctx.isSubtask) {
-      items.push({
-        label: ctx.isMilestone ? 'Copy link to milestone' : 'Copy link to task',
-        icon: <Link2 size={ICON} />,
-        onClick: run(() => copyTaskLink(view, ctx.line0, titleOf(getNotePath() ?? '')))
-      })
-    }
+    items.push({
+      label: ctx.isMilestone ? 'Milestone' : 'Task',
+      icon: ctx.isMilestone ? <Milestone size={ICON} /> : <CheckSquare size={ICON} />,
+      submenu: taskItems(view, ctx, run, openSub)
+    })
+  }
+  if (table) {
+    items.push({
+      label: 'Table',
+      icon: <Table2 size={ICON} />,
+      submenu: tableItems(view, table, run)
+    })
   }
   if (ctx.isMachine) {
     items.push(

@@ -3,6 +3,19 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.9.1
+
+- **The editor's right-click menu is grouped into submenus**, the way
+  Obsidian's is: Cut/Copy/Paste stay at the top, and everything else opens
+  from **Format**, **Insert**, **Task** or **Table** — each shown only when
+  the clicked line can use it. Spell suggestions and hyperlink actions stay
+  at the top level. A right-click inside a table on a task line used to list
+  about 25 items; it now lists seven.
+- Fixed the table right-click menu acting on the wrong cell: Insert row
+  above/below, Delete row and the column actions all landed on the header row
+  and the first column instead of the cell that was clicked. A right-click on a
+  table now opens the menu only — it no longer opens that cell for editing.
+
 ## 1.9.0
 
 - **Tables are edited by clicking straight into a cell**, the way Obsidian

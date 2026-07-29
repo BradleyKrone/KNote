@@ -48,10 +48,10 @@ Markdown:
 
   `[[link]]` and `#tag` autocomplete and `Ctrl+B`/`Ctrl+I` work inside a cell.
   Pasting spreadsheet data (tab-separated, one line per row) fills the cells
-  around the caret and grows the table to fit. Right-click anywhere to
-  **Insert table…** (pick a row/column count), or right-click a cell to
-  insert/delete the row or column under it — or choose **Edit table source**
-  to hand-edit the raw Markdown.
+  around the caret and grows the table to fit. Right-click anywhere for
+  **Insert ▸ Table…** (pick a row/column count), or right-click a cell for
+  **Table ▸** to insert/delete the row or column under it — or
+  **Table ▸ Edit table source** to hand-edit the raw Markdown.
 - **`` ```mermaid `` code blocks render as real diagrams** (flowcharts,
   sequence diagrams, and anything else Mermaid supports); click a diagram to
   drop your cursor in and edit the raw source, exactly like every other
@@ -80,7 +80,7 @@ Markdown:
   (`- [ ] Rewire the pump ^rewire-the-pump`), so it's linkable with no manual
   step and still readable if you ever open the file elsewhere. Three ways to
   get a link, none of which require finding that anchor:
-  - Right-click a task → **Copy link to task**.
+  - Right-click a task → **Task ▸ Copy link to task**.
   - On the **board**, hover a card and click the 🔗 button.
   - From the note you're writing in, type `[[Note#^` and pick the task by its
     **text** — see *Autocomplete* below.
@@ -99,7 +99,7 @@ Markdown:
 - **`[Hyperlinks](https://…)`** render as just their link text — the URL is
   tucked away (hover to see it) and reappears when your cursor is on the line,
   like every other construct. Click one to open it in your browser. To make
-  one, right-click → **Insert link…**; right-click an existing link for
+  one, right-click → **Insert ▸ Link…**; right-click an existing link for
   **Copy link** (the bare URL, ready to paste anywhere), **Edit link…** or
   **Remove link**. Only `http`, `https` and `mailto` addresses will open —
   anything else is refused. Opening a link hands it to your browser; KNote
@@ -181,21 +181,26 @@ Turn it off in **Vault Settings → Links** if you'd rather links never move.
 ### Right-click menu
 
 Right-click anywhere in a Live Preview note for a context menu that acts on
-the clicked line. Every entry carries an icon on the left, so you can pick one
-out at a glance instead of reading down the list:
+the clicked line. Actions are grouped into submenus that open on hover, so the
+menu stays short — the clipboard actions and anything specific to what you
+clicked (a misspelling, a hyperlink) sit at the top level. A group only
+appears when the clicked line can use it. Every entry carries an icon on the
+left, so you can pick one out at a glance instead of reading down the list:
 
 | Item | Effect |
 |---|---|
 | Cut / Copy / Paste | The usual clipboard actions (Cut and Copy grey out with nothing selected). `Ctrl+X`/`C`/`V` work as always |
-| Bold / Italic / Strikethrough / Inline code | Toggle the marker on the selection |
-| Insert wiki link | Insert `[[]]` (wraps the selection if any) |
-| Insert link… | Enter link text + a URL → insert a `[text](url)` hyperlink (pre-fills from the selection) |
+| **Format ▸** Bold / Italic / Strikethrough / Inline code | Toggle the marker on the selection |
+| **Insert ▸** Wiki link | Insert `[[]]` (wraps the selection if any) |
+| **Insert ▸** Link… | Enter link text + a URL → insert a `[text](url)` hyperlink (pre-fills from the selection) |
+| **Insert ▸** Checkbox | Insert a `- [ ]` task line |
+| **Insert ▸** Milestone | Insert a dated `🏁 Milestone 📅 …` line |
+| **Insert ▸** Table… | Pick a row/column count → insert an empty table |
+| **Insert ▸** Machine work… | Pick a serial + date → insert a `🚜` entry with the detail template |
+| **Task ▸** Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
+| **Task ▸** Copy link to task | *(task/milestone lines)* copy a `[[Note#^id\|Task text]]` link to this task (adding a hidden `^anchor` named after the task if needed) — paste it elsewhere to jump back |
+| **Table ▸** *(row/column actions)* | *(inside a table)* insert or delete the clicked row or column, or drop to the raw Markdown with Edit table source |
 | Open link / Copy link / Edit link… / Remove link | *(on a hyperlink)* open it in your browser, copy the bare URL, change its text/target, or unwrap it back to plain text |
-| Add checkbox | Insert a `- [ ]` task line |
-| Add milestone | Insert a dated `🏁 Milestone 📅 …` line |
-| Log machine work… | Pick a serial + date → insert a `🚜` entry with the detail template |
-| Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
-| Copy link to task | *(task/milestone lines)* copy a `[[Note#^id\|Task text]]` link to this task (adding a hidden `^anchor` named after the task if needed) — paste it elsewhere to jump back |
 | Edit machine entry… | *(🚜 lines)* change the serial + date, keeping the activity text |
 | *Suggestions* / Add to dictionary / Ignore | *(misspelled words)* replace with a correction, add the word to your vault dictionary, or ignore it this session |
 

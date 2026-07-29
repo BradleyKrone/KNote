@@ -20,8 +20,15 @@
 //   - `[[` and `#` autocomplete pop up inside a cell, unclipped by the grid
 //   - Ctrl+Z reaches VS Code
 //   - paste a block copied from Excel; the table grows to fit
-//   - right-click Insert row / Delete column while a cell is open
-//   - right-click Edit table source, then click away
+//   - right-click the last cell of the last row: under Table ▸, Insert row
+//     above/below, Delete row and the column ops all act on *that* row and
+//     column, not the header/first column — with and without a cell already
+//     open elsewhere in the table, and the same again in Edit table source view
+//   - right-click a cell in the second of two tables in one note; the first
+//     table is left alone
+//   - right-click a cell without opening it for editing (the menu is all a
+//     right-click does)
+//   - right-click Table ▸ Edit table source, then click away
 //   - scroll a focused cell out of the viewport and back
 //   - find/replace hitting text inside a table reveals its source
 
