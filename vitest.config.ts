@@ -13,6 +13,9 @@ export default defineConfig({
     }
   },
   test: {
-    include: ['tests/**/*.test.ts']
+    include: ['tests/**/*.test.ts'],
+    // Stubs the webview's acquireVsCodeApi so editor modules that reach the RPC
+    // client are importable under Node — see tests/setup.ts.
+    setupFiles: ['tests/setup.ts']
   }
 })

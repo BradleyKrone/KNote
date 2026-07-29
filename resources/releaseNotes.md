@@ -3,6 +3,19 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.9.0
+
+- **Tables are edited by clicking straight into a cell**, the way Obsidian
+  does it — the table stays a rendered grid, and you never have to drop into
+  raw pipes to enter data. `Tab`/`Shift+Tab` and the arrow keys move between
+  cells, `Enter` moves to the cell below (adding a row past the last one),
+  `Shift+Enter` inserts a line break, and `Esc` leaves the table.
+  `[[link]]`/`#tag` autocomplete and bold/italic shortcuts work inside a
+  cell. Pasting tab-separated data fills cells around the caret and grows
+  the table to fit. Right-click anywhere for **Insert table…**, or on a cell
+  to insert/delete its row or column, or to drop to **Edit table source**
+  for the raw Markdown.
+
 ## 1.8.1
 
 - Fixed notes being corrupted on save, with characters dropped in scattered

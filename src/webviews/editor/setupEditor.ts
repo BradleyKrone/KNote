@@ -18,6 +18,7 @@ import type { CmEdit, CmPos } from '@shared/editorSync'
 import { vscodeApi } from '../shared/rpc'
 import { knoteTheme } from './theme'
 import { livePreview } from './livePreview'
+import { tableCellEdit } from './tableCellEdit'
 import { tableRender } from './tableRender'
 import { mermaidRender } from './mermaidRender'
 import { embedRender } from './embedRender'
@@ -80,6 +81,9 @@ export function createEditor(opts: { parent: HTMLElement; doc: string }): Editor
       EditorView.lineWrapping,
       markdown({ extensions: [Strikethrough, Table, Autolink] }),
       syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+      // Before tableRender: its decorations read the active-cell / table-source
+      // state fields, and a state field can only read one declared before it.
+      tableCellEdit,
       tableRender,
       mermaidRender,
       embedRender,

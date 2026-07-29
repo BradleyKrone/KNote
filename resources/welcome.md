@@ -32,9 +32,26 @@ Markdown:
   render as a styled document — proportional body text in a centered reading
   column, boxed code blocks, tinted quotes — while the raw syntax reveals on
   the line your cursor is on, so you always edit the source directly.
-- **Pipe tables render as real grids** (with column alignment); click a table
-  to drop your cursor in and edit the raw Markdown, exactly like every other
-  construct.
+- **Pipe tables render as real grids you type straight into** (with column
+  alignment) — click any cell and start typing, the way Obsidian does it. The
+  table stays a rendered grid; you never edit raw pipes to enter data. Keys
+  while a cell is open:
+
+  | Key | Does |
+  | --- | ---- |
+  | `Tab` / `Shift+Tab` | Next / previous cell. `Tab` off the last cell adds a row. |
+  | `Enter` | Cell below; on the last row, adds one. |
+  | `Shift+Enter` | Line break inside the cell. |
+  | `←` `→` | Move within the cell; at its edge, to the next/previous one. |
+  | `↑` `↓` | Cell above / below; past the edge, out of the table. |
+  | `Esc` | Leave the table. |
+
+  `[[link]]` and `#tag` autocomplete and `Ctrl+B`/`Ctrl+I` work inside a cell.
+  Pasting spreadsheet data (tab-separated, one line per row) fills the cells
+  around the caret and grows the table to fit. Right-click anywhere to
+  **Insert table…** (pick a row/column count), or right-click a cell to
+  insert/delete the row or column under it — or choose **Edit table source**
+  to hand-edit the raw Markdown.
 - **`` ```mermaid `` code blocks render as real diagrams** (flowcharts,
   sequence diagrams, and anything else Mermaid supports); click a diagram to
   drop your cursor in and edit the raw source, exactly like every other
