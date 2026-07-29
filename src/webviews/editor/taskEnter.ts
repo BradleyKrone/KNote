@@ -22,9 +22,10 @@ import { docBlockIds } from './taskLinkLogic'
 
 /** Enter handler: apply the seed plan, placing the caret after `- Notes: `. */
 function seedTaskNoteOnEnter(view: EditorView): boolean {
-  // Build the template with the document's real line break, not a bare `\n`:
-  // when EditorState.lineSeparator is set (this editor pins it to the vault
-  // file's EOL, `\r\n` on Windows), a lone `\n` is literal text, not a break.
+  // Build the template with the document's own line break rather than a
+  // hardcoded one. It is LF today (the editor holds the document in LF and the
+  // host reapplies the note's real EOL on write — see createEditor), but a
+  // literal `\n` here would silently become text if that ever changed.
   const plan = planTaskNoteSeed(view.state, dayjs().format('M/D/YYYY'), view.state.lineBreak)
   if (!plan) return false
 
