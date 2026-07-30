@@ -3,6 +3,12 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 1.9.2
+
+- Fixed a right-click menu (or other popover) that opened near the edge of
+  the window from being clamped to the wrong position — it now stays fully
+  on screen without shifting away from the point you clicked.
+
 ## 1.9.1
 
 - **The editor's right-click menu is grouped into submenus**, the way
