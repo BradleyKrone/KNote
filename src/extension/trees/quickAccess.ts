@@ -1,4 +1,4 @@
-// The three activity-bar quick-access trees: Boards, Machines, Milestones.
+// The three activity-bar quick-access trees: Boards, Machines, Projects.
 // Each sits in its own view container (its own icon on the activity bar) and
 // is a launcher first: the top item opens the full panel, the rows below are
 // shortcuts into the same data. Native TreeViews rather than webviews — these
@@ -8,19 +8,19 @@
 import * as vscode from 'vscode'
 import dayjs from 'dayjs'
 import type { VaultPath } from '@shared/types'
-import { getVaultConfig } from '../../core/vaultConfig'
+import { getVaultConfig, setVaultConfig } from '../../core/vaultConfig'
 import { currentVaultRoot, notesMap, onIndexDelta } from '../engine'
+import { broadcast } from '../rpc/webviewRpc'
 import { uriForRel } from '../paths'
 import { openNoteInLiveEditor } from '../views/liveEditorProvider'
 import {
   collectBoards,
   collectMachines,
-  collectMilestones,
-  relativeLabel,
+  collectProjects,
   type MachineEntryNode,
   type MachineNode,
-  type MilestoneNode,
-  type NoteBoardNode
+  type NoteBoardNode,
+  type ProjectNode
 } from './quickAccessSelectors'
 
 const today = (): string => dayjs().format('YYYY-MM-DD')
@@ -143,43 +143,78 @@ class MachinesTreeProvider implements vscode.TreeDataProvider<MachineTreeNode> {
   }
 }
 
-// ---------- Milestones (the Timeline container) ----------
+// ---------- Projects (the Planner container) ----------
 
-type TimelineTreeNode = { kind: 'fullTimeline'; count: number } | MilestoneNode
+type PlannerTreeNode = { kind: 'planner' } | ProjectNode
 
-class TimelineTreeProvider implements vscode.TreeDataProvider<TimelineTreeNode> {
+/**
+ * Just the projects, each with a checkbox deciding whether it appears on the
+ * Planner chart. The state lives in the vault config (`hiddenProjects`), so a
+ * choice survives a reload and reaches the webview through the same
+ * `configChanged` broadcast every other setting uses.
+ */
+class PlannerTreeProvider implements vscode.TreeDataProvider<PlannerTreeNode> {
   private emitter = new vscode.EventEmitter<void>()
   readonly onDidChangeTreeData = this.emitter.event
+  /** Read synchronously by getTreeItem, so it's cached rather than awaited per row. */
+  private hidden = new Set<string>()
 
   refresh(): void {
     this.emitter.fire()
   }
 
-  getTreeItem(node: TimelineTreeNode): vscode.TreeItem {
-    if (node.kind === 'fullTimeline') {
-      const item = new vscode.TreeItem('Full Timeline')
-      item.iconPath = new vscode.ThemeIcon('calendar')
-      item.description = `${node.count} ${node.count === 1 ? 'milestone' : 'milestones'}`
-      item.tooltip = 'Open the Timeline panel (tasks, notes, and milestones by date)'
-      item.command = { command: 'knote.openTimeline', title: 'Open Timeline' }
-      return item
-    }
-    const item = new vscode.TreeItem(node.text)
-    item.iconPath = new vscode.ThemeIcon('milestone')
-    item.description = `${relativeLabel(node.date, today())} · ${node.noteTitle}`
-    item.tooltip = `${node.date} — ${node.path}:${node.line + 1}`
-    item.command = {
-      command: 'knote.openNoteAt',
-      title: 'Open Milestone',
-      arguments: [node.path, node.line]
-    }
-    return item
+  /** Re-read the hidden set, then redraw. */
+  async reload(): Promise<void> {
+    this.hidden = new Set((await getVaultConfig()).hiddenProjects)
+    this.refresh()
   }
 
-  getChildren(node?: TimelineTreeNode): TimelineTreeNode[] {
+  /** Tick/untick a project, persisting to the vault config. */
+  async setVisible(slug: string, visible: boolean): Promise<void> {
+    const config = await getVaultConfig()
+    const hidden = new Set(config.hiddenProjects)
+    if (visible) hidden.delete(slug)
+    else hidden.add(slug)
+    await setVaultConfig({ ...config, hiddenProjects: [...hidden].sort() })
+    this.hidden = hidden
+    // Tell the open Planner panel, which mirrors the config like every webview.
+    broadcast('configChanged', { ...config, hiddenProjects: [...hidden].sort() })
+    this.refresh()
+  }
+
+  getTreeItem(node: PlannerTreeNode): vscode.TreeItem {
+    if (node.kind === 'planner') {
+      const item = new vscode.TreeItem('Open Planner')
+      item.iconPath = new vscode.ThemeIcon('gantt-chart')
+      item.tooltip = 'Open the project planner (deliverables on a schedule)'
+      item.command = { command: 'knote.openPlanner', title: 'Open Planner' }
+      return item
+    }
+    {
+      const item = new vscode.TreeItem(node.title)
+      item.checkboxState = this.hidden.has(node.slug)
+        ? vscode.TreeItemCheckboxState.Unchecked
+        : vscode.TreeItemCheckboxState.Checked
+      item.iconPath = new vscode.ThemeIcon(
+        node.complete ? 'pass-filled' : node.overdue ? 'warning' : 'project'
+      )
+      const count = `${node.deliverables} ${node.deliverables === 1 ? 'deliverable' : 'deliverables'}`
+      const state = node.complete ? 'completed' : node.overdue ? `overdue ${node.dueDate}` : null
+      const span = node.start && node.end ? `${node.start} → ${node.end}` : null
+      item.description = [state, count, span].filter(Boolean).join(' · ')
+      item.tooltip = `${node.path} — click to open the project note, untick to hide it from the Planner`
+      item.command = {
+        command: 'knote.openNoteAt',
+        title: 'Open Project',
+        arguments: [node.path, 0]
+      }
+      return item
+    }
+  }
+
+  getChildren(node?: PlannerTreeNode): PlannerTreeNode[] {
     if (node || !currentVaultRoot()) return []
-    const items = collectMilestones(notesMap(), today())
-    return [{ kind: 'fullTimeline', count: items.length }, ...items]
+    return [{ kind: 'planner' }, ...collectProjects(notesMap(), today())]
   }
 }
 
@@ -207,27 +242,38 @@ function autoOpenOnReveal(view: vscode.TreeView<unknown>, command: string): vsco
 export function registerQuickAccessTrees(context: vscode.ExtensionContext): void {
   const boards = new BoardsTreeProvider()
   const machines = new MachinesTreeProvider()
-  const timeline = new TimelineTreeProvider()
+  const planner = new PlannerTreeProvider()
 
   const boardsView = vscode.window.createTreeView('knote.boards', { treeDataProvider: boards })
   const machinesView = vscode.window.createTreeView('knote.machines', {
     treeDataProvider: machines
   })
-  const timelineView = vscode.window.createTreeView('knote.milestones', {
-    treeDataProvider: timeline
+  const plannerView = vscode.window.createTreeView('knote.projects', {
+    treeDataProvider: planner,
+    // Ticking several projects in a row shouldn't need one click each to
+    // re-focus the row.
+    manageCheckboxStateManually: true
   })
+  // The hidden set lives on disk; load it once the vault is up.
+  void planner.reload()
 
   context.subscriptions.push(
+    plannerView.onDidChangeCheckboxState(async ({ items }) => {
+      for (const [node, state] of items) {
+        if (node.kind !== 'project') continue
+        await planner.setVisible(node.slug, state === vscode.TreeItemCheckboxState.Checked)
+      }
+    }),
     boardsView,
     machinesView,
-    timelineView,
+    plannerView,
     autoOpenOnReveal(boardsView as vscode.TreeView<unknown>, 'knote.openBoard'),
     autoOpenOnReveal(machinesView as vscode.TreeView<unknown>, 'knote.openMachineLog'),
-    autoOpenOnReveal(timelineView as vscode.TreeView<unknown>, 'knote.openTimeline'),
+    autoOpenOnReveal(plannerView as vscode.TreeView<unknown>, 'knote.openPlanner'),
     debouncedRefresh(() => {
       boards.refresh()
       machines.refresh()
-      timeline.refresh()
+      planner.refresh()
     }),
     vscode.commands.registerCommand('knote.openNoteAt', async (path: VaultPath, line: number) => {
       await openNoteInLiveEditor(uriForRel(path), line)

@@ -1,7 +1,7 @@
 {
   "name": "knote",
   "displayName": "KNote",
-  "version": "1.9.2",
+  "version": "1.10.0",
   "description": "KNote — a local-first Markdown vault with a checkbox-driven Kanban board, wiki links, and vault-wide search, as a VS Code extension",
   "publisher": "bradleykrone",
   "main": "./dist/extension.js",
@@ -46,8 +46,8 @@
         "title": "KNote: Open Note at Line"
       },
       {
-        "command": "knote.openTimeline",
-        "title": "KNote: Open Timeline"
+        "command": "knote.openPlanner",
+        "title": "KNote: Open Project Planner"
       },
       {
         "command": "knote.openMachineLog",
@@ -188,7 +188,7 @@
         },
         {
           "id": "knoteTimeline",
-          "title": "KNote Timeline",
+          "title": "KNote Planner",
           "icon": "resources/icon-timeline.svg"
         }
       ]
@@ -241,8 +241,8 @@
       ],
       "knoteTimeline": [
         {
-          "id": "knote.milestones",
-          "name": "Milestones"
+          "id": "knote.projects",
+          "name": "Projects"
         }
       ]
     },
@@ -306,7 +306,7 @@
         "contents": "No KNote vault is open in this workspace.\n[Initialize Vault](command:knote.initializeVault)"
       },
       {
-        "view": "knote.milestones",
+        "view": "knote.projects",
         "contents": "No KNote vault is open in this workspace.\n[Initialize Vault](command:knote.initializeVault)"
       }
     ],

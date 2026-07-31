@@ -54,10 +54,14 @@ readable and editable in any other text editor.
 - Cards carry tags, due dates (`📅 2026-07-15` / `@due(2026-07-15)`), and
   priority markers (`!`, `!!`, `!!!`); archive with `- [a]`.
 
-### Timeline, Machine Log, Graph
-- **Timeline** — a chronological view of every dated task, `🏁` milestone,
-  and `date:`-frontmatter note across the vault, with right-click date
-  editing.
+### Project Planner, Machine Log, Graph
+- **Project planner** — a Gantt chart over notes marked `type: project`.
+  Deliverables are top-level tasks with a `🛫 start 📅 end` span and a
+  `#deliverable/<project>/<name>` tag; any task in the vault joins one by
+  carrying that tag. Drag bars to re-plan (dependents cascade), drag their
+  edges to resize, and link `⛓` dependencies by dragging between bars.
+  Deliverable tasks only surface on the board while their deliverable is
+  running — or overdue.
 - **Machine log** — register machines (serial, model, config attributes)
   in KNote Settings; log dated `🚜` work entries against them and browse a
   filterable log grouped by machine.
@@ -83,7 +87,7 @@ A VS Code extension in four layers under `src/`:
   editor providers (links, completions, hover, decorations, paste-image),
   commands, webview panels/views, and the two-way-sync write path
   (`verifiedEdit.ts`).
-- **`src/webviews/`** — React apps for the board, timeline, machine log,
+- **`src/webviews/`** — React apps for the board, planner, machine log,
   graph, search, backlinks, properties, and settings, themed with VS Code
   color variables.
 - **`src/shared/`** — types, the markdown parser, the host↔webview RPC

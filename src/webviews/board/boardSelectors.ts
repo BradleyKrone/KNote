@@ -3,6 +3,7 @@ import isoWeek from 'dayjs/plugin/isoWeek'
 import type { BoardColumn, NoteMeta, VaultPath } from '@shared/types'
 import { isInside, samePath, titleOf } from '@shared/pathUtils'
 import { ARCHIVED_CHAR, DUE_RE, PRIORITY_RE, stripInlineMarkers } from '@shared/parser/patterns'
+import { deliverableWindows, visibleForDeliverable } from '@shared/deliverables'
 
 dayjs.extend(isoWeek)
 
@@ -147,6 +148,8 @@ export interface BoardFilters {
   statusChanged?: DateRangeFilter
   dateEntered?: DateRangeFilter
   due?: DateRangeFilter
+  /** Escape hatch for the deliverable-window gate below — the board's "Show all deliverable tasks" toggle. */
+  ignoreDeliverableWindow?: boolean
 }
 
 export function collectCards(
@@ -155,12 +158,18 @@ export function collectCards(
   filters: BoardFilters
 ): BoardCard[] {
   const cards: BoardCard[] = []
+  // Project work only belongs on the board while its deliverable is actually
+  // running (or overdue) — see visibleForDeliverable. Both views read the same
+  // index map, so this needs nothing from the host.
+  const windows = filters.ignoreDeliverableWindow ? null : deliverableWindows(notes)
+  const now = dayjs().format('YYYY-MM-DD')
   for (const meta of notes.values()) {
     if (scope.kind === 'note' && !samePath(meta.path, scope.path)) continue
     if (scope.kind === 'folder' && !isInside(meta.path, scope.path)) continue
     for (const task of meta.tasks) {
       if (task.statusChar === ARCHIVED_CHAR) continue
       if (task.isSubtask) continue
+      if (windows && !visibleForDeliverable(task, windows, now)) continue
       const card = toCard(meta, task)
       if (
         filters.tag &&
@@ -195,7 +204,13 @@ export function groupByColumn(cards: BoardCard[], columns: BoardColumn[]): Board
 /** All tags present on the (unfiltered) card set, for the filter dropdown. */
 export function boardTags(notes: Map<string, NoteMeta>, scope: BoardScope): string[] {
   const tags = new Set<string>()
-  for (const card of collectCards(notes, scope, { tag: null, text: '' })) {
+  // Ignores the deliverable-window gate on purpose: the tag dropdown shouldn't
+  // lose entries as deliverables open and close.
+  for (const card of collectCards(notes, scope, {
+    tag: null,
+    text: '',
+    ignoreDeliverableWindow: true
+  })) {
     for (const t of card.tags) tags.add(t)
   }
   return [...tags].sort()

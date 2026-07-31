@@ -6,6 +6,7 @@ import * as vault from '../src/core/vaultService'
 import {
   appendLine,
   deleteLine,
+  insertLine,
   moveLine,
   replaceLine,
   setTaskStatusMeta
@@ -268,6 +269,32 @@ describe('moveLine', () => {
   it('rejects with KNOTE_STALE when the target line changed', async () => {
     await seed('a.md', 'a\nb\n')
     await expect(moveLine('a.md', 0, 'a', 1, 'gone')).rejects.toThrow('KNOTE_STALE')
+  })
+})
+
+describe('insertLine', () => {
+  it('inserts directly below its anchor line', async () => {
+    await seed('a.md', 'one\ntwo\nthree\n')
+    await insertLine('a.md', 1, 'two', 'TWO-AND-A-HALF')
+    expect(await read('a.md')).toBe('one\ntwo\nTWO-AND-A-HALF\nthree\n')
+  })
+
+  it('refuses when the anchor line changed on disk', async () => {
+    await seed('a.md', 'one\nedited\nthree\n')
+    await expect(insertLine('a.md', 1, 'two', 'new')).rejects.toThrow(/KNOTE_STALE/)
+    expect(await read('a.md')).toBe('one\nedited\nthree\n')
+  })
+
+  it('follows the anchor when it has shifted and is unambiguous', async () => {
+    await seed('a.md', 'zero\none\ntwo\nthree\n')
+    await insertLine('a.md', 1, 'two', 'new')
+    expect(await read('a.md')).toBe('zero\none\ntwo\nnew\nthree\n')
+  })
+
+  it('preserves CRLF line endings', async () => {
+    await seed('a.md', 'one\r\ntwo\r\nthree\r\n')
+    await insertLine('a.md', 1, 'two', 'new')
+    expect(await read('a.md')).toBe('one\r\ntwo\r\nnew\r\nthree\r\n')
   })
 })
 

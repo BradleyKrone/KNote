@@ -57,10 +57,10 @@ A VS Code extension in four layers under `src/`:
   syntax in Reading mode), `attachmentAutoCleanup.ts`, `providers/`
   (wiki-link DocumentLinks, completions, hover, decorations, paste-image),
   `commands/` (tasks, formatting, weekly notes, templates, machine
-  entries, maintenance), `views/` (board/timeline/machineLog/graph/settings
+  entries, maintenance), `views/` (board/planner/machineLog/graph/settings
   panels + the Live Preview custom editor + sidebar webview views),
   `trees/tagsTree.ts`, `rpc/` (webview RPC router + HostApi handlers).
-- **`src/webviews/`** — React 18 apps bundled per view (board, timeline,
+- **`src/webviews/`** — React 18 apps bundled per view (board, planner,
   machineLog, graph, search, backlinks, outline, properties, settings)
   plus `editor/` — the CodeMirror 6 Live Preview editor, which is *not*
   React and is the default `.md` editor (live-preview decorations, tables,

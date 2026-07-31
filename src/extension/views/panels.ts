@@ -1,4 +1,4 @@
-// Singleton editor-area WebviewPanels for Timeline, Machine Log, Graph, and
+// Singleton editor-area WebviewPanels for the Planner, Machine Log, Graph, and
 // KNote Settings. Unlike the board these rebuild from the index snapshot on
 // reopen, so no retainContextWhenHidden.
 
@@ -17,10 +17,10 @@ interface PanelDef {
 
 const PANELS: PanelDef[] = [
   {
-    command: 'knote.openTimeline',
-    viewType: 'knote.timeline',
-    view: 'timeline',
-    title: 'KNote Timeline'
+    command: 'knote.openPlanner',
+    viewType: 'knote.planner',
+    view: 'planner',
+    title: 'KNote Planner'
   },
   {
     command: 'knote.openMachineLog',

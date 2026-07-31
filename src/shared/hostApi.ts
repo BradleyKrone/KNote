@@ -71,7 +71,25 @@ export interface HostApi {
     beforeLine: number,
     beforeExpectedText: string | null
   ): Promise<void>
+  /**
+   * Insert `text` on the line directly below `afterLine`, verified against
+   * that anchor line's exact text — how the planner adds a task or milestone
+   * under the deliverable it belongs to.
+   */
+  insertLine(
+    path: VaultPath,
+    afterLine: number,
+    afterExpectedText: string,
+    text: string
+  ): Promise<void>
   appendToNote(path: VaultPath, text: string): Promise<void>
+
+  /**
+   * Create a note with the given content, returning the path it actually
+   * landed at — the name is uniquified if something is already there, so this
+   * never overwrites an existing note.
+   */
+  createNote(path: VaultPath, content: string): Promise<VaultPath>
 
   /** Renames/merges a tag across the vault. Returns the paths changed. */
   renameTag(oldTag: string, newTag: string): Promise<VaultPath[]>

@@ -124,6 +124,25 @@ export async function moveLine(
 }
 
 /**
+ * Verified insert directly below an anchor line — how the planner adds a task
+ * or milestone under the deliverable it belongs to. Anchoring on a line whose
+ * exact text the caller already holds avoids the read-then-write race a
+ * "insert at line N" API would have.
+ */
+export async function insertLine(
+  rel: VaultPath,
+  afterLine: number,
+  afterExpectedText: string,
+  text: string
+): Promise<void> {
+  const { eol, lines } = await readNoteLines(rel)
+  const anchor = locateLine(lines, afterLine, afterExpectedText)
+  if (anchor === -1) throw new Error(`${STALE_ERROR}: line changed on disk in ${rel}`)
+  lines.splice(anchor + 1, 0, text)
+  await writeFileAtomic(rel, lines.join(eol))
+}
+
+/**
  * Append a line to a note, creating the note if it doesn't exist.
  *
  * Read-modify-write guarded by optimistic concurrency: if an external edit

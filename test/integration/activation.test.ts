@@ -26,7 +26,7 @@ describe('activation', () => {
     // A representative slice across the command surface; each must resolve.
     const expected = [
       'knote.openBoard',
-      'knote.openTimeline',
+      'knote.openPlanner',
       'knote.cycleTaskStatus',
       'knote.setTaskStatus',
       'knote.insertCheckbox',

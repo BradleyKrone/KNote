@@ -4,7 +4,22 @@
 
 import dayjs from 'dayjs'
 import type { MachineDef, NoteMeta, VaultPath } from '@shared/types'
-import { ARCHIVED_CHAR, DUE_RE, stripInlineMarkers } from '@shared/parser/patterns'
+import {
+  ARCHIVED_CHAR,
+  DUE_RE,
+  parseDeliverableTag,
+  stripInlineMarkers
+} from '@shared/parser/patterns'
+import {
+  deliverableTagsOf,
+  endDateOf,
+  isProjectComplete,
+  isProjectNote,
+  isTaskDone,
+  projectEndDate,
+  projectSlug,
+  startDateOf
+} from '@shared/deliverables'
 
 // ---------- Boards ----------
 
@@ -186,7 +201,76 @@ export function collectMilestones(notes: Map<string, NoteMeta>, today: string): 
   return [...upcoming, ...past]
 }
 
-/** "today" / "in 3 days" / "2 weeks ago" — same tiering as the Timeline panel. */
+// ---------- Projects ----------
+
+export interface ProjectNode {
+  kind: 'project'
+  path: VaultPath
+  title: string
+  slug: string
+  deliverables: number
+  /** Earliest start / latest end across the project's deliverables, if any are scheduled. */
+  start: string | null
+  end: string | null
+  /** The project's own `end:` target date, if it declared one. */
+  dueDate: string | null
+  complete: boolean
+  /** Past its target date with work still open. */
+  overdue: boolean
+}
+
+/**
+ * The vault's `type: project` notes with a scheduled-span summary — the
+ * activity-bar companion to the Planner panel. Reads the same
+ * `shared/deliverables` primitives the panel and the board do, so the three
+ * can't disagree about what counts as a project or a deliverable.
+ */
+export function collectProjects(notes: Map<string, NoteMeta>, today: string): ProjectNode[] {
+  const projects: ProjectNode[] = []
+  for (const meta of notes.values()) {
+    if (!isProjectNote(meta)) continue
+    const slug = projectSlug(meta)
+    let start: string | null = null
+    let end: string | null = null
+    let deliverables = 0
+    let open = 0
+    for (const task of meta.tasks) {
+      if (task.isSubtask) continue
+      const taskEnd = endDateOf(task.text)
+      if (!taskEnd) continue
+      const own = deliverableTagsOf(task.tags, task.text)
+      if (!own.some((t) => parseDeliverableTag(t)?.project === slug)) continue
+      deliverables++
+      if (!isTaskDone(task)) open++
+      const taskStart = startDateOf(task.text) ?? taskEnd
+      if (start === null || taskStart < start) start = taskStart
+      if (end === null || taskEnd > end) end = taskEnd
+    }
+    const complete = isProjectComplete(meta)
+    const dueDate = projectEndDate(meta)
+    projects.push({
+      kind: 'project',
+      path: meta.path,
+      title: String(meta.frontmatter['title'] ?? meta.title),
+      slug,
+      deliverables,
+      start,
+      end,
+      dueDate,
+      complete,
+      // Same rule as the planner: a declared target, passed, with work still
+      // open. The tree counts unchecked deliverables where the planner averages
+      // task percentages — both mean "not finished".
+      overdue: !complete && dueDate !== null && dueDate < today && open > 0
+    })
+  }
+  // Live projects first, finished ones at the bottom.
+  return projects.sort(
+    (a, b) => Number(a.complete) - Number(b.complete) || a.title.localeCompare(b.title)
+  )
+}
+
+/** "today" / "in 3 days" / "2 weeks ago" — same tiering as the Planner panel. */
 export function relativeLabel(date: string, today: string): string {
   const days = dayjs(date).diff(dayjs(today), 'day')
   if (days === 0) return 'today'

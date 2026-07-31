@@ -1,7 +1,7 @@
 # Welcome to KNote
 
 KNote is a local-first, plain-Markdown note system with a Kanban board and
-a timeline built in — now running as a **VS Code extension**. Everything
+a project planner built in — now running as a **VS Code extension**. Everything
 you write is a `.md` file on disk in your **vault** (a workspace folder) —
 no proprietary format, no account, no network calls of any kind.
 
@@ -281,7 +281,7 @@ the main thing, the rows under it jump straight to one item.
 | Calendar | **This Week** | **This Week's Note** — opens (creating if needed) the current ISO-week note; just clicking the icon opens it | Past weekly notes, newest first — click to open |
 | Kanban columns | **Boards** | **All Tasks** — the whole-vault board | One row per note that has tasks, `open/total`, busiest first — click for that note's board |
 | Tractor | **Machines** | **Full Machine Log** | Registered machines (then any unregistered serial found in a note); expand for its 🚜 entries, newest first — click to jump to the line |
-| Timeline | **Milestones** | **Full Timeline** | Dated `🏁` milestones — upcoming soonest-first, then past — click to jump to the line |
+| Timeline | **Projects** | **Open Planner** | One row per `type: project` note (deliverable count + span). **Tick a project to show it on the Planner chart, untick to hide it** — the choice is saved in the vault. Click the name to open its note |
 
 These all track the index live, so counts and lists follow your edits.
 
@@ -299,12 +299,66 @@ The **KNote icon in the Activity Bar** opens five panels:
   rename across the vault or deprecate (hide from pickers).
 - **Properties** — form-style frontmatter editing for the active note.
 
-## Timeline, Machine Log, Graph
+## Project Planner
 
-- **KNote: Open Timeline** — everything dated, chronologically: tasks with
-  `📅 2026-07-15`, notes with `date:`/`due:`/`deadline:` frontmatter, and
-  standalone `🏁 Milestone 📅 date` lines (`!!!` renders large). Right-click
-  an item to change its date.
+**KNote: Open Project Planner** is a Gantt chart over your projects —
+deliverables as bars on a schedule, drag them to re-plan. It replaces the
+old Timeline panel. Everything it shows lives in plain Markdown:
+
+| Thing | How you write it |
+| --- | --- |
+| Project | a note with `type: project` (and optionally `project: <slug>`) in its frontmatter |
+| Its deadline | `end: 2026-06-30` in the same frontmatter (`due:`/`deadline:` also read) |
+| Finishing it | `status: completed` — set it from the planner's right-click menu |
+| Deliverable | a top-level task in that note: `- [ ] Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design` |
+| Its tasks | any checkbox line **anywhere in the vault** carrying that same `#deliverable/…` tag |
+| Dependency | `⛓ #deliverable/govalle/contracts` on the deliverable line — "starts after that one"; repeatable |
+| Milestone | a `🏁 Permits approved 📅 2026-04-12 #deliverable/govalle/design` line — a diamond on the chart |
+
+`🛫` is the start date, `📅` the end date (`@start(...)`/`@due(...)` also
+read). A deliverable with no `🛫` is a single-day bar.
+
+In the chart:
+
+| Action | What it does |
+| --- | --- |
+| Drag a bar | moves it — **and everything that depends on it**, by the same number of days. Independent bars never move |
+| Drag a bar's left/right edge | changes just that date |
+| Drag the 🔗 grip onto another bar | makes that bar wait on this one (a link that would create a loop is refused) |
+| Double-click any row | opens the note at that line |
+| Right-click a deliverable → **Edit dates…** | a calendar for both ends of the span, with 1/3/5/10/20-day length presets and ±1d/±1w/Today nudges that slide the span without changing its length |
+| Right-click a deliverable → **Depends on ▸** | every other deliverable, ticked where it's already a predecessor — click to add or remove. Anything that would create a loop is greyed out and labelled *would loop* |
+| Right-click a row | also: add a deliverable / task / milestone |
+| day / week / month | zoom; **Today** re-centres on the today line |
+
+Bar fill is % complete — the share of the deliverable's tasks that are
+checked (or its own checkbox if it has none). A bar that starts before
+something it depends on finishes is outlined in red.
+
+**Project status.** A project carries a badge in the tree:
+
+| Badge | When |
+| --- | --- |
+| *(none)* | active |
+| **overdue** | its `end:` date has passed with work still open. A project with no `end:` date is never overdue — a derived finish isn't a promise |
+| **done** | `status: completed` |
+
+Right-click a project for **Set target end date…** and **Mark project
+completed** / **Reopen project**. Completed projects sort to the bottom of
+the list and are **closed for business**: Add deliverable / task /
+milestone are greyed out, and their `#deliverable/…` tags disappear from
+`#` tag autocomplete, so old work can't be filed against a finished
+project by accident. Reopening restores all of it. Nothing is deleted or
+hidden — the chart still draws everything the project contains.
+
+**Deliverable tasks and the board:** a task tagged `#deliverable/…` only
+appears on the Kanban board while its deliverable is actually running —
+or after its end date if it's still unchecked, so late work never
+disappears. Untagged tasks are unaffected. Tick **All deliverables** in
+the board header to see everything regardless.
+
+## Machine Log, Graph
+
 - **KNote: Open Machine Log** — 🚜 work entries collected from every note,
   filterable by serial, config attribute, tag, and text, optionally grouped
   per machine. Insert entries with **KNote: Insert Machine Log Entry**;
