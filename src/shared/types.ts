@@ -227,6 +227,13 @@ export interface VaultConfig {
    * 'never' leaves links exactly as written, so they dangle after a rename.
    */
   linkUpdate: 'always' | 'never'
+  /**
+   * Project slugs unticked in the Projects sidebar, hidden from the Planner
+   * chart. Stored as the *hidden* set rather than the visible one so a project
+   * you create later shows up on its own instead of staying invisible until
+   * someone remembers to tick it.
+   */
+  hiddenProjects: string[]
 }
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
@@ -246,5 +253,6 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   machines: [],
   deprecatedTags: [],
   userDictionary: [],
-  linkUpdate: 'always'
+  linkUpdate: 'always',
+  hiddenProjects: []
 }

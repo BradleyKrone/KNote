@@ -3,6 +3,53 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.0.0
+
+- **Project Planner**: the Timeline panel is now a Gantt-style project
+  planner (**KNote: Open Project Planner**). A note with `type: project`
+  frontmatter is a project; its deliverables are top-level tasks carrying a
+  `🛫 start 📅 end` span and their own `#deliverable/<project>/<name>` tag.
+  The chart draws each deliverable as a bar with a % complete fill,
+  milestones as diamonds, and a today line, at day/week/month zoom.
+- **Drag to re-plan**: drag a bar to move it — everything that depends on
+  it moves by the same number of days, and nothing else does. Drag an edge
+  to change one date, or drag the 🔗 grip onto another bar to make it wait
+  on this one. A link that would create a loop is refused, and a bar that
+  starts before something it depends on finishes is outlined in red.
+- **Edit a deliverable without dragging**: right-click it for **Edit dates…**
+  (a calendar for both ends, with day-length presets and nudges that slide
+  the span without resizing it) or **Depends on ▸**, which lists every other
+  deliverable with a tick beside the ones it already waits on — click to add
+  or remove. Anything that would create a loop is greyed out.
+- **New project**: pick where the note goes by browsing the vault the way
+  you would in a file manager — a breadcrumb, one folder level at a time,
+  files shown greyed for context, and **New folder here** to make one on
+  the spot.
+- **Projects have a deadline and a status**: give a project note an
+  `end: 2026-06-30` frontmatter date and it's flagged **overdue** in the
+  planner and the Projects sidebar once that date passes with work still
+  open. Right-click a project to set the date, or to **Mark project
+  completed** — a completed project sorts to the bottom, shows a **done**
+  badge, and is closed for business: you can't add deliverables, tasks or
+  milestones to it, and its `#deliverable/…` tags stop appearing in `#` tag
+  autocomplete so nothing new gets filed against it. Reopening restores it.
+- **Tasks anywhere can belong to a deliverable**: tag any checkbox line in
+  the vault with a deliverable's `#deliverable/…` tag and it joins that
+  deliverable — no need to keep project work in the project note.
+- **The board now shows only current project work**: a task carrying a
+  `#deliverable/…` tag appears on the Kanban board while its deliverable is
+  running, or after its end date if it's still unchecked. Untagged tasks
+  are unaffected; tick **All deliverables** in the board header to see
+  everything.
+- The **Projects** activity-bar section replaces Milestones: one row per
+  project with its deliverable count and span. **Each has a checkbox that
+  decides whether it appears on the Planner chart** — untick the ones you
+  aren't working on to clear the view. The choice is saved per vault.
+- **The Timeline panel is gone**, replaced by the Planner. **KNote: Open
+  Timeline** no longer exists — use **KNote: Open Project Planner**. Notes
+  are untouched; dated tasks that weren't deliverables simply no longer have
+  a chart of their own.
+
 ## 1.9.2
 
 - Fixed a right-click menu (or other popover) that opened near the edge of

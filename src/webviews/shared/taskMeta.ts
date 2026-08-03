@@ -1,4 +1,11 @@
-import { DUE_RE, preservingBlockId, PRIORITY_RE, TAG_RE } from '@shared/parser/patterns'
+import {
+  DEPENDS_RE,
+  DUE_RE,
+  preservingBlockId,
+  PRIORITY_RE,
+  START_RE,
+  TAG_RE
+} from '@shared/parser/patterns'
 
 /** Display label for a priority level (0 = none), shared by the board card,
  *  the priority picker, and the editor's live-preview pill. */
@@ -39,4 +46,42 @@ export function setDueDate(text: string, date: string | null): string {
     const stripped = normalize(t.replace(DUE_RE, ''))
     return date ? `${stripped} 📅 ${date}`.trim() : stripped
   })
+}
+
+/** Replace the task's 🛫 start-date marker, or remove it when `date` is null. */
+export function setStartDate(text: string, date: string | null): string {
+  return preservingBlockId(text, (t) => {
+    const stripped = normalize(t.replace(START_RE, ''))
+    return date ? `${stripped} 🛫 ${date}`.trim() : stripped
+  })
+}
+
+/**
+ * Set both halves of a deliverable's span in one pass, so moving or resizing a
+ * bar is a single line rewrite rather than two verified edits (the second of
+ * which would be racing the first's index delta). Emits `🛫` before `📅`.
+ */
+export function setDeliverableDates(text: string, start: string, end: string): string {
+  return preservingBlockId(text, (t) => {
+    const stripped = normalize(t.replace(START_RE, '').replace(DUE_RE, ''))
+    return `${stripped} 🛫 ${start} 📅 ${end}`.trim()
+  })
+}
+
+/** Append a `⛓ #deliverable/...` dependency marker; idempotent. */
+export function addDependency(text: string, predecessorTag: string): string {
+  if (dependencies(text).includes(predecessorTag)) return text
+  return preservingBlockId(text, (t) => `${normalize(t)} ⛓ #${predecessorTag}`.trim())
+}
+
+/** Remove one `⛓ #deliverable/...` dependency marker, leaving any others. */
+export function removeDependency(text: string, predecessorTag: string): string {
+  return preservingBlockId(text, (t) =>
+    normalize(t.replace(DEPENDS_RE, (match, tag: string) => (tag === predecessorTag ? '' : match)))
+  )
+}
+
+/** The predecessor tags a line declares (bare, no `#`). */
+export function dependencies(text: string): string[] {
+  return [...text.matchAll(DEPENDS_RE)].map((m) => m[1])
 }

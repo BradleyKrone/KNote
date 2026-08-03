@@ -40,6 +40,7 @@ export function BoardView({ scope }: { scope: BoardScope }): React.JSX.Element {
   const [statusChangedFilter, setStatusChangedFilter] = useState<DateRangeFilter>(ANY_DATE_FILTER)
   const [dateEnteredFilter, setDateEnteredFilter] = useState<DateRangeFilter>(ANY_DATE_FILTER)
   const [dueFilter, setDueFilter] = useState<DateRangeFilter>(ANY_DATE_FILTER)
+  const [allDeliverables, setAllDeliverables] = useState(false)
 
   const cards = useMemo(
     () =>
@@ -48,9 +49,19 @@ export function BoardView({ scope }: { scope: BoardScope }): React.JSX.Element {
         text: textFilter,
         statusChanged: statusChangedFilter,
         dateEntered: dateEnteredFilter,
-        due: dueFilter
+        due: dueFilter,
+        ignoreDeliverableWindow: allDeliverables
       }),
-    [notes, scope, tagFilter, textFilter, statusChangedFilter, dateEnteredFilter, dueFilter]
+    [
+      notes,
+      scope,
+      tagFilter,
+      textFilter,
+      statusChangedFilter,
+      dateEnteredFilter,
+      dueFilter,
+      allDeliverables
+    ]
   )
   const byColumn = useMemo(() => groupByColumn(cards, columns), [cards, columns])
   const tags = useMemo(() => boardTags(notes, scope), [notes, scope])
@@ -235,6 +246,17 @@ export function BoardView({ scope }: { scope: BoardScope }): React.JSX.Element {
             onChange={setDateEnteredFilter}
           />
           <DateRangeFilterControl label="Due" value={dueFilter} onChange={setDueFilter} />
+          <label
+            className="board-group-toggle"
+            title="Show tasks whose deliverable hasn't started yet, or finished on time"
+          >
+            <input
+              type="checkbox"
+              checked={allDeliverables}
+              onChange={(e) => setAllDeliverables(e.target.checked)}
+            />
+            All deliverables
+          </label>
           <label className="board-group-toggle">
             <input
               type="checkbox"

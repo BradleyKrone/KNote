@@ -186,6 +186,25 @@ export async function moveLine(
   await applyAndMaybeSave(doc, edit)
 }
 
+export async function insertLine(
+  rel: VaultPath,
+  afterLine: number,
+  afterExpectedText: string,
+  text: string
+): Promise<void> {
+  const doc = openDocFor(rel)
+  if (!doc) {
+    await lineEdit.insertLine(rel, afterLine, afterExpectedText, text)
+    void vaultIndex.indexFile(rel)
+    return
+  }
+  const anchor = locateLine(doc, afterLine, afterExpectedText)
+  if (anchor === -1) throw stale(rel)
+  const edit = new vscode.WorkspaceEdit()
+  edit.insert(doc.uri, doc.lineAt(anchor).range.end, '\n' + text)
+  await applyAndMaybeSave(doc, edit)
+}
+
 export async function appendToNote(rel: VaultPath, text: string): Promise<void> {
   const doc = openDocFor(rel)
   if (!doc) {

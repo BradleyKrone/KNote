@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  boardTags,
   collectCards,
   dueState,
   followUpState,
@@ -211,5 +212,71 @@ describe('collectCards date filters', () => {
       }
     )
     expect(cards.map((c) => c.displayText)).toEqual(['done task'])
+  })
+})
+
+// Project work only belongs on the board while its deliverable is running.
+// "Today" is still 2026-07-08 from the fake timer at the top of this file.
+describe('collectCards deliverable windows', () => {
+  const notes = new Map<string, NoteMeta>()
+  notes.set(
+    'Project.md',
+    parseNote(
+      'Project.md',
+      [
+        '---',
+        'type: project',
+        'project: p',
+        '---',
+        '- [ ] Current 🛫 2026-07-01 📅 2026-07-31 #deliverable/p/current',
+        '- [ ] Future 🛫 2026-09-01 📅 2026-09-30 #deliverable/p/future',
+        '- [ ] Past 🛫 2026-06-01 📅 2026-06-30 #deliverable/p/past',
+        ''
+      ].join('\n')
+    )
+  )
+  notes.set(
+    'Work.md',
+    parseNote(
+      'Work.md',
+      [
+        '- [ ] plain task',
+        '- [ ] current work #deliverable/p/current',
+        '- [ ] future work #deliverable/p/future',
+        '- [ ] late work #deliverable/p/past',
+        '- [x] finished work #deliverable/p/past',
+        '- [ ] orphan work #deliverable/p/ghost',
+        ''
+      ].join('\n')
+    )
+  )
+  const baseFilters: BoardFilters = { tag: null, text: '' }
+  const labels = (filters: BoardFilters = baseFilters): string[] =>
+    collectCards(notes, { kind: 'note', path: 'Work.md' }, filters).map((c) => c.displayText)
+
+  it('shows current and overdue-unchecked work, hides not-yet-started and finished-on-time work', () => {
+    expect(labels()).toEqual(['plain task', 'current work', 'late work', 'orphan work'])
+  })
+
+  it('shows everything again under the escape-hatch toggle', () => {
+    expect(labels({ ...baseFilters, ignoreDeliverableWindow: true })).toEqual([
+      'plain task',
+      'current work',
+      'future work',
+      'late work',
+      'finished work',
+      'orphan work'
+    ])
+  })
+
+  it('gates deliverable lines themselves too — current and overdue only', () => {
+    // "Past" is unchecked and its window has closed, so it stays visible as
+    // late work; "Future" hasn't started, so it doesn't clutter the board yet.
+    const project = collectCards(notes, { kind: 'note', path: 'Project.md' }, baseFilters)
+    expect(project.map((c) => c.displayText)).toEqual(['Current', 'Past'])
+  })
+
+  it('never lets a closed deliverable shrink the tag dropdown', () => {
+    expect(boardTags(notes, { kind: 'note', path: 'Work.md' })).toContain('deliverable/p/future')
   })
 })

@@ -6,6 +6,7 @@ import { getVaultConfig } from '../../core/vaultConfig'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
 import { linkAlias } from '@shared/blockAnchor'
 import { noteCandidates, resolveTarget, tagCounts } from '@shared/wikiResolve'
+import { closedDeliverableTags } from '@shared/deliverables'
 import { notesMap } from '../engine'
 import { vaultNoteRel } from '../paths'
 
@@ -118,9 +119,14 @@ class KnoteCompletionProvider implements vscode.CompletionItemProvider {
     )
     const config = await getVaultConfig()
     const deprecated = new Set(config.deprecatedTags.map((t) => t.toLowerCase()))
-    const counts = tagCounts(notesMap())
+    const notes = notesMap()
+    const counts = tagCounts(notes)
+    // A completed project is closed: its deliverable tags stop being offered so
+    // new work can't be filed against something already finished. The tags
+    // still parse and still render — only the suggestion goes away.
+    const closed = closedDeliverableTags(notes)
     return [...counts.entries()]
-      .filter(([tag]) => !deprecated.has(tag.toLowerCase()))
+      .filter(([tag]) => !deprecated.has(tag.toLowerCase()) && !closed.has(tag))
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .map(([tag, count], i) => {
         const item = new vscode.CompletionItem(tag, vscode.CompletionItemKind.Keyword)

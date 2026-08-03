@@ -13,7 +13,7 @@ export const WIKI_LINK_RE = /(!?)\[\[([^[\]|#\n]+)(#[^[\]|\n]+)?(\|[^[\]\n]+)?\]
  * appended to the end of a task line, so setting one on an already-anchored
  * task used to push the anchor into the middle of the line.
  */
-const AFTER_ANCHOR = String.raw`(?:\s*(?:📅\s*\d{4}-\d{2}-\d{2}|@due\(\d{4}-\d{2}-\d{2}\)|✅\s*\d{4}-\d{2}-\d{2}|!{1,3}|#[A-Za-z0-9_][A-Za-z0-9_/-]*))*`
+const AFTER_ANCHOR = String.raw`(?:\s*(?:📅\s*\d{4}-\d{2}-\d{2}|@due\(\d{4}-\d{2}-\d{2}\)|🛫\s*\d{4}-\d{2}-\d{2}|@start\(\d{4}-\d{2}-\d{2}\)|✅\s*\d{4}-\d{2}-\d{2}|⛓\s*#[A-Za-z0-9_][A-Za-z0-9_/-]*|!{1,3}|#[A-Za-z0-9_][A-Za-z0-9_/-]*))*`
 
 /**
  * ` ^block-id` at the end of a line — an Obsidian-style block anchor that
@@ -57,6 +57,35 @@ export const TASK_LINE_RE = /^(\s*)([-*+]|\d+[.)])\s\[(.)\](?:\s(.*))?$/
 
 /** @due(2026-07-10) or 📅 2026-07-10 */
 export const DUE_RE = /(?:@due\((\d{4}-\d{2}-\d{2})\)|📅\s*(\d{4}-\d{2}-\d{2}))/
+
+/**
+ * @start(2026-07-10) or 🛫 2026-07-10 — the start half of a project
+ * deliverable's date span (the end half is the ordinary `📅` due date). Only
+ * the planner reads it; a task without one is a point in time, not a span.
+ */
+export const START_RE = /(?:@start\((\d{4}-\d{2}-\d{2})\)|🛫\s*(\d{4}-\d{2}-\d{2}))/
+
+/**
+ * `⛓ #deliverable/<project>/<name>` — a scheduling dependency written on a
+ * deliverable line, read as "this deliverable comes *after* that one". Global:
+ * a deliverable may depend on several. Group 1 = the bare predecessor tag
+ * (no leading `#`).
+ */
+export const DEPENDS_RE = /⛓\s*#(deliverable\/[A-Za-z0-9_][A-Za-z0-9_/-]*)/g
+
+/**
+ * `deliverable/<project>/<name>` — the tag that binds a task to a project
+ * deliverable, wherever in the vault the task lives. Exactly three segments:
+ * a two-segment tag is the project itself and a deeper one is rejected, which
+ * keeps the namespace from drifting into free-form nesting.
+ */
+export const DELIVERABLE_TAG_RE = /^deliverable\/([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]+)$/
+
+/** Splits a bare (no `#`) deliverable tag into its project and deliverable slugs, or null. */
+export function parseDeliverableTag(tag: string): { project: string; deliverable: string } | null {
+  const m = DELIVERABLE_TAG_RE.exec(tag)
+  return m ? { project: m[1], deliverable: m[2] } : null
+}
 
 /** ✅ 2026-07-16 — completion-date marker appended to a checked sub-task line. Group 1 = the date. */
 const DONE_DATE_RE = /\s*✅\s*(\d{4}-\d{2}-\d{2})/g
@@ -282,7 +311,11 @@ export const PRIORITY_RE = /(?:^|\s)(!{1,3})(?=\s|$)/
 export function stripInlineMarkers(text: string): string {
   return (
     text
+      // Dependencies first: the generic tag strip below would otherwise eat the
+      // tag and leave a bare `⛓` behind in the label.
+      .replace(DEPENDS_RE, '')
       .replace(DUE_RE, '')
+      .replace(START_RE, '')
       .replace(PRIORITY_RE, ' ')
       .replace(/(^|[\s([{])#[A-Za-z0-9_][A-Za-z0-9_/-]*/g, '$1')
       // `$2`, not `''` — a buried anchor's trailing markers belong to the label.

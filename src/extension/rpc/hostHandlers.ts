@@ -84,7 +84,14 @@ export function createHostHandlers(): HostHandlers {
     setTaskStatusMeta: verifiedEdit.setTaskStatusMeta,
     deleteLine: verifiedEdit.deleteLine,
     moveLine: verifiedEdit.moveLine,
+    insertLine: verifiedEdit.insertLine,
     appendToNote: verifiedEdit.appendToNote,
+
+    createNote: async (path: VaultPath, content: string) => {
+      const created = await vault.createFile(path, content)
+      await vaultIndex.indexFile(created)
+      return created
+    },
 
     renameTag: async (oldTag: string, newTag: string) =>
       (await renameTagAcrossVault(oldTag, newTag)).filesChanged,
