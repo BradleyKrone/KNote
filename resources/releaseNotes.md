@@ -3,7 +3,7 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
-## 1.10.0
+## 2.0.0
 
 - **Project Planner**: the Timeline panel is now a Gantt-style project
   planner (**KNote: Open Project Planner**). A note with `type: project`
@@ -45,6 +45,10 @@ Extensions view.
   project with its deliverable count and span. **Each has a checkbox that
   decides whether it appears on the Planner chart** — untick the ones you
   aren't working on to clear the view. The choice is saved per vault.
+- **The Timeline panel is gone**, replaced by the Planner. **KNote: Open
+  Timeline** no longer exists — use **KNote: Open Project Planner**. Notes
+  are untouched; dated tasks that weren't deliverables simply no longer have
+  a chart of their own.
 
 ## 1.9.2
 

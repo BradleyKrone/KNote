@@ -71,7 +71,8 @@ A VS Code extension in four layers under `src/`:
   `parser/patterns.ts`), `hostApi.ts` (the host ↔ webview RPC contract),
   `wikiResolve.ts`, `renderMarkdown.ts` (markdown-it + KNote's wiki-link
   and tag rules, shared by embeds, hover previews and Reading mode),
-  `embedSlice.ts`, path/search utilities. Pure TS, used by all layers.
+  `embedSlice.ts`, `deliverables.ts` (the project-planner data model),
+  path/search utilities. Pure TS, used by all layers.
 
 Key invariants:
 - A **vault** is just a folder on disk. That's the entire data model — no
@@ -87,6 +88,39 @@ Key invariants:
   `engine.whenIndexBuilt()` — `getIndexSnapshot` does, which is what keeps
   a restored Live Preview tab from hydrating its store with nothing and
   leaving `[[` completion, backlinks and tags near-empty.
+
+### The project planner (Gantt chart)
+
+The Planner (`src/webviews/planner/`, opened by **KNote: Open Project
+Planner**) is a Gantt chart drawn entirely from markdown — there is no
+project database, and adding one would break the vault-is-the-data-model
+invariant above. The whole model lives in `src/shared/deliverables.ts`, so
+the board and the planner agree without importing each other:
+
+- A **project** is a note whose frontmatter says `type: project`. Its slug
+  is `project:` frontmatter, else its kebab-cased title. `status: completed`
+  closes it (no new deliverables/tasks; its tags drop out of completion).
+- A **deliverable** is a *top-level* checkbox task in that note carrying
+  `#deliverable/<project>/<name>` — exactly three segments, enforced by
+  `DELIVERABLE_TAG_RE`; two segments is the project, four is rejected.
+- Its **bar** spans `🛫`/`@start(YYYY-MM-DD)` → `📅`/`@due(...)`
+  (`START_RE`, `DUE_RE`). No `🛫` means start falls back to end — a point,
+  not a span.
+- **Dependencies** are `⛓ #deliverable/<project>/<name>` on the deliverable
+  line, read as "comes after that one" (`DEPENDS_RE`, global — several
+  allowed). They draw the arrows and constrain drag.
+- Ordinary tasks **join** a deliverable by carrying the same tag, anywhere
+  in the vault.
+- Any new inline marker must be added to `AFTER_ANCHOR` in
+  `parser/patterns.ts` (so it can't be pushed past a `^block-id`) *and* to
+  `stripInlineMarkers` — strip dependencies before the generic tag strip or
+  a bare `⛓` is left in the label.
+- Which projects are charted is stored in `VaultConfig.hiddenProjects` —
+  the *hidden* set, so a newly created project shows up on its own.
+- Dragging a bar rewrites the task line through the ordinary verified-edit
+  path (`plannerActions.ts` → `verifiedEdit` / `core/lineEdit`); it is not a
+  special case. Layout maths live in `plannerLayout.ts` and are unit-tested
+  in `tests/plannerLayout.test.ts` — keep them pure.
 
 ## Dev workflow
 
