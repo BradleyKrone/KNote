@@ -4,10 +4,11 @@
 // revives boards across window reloads.
 
 import * as vscode from 'vscode'
+import type { DeliverableScopeFilter } from '@shared/deliverables'
 import { titleOf } from '@shared/pathUtils'
 import { currentVaultRoot } from '../engine'
 import { vaultNoteRel } from '../paths'
-import { attach } from '../rpc/webviewRpc'
+import { attach, broadcast } from '../rpc/webviewRpc'
 import { createHostHandlers } from '../rpc/hostHandlers'
 import { webviewHtml, webviewResourceRoots } from './webviewHtml'
 
@@ -28,7 +29,8 @@ function panelTitle(scope: BoardScope): string {
 function wirePanel(
   context: vscode.ExtensionContext,
   panel: vscode.WebviewPanel,
-  scope: BoardScope
+  scope: BoardScope,
+  initialFilter?: DeliverableScopeFilter
 ): void {
   const key = scopeKey(scope)
   panels.set(key, panel)
@@ -39,7 +41,8 @@ function wirePanel(
     'board',
     panelTitle(scope),
     {
-      scope
+      scope,
+      initialFilter
     }
   )
   panel.onDidDispose(() => {
@@ -71,6 +74,41 @@ function openBoard(context: vscode.ExtensionContext, scope: BoardScope): void {
   wirePanel(context, panel, scope)
 }
 
+/**
+ * Reveal (or open) the whole-vault board with a project/deliverable filter
+ * applied — the Boards tree's "Filter by Project" section. Always targets the
+ * global board: deliverables span notes, so filtering only makes sense there.
+ * An already-open panel gets the filter pushed live via broadcast; a fresh one
+ * gets it baked into its bootstrap payload.
+ */
+export function openBoardWithFilter(
+  context: vscode.ExtensionContext,
+  filter: DeliverableScopeFilter
+): void {
+  if (!currentVaultRoot()) {
+    void vscode.window.showWarningMessage('KNote: no vault is open in this workspace.')
+    return
+  }
+  const scope: BoardScope = { kind: 'global' }
+  const existing = panels.get(scopeKey(scope))
+  if (existing) {
+    existing.reveal()
+    broadcast('boardFilterChanged', filter)
+    return
+  }
+  const panel = vscode.window.createWebviewPanel(
+    VIEW_TYPE,
+    panelTitle(scope),
+    vscode.ViewColumn.Active,
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+      localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoot())
+    }
+  )
+  wirePanel(context, panel, scope, filter)
+}
+
 export function registerBoardPanel(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('knote.openBoard', () =>
@@ -85,10 +123,6 @@ export function registerBoardPanel(context: vscode.ExtensionContext): void {
       }
       openBoard(context, { kind: 'note', path: rel })
     }),
-    // The Boards tree passes a path directly — no active editor involved.
-    vscode.commands.registerCommand('knote.openBoardForPath', (path: string) =>
-      openBoard(context, { kind: 'note', path })
-    ),
     vscode.window.registerWebviewPanelSerializer(VIEW_TYPE, {
       deserializeWebviewPanel: async (panel, state: { scope?: BoardScope } | undefined) => {
         if (!currentVaultRoot()) {

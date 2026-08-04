@@ -270,6 +270,46 @@ export function collectProjects(notes: Map<string, NoteMeta>, today: string): Pr
   )
 }
 
+export interface ProjectDeliverableNode {
+  kind: 'deliverable'
+  tag: string
+  project: string
+  label: string
+  done: boolean
+}
+
+/**
+ * One row per deliverable defined on `projectSlug` — the same defining rule
+ * `collectProjects` rolls up (a top-level task with a `📅` end date carrying
+ * that project's `deliverable/<project>/<name>` tag), just not aggregated.
+ * The Boards tree's "Filter by Project" section expands a project into these.
+ */
+export function collectProjectDeliverables(
+  notes: Map<string, NoteMeta>,
+  projectSlug: string
+): ProjectDeliverableNode[] {
+  const out: ProjectDeliverableNode[] = []
+  for (const meta of notes.values()) {
+    for (const task of meta.tasks) {
+      if (task.isSubtask) continue
+      if (!endDateOf(task.text)) continue
+      const tag = deliverableTagsOf(task.tags, task.text).find(
+        (t) => parseDeliverableTag(t)?.project === projectSlug
+      )
+      if (!tag) continue
+      out.push({
+        kind: 'deliverable',
+        tag,
+        project: projectSlug,
+        label: stripInlineMarkers(task.text) || tag,
+        done: isTaskDone(task)
+      })
+    }
+  }
+  out.sort((a, b) => a.label.localeCompare(b.label))
+  return out
+}
+
 /** "today" / "in 3 days" / "2 weeks ago" — same tiering as the Planner panel. */
 export function relativeLabel(date: string, today: string): string {
   const days = dayjs(date).diff(dayjs(today), 'day')

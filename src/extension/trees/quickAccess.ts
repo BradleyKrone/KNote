@@ -7,19 +7,22 @@
 
 import * as vscode from 'vscode'
 import dayjs from 'dayjs'
+import type { DeliverableScopeFilter } from '@shared/deliverables'
 import type { VaultPath } from '@shared/types'
 import { getVaultConfig, setVaultConfig } from '../../core/vaultConfig'
 import { currentVaultRoot, notesMap, onIndexDelta } from '../engine'
 import { broadcast } from '../rpc/webviewRpc'
 import { uriForRel } from '../paths'
 import { openNoteInLiveEditor } from '../views/liveEditorProvider'
+import { openBoardWithFilter } from '../views/boardPanel'
 import {
   collectBoards,
   collectMachines,
+  collectProjectDeliverables,
   collectProjects,
   type MachineEntryNode,
   type MachineNode,
-  type NoteBoardNode,
+  type ProjectDeliverableNode,
   type ProjectNode
 } from './quickAccessSelectors'
 
@@ -42,7 +45,13 @@ function debouncedRefresh(refresh: () => void): vscode.Disposable {
 
 // ---------- Boards ----------
 
-type BoardTreeNode = { kind: 'global'; open: number; total: number } | NoteBoardNode
+type BoardTreeNode =
+  | { kind: 'global'; open: number; total: number }
+  | { kind: 'filterRoot' }
+  | { kind: 'filterAll' }
+  | { kind: 'filterUnassigned' }
+  | ProjectNode
+  | ProjectDeliverableNode
 
 class BoardsTreeProvider implements vscode.TreeDataProvider<BoardTreeNode> {
   private emitter = new vscode.EventEmitter<void>()
@@ -53,31 +62,92 @@ class BoardsTreeProvider implements vscode.TreeDataProvider<BoardTreeNode> {
   }
 
   getTreeItem(node: BoardTreeNode): vscode.TreeItem {
-    if (node.kind === 'global') {
-      const item = new vscode.TreeItem('All Tasks')
-      item.iconPath = new vscode.ThemeIcon('layout')
-      item.description = `${node.open} open · ${node.total} total`
-      item.tooltip = 'Open the whole-vault Kanban board'
-      item.command = { command: 'knote.openBoard', title: 'Open Board' }
-      return item
+    switch (node.kind) {
+      case 'global': {
+        const item = new vscode.TreeItem('All Tasks')
+        item.iconPath = new vscode.ThemeIcon('layout')
+        item.description = `${node.open} open · ${node.total} total`
+        item.tooltip = 'Open the whole-vault Kanban board'
+        item.command = { command: 'knote.openBoard', title: 'Open Board' }
+        return item
+      }
+      case 'filterRoot': {
+        const item = new vscode.TreeItem(
+          'Filter by Project',
+          vscode.TreeItemCollapsibleState.Collapsed
+        )
+        item.iconPath = new vscode.ThemeIcon('filter')
+        item.tooltip = 'Narrow the whole-vault board to one project or deliverable'
+        return item
+      }
+      case 'filterAll': {
+        const item = new vscode.TreeItem('All')
+        item.iconPath = new vscode.ThemeIcon('circle-large-outline')
+        item.tooltip = 'Show every task on the whole-vault board'
+        item.command = {
+          command: 'knote.filterBoard',
+          title: 'Filter Board',
+          arguments: [{ kind: 'all' } satisfies DeliverableScopeFilter]
+        }
+        return item
+      }
+      case 'filterUnassigned': {
+        const item = new vscode.TreeItem('Unassigned')
+        item.iconPath = new vscode.ThemeIcon('question')
+        item.tooltip = 'Tasks that carry no #deliverable tag'
+        item.command = {
+          command: 'knote.filterBoard',
+          title: 'Filter Board',
+          arguments: [{ kind: 'unassigned' } satisfies DeliverableScopeFilter]
+        }
+        return item
+      }
+      case 'project': {
+        const item = new vscode.TreeItem(node.title, vscode.TreeItemCollapsibleState.Collapsed)
+        item.iconPath = new vscode.ThemeIcon(
+          node.complete ? 'pass-filled' : node.overdue ? 'warning' : 'project'
+        )
+        const count = `${node.deliverables} ${node.deliverables === 1 ? 'deliverable' : 'deliverables'}`
+        item.description = count
+        item.tooltip = `Filter the board to ${node.title}'s deliverables`
+        item.command = {
+          command: 'knote.filterBoard',
+          title: 'Filter Board',
+          arguments: [
+            { kind: 'project', slug: node.slug, label: node.title } satisfies DeliverableScopeFilter
+          ]
+        }
+        return item
+      }
+      case 'deliverable': {
+        const item = new vscode.TreeItem(node.label)
+        item.iconPath = new vscode.ThemeIcon(node.done ? 'pass-filled' : 'circle-large-outline')
+        item.tooltip = `Filter the board to just this deliverable`
+        item.command = {
+          command: 'knote.filterBoard',
+          title: 'Filter Board',
+          arguments: [
+            { kind: 'deliverable', tag: node.tag, label: node.label } satisfies DeliverableScopeFilter
+          ]
+        }
+        return item
+      }
     }
-    const item = new vscode.TreeItem(node.title)
-    item.iconPath = new vscode.ThemeIcon('checklist')
-    item.description = `${node.open}/${node.total}`
-    item.resourceUri = uriForRel(node.path)
-    item.tooltip = `Open the board for ${node.path} — ${node.open} of ${node.total} open`
-    item.command = {
-      command: 'knote.openBoardForPath',
-      title: 'Open Board',
-      arguments: [node.path]
-    }
-    return item
   }
 
   getChildren(node?: BoardTreeNode): BoardTreeNode[] {
-    if (node || !currentVaultRoot()) return []
-    const model = collectBoards(notesMap())
-    return [{ kind: 'global', open: model.open, total: model.total }, ...model.notes]
+    if (!currentVaultRoot()) return []
+    if (!node) {
+      const model = collectBoards(notesMap())
+      return [{ kind: 'global', open: model.open, total: model.total }, { kind: 'filterRoot' }]
+    }
+    if (node.kind === 'filterRoot') {
+      return [{ kind: 'filterAll' }, { kind: 'filterUnassigned' }, ...collectProjects(notesMap(), today())]
+    }
+    if (node.kind === 'project') {
+      return collectProjectDeliverables(notesMap(), node.slug)
+    }
+    return []
   }
 }
 
@@ -277,6 +347,9 @@ export function registerQuickAccessTrees(context: vscode.ExtensionContext): void
     }),
     vscode.commands.registerCommand('knote.openNoteAt', async (path: VaultPath, line: number) => {
       await openNoteInLiveEditor(uriForRel(path), line)
-    })
+    }),
+    vscode.commands.registerCommand('knote.filterBoard', (filter: DeliverableScopeFilter) =>
+      openBoardWithFilter(context, filter)
+    )
   )
 }

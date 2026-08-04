@@ -289,7 +289,7 @@ the main thing, the rows under it jump straight to one item.
 | Icon | Section | Top row opens | Rows below |
 | --- | --- | --- | --- |
 | Calendar | **This Week** | **This Week's Note** — opens (creating if needed) the current ISO-week note; just clicking the icon opens it | Past weekly notes, newest first — click to open |
-| Kanban columns | **Boards** | **All Tasks** — the whole-vault board | One row per note that has tasks, `open/total`, busiest first — click for that note's board |
+| Kanban columns | **Boards** | **All Tasks** — the whole-vault board | **Filter by Project** — All / Unassigned / one row per project (expand for its deliverables); clicking any of them opens (or narrows) the whole-vault board |
 | Tractor | **Machines** | **Full Machine Log** | Registered machines (then any unregistered serial found in a note); expand for its 🚜 entries, newest first — click to jump to the line |
 | Timeline | **Projects** | **Open Planner** | One row per `type: project` note (deliverable count + span). **Tick a project to show it on the Planner chart, untick to hide it** — the choice is saved in the vault. Click the name to open its note |
 

@@ -38,10 +38,6 @@
         "title": "KNote: Open Board for This Note"
       },
       {
-        "command": "knote.openBoardForPath",
-        "title": "KNote: Open Board for Note Path"
-      },
-      {
         "command": "knote.openNoteAt",
         "title": "KNote: Open Note at Line"
       },
@@ -280,10 +276,6 @@
         },
         {
           "command": "knote.undeprecateTag",
-          "when": "false"
-        },
-        {
-          "command": "knote.openBoardForPath",
           "when": "false"
         },
         {

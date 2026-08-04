@@ -5,6 +5,7 @@ import {
   collectBoards,
   collectMachines,
   collectMilestones,
+  collectProjectDeliverables,
   relativeLabel
 } from '@ext/trees/quickAccessSelectors'
 
@@ -169,6 +170,47 @@ describe('collectMilestones', () => {
         date: '2026-08-01'
       }
     ])
+  })
+})
+
+describe('collectProjectDeliverables', () => {
+  const notes = vault(
+    [
+      'Project.md',
+      [
+        '---',
+        'type: project',
+        'project: p',
+        '---',
+        '- [ ] Design 🛫 2026-07-01 📅 2026-07-31 #deliverable/p/design',
+        '- [x] Build 🛫 2026-08-01 📅 2026-08-31 #deliverable/p/build',
+        '- [ ] no span, not a deliverable #deliverable/p/notreally',
+        ''
+      ].join('\n')
+    ],
+    ['Work.md', '- [ ] member task #deliverable/p/design\n- [ ] unrelated task']
+  )
+
+  it('lists one row per defined deliverable, sorted by label', () => {
+    expect(collectProjectDeliverables(notes, 'p')).toEqual([
+      { kind: 'deliverable', tag: 'deliverable/p/build', project: 'p', label: 'Build', done: true },
+      { kind: 'deliverable', tag: 'deliverable/p/design', project: 'p', label: 'Design', done: false }
+    ])
+  })
+
+  it('ignores a tagged line with no 📅 span — it never defines a deliverable', () => {
+    expect(collectProjectDeliverables(notes, 'p').map((d) => d.tag)).not.toContain(
+      'deliverable/p/notreally'
+    )
+  })
+
+  it('does not list a member task from another note as a deliverable of its own', () => {
+    const tags = collectProjectDeliverables(notes, 'p').map((d) => d.tag)
+    expect(tags).toEqual(['deliverable/p/build', 'deliverable/p/design'])
+  })
+
+  it('returns nothing for an unknown project slug', () => {
+    expect(collectProjectDeliverables(notes, 'nope')).toEqual([])
   })
 })
 
