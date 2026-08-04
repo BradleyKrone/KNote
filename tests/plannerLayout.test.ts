@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   addDays,
+  dateToCenterX,
   dateToX,
   diffDays,
   domainOf,
@@ -96,6 +97,17 @@ describe('dateToX / xToDate', () => {
 
   it('sizes the grid to the whole domain', () => {
     expect(gridWidth(domain, 'week')).toBeCloseTo(domain.days * PX_PER_DAY.week)
+  })
+
+  it('centers a date half a day-width past its left edge, at every zoom', () => {
+    for (const zoom of ZOOMS) {
+      for (const date of ['2026-03-18', '2026-04-01', '2026-04-30']) {
+        expect(dateToCenterX(domain, date, zoom)).toBeCloseTo(
+          dateToX(domain, date, zoom) + PX_PER_DAY[zoom] / 2
+        )
+      }
+    }
+    expect(dateToCenterX(domain, domain.start, 'day')).toBe(PX_PER_DAY.day / 2)
   })
 
   it('quantizes a pixel drag to whole days, rounding at the half day', () => {

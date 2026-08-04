@@ -2,7 +2,15 @@
 // resize grips and the link grip that starts a dependency drag.
 
 import { Link2 } from 'lucide-react'
-import { dateToX, diffDays, PX_PER_DAY, ROW_HEIGHT, type Domain, type Zoom } from './plannerLayout'
+import {
+  dateToCenterX,
+  dateToX,
+  diffDays,
+  PX_PER_DAY,
+  ROW_HEIGHT,
+  type Domain,
+  type Zoom
+} from './plannerLayout'
 import type { PlannerDeliverable, PlannerMilestone } from './plannerSelectors'
 import type { DragMode } from './useBarDrag'
 
@@ -104,7 +112,7 @@ export function MilestoneMark({
   return (
     <div
       className={`planner-milestone${milestone.important ? ' important' : ''}`}
-      style={{ left: dateToX(domain, milestone.date, zoom), top: (ROW_HEIGHT - size) / 2 }}
+      style={{ left: dateToCenterX(domain, milestone.date, zoom), top: (ROW_HEIGHT - size) / 2 }}
       title={`${milestone.text} · ${milestone.date}`}
       onDoubleClick={onOpen}
     >

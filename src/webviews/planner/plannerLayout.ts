@@ -66,6 +66,12 @@ export function dateToX(domain: Domain, date: string, zoom: Zoom): number {
   return diffDays(domain.start, date) * PX_PER_DAY[zoom]
 }
 
+/** Center of a date's column — used for the today indicator, which should
+ * read as marking that day, not the boundary before it. */
+export function dateToCenterX(domain: Domain, date: string, zoom: Zoom): number {
+  return dateToX(domain, date, zoom) + PX_PER_DAY[zoom] / 2
+}
+
 export function xToDate(domain: Domain, x: number, zoom: Zoom): string {
   return addDays(domain.start, Math.round(x / PX_PER_DAY[zoom]))
 }

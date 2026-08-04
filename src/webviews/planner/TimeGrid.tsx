@@ -5,7 +5,14 @@
 // at day zoom a year-wide domain would otherwise be hundreds of divs that
 // exist only to draw a 1px line.
 
-import { dateToX, gridWidth, PX_PER_DAY, type Band, type Domain, type Zoom } from './plannerLayout'
+import {
+  dateToCenterX,
+  gridWidth,
+  PX_PER_DAY,
+  type Band,
+  type Domain,
+  type Zoom
+} from './plannerLayout'
 
 interface HeaderProps {
   domain: Domain
@@ -44,7 +51,7 @@ export function GridHeader({
           </div>
         ))}
       </div>
-      <div className="planner-today-pip" style={{ left: dateToX(domain, today, zoom) }} />
+      <div className="planner-today-pip" style={{ left: dateToCenterX(domain, today, zoom) }} />
     </div>
   )
 }
@@ -75,7 +82,7 @@ export function GridBody({ domain, zoom, today, height, children }: BodyProps): 
         backgroundSize: `${step}px 100%`
       }}
     >
-      <div className="planner-today-line" style={{ left: dateToX(domain, today, zoom) }} />
+      <div className="planner-today-line" style={{ left: dateToCenterX(domain, today, zoom) }} />
       {children}
     </div>
   )

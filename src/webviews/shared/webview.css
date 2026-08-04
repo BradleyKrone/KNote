@@ -1514,6 +1514,7 @@ button {
   bottom: 0;
   width: 2px;
   height: 8px;
+  transform: translateX(-50%);
   background: var(--vscode-charts-red, #e05252);
 }
 
@@ -1630,6 +1631,7 @@ button {
   top: 0;
   bottom: 0;
   width: 1px;
+  transform: translateX(-50%);
   background: var(--vscode-charts-red, #e05252);
   opacity: 0.8;
   pointer-events: none;
@@ -1745,13 +1747,14 @@ button {
   display: flex;
   align-items: center;
   gap: 5px;
-  transform: translateX(-50%);
   z-index: 2;
 }
 
+/* Centered on the date pixel itself, not the whole diamond+label row — the
+   label's length must never shift where the diamond appears to sit. */
 .planner-diamond {
   background: var(--vscode-charts-purple, #b06fd0);
-  transform: rotate(45deg);
+  transform: translateX(-50%) rotate(45deg);
   flex: none;
 }
 
