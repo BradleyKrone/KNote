@@ -194,7 +194,13 @@ describe('collectProjectDeliverables', () => {
   it('lists one row per defined deliverable, sorted by label', () => {
     expect(collectProjectDeliverables(notes, 'p')).toEqual([
       { kind: 'deliverable', tag: 'deliverable/p/build', project: 'p', label: 'Build', done: true },
-      { kind: 'deliverable', tag: 'deliverable/p/design', project: 'p', label: 'Design', done: false }
+      {
+        kind: 'deliverable',
+        tag: 'deliverable/p/design',
+        project: 'p',
+        label: 'Design',
+        done: false
+      }
     ])
   })
 

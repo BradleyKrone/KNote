@@ -220,7 +220,7 @@ export function mergeTaskMetaLines(
 }
 
 /** A list-item line (`- `, `* `, `1. `) — the meta/note lines under a task are these. */
-const LIST_ITEM_RE = /^(\s*)([-*+]|\d+[.)])\s/
+export const LIST_ITEM_RE = /^(\s*)([-*+]|\d+[.)])\s/
 
 /**
  * Exclusive end index of a task's *own* attached-note block within `lines`:

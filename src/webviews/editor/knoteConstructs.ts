@@ -46,6 +46,7 @@ import { host } from '../shared/rpc'
 import { promptReason, showToast, useConfigStore } from '../shared/stores'
 import { checkboxRange } from './constructLogic'
 import { isNoteEmbedLine } from './embedLogic'
+import { hangingIndentEm } from './hangingIndent'
 import { isCollapsedMermaidFence } from './mermaidRender'
 
 // One webview edits exactly one note; its vault-relative path is set at init.
@@ -365,6 +366,23 @@ function decorateLine(
     (inTable(view, line.from) || inMermaidBlock(view, line.from) || isNoteEmbedLine(text))
   ) {
     return
+  }
+
+  // Hanging indent: a wrapped line's continuation tucks under its own text
+  // instead of falling back flush-left. Applied whether or not the line is
+  // revealed — one width per line *shape*, so the caret arriving on a line
+  // never shifts it sideways. Skipped inside code and tables, which have their
+  // own monospace block layout.
+  if (!inCode(view, line.from) && !inTable(view, line.from)) {
+    const hang = hangingIndentEm(text)
+    if (hang !== null) {
+      out.push(
+        Decoration.line({
+          class: 'cm-knote-hang',
+          attributes: { style: `--knote-hang:${hang}em` }
+        }).range(line.from)
+      )
+    }
   }
 
   // Whole-line styling (always applied, never hidden).

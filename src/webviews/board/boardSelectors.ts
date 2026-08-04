@@ -164,7 +164,10 @@ export interface BoardFilters {
   deliverableScope?: DeliverableScopeFilter
 }
 
-function matchesDeliverableScope(card: Pick<BoardCard, 'tags'>, scope: DeliverableScopeFilter): boolean {
+function matchesDeliverableScope(
+  card: Pick<BoardCard, 'tags'>,
+  scope: DeliverableScopeFilter
+): boolean {
   if (!scope || scope.kind === 'all') return true
   if (scope.kind === 'unassigned') return !card.tags.some((t) => parseDeliverableTag(t))
   if (scope.kind === 'project')

@@ -127,7 +127,11 @@ class BoardsTreeProvider implements vscode.TreeDataProvider<BoardTreeNode> {
           command: 'knote.filterBoard',
           title: 'Filter Board',
           arguments: [
-            { kind: 'deliverable', tag: node.tag, label: node.label } satisfies DeliverableScopeFilter
+            {
+              kind: 'deliverable',
+              tag: node.tag,
+              label: node.label
+            } satisfies DeliverableScopeFilter
           ]
         }
         return item
@@ -142,7 +146,11 @@ class BoardsTreeProvider implements vscode.TreeDataProvider<BoardTreeNode> {
       return [{ kind: 'global', open: model.open, total: model.total }, { kind: 'filterRoot' }]
     }
     if (node.kind === 'filterRoot') {
-      return [{ kind: 'filterAll' }, { kind: 'filterUnassigned' }, ...collectProjects(notesMap(), today())]
+      return [
+        { kind: 'filterAll' },
+        { kind: 'filterUnassigned' },
+        ...collectProjects(notesMap(), today())
+      ]
     }
     if (node.kind === 'project') {
       return collectProjectDeliverables(notesMap(), node.slug)

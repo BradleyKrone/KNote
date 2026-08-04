@@ -11,6 +11,7 @@ import { joinRel } from '@shared/pathUtils'
 import { getVaultConfig } from '../../core/vaultConfig'
 import { currentVaultRoot, notesMap, onIndexDelta } from '../engine'
 import { uriForRel } from '../paths'
+import { collectWeeklyNotes } from './weeklySelectors'
 
 dayjs.extend(isoWeek)
 
@@ -55,13 +56,13 @@ class WeeklyTreeProvider implements vscode.TreeDataProvider<WeeklyNode> {
   async getChildren(node?: WeeklyNode): Promise<WeeklyNode[]> {
     if (node || !currentVaultRoot()) return []
     const config = await getVaultConfig()
-    const prefix = config.weeklyFolder ? config.weeklyFolder + '/' : ''
     const current = await thisWeekPath()
 
-    const past = [...notesMap().values()]
-      .filter((m) => m.path.startsWith(prefix) && m.path !== current)
-      .sort((a, b) => b.mtimeMs - a.mtimeMs)
-      .map((m): WeeklyNode => ({ kind: 'past', path: m.path, title: m.title }))
+    const past = collectWeeklyNotes(notesMap().values(), {
+      folder: config.weeklyFolder,
+      format: config.weeklyFormat,
+      current
+    }).map((n): WeeklyNode => ({ kind: 'past', path: n.path, title: n.title }))
 
     return [{ kind: 'thisWeek' }, ...past]
   }

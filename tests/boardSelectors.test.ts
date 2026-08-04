@@ -284,9 +284,11 @@ describe('collectCards deliverable windows', () => {
     // Ignore the deliverable-window gate here — these tests are only about
     // which project/deliverable a card belongs to, not when it's visible.
     const scoped = (deliverableScope: BoardFilters['deliverableScope']): string[] =>
-      collectCards(notes, { kind: 'global' }, { ...baseFilters, ignoreDeliverableWindow: true, deliverableScope }).map(
-        (c) => c.displayText
-      )
+      collectCards(
+        notes,
+        { kind: 'global' },
+        { ...baseFilters, ignoreDeliverableWindow: true, deliverableScope }
+      ).map((c) => c.displayText)
 
     it('null and { kind: "all" } both mean unfiltered', () => {
       const all = scoped(undefined)
@@ -318,10 +320,9 @@ describe('collectCards deliverable windows', () => {
     })
 
     it('"deliverable" narrows to the exact tag', () => {
-      expect(scoped({ kind: 'deliverable', tag: 'deliverable/p/current', label: 'Current' })).toEqual([
-        'Current',
-        'current work'
-      ])
+      expect(
+        scoped({ kind: 'deliverable', tag: 'deliverable/p/current', label: 'Current' })
+      ).toEqual(['Current', 'current work'])
     })
   })
 })

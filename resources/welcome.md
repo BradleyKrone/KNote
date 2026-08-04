@@ -30,8 +30,10 @@ Markdown:
 
 - Headings, **bold**/*italic*/~~strike~~, `code`, blockquotes and lists
   render as a styled document — proportional body text in a centered reading
-  column, boxed code blocks, tinted quotes — while the raw syntax reveals on
-  the line your cursor is on, so you always edit the source directly.
+  column, boxed code blocks, tinted quotes, and long lines that wrap with a
+  hanging indent so a list item's continuation tucks under its own text —
+  while the raw syntax reveals on the line your cursor is on, so you always
+  edit the source directly.
 - **Pipe tables render as real grids you type straight into** (with column
   alignment) — click any cell and start typing, the way Obsidian does it. The
   table stays a rendered grid; you never edit raw pipes to enter data. Keys
