@@ -88,6 +88,7 @@ import {
   addLineTag,
   editMachineOnLine,
   insertCheckbox,
+  insertCodeBlock,
   insertMachineEntry,
   insertMarkdownLink,
   insertMilestone,
@@ -515,6 +516,7 @@ function insertItems(
       icon: <Milestone size={ICON} />,
       onClick: run(() => insertMilestone(view))
     },
+    { label: 'Code block', icon: <Code size={ICON} />, onClick: run(() => insertCodeBlock(view)) },
     { label: 'Table…', icon: <Table2 size={ICON} />, onClick: openSub('table') },
     { label: 'Machine work…', icon: <Truck size={ICON} />, onClick: openSub('machine') }
   ]

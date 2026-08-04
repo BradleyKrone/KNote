@@ -2,8 +2,18 @@ import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import type { BoardColumn, NoteMeta, VaultPath } from '@shared/types'
 import { isInside, samePath, titleOf } from '@shared/pathUtils'
-import { ARCHIVED_CHAR, DUE_RE, PRIORITY_RE, stripInlineMarkers } from '@shared/parser/patterns'
-import { deliverableWindows, visibleForDeliverable } from '@shared/deliverables'
+import {
+  ARCHIVED_CHAR,
+  DUE_RE,
+  PRIORITY_RE,
+  parseDeliverableTag,
+  stripInlineMarkers
+} from '@shared/parser/patterns'
+import {
+  deliverableWindows,
+  visibleForDeliverable,
+  type DeliverableScopeFilter
+} from '@shared/deliverables'
 
 dayjs.extend(isoWeek)
 
@@ -150,6 +160,19 @@ export interface BoardFilters {
   due?: DateRangeFilter
   /** Escape hatch for the deliverable-window gate below — the board's "Show all deliverable tasks" toggle. */
   ignoreDeliverableWindow?: boolean
+  /** The Boards tree's project/deliverable/unassigned pick — orthogonal to `tag`, both apply together. */
+  deliverableScope?: DeliverableScopeFilter
+}
+
+function matchesDeliverableScope(
+  card: Pick<BoardCard, 'tags'>,
+  scope: DeliverableScopeFilter
+): boolean {
+  if (!scope || scope.kind === 'all') return true
+  if (scope.kind === 'unassigned') return !card.tags.some((t) => parseDeliverableTag(t))
+  if (scope.kind === 'project')
+    return card.tags.some((t) => parseDeliverableTag(t)?.project === scope.slug)
+  return card.tags.includes(scope.tag)
 }
 
 export function collectCards(
@@ -176,6 +199,7 @@ export function collectCards(
         !card.tags.some((t) => t === filters.tag || t.startsWith(filters.tag + '/'))
       )
         continue
+      if (!matchesDeliverableScope(card, filters.deliverableScope ?? null)) continue
       if (filters.text && !card.text.toLowerCase().includes(filters.text.toLowerCase())) continue
       if (!matchesDateFilter(card.statusChanged, filters.statusChanged ?? ANY_DATE_FILTER)) continue
       if (!matchesDateFilter(card.dateEntered, filters.dateEntered ?? ANY_DATE_FILTER)) continue

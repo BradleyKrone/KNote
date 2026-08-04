@@ -2,6 +2,59 @@
 // editor follows the active color theme (mirrors shared/webview.css).
 
 import { EditorView } from '@codemirror/view'
+import { HighlightStyle } from '@codemirror/language'
+import { tags as t } from '@lezer/highlight'
+
+/**
+ * Fenced-code token colors, mapped onto VS Code's `--vscode-symbolIcon-*`
+ * theme variables (the same family editor.css uses for embed/hover code)
+ * instead of `@codemirror/language`'s `defaultHighlightStyle` — that style's
+ * fixed light-theme palette (e.g. a dark olive `#404740` for `tags.meta`,
+ * which covers C-style preprocessor directives like `#include`) reads as
+ * near-invisible, low-contrast text against a dark VS Code theme.
+ */
+export const knoteHighlightStyle = HighlightStyle.define([
+  {
+    tag: [t.comment, t.lineComment, t.blockComment, t.docComment],
+    color: 'var(--vscode-descriptionForeground)',
+    fontStyle: 'italic'
+  },
+  {
+    tag: [
+      t.keyword,
+      t.controlKeyword,
+      t.moduleKeyword,
+      t.operatorKeyword,
+      t.meta,
+      t.processingInstruction,
+      t.macroName
+    ],
+    color: 'var(--vscode-symbolIcon-keywordForeground, #c586c0)'
+  },
+  {
+    tag: [t.string, t.special(t.string), t.regexp],
+    color: 'var(--vscode-symbolIcon-stringForeground, #ce9178)'
+  },
+  { tag: [t.number, t.bool, t.atom], color: 'var(--vscode-symbolIcon-numberForeground, #b5cea8)' },
+  {
+    tag: [t.function(t.variableName), t.function(t.propertyName)],
+    color: 'var(--vscode-symbolIcon-functionForeground, #dcdcaa)'
+  },
+  {
+    tag: [t.typeName, t.className, t.namespace],
+    color: 'var(--vscode-symbolIcon-classForeground, #4ec9b0)'
+  },
+  {
+    tag: [t.variableName, t.definition(t.variableName), t.propertyName],
+    color: 'var(--vscode-symbolIcon-variableForeground, #9cdcfe)'
+  },
+  { tag: [t.link, t.url], color: 'var(--vscode-textLink-foreground)', textDecoration: 'underline' },
+  { tag: t.heading, fontWeight: 'bold' },
+  { tag: t.emphasis, fontStyle: 'italic' },
+  { tag: t.strong, fontWeight: 'bold' },
+  { tag: t.strikethrough, textDecoration: 'line-through' },
+  { tag: t.invalid, color: 'var(--vscode-errorForeground)' }
+])
 
 export const knoteTheme = EditorView.theme({
   '&': {

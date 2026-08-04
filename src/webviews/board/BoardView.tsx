@@ -13,7 +13,9 @@ import {
   type DragOverEvent,
   type DragStartEvent
 } from '@dnd-kit/core'
+import type { DeliverableScopeFilter } from '@shared/deliverables'
 import { reasonLineForTask } from '@shared/parser/patterns'
+import { on } from '../shared/rpc'
 import { promptReason, showToast, useConfigStore, useIndexStore } from '../shared/stores'
 import {
   ANY_DATE_FILTER,
@@ -31,7 +33,13 @@ import { Column } from './Column'
 import { cardId, CardPreview } from './Card'
 import { DateRangeFilterControl } from './DateRangeFilterControl'
 
-export function BoardView({ scope }: { scope: BoardScope }): React.JSX.Element {
+export function BoardView({
+  scope,
+  initialFilter = null
+}: {
+  scope: BoardScope
+  initialFilter?: DeliverableScopeFilter
+}): React.JSX.Element {
   const notes = useIndexStore((s) => s.notes)
   const columns = useConfigStore((s) => s.vaultConfig.columns)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
@@ -41,6 +49,9 @@ export function BoardView({ scope }: { scope: BoardScope }): React.JSX.Element {
   const [dateEnteredFilter, setDateEnteredFilter] = useState<DateRangeFilter>(ANY_DATE_FILTER)
   const [dueFilter, setDueFilter] = useState<DateRangeFilter>(ANY_DATE_FILTER)
   const [allDeliverables, setAllDeliverables] = useState(false)
+  const [deliverableScope, setDeliverableScope] = useState<DeliverableScopeFilter>(initialFilter)
+
+  useEffect(() => on('boardFilterChanged', setDeliverableScope), [])
 
   const cards = useMemo(
     () =>
@@ -50,7 +61,8 @@ export function BoardView({ scope }: { scope: BoardScope }): React.JSX.Element {
         statusChanged: statusChangedFilter,
         dateEntered: dateEnteredFilter,
         due: dueFilter,
-        ignoreDeliverableWindow: allDeliverables
+        ignoreDeliverableWindow: allDeliverables,
+        deliverableScope
       }),
     [
       notes,
@@ -60,7 +72,8 @@ export function BoardView({ scope }: { scope: BoardScope }): React.JSX.Element {
       statusChangedFilter,
       dateEnteredFilter,
       dueFilter,
-      allDeliverables
+      allDeliverables,
+      deliverableScope
     ]
   )
   const byColumn = useMemo(() => groupByColumn(cards, columns), [cards, columns])
@@ -215,6 +228,18 @@ export function BoardView({ scope }: { scope: BoardScope }): React.JSX.Element {
       <div className="board-header">
         <div className="board-title">
           Board <span className="board-scope">{scopeLabel(scope)}</span>
+          {deliverableScope && deliverableScope.kind !== 'all' && (
+            <span className="board-scope-filter">
+              {deliverableScope.kind === 'unassigned' ? 'Unassigned' : deliverableScope.label}
+              <button
+                className="board-scope-filter-clear"
+                title="Clear filter"
+                onClick={() => setDeliverableScope(null)}
+              >
+                ×
+              </button>
+            </span>
+          )}
         </div>
         <div className="board-controls">
           <input

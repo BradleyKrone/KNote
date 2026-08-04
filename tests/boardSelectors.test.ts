@@ -279,4 +279,50 @@ describe('collectCards deliverable windows', () => {
   it('never lets a closed deliverable shrink the tag dropdown', () => {
     expect(boardTags(notes, { kind: 'note', path: 'Work.md' })).toContain('deliverable/p/future')
   })
+
+  describe('deliverableScope (the Boards tree filter)', () => {
+    // Ignore the deliverable-window gate here — these tests are only about
+    // which project/deliverable a card belongs to, not when it's visible.
+    const scoped = (deliverableScope: BoardFilters['deliverableScope']): string[] =>
+      collectCards(
+        notes,
+        { kind: 'global' },
+        { ...baseFilters, ignoreDeliverableWindow: true, deliverableScope }
+      ).map((c) => c.displayText)
+
+    it('null and { kind: "all" } both mean unfiltered', () => {
+      const all = scoped(undefined)
+      expect(scoped(null)).toEqual(all)
+      expect(scoped({ kind: 'all' })).toEqual(all)
+      expect(all).toContain('plain task')
+      expect(all).toContain('current work')
+    })
+
+    it('"unassigned" keeps only cards with no deliverable tag at all', () => {
+      expect(scoped({ kind: 'unassigned' })).toEqual(['plain task'])
+    })
+
+    it('"project" matches every card tagged under that project, regardless of deliverable', () => {
+      expect(scoped({ kind: 'project', slug: 'p', label: 'P' })).toEqual([
+        'Current',
+        'Future',
+        'Past',
+        'current work',
+        'future work',
+        'late work',
+        'finished work',
+        'orphan work'
+      ])
+    })
+
+    it('"project" for an unknown slug matches nothing', () => {
+      expect(scoped({ kind: 'project', slug: 'nope', label: 'Nope' })).toEqual([])
+    })
+
+    it('"deliverable" narrows to the exact tag', () => {
+      expect(
+        scoped({ kind: 'deliverable', tag: 'deliverable/p/current', label: 'Current' })
+      ).toEqual(['Current', 'current work'])
+    })
+  })
 })

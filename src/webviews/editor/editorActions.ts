@@ -84,6 +84,12 @@ export function insertCheckbox(view: EditorView): void {
   insertBlock(view, '- [ ] ')
 }
 
+/** Insert an empty fenced code block, caret placed on the language token. */
+export function insertCodeBlock(view: EditorView): void {
+  const text = '```\n\n```'
+  insertBlock(view, text, { from: 3, to: 3 })
+}
+
 /** Insert a 🏁 milestone line at the caret, with the placeholder label selected. */
 export function insertMilestone(view: EditorView): void {
   const label = 'Milestone'

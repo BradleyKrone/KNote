@@ -3,6 +3,28 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.1.0
+
+- **Code block highlighting**: fenced code blocks are syntax-highlighted in
+  both Live Preview and Reading mode/embeds/hover previews, for JS/TS,
+  Python, JSON, HTML, CSS, Bash, Markdown, YAML, C/C++, Java, Go, Rust and
+  SQL. Right-click → **Insert → Code block** adds an empty fence.
+- **Filter the board by project**: the Boards sidebar section gained a
+  **Filter by Project** row — All, Unassigned, or one row per project,
+  expandable to its individual deliverables. Clicking one opens (or narrows)
+  the whole-vault board to just that scope, shown as a chip in the board's
+  header with a ✕ to clear it.
+- **Hanging indent on wrapped lines**: in Live Preview a long list item or
+  task that wraps now tucks its continuation under its own text instead of
+  falling back flush-left, so nesting stays readable at any window width.
+  Code blocks and tables keep their existing layout.
+- Fixed the Planner's today line and milestone diamonds sitting at the start
+  edge of their day column instead of centered on it, so they read as
+  marking the boundary before the day rather than the day itself.
+- Fixed the sidebar's past weekly notes list ordering by last-edited time
+  instead of the week each note is actually for, so touching an old weekly
+  note bounced it to the top of the list out of chronological order.
+
 ## 2.0.0
 
 - **Project Planner**: the Timeline panel is now a Gantt-style project

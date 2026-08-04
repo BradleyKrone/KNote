@@ -30,8 +30,10 @@ Markdown:
 
 - Headings, **bold**/*italic*/~~strike~~, `code`, blockquotes and lists
   render as a styled document — proportional body text in a centered reading
-  column, boxed code blocks, tinted quotes — while the raw syntax reveals on
-  the line your cursor is on, so you always edit the source directly.
+  column, boxed code blocks, tinted quotes, and long lines that wrap with a
+  hanging indent so a list item's continuation tucks under its own text —
+  while the raw syntax reveals on the line your cursor is on, so you always
+  edit the source directly.
 - **Pipe tables render as real grids you type straight into** (with column
   alignment) — click any cell and start typing, the way Obsidian does it. The
   table stays a rendered grid; you never edit raw pipes to enter data. Keys
@@ -225,6 +227,16 @@ All in Markdown editors only:
 All hotkeys are ordinary VS Code keybindings — rebind them in **Keyboard
 Shortcuts** (`Ctrl+K Ctrl+S`).
 
+### Code blocks
+
+Fenced code blocks (```` ```lang ````) are syntax-highlighted, both while
+editing in Live Preview and in embeds/hover previews/Reading mode, for a
+broad common set of languages — JS/TS, Python, JSON, HTML, CSS, Bash, Markdown,
+YAML, C/C++, Java, Go, Rust, SQL. An unrecognized language still renders as
+plain, unhighlighted code rather than an error. Right-click in Live Preview →
+**Insert → Code block** to add an empty fence with the caret on the language
+slot.
+
 ## The Kanban board
 
 **KNote: Open Kanban Board** (`Ctrl+Alt+K`), or the Kanban icon in the
@@ -279,7 +291,7 @@ the main thing, the rows under it jump straight to one item.
 | Icon | Section | Top row opens | Rows below |
 | --- | --- | --- | --- |
 | Calendar | **This Week** | **This Week's Note** — opens (creating if needed) the current ISO-week note; just clicking the icon opens it | Past weekly notes, newest first — click to open |
-| Kanban columns | **Boards** | **All Tasks** — the whole-vault board | One row per note that has tasks, `open/total`, busiest first — click for that note's board |
+| Kanban columns | **Boards** | **All Tasks** — the whole-vault board | **Filter by Project** — All / Unassigned / one row per project (expand for its deliverables); clicking any of them opens (or narrows) the whole-vault board |
 | Tractor | **Machines** | **Full Machine Log** | Registered machines (then any unregistered serial found in a note); expand for its 🚜 entries, newest first — click to jump to the line |
 | Timeline | **Projects** | **Open Planner** | One row per `type: project` note (deliverable count + span). **Tick a project to show it on the Planner chart, untick to hide it** — the choice is saved in the vault. Click the name to open its note |
 

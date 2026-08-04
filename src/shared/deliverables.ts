@@ -27,6 +27,19 @@ export interface DeliverableWindow {
   end: string
 }
 
+/**
+ * The board's "which project/deliverable am I looking at" filter, picked from
+ * the Boards sidebar tree. `label` is display-only (the tree already knows the
+ * project/deliverable's human title); matching only ever looks at `slug`/`tag`.
+ * `null` is the resting "no filter" state, same as `{ kind: 'all' }`.
+ */
+export type DeliverableScopeFilter =
+  | { kind: 'all' }
+  | { kind: 'unassigned' }
+  | { kind: 'project'; slug: string; label: string }
+  | { kind: 'deliverable'; tag: string; label: string }
+  | null
+
 /** True when the note's frontmatter marks it a project note. */
 export function isProjectNote(meta: NoteMeta): boolean {
   return String(meta.frontmatter['type'] ?? '').trim() === 'project'

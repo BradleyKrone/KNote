@@ -13,6 +13,7 @@
 
 import MarkdownIt from 'markdown-it'
 import type { StateInline } from 'markdown-it/index.js'
+import { hljsHighlight } from './codeHighlight'
 import { TAG_RE } from './parser/patterns'
 import { isImage } from './pathUtils'
 import { splitWikiTarget } from './wikiResolve'
@@ -209,7 +210,10 @@ export function applyKnoteRules(md: MarkdownIt, opts: KnoteRenderOptions = {}): 
 
 /** A fresh markdown-it instance carrying KNote's rules. */
 export function createRenderer(opts: KnoteRenderOptions = {}): MarkdownIt {
-  return applyKnoteRules(new MarkdownIt({ html: false, linkify: true, breaks: false }), opts)
+  return applyKnoteRules(
+    new MarkdownIt({ html: false, linkify: true, breaks: false, highlight: hljsHighlight }),
+    opts
+  )
 }
 
 /** One-shot render. Prefer holding a `createRenderer` instance when rendering repeatedly. */

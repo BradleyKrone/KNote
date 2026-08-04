@@ -9,14 +9,15 @@
 import { EditorState, Prec, type Text } from '@codemirror/state'
 import { EditorView, keymap, drawSelection, highlightActiveLine } from '@codemirror/view'
 import { defaultKeymap, indentWithTab } from '@codemirror/commands'
-import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
+import { syntaxHighlighting } from '@codemirror/language'
 import { markdown } from '@codemirror/lang-markdown'
 import { Strikethrough, Table, Autolink } from '@lezer/markdown'
+import { codeLanguageFor } from './codeLanguages'
 import { search, searchKeymap } from '@codemirror/search'
 import { completionKeymap } from '@codemirror/autocomplete'
 import type { CmEdit, CmPos } from '@shared/editorSync'
 import { vscodeApi } from '../shared/rpc'
-import { knoteTheme } from './theme'
+import { knoteTheme, knoteHighlightStyle } from './theme'
 import { livePreview } from './livePreview'
 import { tableCellEdit } from './tableCellEdit'
 import { tableRender } from './tableRender'
@@ -79,8 +80,8 @@ export function createEditor(opts: { parent: HTMLElement; doc: string }): Editor
       highlightActiveLine(),
       drawSelection(),
       EditorView.lineWrapping,
-      markdown({ extensions: [Strikethrough, Table, Autolink] }),
-      syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+      markdown({ extensions: [Strikethrough, Table, Autolink], codeLanguages: codeLanguageFor }),
+      syntaxHighlighting(knoteHighlightStyle, { fallback: true }),
       // Before tableRender: its decorations read the active-cell / table-source
       // state fields, and a state field can only read one declared before it.
       tableCellEdit,

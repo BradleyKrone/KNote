@@ -4,6 +4,7 @@
 // boundary as messages so the KNOTE_STALE / KNOTE_CONFLICT sentinels (see
 // errors.ts) keep working on the webview side.
 
+import type { DeliverableScopeFilter } from './deliverables'
 import type {
   EmbedNote,
   FileReadResult,
@@ -144,6 +145,8 @@ export interface HostEvents {
   activeNoteChanged: VaultPath | null
   /** Ask the Search view to run this query (e.g. a Tags-tree click sends `tag:#x`). */
   searchFor: string
+  /** The Boards tree picked a project/deliverable/unassigned/all filter for the open global board. */
+  boardFilterChanged: DeliverableScopeFilter
 }
 
 // ---------- Wire format ----------

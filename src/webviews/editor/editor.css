@@ -397,6 +397,12 @@ body {
 .cm-editor {
   --knote-group-border: rgba(127, 127, 127, 0.35);
   --knote-group-bg: rgba(127, 127, 127, 0.06);
+  /* CodeMirror's base theme ships `.cm-line { padding: 0 2px 0 6px }` scoped
+     under a generated class on .cm-editor — i.e. at two-class specificity, so
+     it outranks a single-class `.cm-*-line` rule in this file. 6px is therefore
+     every line's real left padding, and the hanging indent below has to add to
+     it rather than replace it. Named here so there's one place to retune. */
+  --knote-line-pad: 6px;
 }
 .cm-knote-group-line {
   border-left: 1px solid var(--knote-group-border);
@@ -421,6 +427,31 @@ body {
   border-bottom-left-radius: 6px;
   border-bottom-right-radius: 6px;
   padding-bottom: 0.75em;
+}
+
+/* Hanging indent — a wrapped line's continuation tucks under the line's own
+   text instead of falling back flush-left. `--knote-hang` is set per line by
+   knoteConstructs.ts from hangingIndent.ts: one width per line *shape* (indent
+   depth + marker kind), identical whether or not the line is cursor-revealed,
+   so the caret arriving never shifts the line sideways.
+
+   PADDING plus a matching negative TEXT-INDENT, never margin — same rule as
+   .cm-knote-group-first. CodeMirror is built for exactly this pair: when it
+   paints selection rectangles it reads `paddingLeft + Math.min(0, textIndent)`,
+   so the two cancel and multi-line selections stay put.
+
+   Three classes deliberately: CodeMirror's own base `.cm-line` padding rule is
+   two-class specificity (see --knote-line-pad), so a bare `.cm-knote-hang`
+   would silently lose the cascade. */
+.cm-editor .cm-line.cm-knote-hang {
+  padding-left: calc(var(--knote-line-pad, 6px) + var(--knote-hang, 0px));
+  text-indent: calc(-1 * var(--knote-hang, 0px));
+}
+/* text-indent is inherited and applies to any block container inside the line,
+   which includes the inline-block `•` bullet and the Kanban state pill — left
+   alone they'd be dragged left out of their own boxes. */
+.cm-knote-hang * {
+  text-indent: 0;
 }
 
 /* The "…" stand-in for a collapsed block. */
@@ -626,6 +657,54 @@ body {
 .cm-knote-hover-body .knote-unresolved {
   color: var(--vscode-textLink-foreground);
   text-decoration: none;
+}
+/* highlight.js token colors for fenced code rendered inside embed cards and
+   hover previews (see src/shared/codeHighlight.ts) — mapped onto theme
+   variables so light/dark VS Code themes both read correctly. */
+.cm-knote-embed-body .hljs-comment,
+.cm-knote-embed-body .hljs-quote,
+.cm-knote-hover-body .hljs-comment,
+.cm-knote-hover-body .hljs-quote {
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+.cm-knote-embed-body .hljs-keyword,
+.cm-knote-embed-body .hljs-selector-tag,
+.cm-knote-embed-body .hljs-literal,
+.cm-knote-embed-body .hljs-type,
+.cm-knote-hover-body .hljs-keyword,
+.cm-knote-hover-body .hljs-selector-tag,
+.cm-knote-hover-body .hljs-literal,
+.cm-knote-hover-body .hljs-type {
+  color: var(--vscode-symbolIcon-keywordForeground, #c586c0);
+}
+.cm-knote-embed-body .hljs-string,
+.cm-knote-embed-body .hljs-attr,
+.cm-knote-hover-body .hljs-string,
+.cm-knote-hover-body .hljs-attr {
+  color: var(--vscode-symbolIcon-stringForeground, #ce9178);
+}
+.cm-knote-embed-body .hljs-number,
+.cm-knote-hover-body .hljs-number {
+  color: var(--vscode-symbolIcon-numberForeground, #b5cea8);
+}
+.cm-knote-embed-body .hljs-title,
+.cm-knote-embed-body .hljs-title.function_,
+.cm-knote-embed-body .hljs-title.class_,
+.cm-knote-hover-body .hljs-title,
+.cm-knote-hover-body .hljs-title.function_,
+.cm-knote-hover-body .hljs-title.class_ {
+  color: var(--vscode-symbolIcon-functionForeground, #dcdcaa);
+}
+.cm-knote-embed-body .hljs-variable,
+.cm-knote-embed-body .hljs-params,
+.cm-knote-hover-body .hljs-variable,
+.cm-knote-hover-body .hljs-params {
+  color: var(--vscode-symbolIcon-variableForeground, #9cdcfe);
+}
+.cm-knote-embed-body .hljs-built_in,
+.cm-knote-hover-body .hljs-built_in {
+  color: var(--vscode-symbolIcon-classForeground, #4ec9b0);
 }
 .cm-knote-hover-body .knote-tag {
   color: #000;
