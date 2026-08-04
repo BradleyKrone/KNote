@@ -225,6 +225,16 @@ All in Markdown editors only:
 All hotkeys are ordinary VS Code keybindings — rebind them in **Keyboard
 Shortcuts** (`Ctrl+K Ctrl+S`).
 
+### Code blocks
+
+Fenced code blocks (```` ```lang ````) are syntax-highlighted, both while
+editing in Live Preview and in embeds/hover previews/Reading mode, for a
+broad common set of languages — JS/TS, Python, JSON, HTML, CSS, Bash, Markdown,
+YAML, C/C++, Java, Go, Rust, SQL. An unrecognized language still renders as
+plain, unhighlighted code rather than an error. Right-click in Live Preview →
+**Insert → Code block** to add an empty fence with the caret on the language
+slot.
+
 ## The Kanban board
 
 **KNote: Open Kanban Board** (`Ctrl+Alt+K`), or the Kanban icon in the

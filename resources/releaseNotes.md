@@ -3,6 +3,13 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.1.0
+
+- **Code block highlighting**: fenced code blocks are syntax-highlighted in
+  both Live Preview and Reading mode/embeds/hover previews, for JS/TS,
+  Python, JSON, HTML, CSS, Bash, Markdown, YAML, C/C++, Java, Go, Rust and
+  SQL. Right-click → **Insert → Code block** adds an empty fence.
+
 ## 2.0.0
 
 - **Project Planner**: the Timeline panel is now a Gantt-style project
