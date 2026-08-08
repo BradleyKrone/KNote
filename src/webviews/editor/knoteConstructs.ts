@@ -30,6 +30,7 @@ import {
   ARCHIVED_CHAR,
   BLOCK_ID_RE,
   DATE_ENTERED_RE,
+  DELIVERABLE_REF_RE,
   MACHINE_ENTRY_RE,
   MILESTONE_LINE_RE,
   PRIORITY_RE,
@@ -266,6 +267,32 @@ class WikiLinkWidget extends WidgetType {
   }
 }
 
+/** `@deliverable(project/name)` join marker → a pill naming `project/deliverable`,
+ *  deliberately styled apart from `.cm-knote-tag` (see editor.css) since it's
+ *  structural membership, not a content tag. Non-interactive, unlike
+ *  WikiLinkWidget — there's nowhere to navigate to. */
+class DeliverableRefWidget extends WidgetType {
+  constructor(
+    private readonly project: string,
+    private readonly name: string
+  ) {
+    super()
+  }
+  eq(other: DeliverableRefWidget): boolean {
+    return other.project === this.project && other.name === this.name
+  }
+  toDOM(): HTMLElement {
+    const span = document.createElement('span')
+    span.className = 'cm-knote-deliverable-ref'
+    span.textContent = `${this.project}/${this.name}`
+    span.title = `${this.project}/${this.name}`
+    return span
+  }
+  ignoreEvent(): boolean {
+    return true
+  }
+}
+
 // Live `<img>` elements currently in the DOM, keyed by the vault-relative
 // path they show, so an `attachmentChanged` event (e.g. a draw.io diagram
 // edited and saved in its own editor) can reload exactly the images
@@ -278,7 +305,8 @@ const liveImages = new Map<string, Set<HTMLImageElement>>()
 /** `src` resolved against the open note's folder, or null for an external/data URI. */
 function resolvedAttachmentPath(src: string): string | null {
   if (/^[a-z][a-z0-9+.-]*:/i.test(src)) return null
-  const folder = notePath && notePath.includes('/') ? notePath.slice(0, notePath.lastIndexOf('/')) : ''
+  const folder =
+    notePath && notePath.includes('/') ? notePath.slice(0, notePath.lastIndexOf('/')) : ''
   return resolveEmbedPath(folder, src)
 }
 
@@ -543,6 +571,17 @@ function decorateLine(
     const from = line.from + hashIndex
     if (inCode(view, from)) continue
     out.push(Decoration.mark({ class: 'cm-knote-tag' }).range(from, from + 1 + tagName.length))
+  }
+
+  // @deliverable(project/name) join markers — collapsed to a pill naming just the
+  // deliverable, same reveal-on-caret treatment [[wiki links]] get; raw text stays
+  // visible (and editable) on the line the caret is on.
+  DELIVERABLE_REF_RE.lastIndex = 0
+  for (let m = DELIVERABLE_REF_RE.exec(text); m; m = DELIVERABLE_REF_RE.exec(text)) {
+    const from = line.from + m.index
+    const to = from + m[0].length
+    if (inCode(view, from) || isRevealed) continue
+    out.push(Decoration.replace({ widget: new DeliverableRefWidget(m[1], m[2]) }).range(from, to))
   }
 
   // Hide a trailing `^block-id` anchor (the target of a [[Note#^id]] link, added

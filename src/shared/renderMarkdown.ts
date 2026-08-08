@@ -132,7 +132,10 @@ function pushImage(
     // draw.io's SVG exports have a transparent canvas and default black
     // lines/arrows — invisible on a dark theme without a light backing
     // behind them (markdownPreview.css / editor.css supply it).
-    ['class', isDrawioFile(target) ? 'knote-embed-image knote-embed-image-drawio' : 'knote-embed-image']
+    [
+      'class',
+      isDrawioFile(target) ? 'knote-embed-image knote-embed-image-drawio' : 'knote-embed-image'
+    ]
   ]
   // markdown-it's image renderer derives the alt text from the token's children.
   const alt = new state.Token('text', '', 0)

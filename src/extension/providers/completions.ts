@@ -1,12 +1,13 @@
 // Autocomplete inside notes: [[note titles + aliases, [[Note#headings and
-// [[Note#^block-ids, and #tags (minus deprecated ones).
+// [[Note#^block-ids, #tags (minus deprecated ones), and @deliverable(...)
+// join markers.
 
 import * as vscode from 'vscode'
 import { getVaultConfig } from '../../core/vaultConfig'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
 import { linkAlias } from '@shared/blockAnchor'
 import { noteCandidates, resolveTarget, tagCounts } from '@shared/wikiResolve'
-import { closedDeliverableTags } from '@shared/deliverables'
+import { closedDeliverableTags, liveDeliverables } from '@shared/deliverables'
 import { notesMap } from '../engine'
 import { vaultNoteRel } from '../paths'
 
@@ -16,6 +17,10 @@ const WIKI_NOTE_PARTIAL = /\[\[([^\][|#]*)$/
 const WIKI_SECTION_PARTIAL = /\[\[([^\][|#]+)#(\^?[^\][|#]*)$/
 /** `#partial` in normal prose (start of line / whitespace / bracket before the #). */
 const TAG_PARTIAL = /(^|[\s([{])#([A-Za-z0-9_/-]*)$/
+/** `@deliverable(partial` — completing what's already inside the parens. */
+const DELIVERABLE_REF_PARTIAL = /@deliverable\(([A-Za-z0-9_/-]*)$/
+/** `@partial` in normal prose — offers deliverables to join, before "deliverable(" is even typed. */
+const AT_PARTIAL = /(^|[\s([{])@([A-Za-z0-9_/-]*)$/
 
 function closeBrackets(lineSuffix: string): string {
   return lineSuffix.startsWith(']]') ? '' : ']]'
@@ -39,6 +44,12 @@ class KnoteCompletionProvider implements vscode.CompletionItemProvider {
 
     const tag = TAG_PARTIAL.exec(prefix)
     if (tag) return this.tagItems(tag, position)
+
+    const deliverableRef = DELIVERABLE_REF_PARTIAL.exec(prefix)
+    if (deliverableRef) return this.deliverableRefItems(deliverableRef, position, suffix)
+
+    const at = AT_PARTIAL.exec(prefix)
+    if (at) return this.atDeliverableItems(at, position)
 
     return undefined
   }
@@ -137,6 +148,63 @@ class KnoteCompletionProvider implements vscode.CompletionItemProvider {
         return item
       })
   }
+
+  /**
+   * Deliverables a task/milestone can join, completing what's already typed
+   * inside `@deliverable(...)`'s parens — every scheduled deliverable of a
+   * live (not completed) project, so typing this marker never requires
+   * remembering a project/deliverable slug by hand.
+   */
+  private deliverableRefItems(
+    m: RegExpExecArray,
+    position: vscode.Position,
+    suffix: string
+  ): vscode.CompletionItem[] {
+    const partial = m[1]
+    const replaceRange = new vscode.Range(
+      position.line,
+      position.character - partial.length,
+      position.line,
+      position.character
+    )
+    const close = suffix.startsWith(')') ? '' : ')'
+    return liveDeliverables(notesMap()).map((d, i) => {
+      const value = `${d.project}/${d.deliverable}`
+      const item = new vscode.CompletionItem(value, vscode.CompletionItemKind.Reference)
+      item.detail = d.label
+      item.insertText = `${value}${close}`
+      item.range = replaceRange
+      item.sortText = String(i).padStart(6, '0')
+      return item
+    })
+  }
+
+  /**
+   * The same deliverables, offered the moment a bare `@` is typed — before
+   * "deliverable(" itself is typed — inserting the whole
+   * `deliverable(project/name)` marker in one go.
+   */
+  private atDeliverableItems(
+    m: RegExpExecArray,
+    position: vscode.Position
+  ): vscode.CompletionItem[] {
+    const partial = m[2]
+    const replaceRange = new vscode.Range(
+      position.line,
+      position.character - partial.length,
+      position.line,
+      position.character
+    )
+    return liveDeliverables(notesMap()).map((d, i) => {
+      const value = `deliverable(${d.project}/${d.deliverable})`
+      const item = new vscode.CompletionItem(value, vscode.CompletionItemKind.Reference)
+      item.detail = d.label
+      item.insertText = value
+      item.range = replaceRange
+      item.sortText = String(i).padStart(6, '0')
+      return item
+    })
+  }
 }
 
 export function registerCompletions(context: vscode.ExtensionContext): void {
@@ -147,7 +215,9 @@ export function registerCompletions(context: vscode.ExtensionContext): void {
       '[',
       '#',
       '^',
-      '|'
+      '|',
+      '(',
+      '@'
     )
   )
 }

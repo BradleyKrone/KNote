@@ -10,6 +10,7 @@ import {
   stripInlineMarkers
 } from '@shared/parser/patterns'
 import {
+  deliverableMembershipOf,
   deliverableWindows,
   visibleForDeliverable,
   type DeliverableScopeFilter
@@ -29,6 +30,8 @@ export interface BoardCard {
   /** Task text with tags/due/priority markers stripped, for display */
   displayText: string
   tags: string[]
+  /** Deliverable(s) this card belongs to (bare `deliverable/<project>/<name>` tags), from either marker — see `deliverableMembershipOf`. */
+  deliverables: string[]
   due: string | null
   priority: number
   /** Follow-up date (YYYY-MM-DD) for a card sitting in a require-reason column */
@@ -59,6 +62,7 @@ export function toCard(meta: NoteMeta, task: NoteMeta['tasks'][number]): BoardCa
     text: task.text,
     displayText: displayText || task.text,
     tags: task.tags,
+    deliverables: deliverableMembershipOf(task.tags, task.text),
     due: due ? (due[1] ?? due[2]) : null,
     priority: prio ? prio[1].length : 0,
     waitingFollowUp: task.waitingFollowUp,
@@ -165,14 +169,14 @@ export interface BoardFilters {
 }
 
 function matchesDeliverableScope(
-  card: Pick<BoardCard, 'tags'>,
+  card: Pick<BoardCard, 'deliverables'>,
   scope: DeliverableScopeFilter
 ): boolean {
   if (!scope || scope.kind === 'all') return true
-  if (scope.kind === 'unassigned') return !card.tags.some((t) => parseDeliverableTag(t))
+  if (scope.kind === 'unassigned') return card.deliverables.length === 0
   if (scope.kind === 'project')
-    return card.tags.some((t) => parseDeliverableTag(t)?.project === scope.slug)
-  return card.tags.includes(scope.tag)
+    return card.deliverables.some((t) => parseDeliverableTag(t)?.project === scope.slug)
+  return card.deliverables.includes(scope.tag)
 }
 
 export function collectCards(

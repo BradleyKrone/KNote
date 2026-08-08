@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import dayjs from 'dayjs'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { Archive, CalendarDays, Hourglass, Link2, Pencil, X } from 'lucide-react'
+import { Archive, CalendarDays, Hourglass, Link2, Package, Pencil, X } from 'lucide-react'
 import { withoutAnchor } from '@shared/blockAnchor'
+import { parseDeliverableTag } from '@shared/parser/patterns'
 import { confirm } from '../shared/stores'
 import { archiveCard, copyCardLink, deleteCard, openSource, updateCardText } from './boardActions'
 import { dueState, followUpState, type BoardCard } from './boardSelectors'
@@ -53,6 +54,29 @@ function WaitingChip({ card }: { card: BoardCard }): React.JSX.Element | null {
   )
 }
 
+/**
+ * Which deliverable(s) this card belongs to — a distinct chip, not a `#tag`
+ * pill, since deliverable membership isn't a content tag (see
+ * `deliverableMembershipOf`). Labelled with just the deliverable's own name;
+ * the project it belongs to is implied by context (which board/scope you're
+ * looking at).
+ */
+function DeliverableChips({ card }: { card: BoardCard }): React.JSX.Element | null {
+  if (card.deliverables.length === 0) return null
+  return (
+    <>
+      {card.deliverables.map((tag) => {
+        const parsed = parseDeliverableTag(tag)
+        return (
+          <span key={tag} className="board-card-deliverable" title={tag}>
+            <Package size={11} /> {parsed?.deliverable ?? tag}
+          </span>
+        )
+      })}
+    </>
+  )
+}
+
 /** Static clone rendered in the DragOverlay so it floats above column scroll clipping. */
 export function CardPreview({ card }: { card: BoardCard }): React.JSX.Element {
   return (
@@ -69,6 +93,7 @@ export function CardPreview({ card }: { card: BoardCard }): React.JSX.Element {
         </span>
         <DueChip card={card} />
         <WaitingChip card={card} />
+        <DeliverableChips card={card} />
         {card.tags.map((t) => (
           <span key={t} className="board-card-tag">
             #{t}
@@ -165,6 +190,7 @@ export function Card({
             )}
             <DueChip card={card} />
             <WaitingChip card={card} />
+            <DeliverableChips card={card} />
             {card.tags.map((t) => (
               <span key={t} className="board-card-tag">
                 #{t}

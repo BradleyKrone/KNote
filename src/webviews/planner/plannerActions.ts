@@ -3,7 +3,12 @@
 // with KNOTE_STALE and toasted rather than clobbered.
 
 import { isStaleError } from '@shared/errors'
-import { PROJECT_END_KEY, PROJECT_STATUS_KEY, slugify } from '@shared/deliverables'
+import {
+  PROJECT_END_KEY,
+  PROJECT_STATUS_KEY,
+  deliverableRefMarker,
+  slugify
+} from '@shared/deliverables'
 import { host } from '../shared/rpc'
 import { showToast } from '../shared/stores'
 import { addDependency, removeDependency, setDeliverableDates } from '../shared/taskMeta'
@@ -177,7 +182,7 @@ export function deliverableLine(
   end: string
 ): { line: string; tag: string } {
   const tag = `deliverable/${projectSlugValue}/${slugify(name)}`
-  return { line: `- [ ] ${name} 🛫 ${start} 📅 ${end} #${tag}`, tag }
+  return { line: `- [ ] ${name} 🛫 ${start} 📅 ${end} ${deliverableRefMarker(tag)}`, tag }
 }
 
 export async function addDeliverable(
@@ -198,7 +203,8 @@ export async function addDeliverable(
  */
 export async function addTask(d: PlannerDeliverable, text: string): Promise<void> {
   await guarded(
-    () => host.insertLine(d.path, d.line, d.rawLine, `    - [ ] ${text} #${d.id}`),
+    () =>
+      host.insertLine(d.path, d.line, d.rawLine, `    - [ ] ${text} ${deliverableRefMarker(d.id)}`),
     'Deliverable changed on disk — planner refreshed'
   )
 }
@@ -209,7 +215,13 @@ export async function addMilestone(
   date: string
 ): Promise<void> {
   await guarded(
-    () => host.insertLine(d.path, d.line, d.rawLine, `🏁 ${text} 📅 ${date} #${d.id}`),
+    () =>
+      host.insertLine(
+        d.path,
+        d.line,
+        d.rawLine,
+        `🏁 ${text} 📅 ${date} ${deliverableRefMarker(d.id)}`
+      ),
     'Deliverable changed on disk — planner refreshed'
   )
 }

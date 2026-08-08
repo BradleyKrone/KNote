@@ -13,7 +13,7 @@ export const WIKI_LINK_RE = /(!?)\[\[([^[\]|#\n]+)(#[^[\]|\n]+)?(\|[^[\]\n]+)?\]
  * appended to the end of a task line, so setting one on an already-anchored
  * task used to push the anchor into the middle of the line.
  */
-const AFTER_ANCHOR = String.raw`(?:\s*(?:📅\s*\d{4}-\d{2}-\d{2}|@due\(\d{4}-\d{2}-\d{2}\)|🛫\s*\d{4}-\d{2}-\d{2}|@start\(\d{4}-\d{2}-\d{2}\)|✅\s*\d{4}-\d{2}-\d{2}|⛓\s*#[A-Za-z0-9_][A-Za-z0-9_/-]*|!{1,3}|#[A-Za-z0-9_][A-Za-z0-9_/-]*))*`
+const AFTER_ANCHOR = String.raw`(?:\s*(?:📅\s*\d{4}-\d{2}-\d{2}|@due\(\d{4}-\d{2}-\d{2}\)|🛫\s*\d{4}-\d{2}-\d{2}|@start\(\d{4}-\d{2}-\d{2}\)|✅\s*\d{4}-\d{2}-\d{2}|⛓\s*#[A-Za-z0-9_][A-Za-z0-9_/-]*|⛓\s*@deliverable\([A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\)|@deliverable\([A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\)|!{1,3}|#[A-Za-z0-9_][A-Za-z0-9_/-]*))*`
 
 /**
  * ` ^block-id` at the end of a line — an Obsidian-style block anchor that
@@ -66,18 +66,28 @@ export const DUE_RE = /(?:@due\((\d{4}-\d{2}-\d{2})\)|📅\s*(\d{4}-\d{2}-\d{2})
 export const START_RE = /(?:@start\((\d{4}-\d{2}-\d{2})\)|🛫\s*(\d{4}-\d{2}-\d{2}))/
 
 /**
- * `⛓ #deliverable/<project>/<name>` — a scheduling dependency written on a
+ * `⛓ @deliverable(<project>/<name>)` — a scheduling dependency written on a
  * deliverable line, read as "this deliverable comes *after* that one". Global:
- * a deliverable may depend on several. Group 1 = the bare predecessor tag
- * (no leading `#`).
+ * a deliverable may depend on several. The legacy `⛓ #deliverable/<project>/<name>`
+ * form (group 1) still parses, for notes written before the switch to `@`; new
+ * writes always emit the `@deliverable(...)` form (groups 2/3) — see `dependsTag`.
  */
-export const DEPENDS_RE = /⛓\s*#(deliverable\/[A-Za-z0-9_][A-Za-z0-9_/-]*)/g
+export const DEPENDS_RE =
+  /⛓\s*(?:#(deliverable\/[A-Za-z0-9_][A-Za-z0-9_/-]*)|@deliverable\(([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]+)\))/g
+
+/** A `DEPENDS_RE` match → the bare `deliverable/<project>/<name>` predecessor tag, whichever form matched. */
+export function dependsTag(m: RegExpMatchArray): string {
+  return m[1] ?? `deliverable/${m[2]}/${m[3]}`
+}
 
 /**
- * `deliverable/<project>/<name>` — the tag that binds a task to a project
- * deliverable, wherever in the vault the task lives. Exactly three segments:
- * a two-segment tag is the project itself and a deeper one is rejected, which
- * keeps the namespace from drifting into free-form nesting.
+ * `deliverable/<project>/<name>` — the bare tag shape a deliverable's identity
+ * always reduces to, whichever marker it was read from (see
+ * `DELIVERABLE_REF_RE`, and `deliverableTagsOf` in `shared/deliverables.ts`).
+ * Exactly three segments: a two-segment tag is the project itself and a deeper
+ * one is rejected, which keeps the namespace from drifting into free-form
+ * nesting. Legacy notes may still carry this as a literal `#deliverable/…`
+ * tag — that form still reads, but nothing writes it any more.
  */
 export const DELIVERABLE_TAG_RE = /^deliverable\/([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]+)$/
 
@@ -86,6 +96,22 @@ export function parseDeliverableTag(tag: string): { project: string; deliverable
   const m = DELIVERABLE_TAG_RE.exec(tag)
   return m ? { project: m[1], deliverable: m[2] } : null
 }
+
+/**
+ * `@deliverable(<project>/<name>)` — the one marker for everything about a
+ * deliverable's identity: it's how a deliverable's own top-level task
+ * declares itself, and how any ordinary task or milestone elsewhere in the
+ * vault *joins* one. Deliberately not a `#tag`: it never enters `TAG_RE`, so
+ * it can't clutter the Tags sidebar or `#` autocomplete with structural
+ * plumbing. What makes a particular line the *defining* one rather than a
+ * member is purely structural — a top-level task, in the matching `type:
+ * project` note, carrying a `🛫`/`📅` span — never the marker itself; see
+ * `deliverableTagsOf` in `shared/deliverables.ts`. Legacy notes may still
+ * carry a defining line's identity as a literal `#deliverable/…` tag instead —
+ * that still reads, but nothing writes it any more. Global: a line may join
+ * more than one deliverable. Group 1 = project, group 2 = name.
+ */
+export const DELIVERABLE_REF_RE = /@deliverable\(([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]+)\)/g
 
 /** ✅ 2026-07-16 — completion-date marker appended to a checked sub-task line. Group 1 = the date. */
 const DONE_DATE_RE = /\s*✅\s*(\d{4}-\d{2}-\d{2})/g
@@ -314,6 +340,7 @@ export function stripInlineMarkers(text: string): string {
       // Dependencies first: the generic tag strip below would otherwise eat the
       // tag and leave a bare `⛓` behind in the label.
       .replace(DEPENDS_RE, '')
+      .replace(DELIVERABLE_REF_RE, '')
       .replace(DUE_RE, '')
       .replace(START_RE, '')
       .replace(PRIORITY_RE, ' ')

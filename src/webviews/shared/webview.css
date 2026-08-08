@@ -374,6 +374,19 @@ button {
   padding: 0 6px;
 }
 
+/* Deliverable membership — deliberately not styled like a #tag pill (filled
+ * badge): it's structural metadata (@deliverable(...)), not a content tag. */
+.board-card-deliverable {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-accent);
+  border: 1px solid color-mix(in srgb, var(--text-accent) 40%, transparent);
+  border-radius: 8px;
+  padding: 0 6px;
+}
+
 .board-card-actions {
   position: absolute;
   top: 5px;

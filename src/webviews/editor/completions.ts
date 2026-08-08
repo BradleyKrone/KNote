@@ -1,6 +1,7 @@
-// Autocomplete for the live-preview editor: #tags and [[wiki links]] (note
-// titles/aliases, plus [[Note#heading and [[Note#^block section refs). As the
-// user types after the trigger, CodeMirror filters and re-sorts the list.
+// Autocomplete for the live-preview editor: #tags, [[wiki links]] (note
+// titles/aliases, plus [[Note#heading and [[Note#^block section refs), and
+// @deliverable(project/name) join markers. As the user types after the
+// trigger, CodeMirror filters and re-sorts the list.
 //
 // Mirrors the host-side CompletionItemProvider
 // (extension/providers/completions.ts) so both the native VS Code markdown
@@ -16,6 +17,7 @@ import {
 import type { NoteMeta, VaultPath } from '@shared/types'
 import { linkAlias } from '@shared/blockAnchor'
 import { noteCandidates, resolveTarget, tagCounts } from '@shared/wikiResolve'
+import { liveDeliverables } from '@shared/deliverables'
 import { useIndexStore, useConfigStore } from '../shared/stores'
 
 /** `[[partial` with no closing bracket / heading / alias yet. */
@@ -24,6 +26,8 @@ const WIKI_NOTE_PARTIAL = /\[\[([^\][|#]*)$/
 const WIKI_SECTION_PARTIAL = /\[\[([^\][|#]+)#(\^?[^\][|#]*)$/
 /** `#partial` in normal prose (start of line / whitespace / bracket before the #). */
 const TAG_PARTIAL = /(^|[\s([{])#([A-Za-z0-9_/-]*)$/
+/** `@partial` — offers deliverables to join with `@deliverable(project/name)`. */
+const AT_PARTIAL = /(^|[\s([{])@([A-Za-z0-9_/-]*)$/
 
 /** Text still valid to keep filtering the tag list without re-querying. */
 const TAG_VALID = /^[A-Za-z0-9_/-]*$/
@@ -56,6 +60,23 @@ function tagResult(
       detail: `${count} note${count === 1 ? '' : 's'}`,
       boost: Math.max(-20, -i)
     }))
+  return { from, options, validFor: TAG_VALID }
+}
+
+/** Live deliverables a task/milestone can join, offered as `deliverable(project/name)` completions for `@`. */
+function deliverableResult(
+  m: RegExpExecArray,
+  context: CompletionContext,
+  notes: Map<VaultPath, NoteMeta>
+): CompletionResult {
+  const partial = m[2]
+  const from = context.pos - partial.length
+  const options: Completion[] = liveDeliverables(notes).map((d) => ({
+    label: `deliverable(${d.project}/${d.deliverable})`,
+    type: 'keyword',
+    detail: d.label,
+    apply: `deliverable(${d.project}/${d.deliverable})`
+  }))
   return { from, options, validFor: TAG_VALID }
 }
 
@@ -131,6 +152,9 @@ function knoteCompletions(context: CompletionContext): CompletionResult | null {
 
   const tag = TAG_PARTIAL.exec(prefix)
   if (tag) return tagResult(tag, context, notes)
+
+  const at = AT_PARTIAL.exec(prefix)
+  if (at) return deliverableResult(at, context, notes)
 
   return null
 }

@@ -241,11 +241,11 @@ describe('collectCards deliverable windows', () => {
       'Work.md',
       [
         '- [ ] plain task',
-        '- [ ] current work #deliverable/p/current',
-        '- [ ] future work #deliverable/p/future',
-        '- [ ] late work #deliverable/p/past',
-        '- [x] finished work #deliverable/p/past',
-        '- [ ] orphan work #deliverable/p/ghost',
+        '- [ ] current work @deliverable(p/current)',
+        '- [ ] future work @deliverable(p/future)',
+        '- [ ] late work @deliverable(p/past)',
+        '- [x] finished work @deliverable(p/past)',
+        '- [ ] orphan work @deliverable(p/ghost)',
         ''
       ].join('\n')
     )
@@ -276,8 +276,12 @@ describe('collectCards deliverable windows', () => {
     expect(project.map((c) => c.displayText)).toEqual(['Current', 'Past'])
   })
 
-  it('never lets a closed deliverable shrink the tag dropdown', () => {
-    expect(boardTags(notes, { kind: 'note', path: 'Work.md' })).toContain('deliverable/p/future')
+  it('never surfaces a deliverable join marker as a #tag in the dropdown', () => {
+    // Joining a deliverable is `@deliverable(...)`, not a #tag, so it must
+    // never show up alongside real content tags.
+    expect(boardTags(notes, { kind: 'note', path: 'Work.md' })).not.toContain(
+      'deliverable/p/future'
+    )
   })
 
   describe('deliverableScope (the Boards tree filter)', () => {

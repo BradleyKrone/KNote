@@ -5,19 +5,30 @@
  * so the board never has to import planner code to agree with it.
  *
  * A deliverable is a *top-level* checkbox task in a note whose frontmatter says
- * `type: project`, carrying its own `#deliverable/<project>/<name>` tag plus a
- * `🛫 start` / `📅 end` span. Tasks join it by carrying the same tag, wherever
- * in the vault they live.
+ * `type: project`, carrying its own `@deliverable(<project>/<name>)` marker
+ * plus a `🛫 start` / `📅 end` span. An ordinary task or milestone *joins* one
+ * by carrying that same marker anywhere else in the vault — the same syntax
+ * either way, deliberately not a `#tag`, so a deliverable never clutters the
+ * Tags tree, `#` autocomplete, or a generic tag pill. What makes one line
+ * *defining* rather than a member is purely structural (top-level, in the
+ * project's own note, carrying a span), never the marker itself — see
+ * `deliverableTagsOf` below. Notes written before this switch may still carry
+ * a defining line's identity as a literal `#deliverable/…` tag instead; that
+ * legacy form still reads (`deliverableTagsOf` recognizes both), but nothing
+ * writes it any more.
  */
 
 import type { NoteMeta, TaskItem } from './types'
 import {
   ARCHIVED_CHAR,
+  DELIVERABLE_REF_RE,
   DELIVERABLE_TAG_RE,
   DEPENDS_RE,
   DUE_RE,
   START_RE,
-  parseDeliverableTag
+  dependsTag,
+  parseDeliverableTag,
+  stripInlineMarkers
 } from './parser/patterns'
 
 export interface DeliverableWindow {
@@ -70,8 +81,8 @@ export const PROJECT_END_KEY = 'end'
  * True when the project note is marked finished (`status: completed`).
  *
  * A completed project is closed for business: the planner won't let you add
- * deliverables or tasks to it, and its deliverable tags drop out of `#tag`
- * completion so old work can't be tagged onto it by accident. `complete`,
+ * deliverables or tasks to it, and its deliverables drop out of `@deliverable(…)`
+ * completion so old work can't be joined onto it by accident. `complete`,
  * `done` and `finished` all read as completed too — this is a value someone
  * types by hand, and refusing a synonym would just look broken.
  */
@@ -118,16 +129,63 @@ export function startDateOf(text: string): string | null {
 }
 
 /**
- * The deliverable tags (bare, no `#`) a line *belongs to*.
+ * The deliverable(s) a line *joins* via `@deliverable(<project>/<name>)`,
+ * read straight off its text (the marker is never a `#tag`, so it can't be
+ * found in a task's `tags` array). Returns bare `deliverable/<project>/<name>`
+ * strings, the same format `DELIVERABLE_TAG_RE` produces.
  *
- * A `⛓ #deliverable/…` dependency marker is a tag as far as the indexer is
- * concerned, so it has to be subtracted here — otherwise a deliverable would
- * join every deliverable it merely waits on, and would redefine their windows
- * with its own dates.
+ * A `⛓ @deliverable(...)` dependency is text-identical to a join marker
+ * except for its `⛓ ` prefix, so any `DELIVERABLE_REF_RE` match that falls
+ * inside a `DEPENDS_RE` span is excluded here — otherwise a deliverable would
+ * "join" (and a task's dependency would count as membership in) every
+ * deliverable it merely waits on.
+ */
+export function deliverableRefsOf(text: string): string[] {
+  const dependencySpans = [...text.matchAll(DEPENDS_RE)].map(
+    (m) => [m.index ?? 0, (m.index ?? 0) + m[0].length] as const
+  )
+  const inDependency = (i: number): boolean =>
+    dependencySpans.some(([from, to]) => i >= from && i < to)
+  return [...text.matchAll(DELIVERABLE_REF_RE)]
+    .filter((m) => !inDependency(m.index ?? 0))
+    .map((m) => `deliverable/${m[1]}/${m[2]}`)
+}
+
+/**
+ * The deliverable tags (bare, no `#`) a line *belongs to* — combining the
+ * current `@deliverable(...)` marker (read off the text) with a legacy
+ * `#deliverable/…` tag (read off the indexed `tags` array), so a note written
+ * before the switch to `@` keeps working unchanged.
+ *
+ * A `⛓ …` dependency marker referencing another deliverable is subtracted
+ * from the legacy tag set: when written the old way (`⛓ #deliverable/…`) it's
+ * a `#tag` as far as the indexer is concerned, and without this a deliverable
+ * would join every deliverable it merely waits on, and would redefine their
+ * windows with its own dates. The current `⛓ @deliverable(...)` form never
+ * enters the `tags` array in the first place, so it needs no such filtering.
+ *
+ * This is the one function every lookup should call, whether it's asking
+ * "does this line define a deliverable" or "does this line belong to one" —
+ * the two questions differ only in the structural filters each caller already
+ * applies (top-level task, project note, has a span), never in which marker
+ * was used to say so.
  */
 export function deliverableTagsOf(tags: readonly string[], text = ''): string[] {
-  const depends = new Set([...text.matchAll(DEPENDS_RE)].map((m) => m[1]))
-  return tags.filter((t) => DELIVERABLE_TAG_RE.test(t) && !depends.has(t))
+  const depends = new Set([...text.matchAll(DEPENDS_RE)].map(dependsTag))
+  const legacy = tags.filter((t) => DELIVERABLE_TAG_RE.test(t) && !depends.has(t))
+  return [...new Set([...legacy, ...deliverableRefsOf(text)])]
+}
+
+/** Alias for `deliverableTagsOf` — reads better at a *membership* call site (a task/milestone asking which deliverables it belongs to) than at a *defining* one. */
+export function deliverableMembershipOf(tags: readonly string[], text = ''): string[] {
+  return deliverableTagsOf(tags, text)
+}
+
+/** Bare `deliverable/<project>/<name>` tag → the `@deliverable(project/name)` text a task/milestone joins it with. */
+export function deliverableRefMarker(tag: string): string {
+  const parsed = parseDeliverableTag(tag)
+  if (!parsed) throw new Error(`not a deliverable tag: ${tag}`)
+  return `@deliverable(${parsed.project}/${parsed.deliverable})`
 }
 
 /** A task counts as done when checked or archived. */
@@ -164,9 +222,9 @@ export function deliverableWindows(
 
 /**
  * Every `deliverable/…` tag that belongs to a completed project — the set the
- * `#tag` completion list filters out, so a finished project stops being an
- * option the moment it's closed. Deliverables of *live* projects are never in
- * here, and neither is any other tag.
+ * `@deliverable(…)` completion list filters out, so a finished project stops
+ * being an option the moment it's closed. Deliverables of *live* projects are
+ * never in here, and neither is any other tag.
  */
 export function closedDeliverableTags(notes: ReadonlyMap<string, NoteMeta>): Set<string> {
   const closed = new Set<string>()
@@ -180,6 +238,51 @@ export function closedDeliverableTags(notes: ReadonlyMap<string, NoteMeta>): Set
     }
   }
   return closed
+}
+
+/** One scheduled, open deliverable — what a `@deliverable(...)` picker offers to join. */
+export interface DeliverableOption {
+  /** Bare `deliverable/<project>/<name>` tag. */
+  tag: string
+  project: string
+  deliverable: string
+  /** The defining task's own text, or `project/name` when that can't be found. */
+  label: string
+}
+
+/**
+ * Every deliverable a task or milestone could join right now — every
+ * scheduled (has a window) deliverable of a project that isn't closed. Shared
+ * by the `@deliverable(...)` autocomplete (host and Live Preview editor) and
+ * the right-click "Link to deliverable…" picker, so all three agree on what's
+ * offered.
+ */
+export function liveDeliverables(notes: ReadonlyMap<string, NoteMeta>): DeliverableOption[] {
+  const windows = deliverableWindows(notes)
+  const closed = closedDeliverableTags(notes)
+  const labels = new Map<string, string>()
+  for (const meta of notes.values()) {
+    if (!isProjectNote(meta)) continue
+    for (const task of meta.tasks) {
+      if (task.isSubtask) continue
+      for (const tag of deliverableTagsOf(task.tags, task.text)) {
+        if (windows.has(tag)) labels.set(tag, stripInlineMarkers(task.text) || tag)
+      }
+    }
+  }
+  const out: DeliverableOption[] = []
+  for (const tag of windows.keys()) {
+    if (closed.has(tag)) continue
+    const parsed = parseDeliverableTag(tag)
+    if (!parsed) continue
+    out.push({
+      tag,
+      project: parsed.project,
+      deliverable: parsed.deliverable,
+      label: labels.get(tag) ?? `${parsed.project}/${parsed.deliverable}`
+    })
+  }
+  return out.sort((a, b) => a.label.localeCompare(b.label))
 }
 
 /**
@@ -198,7 +301,7 @@ export function visibleForDeliverable(
   windows: ReadonlyMap<string, DeliverableWindow>,
   today: string
 ): boolean {
-  const tags = deliverableTagsOf(task.tags, task.text ?? '')
+  const tags = deliverableMembershipOf(task.tags, task.text ?? '')
   if (tags.length === 0) return true
   return tags.some((tag) => {
     const window = windows.get(tag)

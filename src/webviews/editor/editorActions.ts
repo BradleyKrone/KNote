@@ -10,8 +10,17 @@ import dayjs from 'dayjs'
 import { EditorSelection, type Line } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import { machineEntryTemplate } from '@shared/machineEntry'
-import { DUE_RE, MACHINE_ENTRY_RE } from '@shared/parser/patterns'
-import { insertTag, setDueDate, setPriority } from '../shared/taskMeta'
+import { DUE_RE, MACHINE_ENTRY_RE, START_RE } from '@shared/parser/patterns'
+import {
+  addDependency,
+  dependencies as lineDependencies,
+  insertDeliverableRef,
+  insertTag,
+  removeDependency,
+  setDueDate,
+  setPriority,
+  setStartDate
+} from '../shared/taskMeta'
 import { host } from '../shared/rpc'
 import { buildMdLink, type MdLink } from './mdLinkLogic'
 
@@ -34,6 +43,12 @@ export function editMachineLine(rawLine: string, serial: string, date: string | 
 /** The current 📅 / @due date on a line, or null. */
 export function lineDue(text: string): string | null {
   const m = DUE_RE.exec(text)
+  return m ? (m[1] ?? m[2]) : null
+}
+
+/** The current 🛫 / @start date on a line, or null. */
+export function lineStart(text: string): string | null {
+  const m = START_RE.exec(text)
   return m ? (m[1] ?? m[2]) : null
 }
 
@@ -181,6 +196,21 @@ export function setLineDue(view: EditorView, date: string | null): void {
   rewriteCaretLine(view, setDueDate(caretLine(view).text, date))
 }
 
+/** Set (or clear, when null) the 🛫 start date on the caret line. */
+export function setLineStart(view: EditorView, date: string | null): void {
+  rewriteCaretLine(view, setStartDate(caretLine(view).text, date))
+}
+
+/** Add or remove a `⛓ @deliverable(...)` dependency on the caret line, whichever it currently lacks. */
+export function toggleLineDependency(view: EditorView, predecessorTag: string): void {
+  const text = caretLine(view).text
+  const has = lineDependencies(text).includes(predecessorTag)
+  rewriteCaretLine(
+    view,
+    has ? removeDependency(text, predecessorTag) : addDependency(text, predecessorTag)
+  )
+}
+
 /** Set the priority marker (0 = none, 1-3 = !/!!/!!!) on the caret line. */
 export function setLinePriority(view: EditorView, level: 0 | 1 | 2 | 3): void {
   rewriteCaretLine(view, setPriority(caretLine(view).text, level))
@@ -189,6 +219,11 @@ export function setLinePriority(view: EditorView, level: 0 | 1 | 2 | 3): void {
 /** Append a `#tag` to the caret line. */
 export function addLineTag(view: EditorView, tag: string): void {
   rewriteCaretLine(view, insertTag(caretLine(view).text, tag))
+}
+
+/** Append an `@deliverable(project/name)` join marker to the caret line. */
+export function addLineDeliverable(view: EditorView, tag: string): void {
+  rewriteCaretLine(view, insertDeliverableRef(caretLine(view).text, tag))
 }
 
 /** Rewrite the caret machine line's serial + date, preserving inline tags/text. */

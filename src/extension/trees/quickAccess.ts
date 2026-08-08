@@ -94,7 +94,7 @@ class BoardsTreeProvider implements vscode.TreeDataProvider<BoardTreeNode> {
       case 'filterUnassigned': {
         const item = new vscode.TreeItem('Unassigned')
         item.iconPath = new vscode.ThemeIcon('question')
-        item.tooltip = 'Tasks that carry no #deliverable tag'
+        item.tooltip = "Tasks that don't belong to any deliverable"
         item.command = {
           command: 'knote.filterBoard',
           title: 'Filter Board',

@@ -1,9 +1,9 @@
 // The live-preview editor's right-click menu. Attaches a `contextmenu` listener
 // to the CodeMirror DOM, reads the line under the click to decide which items
-// apply (task/milestone → tag/priority/due; 🚜 line → edit machine; a checkbox
-// glyph → the Kanban status switcher), and renders the menu — plus any picker an
-// item opens — inside the shared Popover. Reproduces the old Electron app's
-// editor context menu (src/renderer/src/editor/contextMenu.ts).
+// apply (task/milestone → tag/priority/due/deliverable; 🚜 line → edit machine;
+// a checkbox glyph → the Kanban status switcher), and renders the menu — plus
+// any picker an item opens — inside the shared Popover. Reproduces the old
+// Electron app's editor context menu (src/renderer/src/editor/contextMenu.ts).
 //
 // Everything but the clipboard actions lives in a Format / Insert / Task /
 // Table submenu, the way Obsidian groups its editor menu: flat, the menu ran to
@@ -32,6 +32,7 @@ import {
   BookPlus,
   Bold,
   CalendarDays,
+  CalendarRange,
   CheckSquare,
   Clipboard,
   Code,
@@ -44,6 +45,7 @@ import {
   Link,
   Link2,
   Milestone,
+  Package,
   Pencil,
   Plus,
   Rows3,
@@ -59,22 +61,30 @@ import {
   Workflow,
   Wrench
 } from 'lucide-react'
-import type { BoardColumn } from '@shared/types'
+import type { BoardColumn, NoteMeta, VaultPath } from '@shared/types'
 import {
   ARCHIVED_CHAR,
   MACHINE_ENTRY_RE,
   MILESTONE_LINE_RE,
+  parseDeliverableTag,
   TASK_LINE_RE
 } from '@shared/parser/patterns'
+import {
+  deliverableRefsOf,
+  isProjectNote,
+  liveDeliverables,
+  projectSlug
+} from '@shared/deliverables'
 import { Popover } from '../shared/components/Popover'
 import { ContextMenuList, type MenuEntry } from '../shared/components/ContextMenuList'
 import { LinkPickerContent } from '../shared/components/LinkPickerContent'
 import { DatePickerContent } from '../shared/components/DatePickerContent'
 import { PriorityPickerContent } from '../shared/components/PriorityPickerContent'
 import { TagPickerContent } from '../shared/components/TagPickerContent'
+import { DeliverablePickerContent } from '../shared/components/DeliverablePickerContent'
 import { MachineEntryPickerContent } from '../machineLog/MachineEntryPickerContent'
 import { TablePickerContent } from './TablePickerContent'
-import { useConfigStore, showToast } from '../shared/stores'
+import { useConfigStore, useIndexStore, showToast } from '../shared/stores'
 import { titleOf } from '@shared/pathUtils'
 import { host } from '../shared/rpc'
 import { toggleWrap } from './markdownFormatting'
@@ -85,7 +95,9 @@ import { misspelledRangeAt, type WordSpan } from './spellcheck/spellCheck'
 import { suggestWords } from './spellcheck/dictionary'
 import { addToDictionary, ignoreSpelling, replaceWord } from './spellcheck/spellActions'
 import { copySelection, cutSelection, pasteAtSelection } from './clipboard'
+import { dependencies as lineDependencies } from '../shared/taskMeta'
 import {
+  addLineDeliverable,
   addLineTag,
   editMachineOnLine,
   insertCheckbox,
@@ -96,10 +108,13 @@ import {
   insertMilestone,
   insertWikiLink,
   lineDue,
+  lineStart,
   removeMarkdownLink,
   replaceMarkdownLink,
   setLineDue,
-  setLinePriority
+  setLinePriority,
+  setLineStart,
+  toggleLineDependency
 } from './editorActions'
 import { commitActiveCell, setTableSource } from './tableCellEdit'
 import {
@@ -121,6 +136,7 @@ interface LineCtx {
   isMilestone: boolean
   isMachine: boolean
   due: string | null
+  start: string | null
   serial: string
   /** The `[text](url)` hyperlink under the click, if any. */
   link: MdLink | null
@@ -129,7 +145,16 @@ interface LineCtx {
 }
 
 type Point = { x: number; y: number }
-type SubKind = 'machine' | 'edit-machine' | 'date' | 'priority' | 'tag' | 'link' | 'table'
+type SubKind =
+  | 'machine'
+  | 'edit-machine'
+  | 'date'
+  | 'start'
+  | 'priority'
+  | 'tag'
+  | 'deliverable'
+  | 'link'
+  | 'table'
 
 type OpenState =
   | {
@@ -157,13 +182,31 @@ function readLineCtx(view: EditorView, pos: number): LineCtx {
     isMilestone: MILESTONE_LINE_RE.test(line.text),
     isMachine: MACHINE_ENTRY_RE.test(line.text),
     due: lineDue(line.text),
+    start: lineStart(line.text),
     serial: MACHINE_ENTRY_RE.exec(line.text)?.[1] ?? ''
   }
+}
+
+/**
+ * The bare `deliverable/<project>/<name>` tag the right-clicked line itself
+ * *defines*, or null when it's an ordinary task/milestone (including one that
+ * merely *joins* a deliverable). A defining line is a top-level task carrying
+ * a `@deliverable(...)` marker for the open note's own project — the same
+ * structural rule `deliverableTagsOf` documents, just narrowed to "this note".
+ */
+function ownDeliverableTag(ctx: LineCtx, notes: ReadonlyMap<VaultPath, NoteMeta>): string | null {
+  if (!ctx.isTask || ctx.isSubtask) return null
+  const path = getNotePath()
+  const meta = path ? notes.get(path) : undefined
+  if (!meta || !isProjectNote(meta)) return null
+  const slug = projectSlug(meta)
+  return deliverableRefsOf(ctx.text).find((t) => parseDeliverableTag(t)?.project === slug) ?? null
 }
 
 export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Element | null {
   const [open, setOpen] = useState<OpenState>(null)
   const columns = useConfigStore((s) => s.vaultConfig.columns)
+  const notes = useIndexStore((s) => s.notes)
 
   useEffect(() => {
     const dom = view.dom
@@ -207,7 +250,7 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
 
   if (open.stage === 'menu') {
     let items: MenuEntry[]
-    const main = (): MenuEntry[] => mainItems(view, ctx, open.table, run, openSub)
+    const main = (): MenuEntry[] => mainItems(view, ctx, open.table, notes, run, openSub)
     if (open.onCheckbox && ctx.isSubtask) {
       items = subtaskCheckboxItems(ctx, (checked) => {
         close()
@@ -262,6 +305,15 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
           }}
         />
       )}
+      {open.sub === 'start' && (
+        <DatePickerContent
+          currentDate={ctx.start}
+          onSelect={(date) => {
+            close()
+            setLineStart(view, date)
+          }}
+        />
+      )}
       {open.sub === 'priority' && (
         <PriorityPickerContent
           onSelect={(level) => {
@@ -295,6 +347,14 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
           onSelect={(tag) => {
             close()
             addLineTag(view, tag)
+          }}
+        />
+      )}
+      {open.sub === 'deliverable' && (
+        <DeliverablePickerContent
+          onSelect={(tag) => {
+            close()
+            addLineDeliverable(view, tag)
           }}
         />
       )}
@@ -529,23 +589,74 @@ function insertItems(
   ]
 }
 
-/** The Task/Milestone submenu: everything that edits the clicked line's metadata. */
+/**
+ * Every other live deliverable, checked where it's already a predecessor of
+ * `ownTag` — the same "Depends on" shape the planner's row menu offers,
+ * scaled down to what a single line of text can hold (no cycle detection: the
+ * planner already lets a `⛓` marker be hand-typed, so this opens no new risk,
+ * just a friendlier way to reach it).
+ */
+function dependencyItems(
+  view: EditorView,
+  ctx: LineCtx,
+  ownTag: string,
+  notes: ReadonlyMap<VaultPath, NoteMeta>,
+  run: (fn: () => void) => () => void
+): MenuEntry[] {
+  const current = lineDependencies(ctx.text)
+  const candidates = liveDeliverables(notes).filter((d) => d.tag !== ownTag)
+  if (candidates.length === 0) {
+    return [{ label: 'No other deliverables yet', disabled: true, onClick: () => {} }]
+  }
+  return candidates.map((d) => ({
+    label: d.label,
+    checked: current.includes(d.tag),
+    onClick: run(() => toggleLineDependency(view, d.tag))
+  }))
+}
+
+/** The Task/Milestone/Deliverable submenu: everything that edits the clicked line's metadata. */
 function taskItems(
   view: EditorView,
   ctx: LineCtx,
+  ownTag: string | null,
+  notes: ReadonlyMap<VaultPath, NoteMeta>,
   run: (fn: () => void) => () => void,
   openSub: (sub: SubKind) => () => void
 ): MenuEntry[] {
   const items: MenuEntry[] = [
     { label: 'Add tag…', icon: <Tag size={ICON} />, onClick: openSub('tag') },
-    { label: 'Set priority…', icon: <Flag size={ICON} />, onClick: openSub('priority') },
-    { label: 'Set due date…', icon: <CalendarDays size={ICON} />, onClick: openSub('date') }
+    { label: 'Set priority…', icon: <Flag size={ICON} />, onClick: openSub('priority') }
   ]
+  if (ownTag) {
+    items.push(
+      { label: 'Set start date…', icon: <CalendarRange size={ICON} />, onClick: openSub('start') },
+      { label: 'Set due date…', icon: <CalendarDays size={ICON} />, onClick: openSub('date') },
+      {
+        label: 'Depends on',
+        icon: <Link2 size={ICON} />,
+        submenu: dependencyItems(view, ctx, ownTag, notes, run)
+      }
+    )
+  } else {
+    items.push(
+      { label: 'Set due date…', icon: <CalendarDays size={ICON} />, onClick: openSub('date') },
+      {
+        label: 'Link to deliverable…',
+        icon: <Package size={ICON} />,
+        onClick: openSub('deliverable')
+      }
+    )
+  }
   // Only top-level tasks and milestones are linkable — sub-tasks are plain
   // toggles, not standalone items, so they get no anchor.
   if (!ctx.isSubtask) {
     items.push({
-      label: ctx.isMilestone ? 'Copy link to milestone' : 'Copy link to task',
+      label: ownTag
+        ? 'Copy link to deliverable'
+        : ctx.isMilestone
+          ? 'Copy link to milestone'
+          : 'Copy link to task',
       icon: <Link2 size={ICON} />,
       onClick: run(() => copyTaskLink(view, ctx.line0, titleOf(getNotePath() ?? '')))
     })
@@ -563,9 +674,11 @@ function mainItems(
   view: EditorView,
   ctx: LineCtx,
   table: TableCtx | null,
+  notes: ReadonlyMap<VaultPath, NoteMeta>,
   run: (fn: () => void) => () => void,
   openSub: (sub: SubKind) => () => void
 ): MenuEntry[] {
+  const ownTag = ownDeliverableTag(ctx, notes)
   const items: MenuEntry[] = [
     ...clipboardItems(view, ctx.selection.length > 0, run),
     { label: 'Format', icon: <Type size={ICON} />, submenu: formatItems(view, run) },
@@ -573,9 +686,15 @@ function mainItems(
   ]
   if (ctx.isTask || ctx.isMilestone) {
     items.push({
-      label: ctx.isMilestone ? 'Milestone' : 'Task',
-      icon: ctx.isMilestone ? <Milestone size={ICON} /> : <CheckSquare size={ICON} />,
-      submenu: taskItems(view, ctx, run, openSub)
+      label: ownTag ? 'Deliverable' : ctx.isMilestone ? 'Milestone' : 'Task',
+      icon: ownTag ? (
+        <Package size={ICON} />
+      ) : ctx.isMilestone ? (
+        <Milestone size={ICON} />
+      ) : (
+        <CheckSquare size={ICON} />
+      ),
+      submenu: taskItems(view, ctx, ownTag, notes, run, openSub)
     })
   }
   if (table) {

@@ -23,11 +23,11 @@ const PROJECT = [
   '---',
   '',
   '- [ ] Contracts 🛫 2026-03-20 📅 2026-04-05 #deliverable/govalle/contracts',
-  '    - [x] Proposals #deliverable/govalle/contracts',
-  '    - [ ] Bid date #deliverable/govalle/contracts',
+  '    - [x] Proposals @deliverable(govalle/contracts)',
+  '    - [ ] Bid date @deliverable(govalle/contracts)',
   '- [ ] Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design ⛓ #deliverable/govalle/contracts',
   '- [ ] Procurement 🛫 2026-04-21 📅 2026-05-10 #deliverable/govalle/procurement ⛓ #deliverable/govalle/design',
-  '🏁 Permits approved 📅 2026-04-12 #deliverable/govalle/design',
+  '🏁 Permits approved 📅 2026-04-12 @deliverable(govalle/design)',
   '🏁 Groundbreaking !! 📅 2026-05-01',
   ''
 ].join('\n')
@@ -74,7 +74,7 @@ describe('buildPlannerModel', () => {
 
   it('adopts tasks tagged from any other note in the vault', () => {
     const notes = vault({
-      'Field notes.md': '- [ ] Order rebar #deliverable/govalle/procurement 📅 2026-04-25\n'
+      'Field notes.md': '- [ ] Order rebar @deliverable(govalle/procurement) 📅 2026-04-25\n'
     })
     const procurement = buildPlannerModel(notes).byId.get('deliverable/govalle/procurement')!
     expect(procurement.tasks).toHaveLength(1)

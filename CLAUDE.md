@@ -101,16 +101,28 @@ the board and the planner agree without importing each other:
   is `project:` frontmatter, else its kebab-cased title. `status: completed`
   closes it (no new deliverables/tasks; its tags drop out of completion).
 - A **deliverable** is a *top-level* checkbox task in that note carrying
-  `#deliverable/<project>/<name>` — exactly three segments, enforced by
-  `DELIVERABLE_TAG_RE`; two segments is the project, four is rejected.
+  `@deliverable(<project>/<name>)` — exactly two segments inside the parens,
+  enforced by `DELIVERABLE_TAG_RE`/`DELIVERABLE_REF_RE`. What makes a line
+  the *defining* one rather than a member is purely structural (top-level,
+  in the project's own note, carrying a span) — never the marker itself, so
+  the same marker also doubles as the join syntax below. Notes written before
+  this switch may still carry a defining line's identity as a literal
+  `#deliverable/…` tag; that legacy form still reads, but nothing writes it
+  any more.
 - Its **bar** spans `🛫`/`@start(YYYY-MM-DD)` → `📅`/`@due(...)`
   (`START_RE`, `DUE_RE`). No `🛫` means start falls back to end — a point,
   not a span.
-- **Dependencies** are `⛓ #deliverable/<project>/<name>` on the deliverable
+- **Dependencies** are `⛓ @deliverable(<project>/<name>)` on the deliverable
   line, read as "comes after that one" (`DEPENDS_RE`, global — several
-  allowed). They draw the arrows and constrain drag.
-- Ordinary tasks **join** a deliverable by carrying the same tag, anywhere
-  in the vault.
+  allowed; legacy `⛓ #deliverable/…` still reads too). They draw the arrows
+  and constrain drag. Because a dependency is text-identical to a join
+  marker apart from its `⛓ ` prefix, `deliverableRefsOf` has to exclude any
+  `@deliverable(...)` match that falls inside a `DEPENDS_RE` span, or a
+  deliverable would "join" everything it merely waits on.
+- Ordinary tasks **join** a deliverable by carrying that same
+  `@deliverable(<project>/<name>)` marker anywhere in the vault — deliberately
+  not a `#tag`, so joining never clutters the Tags sidebar or `#`
+  autocomplete with structural plumbing.
 - Any new inline marker must be added to `AFTER_ANCHOR` in
   `parser/patterns.ts` (so it can't be pushed past a `^block-id`) *and* to
   `stripInlineMarkers` — strip dependencies before the generic tag strip or

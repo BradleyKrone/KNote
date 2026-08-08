@@ -316,6 +316,16 @@ body {
   font-size: 0.9em;
 }
 
+/* @deliverable(project/name) join marker — same pill shape as .cm-knote-tag but
+ * a different fill so it reads as a distinct kind of thing at a glance. */
+.cm-knote-deliverable-ref {
+  color: #fff;
+  background-color: #238b45;
+  border-radius: 8px;
+  padding: 0.05em 0.45em;
+  font-size: 0.9em;
+}
+
 /* State pill trailing a top-level task line — its current Kanban column. */
 .cm-knote-state {
   display: inline-block;

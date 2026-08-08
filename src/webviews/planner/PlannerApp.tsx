@@ -488,11 +488,11 @@ export function PlannerApp(): React.JSX.Element {
             No projects yet. A project is any note with <code>type: project</code> in its
             frontmatter; its deliverables are top-level tasks carrying a span and a tag:
           </p>
-          <pre>{`- [ ] Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design ⛓ #deliverable/govalle/contracts`}</pre>
+          <pre>{`- [ ] Design 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/design) ⛓ @deliverable(govalle/contracts)`}</pre>
           <p>
-            Tag a task anywhere in the vault with that same
-            <code> #deliverable/…</code> tag and it joins the deliverable — and shows on your board
-            while the deliverable is running.
+            Add <code>@deliverable(govalle/design)</code> to a task or milestone anywhere in the
+            vault and it joins the deliverable — and shows on your board while the deliverable is
+            running.
           </p>
           <button className="icon-btn" onClick={askNewProject}>
             <Plus size={14} /> New project

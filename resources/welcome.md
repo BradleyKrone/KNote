@@ -323,13 +323,16 @@ old Timeline panel. Everything it shows lives in plain Markdown:
 | Project | a note with `type: project` (and optionally `project: <slug>`) in its frontmatter |
 | Its deadline | `end: 2026-06-30` in the same frontmatter (`due:`/`deadline:` also read) |
 | Finishing it | `status: completed` — set it from the planner's right-click menu |
-| Deliverable | a top-level task in that note: `- [ ] Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design` |
-| Its tasks | any checkbox line **anywhere in the vault** carrying that same `#deliverable/…` tag |
-| Dependency | `⛓ #deliverable/govalle/contracts` on the deliverable line — "starts after that one"; repeatable |
-| Milestone | a `🏁 Permits approved 📅 2026-04-12 #deliverable/govalle/design` line — a diamond on the chart |
+| Deliverable | a top-level task in that note: `- [ ] Design 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/design)` |
+| Its tasks | any checkbox line **anywhere in the vault** carrying that same `@deliverable(govalle/design)` marker — deliberately *not* a `#tag`, so joining a deliverable never clutters the Tags sidebar or `#` autocomplete |
+| Dependency | `⛓ @deliverable(govalle/contracts)` on the deliverable line — "starts after that one"; repeatable |
+| Milestone | a `🏁 Permits approved 📅 2026-04-12 @deliverable(govalle/design)` line — a diamond on the chart |
 
 `🛫` is the start date, `📅` the end date (`@start(...)`/`@due(...)` also
-read). A deliverable with no `🛫` is a single-day bar.
+read). A deliverable with no `🛫` is a single-day bar. Notes written before
+KNote switched to `@deliverable(...)` may still carry a deliverable's or
+dependency's identity as a `#deliverable/…` tag — that older form still
+reads fine, but nothing writes it any more.
 
 In the chart:
 
@@ -348,6 +351,14 @@ Bar fill is % complete — the share of the deliverable's tasks that are
 checked (or its own checkbox if it has none). A bar that starts before
 something it depends on finishes is outlined in red.
 
+**Editing a deliverable from the editor.** The same **Set start date… /
+Set due date… / Depends on ▸** trio is one right-click away in the note
+itself, not just the Planner panel: right-click a deliverable's own task
+line and its **Task ▸** submenu becomes **Deliverable ▸**, with those three
+items plus the usual tag/priority. Depends on ▸ lists every other live
+deliverable, ticked where it's already a predecessor — the same picker the
+chart's right-click menu uses.
+
 **Project status.** A project carries a badge in the tree:
 
 | Badge | When |
@@ -359,16 +370,17 @@ something it depends on finishes is outlined in red.
 Right-click a project for **Set target end date…** and **Mark project
 completed** / **Reopen project**. Completed projects sort to the bottom of
 the list and are **closed for business**: Add deliverable / task /
-milestone are greyed out, and their `#deliverable/…` tags disappear from
-`#` tag autocomplete, so old work can't be filed against a finished
-project by accident. Reopening restores all of it. Nothing is deleted or
-hidden — the chart still draws everything the project contains.
+milestone are greyed out, and their deliverables disappear from
+`@deliverable(...)` and `#` tag autocomplete, so old work can't be filed
+against a finished project by accident. Reopening restores all of it.
+Nothing is deleted or hidden — the chart still draws everything the
+project contains.
 
-**Deliverable tasks and the board:** a task tagged `#deliverable/…` only
-appears on the Kanban board while its deliverable is actually running —
-or after its end date if it's still unchecked, so late work never
-disappears. Untagged tasks are unaffected. Tick **All deliverables** in
-the board header to see everything regardless.
+**Deliverable tasks and the board:** a task carrying `@deliverable(...)`
+only appears on the Kanban board while its deliverable is actually
+running — or after its end date if it's still unchecked, so late work
+never disappears. Unjoined tasks are unaffected. Tick **All deliverables**
+in the board header to see everything regardless.
 
 ## Machine Log, Graph
 
