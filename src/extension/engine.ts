@@ -4,7 +4,7 @@
 
 import * as vscode from 'vscode'
 import type { IndexDelta, NoteMeta, VaultPath } from '@shared/types'
-import { isInside, isMarkdown } from '@shared/pathUtils'
+import { isImage, isInside, isMarkdown } from '@shared/pathUtils'
 import * as vault from '../core/vaultService'
 import * as vaultIndex from '../core/indexer/vaultIndex'
 import {
@@ -17,6 +17,16 @@ import { markKnownContent, markOwnWrite, startWatching, stopWatching } from '../
 const deltaEmitter = new vscode.EventEmitter<IndexDelta>()
 /** Fires whenever a note's parsed metadata changes (any source: edits, watcher, board writes). */
 export const onIndexDelta = deltaEmitter.event
+
+const attachmentChangeEmitter = new vscode.EventEmitter<VaultPath>()
+/**
+ * Fires when an image/attachment file changes on disk from outside KNote's
+ * own write paths — e.g. a draw.io diagram edited and saved in its own
+ * editor. Editor saves of the note itself never come through here (that's
+ * live CodeMirror sync); this is specifically for files KNote doesn't own
+ * the writes to.
+ */
+export const onAttachmentChange = attachmentChangeEmitter.event
 
 let vaultRoot: string | null = null
 
@@ -110,6 +120,9 @@ async function handleWatcherEvent(rel: VaultPath, kind: string): Promise<void> {
       await cleanupAttachmentsForDeletedNote(path, content)
     }
   } else {
+    if ((kind === 'add' || kind === 'change') && isImage(rel)) {
+      attachmentChangeEmitter.fire(rel)
+    }
     await vaultIndex.handleFsChange(rel, kind)
   }
 }

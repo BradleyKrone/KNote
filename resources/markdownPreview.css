@@ -32,6 +32,14 @@
   max-width: 100%;
 }
 
+/* draw.io's SVG exports have a transparent canvas and default black
+   lines/arrows, which disappear on a dark theme without a light backing. */
+.knote-embed-image-drawio {
+  background: #fff;
+  border-radius: 4px;
+  padding: 4px;
+}
+
 .knote-embed-missing::after {
   content: ' ⚠ not found';
   color: var(--vscode-errorForeground, #c00);

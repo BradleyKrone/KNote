@@ -52,6 +52,17 @@ export function isImage(rel: string): boolean {
   return IMAGE_EXTS.has(extOf(rel))
 }
 
+/**
+ * True for a draw.io diagram file: raw XML (`.drawio`) or one of draw.io's
+ * "editable image" exports (`.drawio.svg`, `.drawio.png`), which embed the
+ * diagram XML inside a real SVG/PNG. A double-extension check, not just the
+ * final extension — a plain `.svg` must not count.
+ */
+export function isDrawioFile(rel: string): boolean {
+  const name = nameOf(rel).toLowerCase()
+  return name.endsWith('.drawio') || name.endsWith('.drawio.svg') || name.endsWith('.drawio.png')
+}
+
 /** True if `rel` is `folder` itself or inside it. */
 export function isInside(rel: string, folder: string): boolean {
   if (folder === '') return true

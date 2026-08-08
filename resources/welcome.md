@@ -199,6 +199,7 @@ left, so you can pick one out at a glance instead of reading down the list:
 | **Insert ▸** Milestone | Insert a dated `🏁 Milestone 📅 …` line |
 | **Insert ▸** Table… | Pick a row/column count → insert an empty table |
 | **Insert ▸** Machine work… | Pick a serial + date → insert a `🚜` entry with the detail template |
+| **Insert ▸** Draw.io Diagram | Create a blank diagram in your attachments folder, embed it, and open it for editing |
 | **Task ▸** Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
 | **Task ▸** Copy link to task | *(task/milestone lines)* copy a `[[Note#^id\|Task text]]` link to this task (adding a hidden `^anchor` named after the task if needed) — paste it elsewhere to jump back |
 | **Table ▸** *(row/column actions)* | *(inside a table)* insert or delete the clicked row or column, or drop to the raw Markdown with Edit table source |
@@ -407,6 +408,27 @@ the attachments folder automatically:
   the Recycle Bin).
 - **KNote: Clean Up Orphaned Attachments** still exists for a full manual
   sweep of anything that predates this feature.
+
+## Draw.io diagrams
+
+Embed a draw.io diagram in a note and edit it without leaving VS Code:
+
+- **Right-click in Live Preview → Insert ▸ Draw.io Diagram** creates a
+  blank diagram in your attachments folder, embeds it (`![[/…]]`) at the
+  cursor, and opens it for editing. **KNote: Insert Draw.io Diagram** in the
+  Command Palette does the same from the raw text editor (prompting for a
+  name first).
+- The diagram renders inline like any other image, in both Live Preview and
+  Reading mode. **Double-click it in Live Preview** to reopen it for editing
+  (a plain `[[link]]` to a `.drawio` file works the same way on a single click).
+- Diagrams are stored as `.drawio.svg`/`.drawio.png` — draw.io's own
+  "editable image" format, a real SVG/PNG with the diagram data embedded
+  inside it, so it's a normal image everywhere else too.
+- Editing needs the free **Draw.io Integration** extension
+  (`hediet.vscode-drawio`) installed — KNote prompts you to install it the
+  first time you try to edit a diagram if it isn't there yet. That
+  extension's editor runs fully offline once installed, same as everything
+  else in KNote.
 
 ## Data rules (unchanged)
 

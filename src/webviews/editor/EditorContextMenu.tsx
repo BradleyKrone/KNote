@@ -56,6 +56,7 @@ import {
   Truck,
   Type,
   Unlink,
+  Workflow,
   Wrench
 } from 'lucide-react'
 import type { BoardColumn } from '@shared/types'
@@ -89,6 +90,7 @@ import {
   editMachineOnLine,
   insertCheckbox,
   insertCodeBlock,
+  insertDrawioDiagram,
   insertMachineEntry,
   insertMarkdownLink,
   insertMilestone,
@@ -518,7 +520,12 @@ function insertItems(
     },
     { label: 'Code block', icon: <Code size={ICON} />, onClick: run(() => insertCodeBlock(view)) },
     { label: 'Table…', icon: <Table2 size={ICON} />, onClick: openSub('table') },
-    { label: 'Machine work…', icon: <Truck size={ICON} />, onClick: openSub('machine') }
+    { label: 'Machine work…', icon: <Truck size={ICON} />, onClick: openSub('machine') },
+    {
+      label: 'Draw.io Diagram',
+      icon: <Workflow size={ICON} />,
+      onClick: run(() => void insertDrawioDiagram(view))
+    }
   ]
 }
 

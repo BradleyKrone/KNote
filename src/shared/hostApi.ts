@@ -45,6 +45,15 @@ export interface HostApi {
   attachmentUri(src: string): Promise<string | null>
 
   /**
+   * Open a draw.io diagram (`.drawio`, `.drawio.svg`, `.drawio.png`) in the
+   * Draw.io Integration extension's editor, resolving `src` the same way
+   * `attachmentUri` does. Shows an install prompt instead if that extension
+   * isn't installed. Only meaningful for the editor's own webview, same as
+   * `attachmentUri`.
+   */
+  openWithDrawio(src: string): Promise<void>
+
+  /**
    * Save a pasted image's bytes (base64-encoded) into the vault's configured
    * attachments folder and return the vault-relative path it was saved at.
    * Used by the live-preview editor's paste handler, since a
@@ -52,6 +61,13 @@ export interface HostApi {
    * webview editor's own DOM.
    */
   saveImageAttachment(mimeType: string, base64Data: string): Promise<VaultPath>
+
+  /**
+   * Create a blank draw.io diagram in the vault's attachments folder and
+   * return the vault-relative path it was saved at. Used by the live-preview
+   * editor's "Insert ▸ Draw.io Diagram" right-click action.
+   */
+  createDrawioDiagram(): Promise<VaultPath>
 
   // Verified line edits — routed through the host's verifiedEdit (live
   // buffer when the doc is open, atomic disk write otherwise); all fail
@@ -143,6 +159,12 @@ export interface HostEvents {
   configChanged: VaultConfig
   /** Vault-relative path of the note in the active editor, or null. */
   activeNoteChanged: VaultPath | null
+  /**
+   * An image/attachment file changed on disk outside the editor's own sync
+   * path — e.g. a draw.io diagram edited and saved in its own editor.
+   * Image widgets showing this path should refetch and reload.
+   */
+  attachmentChanged: VaultPath
   /** Ask the Search view to run this query (e.g. a Tags-tree click sends `tag:#x`). */
   searchFor: string
   /** The Boards tree picked a project/deliverable/unassigned/all filter for the open global board. */

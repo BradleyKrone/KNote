@@ -4,7 +4,7 @@
 
 import * as vscode from 'vscode'
 import type { HostEvents, RpcRequest, RpcResponse } from '@shared/hostApi'
-import { onIndexDelta } from '../engine'
+import { onAttachmentChange, onIndexDelta } from '../engine'
 import { relForUri } from '../paths'
 
 export type HostHandlers = Record<string, (...args: never[]) => unknown>
@@ -64,6 +64,7 @@ export function setActiveNote(path: string | null): void {
 export function registerRpcBroadcasts(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     onIndexDelta((delta) => broadcast('indexDelta', delta)),
+    onAttachmentChange((path) => broadcast('attachmentChanged', path)),
     // Fires with `editor === undefined` whenever focus moves to *any*
     // non-TextEditor surface — including KNote's own Live Preview panel,
     // every time it's opened or focused. Only react when there's a real

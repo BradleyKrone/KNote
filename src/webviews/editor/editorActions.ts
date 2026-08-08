@@ -12,6 +12,7 @@ import type { EditorView } from '@codemirror/view'
 import { machineEntryTemplate } from '@shared/machineEntry'
 import { DUE_RE, MACHINE_ENTRY_RE } from '@shared/parser/patterns'
 import { insertTag, setDueDate, setPriority } from '../shared/taskMeta'
+import { host } from '../shared/rpc'
 import { buildMdLink, type MdLink } from './mdLinkLogic'
 
 // ---------- Pure line builders (unit-tested) ----------
@@ -112,6 +113,17 @@ export function insertMachineEntry(
   const entry = buildMachineEntryLine(serial, date, tags)
   const caret = entry.length + 1 // after the trailing space, before the template
   insertBlock(view, `${entry} ${machineEntryTemplate()}`, { from: caret, to: caret })
+}
+
+/**
+ * Create a blank draw.io diagram in the vault's attachments folder, embed it
+ * at the caret, and open it for editing. The one editor action that needs a
+ * host round-trip first — the webview has no filesystem access of its own.
+ */
+export async function insertDrawioDiagram(view: EditorView): Promise<void> {
+  const saved = await host.createDrawioDiagram()
+  insertBlock(view, `![[/${saved}]]`)
+  void host.openWithDrawio(`/${saved}`)
 }
 
 /** Insert a `[[]]` wiki link at the caret (wrapping the selection when there is one). */

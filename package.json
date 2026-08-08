@@ -88,6 +88,10 @@
         "title": "KNote: Insert Template"
       },
       {
+        "command": "knote.insertDrawioDiagram",
+        "title": "KNote: Insert Draw.io Diagram"
+      },
+      {
         "command": "knote.cycleTaskStatus",
         "title": "KNote: Cycle Task Status"
       },

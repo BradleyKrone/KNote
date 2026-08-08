@@ -24,7 +24,7 @@ import {
   WidgetType
 } from '@codemirror/view'
 import { isStaleError } from '@shared/errors'
-import { isImage } from '@shared/pathUtils'
+import { isDrawioFile, isImage, resolveEmbedPath, samePath } from '@shared/pathUtils'
 import type { BoardColumn } from '@shared/types'
 import {
   ARCHIVED_CHAR,
@@ -42,7 +42,7 @@ import {
   TASK_LINE_RE,
   WIKI_LINK_RE
 } from '@shared/parser/patterns'
-import { host } from '../shared/rpc'
+import { host, on } from '../shared/rpc'
 import { promptReason, showToast, useConfigStore } from '../shared/stores'
 import { checkboxRange } from './constructLogic'
 import { isNoteEmbedLine } from './embedLogic'
@@ -252,7 +252,10 @@ class WikiLinkWidget extends WidgetType {
     a.addEventListener('mousedown', (e) => e.preventDefault())
     a.addEventListener('click', (e) => {
       e.preventDefault()
-      void host.openWikiTarget(this.target)
+      // A bare link to a raw .drawio file (not wrapped in an image embed)
+      // opens straight in the draw.io editor rather than as a wiki note.
+      if (isDrawioFile(this.target)) void host.openWithDrawio(this.target)
+      else void host.openWikiTarget(this.target)
     })
     return a
   }
@@ -262,6 +265,33 @@ class WikiLinkWidget extends WidgetType {
     return true
   }
 }
+
+// Live `<img>` elements currently in the DOM, keyed by the vault-relative
+// path they show, so an `attachmentChanged` event (e.g. a draw.io diagram
+// edited and saved in its own editor) can reload exactly the images
+// affected. CM6 recycles a widget's DOM node across redraws whenever a new
+// widget instance is eq() to the old one — toDOM() is only called once per
+// distinct DOM node — so a per-instance listener would miss later changes;
+// this registry survives regardless of widget-object churn.
+const liveImages = new Map<string, Set<HTMLImageElement>>()
+
+/** `src` resolved against the open note's folder, or null for an external/data URI. */
+function resolvedAttachmentPath(src: string): string | null {
+  if (/^[a-z][a-z0-9+.-]*:/i.test(src)) return null
+  const folder = notePath && notePath.includes('/') ? notePath.slice(0, notePath.lastIndexOf('/')) : ''
+  return resolveEmbedPath(folder, src)
+}
+
+on('attachmentChanged', (changedPath) => {
+  for (const [key, imgs] of liveImages) {
+    if (!samePath(key, changedPath)) continue
+    for (const img of imgs) {
+      void host.attachmentUri(`/${key}`).then((uri) => {
+        if (uri) img.src = uri
+      })
+    }
+  }
+})
 
 class ImageWidget extends WidgetType {
   constructor(private readonly src: string) {
@@ -279,8 +309,38 @@ class ImageWidget extends WidgetType {
       if (uri) img.src = uri
       else wrap.classList.add('cm-knote-image-missing')
     })
+    const resolved = resolvedAttachmentPath(this.src)
+    if (resolved) {
+      let set = liveImages.get(resolved)
+      if (!set) {
+        set = new Set()
+        liveImages.set(resolved, set)
+      }
+      set.add(img)
+    }
     wrap.appendChild(img)
+    // draw.io's "editable image" exports (.drawio.svg/.drawio.png) render as
+    // plain images above, but double-click hands them to the Draw.io
+    // Integration extension for editing instead of doing nothing.
+    if (isDrawioFile(this.src)) {
+      wrap.classList.add('cm-knote-image-drawio')
+      wrap.title = 'Double-click to edit in draw.io'
+      wrap.addEventListener('dblclick', (e) => {
+        e.preventDefault()
+        void host.openWithDrawio(this.src)
+      })
+    }
     return wrap
+  }
+  destroy(dom: HTMLElement): void {
+    const resolved = resolvedAttachmentPath(this.src)
+    if (!resolved) return
+    const img = dom.querySelector('img')
+    const set = liveImages.get(resolved)
+    if (img && set) {
+      set.delete(img)
+      if (set.size === 0) liveImages.delete(resolved)
+    }
   }
 }
 
