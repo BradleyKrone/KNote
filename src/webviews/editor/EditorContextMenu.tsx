@@ -66,15 +66,9 @@ import {
   ARCHIVED_CHAR,
   MACHINE_ENTRY_RE,
   MILESTONE_LINE_RE,
-  parseDeliverableTag,
   TASK_LINE_RE
 } from '@shared/parser/patterns'
-import {
-  deliverableRefsOf,
-  isProjectNote,
-  liveDeliverables,
-  projectSlug
-} from '@shared/deliverables'
+import { definingDeliverableTag, liveDeliverables } from '@shared/deliverables'
 import { Popover } from '../shared/components/Popover'
 import { ContextMenuList, type MenuEntry } from '../shared/components/ContextMenuList'
 import { LinkPickerContent } from '../shared/components/LinkPickerContent'
@@ -195,12 +189,10 @@ function readLineCtx(view: EditorView, pos: number): LineCtx {
  * structural rule `deliverableTagsOf` documents, just narrowed to "this note".
  */
 function ownDeliverableTag(ctx: LineCtx, notes: ReadonlyMap<VaultPath, NoteMeta>): string | null {
-  if (!ctx.isTask || ctx.isSubtask) return null
+  if (!ctx.isTask) return null
   const path = getNotePath()
   const meta = path ? notes.get(path) : undefined
-  if (!meta || !isProjectNote(meta)) return null
-  const slug = projectSlug(meta)
-  return deliverableRefsOf(ctx.text).find((t) => parseDeliverableTag(t)?.project === slug) ?? null
+  return definingDeliverableTag(ctx.text, !ctx.isSubtask, meta)
 }
 
 export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Element | null {

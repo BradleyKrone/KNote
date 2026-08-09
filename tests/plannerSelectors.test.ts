@@ -252,7 +252,8 @@ describe('deliverableWindows / visibleForDeliverable', () => {
   it('collects a window per deliverable', () => {
     expect(windows.get('deliverable/govalle/design')).toEqual({
       start: '2026-04-01',
-      end: '2026-04-20'
+      end: '2026-04-20',
+      done: false
     })
   })
 
@@ -268,16 +269,16 @@ describe('deliverableWindows / visibleForDeliverable', () => {
     expect(visibleForDeliverable(t, windows, '2026-03-31')).toBe(false)
   })
 
-  it('keeps an overdue unchecked task visible, but hides a finished one', () => {
+  it('keeps a task visible past its deliverable\'s end date whether or not it\'s done', () => {
+    // Completion is never a visibility signal — a task only leaves the board
+    // by being archived, not by being checked off. See the archive-only test
+    // below for the one case that does hide it.
     expect(
       visibleForDeliverable(task(' ', 'deliverable/govalle/design'), windows, '2026-06-01')
     ).toBe(true)
     expect(
       visibleForDeliverable(task('x', 'deliverable/govalle/design'), windows, '2026-06-01')
-    ).toBe(false)
-    expect(
-      visibleForDeliverable(task('a', 'deliverable/govalle/design'), windows, '2026-06-01')
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it('shows a task tagged for a deliverable that does not exist, rather than hiding work', () => {

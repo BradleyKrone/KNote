@@ -10,9 +10,13 @@ import {
   stripInlineMarkers
 } from '@shared/parser/patterns'
 import {
+  definingDeliverableTag,
   deliverableMembershipOf,
+  deliverableProgress,
   deliverableWindows,
+  overdueDeliverables,
   visibleForDeliverable,
+  type DeliverableProgress,
   type DeliverableScopeFilter
 } from '@shared/deliverables'
 
@@ -32,6 +36,12 @@ export interface BoardCard {
   tags: string[]
   /** Deliverable(s) this card belongs to (bare `deliverable/<project>/<name>` tags), from either marker — see `deliverableMembershipOf`. */
   deliverables: string[]
+  /** The bare deliverable tag this card *defines* (its own top-level line in a project note), or null for an ordinary task — including one that merely joins a deliverable. */
+  definesDeliverable: string | null
+  /** Member-task completion for the deliverable this card defines — set only when `definesDeliverable` is. */
+  progress: DeliverableProgress | null
+  /** Which of this card's `deliverables` are currently overdue (window closed, work still unfinished) — a subset of `deliverables`. Drives the red overdue treatment on the deliverable chip even when this task carries no `@due()` of its own. */
+  overdueDeliverables: string[]
   due: string | null
   priority: number
   /** Follow-up date (YYYY-MM-DD) for a card sitting in a require-reason column */
@@ -50,10 +60,23 @@ export function scopeLabel(scope: BoardScope): string {
   return titleOf(scope.path)
 }
 
-export function toCard(meta: NoteMeta, task: NoteMeta['tasks'][number]): BoardCard {
+export function toCard(
+  meta: NoteMeta,
+  task: NoteMeta['tasks'][number],
+  progress?: ReadonlyMap<string, DeliverableProgress>,
+  overdueTags?: ReadonlySet<string>
+): BoardCard {
   const due = DUE_RE.exec(task.text)
   const prio = PRIORITY_RE.exec(task.text)
   const displayText = stripInlineMarkers(task.text)
+  // Board cards are only ever built for top-level tasks (collectCards skips
+  // isSubtask before calling toCard), so `true` here is always correct.
+  // requireSpan: true — a card only counts as *the* deliverable when it
+  // actually carries the 🛫/📅 span, not just the marker; otherwise a plain
+  // top-level task in the project note that merely joins the same deliverable
+  // (no dates of its own) would be mistaken for a second defining line.
+  const definesDeliverable = definingDeliverableTag(task.text, true, meta, true)
+  const deliverables = deliverableMembershipOf(task.tags, task.text)
   return {
     path: meta.path,
     noteTitle: meta.title,
@@ -62,7 +85,14 @@ export function toCard(meta: NoteMeta, task: NoteMeta['tasks'][number]): BoardCa
     text: task.text,
     displayText: displayText || task.text,
     tags: task.tags,
-    deliverables: deliverableMembershipOf(task.tags, task.text),
+    deliverables,
+    definesDeliverable,
+    progress: definesDeliverable
+      ? (progress?.get(definesDeliverable) ?? { done: 0, total: 0 })
+      : null,
+    overdueDeliverables: overdueTags
+      ? deliverables.filter((tag) => overdueTags.has(tag))
+      : [],
     due: due ? (due[1] ?? due[2]) : null,
     priority: prio ? prio[1].length : 0,
     waitingFollowUp: task.waitingFollowUp,
@@ -189,7 +219,9 @@ export function collectCards(
   // running (or overdue) — see visibleForDeliverable. Both views read the same
   // index map, so this needs nothing from the host.
   const windows = filters.ignoreDeliverableWindow ? null : deliverableWindows(notes)
+  const progress = deliverableProgress(notes)
   const now = dayjs().format('YYYY-MM-DD')
+  const overdueTags = overdueDeliverables(notes, now)
   for (const meta of notes.values()) {
     if (scope.kind === 'note' && !samePath(meta.path, scope.path)) continue
     if (scope.kind === 'folder' && !isInside(meta.path, scope.path)) continue
@@ -197,7 +229,7 @@ export function collectCards(
       if (task.statusChar === ARCHIVED_CHAR) continue
       if (task.isSubtask) continue
       if (windows && !visibleForDeliverable(task, windows, now)) continue
-      const card = toCard(meta, task)
+      const card = toCard(meta, task, progress, overdueTags)
       if (
         filters.tag &&
         !card.tags.some((t) => t === filters.tag || t.startsWith(filters.tag + '/'))

@@ -59,16 +59,28 @@ function WaitingChip({ card }: { card: BoardCard }): React.JSX.Element | null {
  * pill, since deliverable membership isn't a content tag (see
  * `deliverableMembershipOf`). Labelled with just the deliverable's own name;
  * the project it belongs to is implied by context (which board/scope you're
- * looking at).
+ * looking at). Skips the tag this card itself defines — that's covered by
+ * `DeliverableBadge` instead, so a deliverable's own card doesn't show a
+ * redundant outlined chip alongside its filled one. A chip for a deliverable
+ * whose window has closed with work still open (`overdueDeliverables`) reads
+ * red, the same overdue treatment `DueChip` gives a task's own blown-past
+ * date — so a task with no `@due()` of its own still shows late once its
+ * deliverable is.
  */
 function DeliverableChips({ card }: { card: BoardCard }): React.JSX.Element | null {
-  if (card.deliverables.length === 0) return null
+  const joined = card.deliverables.filter((tag) => tag !== card.definesDeliverable)
+  if (joined.length === 0) return null
   return (
     <>
-      {card.deliverables.map((tag) => {
+      {joined.map((tag) => {
         const parsed = parseDeliverableTag(tag)
+        const overdue = card.overdueDeliverables.includes(tag)
         return (
-          <span key={tag} className="board-card-deliverable" title={tag}>
+          <span
+            key={tag}
+            className={`board-card-deliverable${overdue ? ' overdue' : ''}`}
+            title={overdue ? `${tag} — deliverable overdue` : tag}
+          >
             <Package size={11} /> {parsed?.deliverable ?? tag}
           </span>
         )
@@ -77,10 +89,41 @@ function DeliverableChips({ card }: { card: BoardCard }): React.JSX.Element | nu
   )
 }
 
+/**
+ * Marks a card as *the* card that defines a deliverable, filled (not
+ * outlined) so it reads as primary rather than a reference — the same
+ * filled-vs-outline convention the Live Preview editor uses for a defining
+ * line vs a joining one (`.cm-knote-deliverable-ref`/`-join`). Shows member-task
+ * completion once the deliverable has any members; a brand-new deliverable
+ * with nothing joined yet just reads "Deliverable". Reads red, same as an
+ * overdue `DueChip`, once its window has closed with work still open.
+ */
+function DeliverableBadge({ card }: { card: BoardCard }): React.JSX.Element | null {
+  if (!card.definesDeliverable) return null
+  const progress = card.progress
+  const overdue = card.overdueDeliverables.includes(card.definesDeliverable)
+  return (
+    <div className={`board-card-deliverable-badge${overdue ? ' overdue' : ''}`}>
+      <Package size={11} />
+      Deliverable{progress && progress.total > 0 ? ` · ${progress.done}/${progress.total} done` : ''}
+    </div>
+  )
+}
+
 /** Static clone rendered in the DragOverlay so it floats above column scroll clipping. */
 export function CardPreview({ card }: { card: BoardCard }): React.JSX.Element {
   return (
-    <div className="board-card dragging board-card-overlay">
+    <div
+      className={[
+        'board-card',
+        'dragging',
+        'board-card-overlay',
+        card.definesDeliverable ? 'is-deliverable' : ''
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <DeliverableBadge card={card} />
       <div className="board-card-text">
         {card.priority > 0 && (
           <span className={`prio prio-${card.priority}`}>{PRIORITY_LABELS[card.priority]}</span>
@@ -138,11 +181,17 @@ export function Card({
         drag.setNodeRef(el)
         drop.setNodeRef(el)
       }}
-      className={['board-card', drag.isDragging ? 'dragging' : '', drop.isOver ? 'drop-before' : '']
+      className={[
+        'board-card',
+        drag.isDragging ? 'dragging' : '',
+        drop.isOver ? 'drop-before' : '',
+        card.definesDeliverable ? 'is-deliverable' : ''
+      ]
         .filter(Boolean)
         .join(' ')}
       {...(editing ? {} : { ...drag.listeners, ...drag.attributes })}
     >
+      {!editing && <DeliverableBadge card={card} />}
       {editing ? (
         <div className="board-card-edit" onPointerDown={(e) => e.stopPropagation()}>
           <TaskMetaToolbar value={draft} onChange={setDraft} textareaRef={textareaRef} />

@@ -377,10 +377,18 @@ Nothing is deleted or hidden — the chart still draws everything the
 project contains.
 
 **Deliverable tasks and the board:** a task carrying `@deliverable(...)`
-only appears on the Kanban board while its deliverable is actually
-running — or after its end date if it's still unchecked, so late work
-never disappears. Unjoined tasks are unaffected. Tick **All deliverables**
-in the board header to see everything regardless.
+only appears on the Kanban board once its deliverable has actually started —
+before that it's hidden so future-scheduled work doesn't clutter the board
+early. Once started it stays visible for good, checked or not; only
+archiving a task removes it. Unjoined tasks are unaffected. Tick **All
+deliverables** in the board header to see everything regardless.
+
+**Overdue deliverables flag their tasks too:** once a deliverable's own
+`📅` end date has passed with work still open, every task that joins it
+shows red on the board — even one with no `📅` of its own — so a slipping
+deliverable can't hide behind tasks that were never individually dated.
+"Still open" means its member tasks aren't all checked, or (a deliverable
+with no members yet) its own checkbox isn't.
 
 ## Machine Log, Graph
 

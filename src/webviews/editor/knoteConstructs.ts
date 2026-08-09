@@ -24,8 +24,9 @@ import {
   WidgetType
 } from '@codemirror/view'
 import { isStaleError } from '@shared/errors'
+import { definingDeliverableTag } from '@shared/deliverables'
 import { isDrawioFile, isImage, resolveEmbedPath, samePath } from '@shared/pathUtils'
-import type { BoardColumn } from '@shared/types'
+import type { BoardColumn, NoteMeta } from '@shared/types'
 import {
   ARCHIVED_CHAR,
   BLOCK_ID_RE,
@@ -44,7 +45,7 @@ import {
   WIKI_LINK_RE
 } from '@shared/parser/patterns'
 import { host, on } from '../shared/rpc'
-import { promptReason, showToast, useConfigStore } from '../shared/stores'
+import { promptReason, showToast, useConfigStore, useIndexStore } from '../shared/stores'
 import { checkboxRange } from './constructLogic'
 import { isNoteEmbedLine } from './embedLogic'
 import { hangingIndentEm } from './hangingIndent'
@@ -267,23 +268,30 @@ class WikiLinkWidget extends WidgetType {
   }
 }
 
-/** `@deliverable(project/name)` join marker → a pill naming `project/deliverable`,
+/** `@deliverable(project/name)` marker → a pill naming `project/deliverable`,
  *  deliberately styled apart from `.cm-knote-tag` (see editor.css) since it's
  *  structural membership, not a content tag. Non-interactive, unlike
- *  WikiLinkWidget — there's nowhere to navigate to. */
+ *  WikiLinkWidget — there's nowhere to navigate to. Filled when the line
+ *  itself *defines* the deliverable, outlined when it merely joins one
+ *  defined elsewhere, so the two read as visually distinct at a glance. */
 class DeliverableRefWidget extends WidgetType {
   constructor(
     private readonly project: string,
-    private readonly name: string
+    private readonly name: string,
+    private readonly isDefining: boolean
   ) {
     super()
   }
   eq(other: DeliverableRefWidget): boolean {
-    return other.project === this.project && other.name === this.name
+    return (
+      other.project === this.project &&
+      other.name === this.name &&
+      other.isDefining === this.isDefining
+    )
   }
   toDOM(): HTMLElement {
     const span = document.createElement('span')
-    span.className = 'cm-knote-deliverable-ref'
+    span.className = this.isDefining ? 'cm-knote-deliverable-ref' : 'cm-knote-deliverable-join'
     span.textContent = `${this.project}/${this.name}`
     span.title = `${this.project}/${this.name}`
     return span
@@ -425,12 +433,13 @@ function buildDecorations(view: EditorView): DecorationSet {
   const revealed = revealedLines(view)
   const { doc } = view.state
   const columns = useConfigStore.getState().vaultConfig.columns
+  const meta = notePath ? useIndexStore.getState().notes.get(notePath) : undefined
 
   for (const visible of view.visibleRanges) {
     let pos = visible.from
     while (pos <= visible.to) {
       const line = doc.lineAt(pos)
-      decorateLine(view, line, revealed.has(line.number), columns, decorations)
+      decorateLine(view, line, revealed.has(line.number), columns, meta, decorations)
       pos = line.to + 1
     }
   }
@@ -442,6 +451,7 @@ function decorateLine(
   line: { from: number; to: number; number: number; text: string },
   isRevealed: boolean,
   columns: BoardColumn[],
+  meta: NoteMeta | undefined,
   out: Range<Decoration>[]
 ): void {
   const text = line.text
@@ -473,6 +483,10 @@ function decorateLine(
     }
   }
 
+  // Task checkbox: replace the `[c]` bracket with a clickable widget.
+  const box = checkboxRange(text)
+  const definingTag = box && !box.isSubtask ? definingDeliverableTag(text, true, meta, true) : null
+
   // Whole-line styling (always applied, never hidden).
   if (REASON_FOR_RE.test(text) || STATUS_CHANGED_RE.test(text) || DATE_ENTERED_RE.test(text)) {
     out.push(Decoration.line({ class: 'cm-knote-meta' }).range(line.from))
@@ -480,10 +494,10 @@ function decorateLine(
     out.push(Decoration.line({ class: 'cm-knote-milestone' }).range(line.from))
   } else if (MACHINE_ENTRY_RE.test(text)) {
     out.push(Decoration.line({ class: 'cm-knote-machine' }).range(line.from))
+  } else if (definingTag) {
+    out.push(Decoration.line({ class: 'cm-knote-deliverable-define' }).range(line.from))
   }
 
-  // Task checkbox: replace the `[c]` bracket with a clickable widget.
-  const box = checkboxRange(text)
   if (box) {
     if (box.statusChar === ARCHIVED_CHAR) {
       out.push(Decoration.line({ class: 'cm-knote-archived' }).range(line.from))
@@ -573,15 +587,22 @@ function decorateLine(
     out.push(Decoration.mark({ class: 'cm-knote-tag' }).range(from, from + 1 + tagName.length))
   }
 
-  // @deliverable(project/name) join markers — collapsed to a pill naming just the
+  // @deliverable(project/name) markers — collapsed to a pill naming just the
   // deliverable, same reveal-on-caret treatment [[wiki links]] get; raw text stays
-  // visible (and editable) on the line the caret is on.
+  // visible (and editable) on the line the caret is on. Filled when this match is
+  // the one the line itself defines, outlined when it's merely a join elsewhere.
   DELIVERABLE_REF_RE.lastIndex = 0
   for (let m = DELIVERABLE_REF_RE.exec(text); m; m = DELIVERABLE_REF_RE.exec(text)) {
     const from = line.from + m.index
     const to = from + m[0].length
     if (inCode(view, from) || isRevealed) continue
-    out.push(Decoration.replace({ widget: new DeliverableRefWidget(m[1], m[2]) }).range(from, to))
+    const isDefining = definingTag === `deliverable/${m[1]}/${m[2]}`
+    out.push(
+      Decoration.replace({ widget: new DeliverableRefWidget(m[1], m[2], isDefining) }).range(
+        from,
+        to
+      )
+    )
   }
 
   // Hide a trailing `^block-id` anchor (the target of a [[Note#^id]] link, added

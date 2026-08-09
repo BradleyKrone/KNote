@@ -36,6 +36,8 @@ export interface DeliverableWindow {
   start: string
   /** YYYY-MM-DD */
   end: string
+  /** Whether the defining line's own checkbox is checked. */
+  done: boolean
 }
 
 /**
@@ -181,6 +183,28 @@ export function deliverableMembershipOf(tags: readonly string[], text = ''): str
   return deliverableTagsOf(tags, text)
 }
 
+/** Bare `deliverable/<project>/<name>` tag this line defines, or null. A
+ *  defining line is a top-level task, in a `type: project` note, carrying
+ *  `@deliverable(...)` for that note's own project — same rule as
+ *  `deliverableTagsOf`, just narrowed to "this note". `requireSpan` additionally
+ *  demands the `📅`/`@due(...)` end date `deliverableWindows()` requires before
+ *  it'll schedule the tag at all (`🛫`/start is optional, same as there) — pass
+ *  `true` wherever "defining" needs to mean "this is *the* entry", `false`
+ *  where a not-yet-dated task should still count as one in progress (e.g. the
+ *  editor's right-click menu, which offers "Set start/due date" precisely for
+ *  a line that hasn't been dated yet). */
+export function definingDeliverableTag(
+  text: string,
+  isTopLevelTask: boolean,
+  meta: NoteMeta | undefined,
+  requireSpan = false
+): string | null {
+  if (!isTopLevelTask || !meta || !isProjectNote(meta)) return null
+  if (requireSpan && !endDateOf(text)) return null
+  const slug = projectSlug(meta)
+  return deliverableRefsOf(text).find((t) => parseDeliverableTag(t)?.project === slug) ?? null
+}
+
 /** Bare `deliverable/<project>/<name>` tag → the `@deliverable(project/name)` text a task/milestone joins it with. */
 export function deliverableRefMarker(tag: string): string {
   const parsed = parseDeliverableTag(tag)
@@ -191,6 +215,37 @@ export function deliverableRefMarker(tag: string): string {
 /** A task counts as done when checked or archived. */
 export function isTaskDone(task: Pick<TaskItem, 'statusChar'>): boolean {
   return /^[xX]$/.test(task.statusChar) || task.statusChar === ARCHIVED_CHAR
+}
+
+export interface DeliverableProgress {
+  done: number
+  total: number
+}
+
+/**
+ * Every deliverable's member-task completion, keyed by its bare tag — the
+ * Kanban board's "N of M tasks done" readout on a deliverable's own card.
+ * Counts every task anywhere in the vault carrying the tag, excluding the
+ * defining line itself (same exclusion `buildPlannerModel`'s member pass
+ * makes), mirroring the planner's `percentComplete` ratio (task-only; a
+ * deliverable's milestones don't count toward it there either).
+ */
+export function deliverableProgress(
+  notes: ReadonlyMap<string, NoteMeta>
+): Map<string, DeliverableProgress> {
+  const progress = new Map<string, DeliverableProgress>()
+  for (const meta of notes.values()) {
+    for (const task of meta.tasks) {
+      for (const tag of deliverableMembershipOf(task.tags, task.text)) {
+        if (definingDeliverableTag(task.text, !task.isSubtask, meta, true) === tag) continue
+        const entry = progress.get(tag) ?? { done: 0, total: 0 }
+        entry.total++
+        if (isTaskDone(task)) entry.done++
+        progress.set(tag, entry)
+      }
+    }
+  }
+  return progress
 }
 
 /**
@@ -213,11 +268,36 @@ export function deliverableWindows(
       const start = startDateOf(task.text) ?? end
       for (const tag of deliverableTagsOf(task.tags, task.text)) {
         if (!parseDeliverableTag(tag)) continue
-        windows.set(tag, { start: start <= end ? start : end, end })
+        windows.set(tag, { start: start <= end ? start : end, end, done: isTaskDone(task) })
       }
     }
   }
   return windows
+}
+
+/**
+ * Bare deliverable tags whose window has closed with work still open — a
+ * deliverable-level echo of the planner's project-overdue rule (past its
+ * date, unfinished), but keyed by tag so the board can flag a *member* task
+ * as overdue even when that task carries no `@due()` of its own. Completion
+ * is its member tasks' done ratio when it has any, else its own checkbox —
+ * the same fallback `percentComplete` uses in the planner, kept here too so
+ * board and planner never disagree about whether a deliverable is late.
+ */
+export function overdueDeliverables(
+  notes: ReadonlyMap<string, NoteMeta>,
+  today: string
+): Set<string> {
+  const windows = deliverableWindows(notes)
+  const progress = deliverableProgress(notes)
+  const overdue = new Set<string>()
+  for (const [tag, window] of windows) {
+    if (today <= window.end) continue
+    const p = progress.get(tag)
+    const done = p && p.total > 0 ? p.done === p.total : window.done
+    if (!done) overdue.add(tag)
+  }
+  return overdue
 }
 
 /**
@@ -264,7 +344,9 @@ export function liveDeliverables(notes: ReadonlyMap<string, NoteMeta>): Delivera
   for (const meta of notes.values()) {
     if (!isProjectNote(meta)) continue
     for (const task of meta.tasks) {
-      if (task.isSubtask) continue
+      // Same defining criteria as deliverableWindows above (top-level, own span) —
+      // a task that only *joins* the deliverable must never supply its label.
+      if (task.isSubtask || !endDateOf(task.text)) continue
       for (const tag of deliverableTagsOf(task.tags, task.text)) {
         if (windows.has(tag)) labels.set(tag, stripInlineMarkers(task.text) || tag)
       }
@@ -291,10 +373,14 @@ export function liveDeliverables(notes: ReadonlyMap<string, NoteMeta>): Delivera
  *  - no deliverable tag → unaffected, always visible;
  *  - a tag with no known window (typo, or a deliverable not scheduled yet) →
  *    visible, because silently hiding real work is far worse than showing it;
- *  - inside the window → visible;
- *  - past the end and still unchecked → visible, so late work never disappears.
- * Only a task whose deliverables are all either not-yet-started or finished-and-done
- * is hidden.
+ *  - on or after the window's start → visible, whether it's still open, past
+ *    its end date, or already checked off. Completion is never a visibility
+ *    signal here — a finished task/deliverable stays on the board like any
+ *    other until it's explicitly archived (`ARCHIVED_CHAR`, checked
+ *    elsewhere), so "done" reads as a column move, not a disappearance.
+ * Only a task whose deliverables have *all* not started yet is hidden — that's
+ * the one case this exists for: keeping future-scheduled work off the board
+ * until it's actually current.
  */
 export function visibleForDeliverable(
   task: Pick<TaskItem, 'statusChar' | 'tags'> & { text?: string },
@@ -306,7 +392,6 @@ export function visibleForDeliverable(
   return tags.some((tag) => {
     const window = windows.get(tag)
     if (!window) return true
-    if (today >= window.start && today <= window.end) return true
-    return today > window.end && !isTaskDone(task)
+    return today >= window.start
   })
 }
