@@ -1572,7 +1572,7 @@ button {
 .planner-tree {
   position: sticky;
   left: 0;
-  z-index: 2;
+  z-index: 3;
   background: var(--panel-bg, var(--vscode-sideBar-background));
   border-right: 1px solid var(--border-color);
 }
