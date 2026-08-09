@@ -3,6 +3,37 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.2.0
+
+- **Draw.io diagrams**: right-click in Live Preview → **Insert ▸ Draw.io
+  Diagram** (or **KNote: Insert Draw.io Diagram** from the Command Palette)
+  creates a blank diagram in your attachments folder, embeds it, and opens
+  it for editing. It renders inline like any other image and double-clicking
+  it in Live Preview reopens it for editing. Diagrams are stored as
+  `.drawio.svg`/`.drawio.png` — a real image with the diagram data embedded
+  inside — and editing needs the free Draw.io Integration extension
+  (`hediet.vscode-drawio`), which KNote offers to install the first time you
+  try to edit one; that extension runs fully offline too.
+- **Deliverables switch to `@deliverable(project/name)`**: replaces the old
+  `#deliverable/project/name` tag, so joining a deliverable no longer
+  clutters the Tags sidebar or `#` autocomplete. Notes written with the old
+  tag still read fine, but nothing writes it any more.
+- **Edit a deliverable from its own note**: right-click a deliverable's task
+  line and its **Task ▸** submenu becomes **Deliverable ▸**, with **Set
+  start date… / Set due date… / Depends on ▸** alongside the usual tag and
+  priority items — the same editing the Planner's right-click menu offers,
+  without leaving the note.
+- Fixed deliverable tasks appearing on the Kanban board before their
+  deliverable had actually started; they now stay hidden until the
+  deliverable's window opens, then stay visible for good once it has.
+- Fixed a deliverable's own board card not showing a filled "Deliverable"
+  badge with member-task progress, and its overdue state not flagging every
+  task that joins it — even ones with no due date of their own — once the
+  deliverable's end date passes with work still open.
+- Fixed dragging a deliverable bar's right edge (or editing its due date)
+  not carrying dependent bars along with it, unlike a full-bar drag; edge
+  drags on the end date now cascade the same way.
+
 ## 2.1.0
 
 - **Code block highlighting**: fenced code blocks are syntax-highlighted in

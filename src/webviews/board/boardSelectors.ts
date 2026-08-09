@@ -90,9 +90,7 @@ export function toCard(
     progress: definesDeliverable
       ? (progress?.get(definesDeliverable) ?? { done: 0, total: 0 })
       : null,
-    overdueDeliverables: overdueTags
-      ? deliverables.filter((tag) => overdueTags.has(tag))
-      : [],
+    overdueDeliverables: overdueTags ? deliverables.filter((tag) => overdueTags.has(tag)) : [],
     due: due ? (due[1] ?? due[2]) : null,
     priority: prio ? prio[1].length : 0,
     waitingFollowUp: task.waitingFollowUp,

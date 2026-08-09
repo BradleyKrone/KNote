@@ -291,10 +291,14 @@ describe('collectCards deliverable windows', () => {
     // definingDeliverableTag does not recognize as a *defining* line (it only
     // reads the current @deliverable(...) text marker — see the "defines a
     // deliverable" describe block below for that case).
-    const work = collectCards(notes, { kind: 'note', path: 'Work.md' }, {
-      ...baseFilters,
-      ignoreDeliverableWindow: true
-    })
+    const work = collectCards(
+      notes,
+      { kind: 'note', path: 'Work.md' },
+      {
+        ...baseFilters,
+        ignoreDeliverableWindow: true
+      }
+    )
     const currentWork = work.find((c) => c.displayText === 'current work')
     expect(currentWork?.definesDeliverable).toBeNull()
     expect(currentWork?.progress).toBeNull()
@@ -386,7 +390,7 @@ describe('collectCards deliverable-defining card', () => {
   )
   const baseFilters: BoardFilters = { tag: null, text: '', ignoreDeliverableWindow: true }
 
-  it('marks the defining card and rolls up its member tasks\' completion', () => {
+  it("marks the defining card and rolls up its member tasks' completion", () => {
     const project = collectCards(notes, { kind: 'note', path: 'Project.md' }, baseFilters)
     const design = project.find((c) => c.displayText === 'Design')
     expect(design?.definesDeliverable).toBe('deliverable/p/design')

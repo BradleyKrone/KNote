@@ -110,7 +110,8 @@ function DeliverableBadge({ card }: { card: BoardCard }): React.JSX.Element | nu
   return (
     <div className={`board-card-deliverable-badge${overdue ? ' overdue' : ''}`}>
       <Package size={11} />
-      Deliverable{progress && progress.total > 0 ? ` · ${progress.done}/${progress.total} done` : ''}
+      Deliverable
+      {progress && progress.total > 0 ? ` · ${progress.done}/${progress.total} done` : ''}
     </div>
   )
 }

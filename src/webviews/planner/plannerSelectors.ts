@@ -362,6 +362,21 @@ export function wouldCycle(model: PlannerModel, predecessor: string, dependent: 
   return false
 }
 
+export type DeliverableBarStatus = 'active' | 'overdue' | 'done'
+
+/**
+ * Bar color state: `done` wins over `overdue` — a finished deliverable past
+ * its due date is not late, it's just late-finished. `done` requires the
+ * deliverable's own checkbox *and* every member task checked — `d.percent`
+ * alone isn't enough, since it's only the member-task ratio (or, with no
+ * members, just the deliverable's own checkbox) and never both at once.
+ */
+export function deliverableBarStatus(d: PlannerDeliverable, today: string): DeliverableBarStatus {
+  if (isTaskDone(d) && d.tasks.every((t) => t.done)) return 'done'
+  if (d.end < today) return 'overdue'
+  return 'active'
+}
+
 /** Deliverables whose start precedes the end of something they depend on. */
 export function violatedDependencies(model: PlannerModel): Set<string> {
   const bad = new Set<string>()

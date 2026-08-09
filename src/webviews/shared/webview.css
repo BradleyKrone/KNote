@@ -1738,6 +1738,14 @@ button {
   --bar-color: #4cbfc0;
 }
 
+.planner-bar.bar-overdue {
+  --bar-color: var(--danger);
+}
+
+.planner-bar.bar-done {
+  --bar-color: #5a5a5a;
+}
+
 .planner-bar-fill {
   position: absolute;
   left: 0;

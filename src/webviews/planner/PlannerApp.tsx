@@ -48,6 +48,7 @@ import {
 import {
   buildPlannerModel,
   cascadeShift,
+  deliverableBarStatus,
   vaultFolders,
   violatedDependencies,
   wouldCycle,
@@ -574,6 +575,7 @@ export function PlannerApp(): React.JSX.Element {
                             domain={domain}
                             zoom={zoom}
                             colorIndex={model.projects.indexOf(row.project)}
+                            status={deliverableBarStatus(row.deliverable, today)}
                             violated={violated.has(row.deliverable.id)}
                             dragging={drag?.id === row.deliverable.id}
                             linkTarget={linkTargetId === row.deliverable.id}
