@@ -3,6 +3,12 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.2.1
+
+- Fixed Gantt bars showing through the Planner's sticky task-name column
+  when scrolling horizontally; the column now stays layered above the bars,
+  matching the header row.
+
 ## 2.2.0
 
 - **Draw.io diagrams**: right-click in Live Preview → **Insert ▸ Draw.io
