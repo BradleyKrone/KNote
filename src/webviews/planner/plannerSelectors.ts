@@ -14,6 +14,7 @@ import type { NoteMeta, VaultPath } from '@shared/types'
 import {
   DEPENDS_RE,
   PRIORITY_RE,
+  dependsTag,
   parseDeliverableTag,
   stripInlineMarkers
 } from '@shared/parser/patterns'
@@ -102,7 +103,7 @@ export interface PlannerModel {
 }
 
 function dependenciesOf(text: string): string[] {
-  return [...text.matchAll(DEPENDS_RE)].map((m) => m[1])
+  return [...text.matchAll(DEPENDS_RE)].map(dependsTag)
 }
 
 export function buildPlannerModel(

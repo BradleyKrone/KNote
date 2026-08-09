@@ -143,6 +143,28 @@ describe('buildPlannerModel', () => {
     expect(model.dependents.has('deliverable/govalle/nope')).toBe(false)
   })
 
+  it('builds a dependency edge written in the current ⛓ @deliverable(...) form', () => {
+    const notes = new Map<string, NoteMeta>()
+    notes.set(
+      'P.md',
+      parseNote(
+        'P.md',
+        [
+          '---',
+          'type: project',
+          'project: p',
+          '---',
+          '- [ ] A 📅 2026-06-01 @deliverable(p/a)',
+          '- [ ] B 📅 2026-06-02 @deliverable(p/b) ⛓ @deliverable(p/a)',
+          ''
+        ].join('\n')
+      )
+    )
+    const model = buildPlannerModel(notes)
+    expect(model.byId.get('deliverable/p/b')!.dependsOn).toEqual(['deliverable/p/a'])
+    expect(model.dependents.get('deliverable/p/a')).toEqual(['deliverable/p/b'])
+  })
+
   it('reads several ⛓ markers on one line', () => {
     const notes = new Map<string, NoteMeta>()
     notes.set(

@@ -332,9 +332,10 @@ export interface DeliverableOption {
 
 /**
  * Every deliverable a task or milestone could join right now — every
- * scheduled (has a window) deliverable of a project that isn't closed. Shared
- * by the `@deliverable(...)` autocomplete (host and Live Preview editor) and
- * the right-click "Link to deliverable…" picker, so all three agree on what's
+ * scheduled (has a window) deliverable of a project that isn't closed, and
+ * whose own defining checkbox isn't already done. Shared by the
+ * `@deliverable(...)` autocomplete (host and Live Preview editor) and the
+ * right-click "Link to deliverable…" picker, so all three agree on what's
  * offered.
  */
 export function liveDeliverables(notes: ReadonlyMap<string, NoteMeta>): DeliverableOption[] {
@@ -353,8 +354,8 @@ export function liveDeliverables(notes: ReadonlyMap<string, NoteMeta>): Delivera
     }
   }
   const out: DeliverableOption[] = []
-  for (const tag of windows.keys()) {
-    if (closed.has(tag)) continue
+  for (const [tag, window] of windows) {
+    if (closed.has(tag) || window.done) continue
     const parsed = parseDeliverableTag(tag)
     if (!parsed) continue
     out.push({

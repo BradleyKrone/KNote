@@ -145,6 +145,28 @@ describe('liveDeliverables', () => {
     expect(liveDeliverables(vault()).map((d) => d.tag)).not.toContain('deliverable/old/a')
   })
 
+  it('excludes a deliverable whose own defining checkbox is already done', () => {
+    const notes = new Map<string, NoteMeta>()
+    notes.set(
+      'Govalle.md',
+      parseNote(
+        'Govalle.md',
+        [
+          '---',
+          'type: project',
+          'project: govalle',
+          '---',
+          '- [x] Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design',
+          '- [ ] Build 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/build',
+          ''
+        ].join('\n')
+      )
+    )
+    const tags = liveDeliverables(notes).map((d) => d.tag)
+    expect(tags).not.toContain('deliverable/govalle/design')
+    expect(tags).toContain('deliverable/govalle/build')
+  })
+
   it('lists a deliverable defined with the current @deliverable(...) marker, not just the legacy #tag', () => {
     const notes = new Map<string, NoteMeta>()
     notes.set(

@@ -339,7 +339,8 @@ In the chart:
 | Action | What it does |
 | --- | --- |
 | Drag a bar | moves it — **and everything that depends on it**, by the same number of days. Independent bars never move |
-| Drag a bar's left/right edge | changes just that date |
+| Drag a bar's left edge | changes just the start date |
+| Drag a bar's right edge, or edit its due date | changes the end date — **and carries anything waiting on it along by the same number of days**, same as a full drag |
 | Drag the 🔗 grip onto another bar | makes that bar wait on this one (a link that would create a loop is refused) |
 | Double-click any row | opens the note at that line |
 | Right-click a deliverable → **Edit dates…** | a calendar for both ends of the span, with 1/3/5/10/20-day length presets and ±1d/±1w/Today nudges that slide the span without changing its length |

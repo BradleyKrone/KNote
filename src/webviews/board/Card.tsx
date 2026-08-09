@@ -4,6 +4,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { Archive, CalendarDays, Hourglass, Link2, Package, Pencil, X } from 'lucide-react'
 import { withoutAnchor } from '@shared/blockAnchor'
 import { parseDeliverableTag } from '@shared/parser/patterns'
+import { isTaskDone } from '@shared/deliverables'
 import { confirm } from '../shared/stores'
 import { archiveCard, copyCardLink, deleteCard, openSource, updateCardText } from './boardActions'
 import { dueState, followUpState, type BoardCard } from './boardSelectors'
@@ -65,16 +66,20 @@ function WaitingChip({ card }: { card: BoardCard }): React.JSX.Element | null {
  * whose window has closed with work still open (`overdueDeliverables`) reads
  * red, the same overdue treatment `DueChip` gives a task's own blown-past
  * date — so a task with no `@due()` of its own still shows late once its
- * deliverable is.
+ * deliverable is. Never on a card that's itself done, though: this task's
+ * own contribution is finished, so it shouldn't keep reading as late just
+ * because *other* work on the same deliverable is still open — the same
+ * carve-out `dueState`/`followUpState` give a done card's own date.
  */
 function DeliverableChips({ card }: { card: BoardCard }): React.JSX.Element | null {
   const joined = card.deliverables.filter((tag) => tag !== card.definesDeliverable)
   if (joined.length === 0) return null
+  const done = isTaskDone(card)
   return (
     <>
       {joined.map((tag) => {
         const parsed = parseDeliverableTag(tag)
-        const overdue = card.overdueDeliverables.includes(tag)
+        const overdue = !done && card.overdueDeliverables.includes(tag)
         return (
           <span
             key={tag}

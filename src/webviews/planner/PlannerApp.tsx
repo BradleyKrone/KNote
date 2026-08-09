@@ -176,8 +176,21 @@ export function PlannerApp(): React.JSX.Element {
       }
       const start = state.mode === 'resize-start' ? addDays(d.start, state.deltaDays) : d.start
       const end = state.mode === 'resize-end' ? addDays(d.end, state.deltaDays) : d.end
-      startPending(new Map([[d.id, { start, end }]]))
-      void resizeDeliverable(d, start, end)
+      const spans = new Map<string, Span>([[d.id, { start, end }]])
+      if (state.mode === 'resize-end') {
+        // Preview the downstream cascade too, same as a whole-bar move.
+        for (const id of cascadeShift(model, state.id, state.deltaDays)) {
+          if (id === d.id) continue
+          const moved = model.byId.get(id)
+          if (moved)
+            spans.set(id, {
+              start: addDays(moved.start, state.deltaDays),
+              end: addDays(moved.end, state.deltaDays)
+            })
+        }
+      }
+      startPending(spans)
+      void resizeDeliverable(model, d, start, end)
 
       function startPending(spans: Map<string, Span>): void {
         setPending((prev) => {
@@ -198,17 +211,25 @@ export function PlannerApp(): React.JSX.Element {
       const d = model.byId.get(id)
       const base: Span = d ? { start: d.start, end: d.end } : { start: today, end: today }
       if (drag && drag.deltaDays !== 0 && d) {
-        const moving =
-          drag.mode === 'move' ? cascadeShift(model, drag.id, drag.deltaDays).includes(id) : false
-        if (moving)
-          return {
-            start: addDays(base.start, drag.deltaDays),
-            end: addDays(base.end, drag.deltaDays)
-          }
+        // The dragged bar itself, for a resize, only moves the edge under the
+        // pointer — check this before the cascade below, which would otherwise
+        // also match it (it's always the head of its own cascade).
         if (drag.id === id && drag.mode === 'resize-start')
           return { start: addDays(base.start, drag.deltaDays), end: base.end }
         if (drag.id === id && drag.mode === 'resize-end')
           return { start: base.start, end: addDays(base.end, drag.deltaDays) }
+        // A move shifts the dragged bar and everything downstream of it by the
+        // same delta; a resize-end only shifts what's downstream, since
+        // extending or shrinking the finish date is exactly what a dependent
+        // was waiting on.
+        const cascading =
+          (drag.mode === 'move' || drag.mode === 'resize-end') &&
+          cascadeShift(model, drag.id, drag.deltaDays).includes(id)
+        if (cascading)
+          return {
+            start: addDays(base.start, drag.deltaDays),
+            end: addDays(base.end, drag.deltaDays)
+          }
       }
       return previewOf(id) ?? base
     },
@@ -633,7 +654,7 @@ export function PlannerApp(): React.JSX.Element {
             onApply={(start, end) => {
               const d = model.byId.get(spanEditor.deliverable.id) ?? spanEditor.deliverable
               setSpanEditor(null)
-              void resizeDeliverable(d, start, end)
+              void resizeDeliverable(model, d, start, end)
             }}
           />
         </Popover>
