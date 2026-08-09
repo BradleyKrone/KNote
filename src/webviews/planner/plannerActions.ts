@@ -3,11 +3,16 @@
 // with KNOTE_STALE and toasted rather than clobbered.
 
 import { isStaleError } from '@shared/errors'
-import { PROJECT_END_KEY, PROJECT_STATUS_KEY, slugify } from '@shared/deliverables'
+import {
+  PROJECT_END_KEY,
+  PROJECT_STATUS_KEY,
+  deliverableRefMarker,
+  slugify
+} from '@shared/deliverables'
 import { host } from '../shared/rpc'
 import { showToast } from '../shared/stores'
 import { addDependency, removeDependency, setDeliverableDates } from '../shared/taskMeta'
-import { addDays } from './plannerLayout'
+import { addDays, diffDays } from './plannerLayout'
 import { cascadeShift, type PlannerDeliverable, type PlannerModel } from './plannerSelectors'
 
 /** Run a write, turning a stale-line refusal into a toast instead of a crash. */
@@ -63,18 +68,48 @@ export async function moveDeliverable(
   }
 }
 
-/** Change one deliverable's span (an edge drag or a date-picker edit); dependents stay put. */
+/**
+ * Change one deliverable's span (an edge drag or a date-picker edit). Moving
+ * the *end* later or earlier carries everything downstream along by the same
+ * number of days — exactly what `moveDeliverable` does for a whole-bar drag —
+ * since a dependent's whole reason for waiting is that end date. Moving the
+ * *start* never touches dependents: nothing downstream cares when this one
+ * began, only when it finishes.
+ */
 export async function resizeDeliverable(
+  model: PlannerModel,
   d: PlannerDeliverable,
   start: string,
   end: string
 ): Promise<void> {
   const [from, to] = spanFor(d, start, end)
   if (from === d.start && to === d.end) return
-  await guarded(
+  const ok = await guarded(
     () => host.replaceLine(d.path, d.line, d.rawLine, setDeliverableDates(d.rawLine, from, to)),
     'Note changed on disk — planner refreshed'
   )
+  if (!ok) return
+  const days = diffDays(d.end, to)
+  if (days === 0) return
+  const order = cascadeShift(model, d.id, days).filter((id) => id !== d.id)
+  let written = 0
+  for (const currentId of order) {
+    const dep = model.byId.get(currentId)
+    if (!dep) continue
+    const [depFrom, depTo] = spanFor(dep, addDays(dep.start, days), addDays(dep.end, days))
+    const depOk = await guarded(
+      () =>
+        host.replaceLine(
+          dep.path,
+          dep.line,
+          dep.rawLine,
+          setDeliverableDates(dep.rawLine, depFrom, depTo)
+        ),
+      `${dep.label} changed on disk — ${written} of ${order.length} moved; drag again to finish`
+    )
+    if (!depOk) return
+    written++
+  }
 }
 
 /** Record that `dependent` waits on `predecessor`. Caller has already ruled out a cycle. */
@@ -177,7 +212,7 @@ export function deliverableLine(
   end: string
 ): { line: string; tag: string } {
   const tag = `deliverable/${projectSlugValue}/${slugify(name)}`
-  return { line: `- [ ] ${name} 🛫 ${start} 📅 ${end} #${tag}`, tag }
+  return { line: `- [ ] ${name} 🛫 ${start} 📅 ${end} ${deliverableRefMarker(tag)}`, tag }
 }
 
 export async function addDeliverable(
@@ -198,7 +233,8 @@ export async function addDeliverable(
  */
 export async function addTask(d: PlannerDeliverable, text: string): Promise<void> {
   await guarded(
-    () => host.insertLine(d.path, d.line, d.rawLine, `    - [ ] ${text} #${d.id}`),
+    () =>
+      host.insertLine(d.path, d.line, d.rawLine, `    - [ ] ${text} ${deliverableRefMarker(d.id)}`),
     'Deliverable changed on disk — planner refreshed'
   )
 }
@@ -209,7 +245,13 @@ export async function addMilestone(
   date: string
 ): Promise<void> {
   await guarded(
-    () => host.insertLine(d.path, d.line, d.rawLine, `🏁 ${text} 📅 ${date} #${d.id}`),
+    () =>
+      host.insertLine(
+        d.path,
+        d.line,
+        d.rawLine,
+        `🏁 ${text} 📅 ${date} ${deliverableRefMarker(d.id)}`
+      ),
     'Deliverable changed on disk — planner refreshed'
   )
 }

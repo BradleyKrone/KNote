@@ -56,7 +56,7 @@ describe('setDeliverableDates', () => {
 describe('addDependency / removeDependency', () => {
   it('appends a marker and refuses to duplicate it', () => {
     const once = addDependency(LINE, 'deliverable/p/contracts')
-    expect(once).toBe(`${LINE} ⛓ #deliverable/p/contracts`)
+    expect(once).toBe(`${LINE} ⛓ @deliverable(p/contracts)`)
     expect(addDependency(once, 'deliverable/p/contracts')).toBe(once)
   })
 
@@ -72,6 +72,17 @@ describe('addDependency / removeDependency', () => {
     expect(linked.endsWith(' ^design1')).toBe(true)
     expect(dependencies(linked)).toEqual(['deliverable/p/contracts'])
   })
+
+  it('still reads a legacy ⛓ #deliverable/... marker, and can remove it', () => {
+    const legacy = `${LINE} ⛓ #deliverable/p/contracts`
+    expect(dependencies(legacy)).toEqual(['deliverable/p/contracts'])
+    expect(removeDependency(legacy, 'deliverable/p/contracts')).toBe(LINE)
+  })
+
+  it('reads both marker forms on the same line', () => {
+    const mixed = `${LINE} ⛓ #deliverable/p/a ⛓ @deliverable(p/b)`
+    expect(dependencies(mixed)).toEqual(['deliverable/p/a', 'deliverable/p/b'])
+  })
 })
 
 describe('stripInlineMarkers', () => {
@@ -81,5 +92,9 @@ describe('stripInlineMarkers', () => {
     )
     expect(stripInlineMarkers('Design ⛓ #deliverable/p/contracts')).toBe('Design')
     expect(stripInlineMarkers('Design ⛓ #deliverable/p/a ⛓ #deliverable/p/b')).toBe('Design')
+  })
+
+  it('strips a @deliverable(...) join marker, leaving no orphaned text', () => {
+    expect(stripInlineMarkers('Draft wireframes @deliverable(p/design)')).toBe('Draft wireframes')
   })
 })

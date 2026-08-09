@@ -286,6 +286,11 @@ button {
 .board-card.drop-before {
   box-shadow: 0 -2px 0 0 var(--interactive-accent);
 }
+/* A deliverable's own defining card — an accent stripe so it reads as a
+ * different kind of card before you even read the badge or its text. */
+.board-card.is-deliverable {
+  border-left: 3px solid var(--text-accent);
+}
 
 .board-card-text {
   font-size: 13.5px;
@@ -368,10 +373,54 @@ button {
 
 .board-card-tag {
   font-size: 11px;
-  color: var(--vscode-badge-foreground);
+  color: #000;
   background: var(--vscode-badge-background);
   border-radius: 8px;
   padding: 0 6px;
+}
+
+/* Deliverable membership — deliberately not styled like a #tag pill (filled
+ * badge): it's structural metadata (@deliverable(...)), not a content tag.
+ * Same green (#238b45) as .cm-knote-deliverable-join in the Live Preview
+ * editor, so the deliverable identity reads as the same color everywhere. */
+.board-card-deliverable {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: #238b45;
+  border: 1px solid #238b45;
+  border-radius: 8px;
+  padding: 0 6px;
+}
+
+/* A deliverable whose window has closed with work still open — same red as
+ * .board-card-due.due-overdue, so a task with no @due() of its own still
+ * reads as late once its deliverable is. */
+.board-card-deliverable.overdue {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+/* The badge on a deliverable's own defining card — filled rather than
+ * outlined, same filled-vs-outline convention as .cm-knote-deliverable-ref/
+ * -join in the Live Preview editor, so a defining card reads as primary. */
+.board-card-deliverable-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #000;
+  background: #4caf50;
+  border-radius: 8px;
+  padding: 1px 7px;
+  margin-bottom: 6px;
+}
+.board-card-deliverable-badge.overdue {
+  color: #fff;
+  background: var(--danger);
 }
 
 .board-card-actions {
@@ -1687,6 +1736,14 @@ button {
 }
 .planner-color-5 {
   --bar-color: #4cbfc0;
+}
+
+.planner-bar.bar-overdue {
+  --bar-color: var(--danger);
+}
+
+.planner-bar.bar-done {
+  --bar-color: #5a5a5a;
 }
 
 .planner-bar-fill {

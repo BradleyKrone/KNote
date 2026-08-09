@@ -15,7 +15,7 @@ import MarkdownIt from 'markdown-it'
 import type { StateInline } from 'markdown-it/index.js'
 import { hljsHighlight } from './codeHighlight'
 import { TAG_RE } from './parser/patterns'
-import { isImage } from './pathUtils'
+import { isDrawioFile, isImage } from './pathUtils'
 import { splitWikiTarget } from './wikiResolve'
 
 export interface KnoteRenderOptions {
@@ -129,7 +129,13 @@ function pushImage(
   token.attrs = [
     ['src', src],
     ['alt', ''],
-    ['class', 'knote-embed-image']
+    // draw.io's SVG exports have a transparent canvas and default black
+    // lines/arrows — invisible on a dark theme without a light backing
+    // behind them (markdownPreview.css / editor.css supply it).
+    [
+      'class',
+      isDrawioFile(target) ? 'knote-embed-image knote-embed-image-drawio' : 'knote-embed-image'
+    ]
   ]
   // markdown-it's image renderer derives the alt text from the token's children.
   const alt = new state.Token('text', '', 0)

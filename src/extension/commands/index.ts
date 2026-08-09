@@ -5,6 +5,7 @@ import { registerTemplateCommands } from './templates'
 import { registerWeeklyNoteCommands } from './weeklyNotes'
 import { registerMachineEntryCommands } from './machineEntry'
 import { registerMaintenanceCommands } from './maintenance'
+import { registerDrawioCommands } from './drawio'
 
 export function registerAllCommands(context: vscode.ExtensionContext): void {
   registerTaskCommands(context)
@@ -13,4 +14,5 @@ export function registerAllCommands(context: vscode.ExtensionContext): void {
   registerWeeklyNoteCommands(context)
   registerMachineEntryCommands(context)
   registerMaintenanceCommands(context)
+  registerDrawioCommands(context)
 }

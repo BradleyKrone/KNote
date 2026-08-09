@@ -7,7 +7,7 @@ import type { EmbedNote, VaultConfig, VaultPath } from '@shared/types'
 import { sliceEmbedSection } from '@shared/embedSlice'
 import { isExternalUrl } from '@shared/externalUrl'
 import { resolveTarget, sectionLine, splitWikiTarget } from '@shared/wikiResolve'
-import { saveImageAttachment } from '../../core/attachments'
+import { createDrawioDiagram, saveImageAttachment } from '../../core/attachments'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
 import * as searchIndex from '../../core/indexer/searchIndex'
 import { findMentions } from '../../core/indexer/mentions'
@@ -79,6 +79,8 @@ export function createHostHandlers(): HostHandlers {
 
     saveImageAttachment: (mimeType: string, base64Data: string) =>
       saveImageAttachment(mimeType, Buffer.from(base64Data, 'base64')),
+
+    createDrawioDiagram: () => createDrawioDiagram(),
 
     replaceLine: verifiedEdit.replaceLine,
     setTaskStatusMeta: verifiedEdit.setTaskStatusMeta,

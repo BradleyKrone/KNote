@@ -199,6 +199,7 @@ left, so you can pick one out at a glance instead of reading down the list:
 | **Insert ▸** Milestone | Insert a dated `🏁 Milestone 📅 …` line |
 | **Insert ▸** Table… | Pick a row/column count → insert an empty table |
 | **Insert ▸** Machine work… | Pick a serial + date → insert a `🚜` entry with the detail template |
+| **Insert ▸** Draw.io Diagram | Create a blank diagram in your attachments folder, embed it, and open it for editing |
 | **Task ▸** Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
 | **Task ▸** Copy link to task | *(task/milestone lines)* copy a `[[Note#^id\|Task text]]` link to this task (adding a hidden `^anchor` named after the task if needed) — paste it elsewhere to jump back |
 | **Table ▸** *(row/column actions)* | *(inside a table)* insert or delete the clicked row or column, or drop to the raw Markdown with Edit table source |
@@ -322,20 +323,24 @@ old Timeline panel. Everything it shows lives in plain Markdown:
 | Project | a note with `type: project` (and optionally `project: <slug>`) in its frontmatter |
 | Its deadline | `end: 2026-06-30` in the same frontmatter (`due:`/`deadline:` also read) |
 | Finishing it | `status: completed` — set it from the planner's right-click menu |
-| Deliverable | a top-level task in that note: `- [ ] Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design` |
-| Its tasks | any checkbox line **anywhere in the vault** carrying that same `#deliverable/…` tag |
-| Dependency | `⛓ #deliverable/govalle/contracts` on the deliverable line — "starts after that one"; repeatable |
-| Milestone | a `🏁 Permits approved 📅 2026-04-12 #deliverable/govalle/design` line — a diamond on the chart |
+| Deliverable | a top-level task in that note: `- [ ] Design 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/design)` |
+| Its tasks | any checkbox line **anywhere in the vault** carrying that same `@deliverable(govalle/design)` marker — deliberately *not* a `#tag`, so joining a deliverable never clutters the Tags sidebar or `#` autocomplete |
+| Dependency | `⛓ @deliverable(govalle/contracts)` on the deliverable line — "starts after that one"; repeatable |
+| Milestone | a `🏁 Permits approved 📅 2026-04-12 @deliverable(govalle/design)` line — a diamond on the chart |
 
 `🛫` is the start date, `📅` the end date (`@start(...)`/`@due(...)` also
-read). A deliverable with no `🛫` is a single-day bar.
+read). A deliverable with no `🛫` is a single-day bar. Notes written before
+KNote switched to `@deliverable(...)` may still carry a deliverable's or
+dependency's identity as a `#deliverable/…` tag — that older form still
+reads fine, but nothing writes it any more.
 
 In the chart:
 
 | Action | What it does |
 | --- | --- |
 | Drag a bar | moves it — **and everything that depends on it**, by the same number of days. Independent bars never move |
-| Drag a bar's left/right edge | changes just that date |
+| Drag a bar's left edge | changes just the start date |
+| Drag a bar's right edge, or edit its due date | changes the end date — **and carries anything waiting on it along by the same number of days**, same as a full drag |
 | Drag the 🔗 grip onto another bar | makes that bar wait on this one (a link that would create a loop is refused) |
 | Double-click any row | opens the note at that line |
 | Right-click a deliverable → **Edit dates…** | a calendar for both ends of the span, with 1/3/5/10/20-day length presets and ±1d/±1w/Today nudges that slide the span without changing its length |
@@ -346,6 +351,14 @@ In the chart:
 Bar fill is % complete — the share of the deliverable's tasks that are
 checked (or its own checkbox if it has none). A bar that starts before
 something it depends on finishes is outlined in red.
+
+**Editing a deliverable from the editor.** The same **Set start date… /
+Set due date… / Depends on ▸** trio is one right-click away in the note
+itself, not just the Planner panel: right-click a deliverable's own task
+line and its **Task ▸** submenu becomes **Deliverable ▸**, with those three
+items plus the usual tag/priority. Depends on ▸ lists every other live
+deliverable, ticked where it's already a predecessor — the same picker the
+chart's right-click menu uses.
 
 **Project status.** A project carries a badge in the tree:
 
@@ -358,16 +371,25 @@ something it depends on finishes is outlined in red.
 Right-click a project for **Set target end date…** and **Mark project
 completed** / **Reopen project**. Completed projects sort to the bottom of
 the list and are **closed for business**: Add deliverable / task /
-milestone are greyed out, and their `#deliverable/…` tags disappear from
-`#` tag autocomplete, so old work can't be filed against a finished
-project by accident. Reopening restores all of it. Nothing is deleted or
-hidden — the chart still draws everything the project contains.
+milestone are greyed out, and their deliverables disappear from
+`@deliverable(...)` and `#` tag autocomplete, so old work can't be filed
+against a finished project by accident. Reopening restores all of it.
+Nothing is deleted or hidden — the chart still draws everything the
+project contains.
 
-**Deliverable tasks and the board:** a task tagged `#deliverable/…` only
-appears on the Kanban board while its deliverable is actually running —
-or after its end date if it's still unchecked, so late work never
-disappears. Untagged tasks are unaffected. Tick **All deliverables** in
-the board header to see everything regardless.
+**Deliverable tasks and the board:** a task carrying `@deliverable(...)`
+only appears on the Kanban board once its deliverable has actually started —
+before that it's hidden so future-scheduled work doesn't clutter the board
+early. Once started it stays visible for good, checked or not; only
+archiving a task removes it. Unjoined tasks are unaffected. Tick **All
+deliverables** in the board header to see everything regardless.
+
+**Overdue deliverables flag their tasks too:** once a deliverable's own
+`📅` end date has passed with work still open, every task that joins it
+shows red on the board — even one with no `📅` of its own — so a slipping
+deliverable can't hide behind tasks that were never individually dated.
+"Still open" means its member tasks aren't all checked, or (a deliverable
+with no members yet) its own checkbox isn't.
 
 ## Machine Log, Graph
 
@@ -407,6 +429,27 @@ the attachments folder automatically:
   the Recycle Bin).
 - **KNote: Clean Up Orphaned Attachments** still exists for a full manual
   sweep of anything that predates this feature.
+
+## Draw.io diagrams
+
+Embed a draw.io diagram in a note and edit it without leaving VS Code:
+
+- **Right-click in Live Preview → Insert ▸ Draw.io Diagram** creates a
+  blank diagram in your attachments folder, embeds it (`![[/…]]`) at the
+  cursor, and opens it for editing. **KNote: Insert Draw.io Diagram** in the
+  Command Palette does the same from the raw text editor (prompting for a
+  name first).
+- The diagram renders inline like any other image, in both Live Preview and
+  Reading mode. **Double-click it in Live Preview** to reopen it for editing
+  (a plain `[[link]]` to a `.drawio` file works the same way on a single click).
+- Diagrams are stored as `.drawio.svg`/`.drawio.png` — draw.io's own
+  "editable image" format, a real SVG/PNG with the diagram data embedded
+  inside it, so it's a normal image everywhere else too.
+- Editing needs the free **Draw.io Integration** extension
+  (`hediet.vscode-drawio`) installed — KNote prompts you to install it the
+  first time you try to edit a diagram if it isn't there yet. That
+  extension's editor runs fully offline once installed, same as everything
+  else in KNote.
 
 ## Data rules (unchanged)
 

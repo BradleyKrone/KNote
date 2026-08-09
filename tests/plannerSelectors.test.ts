@@ -3,6 +3,7 @@ import {
   buildPlannerModel,
   cascadeShift,
   childFolders,
+  deliverableBarStatus,
   notesInFolder,
   vaultFolders,
   violatedDependencies,
@@ -23,11 +24,11 @@ const PROJECT = [
   '---',
   '',
   '- [ ] Contracts 🛫 2026-03-20 📅 2026-04-05 #deliverable/govalle/contracts',
-  '    - [x] Proposals #deliverable/govalle/contracts',
-  '    - [ ] Bid date #deliverable/govalle/contracts',
+  '    - [x] Proposals @deliverable(govalle/contracts)',
+  '    - [ ] Bid date @deliverable(govalle/contracts)',
   '- [ ] Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design ⛓ #deliverable/govalle/contracts',
   '- [ ] Procurement 🛫 2026-04-21 📅 2026-05-10 #deliverable/govalle/procurement ⛓ #deliverable/govalle/design',
-  '🏁 Permits approved 📅 2026-04-12 #deliverable/govalle/design',
+  '🏁 Permits approved 📅 2026-04-12 @deliverable(govalle/design)',
   '🏁 Groundbreaking !! 📅 2026-05-01',
   ''
 ].join('\n')
@@ -74,7 +75,7 @@ describe('buildPlannerModel', () => {
 
   it('adopts tasks tagged from any other note in the vault', () => {
     const notes = vault({
-      'Field notes.md': '- [ ] Order rebar #deliverable/govalle/procurement 📅 2026-04-25\n'
+      'Field notes.md': '- [ ] Order rebar @deliverable(govalle/procurement) 📅 2026-04-25\n'
     })
     const procurement = buildPlannerModel(notes).byId.get('deliverable/govalle/procurement')!
     expect(procurement.tasks).toHaveLength(1)
@@ -141,6 +142,28 @@ describe('buildPlannerModel', () => {
       'deliverable/govalle/contracts'
     ])
     expect(model.dependents.has('deliverable/govalle/nope')).toBe(false)
+  })
+
+  it('builds a dependency edge written in the current ⛓ @deliverable(...) form', () => {
+    const notes = new Map<string, NoteMeta>()
+    notes.set(
+      'P.md',
+      parseNote(
+        'P.md',
+        [
+          '---',
+          'type: project',
+          'project: p',
+          '---',
+          '- [ ] A 📅 2026-06-01 @deliverable(p/a)',
+          '- [ ] B 📅 2026-06-02 @deliverable(p/b) ⛓ @deliverable(p/a)',
+          ''
+        ].join('\n')
+      )
+    )
+    const model = buildPlannerModel(notes)
+    expect(model.byId.get('deliverable/p/b')!.dependsOn).toEqual(['deliverable/p/a'])
+    expect(model.dependents.get('deliverable/p/a')).toEqual(['deliverable/p/b'])
   })
 
   it('reads several ⛓ markers on one line', () => {
@@ -252,7 +275,8 @@ describe('deliverableWindows / visibleForDeliverable', () => {
   it('collects a window per deliverable', () => {
     expect(windows.get('deliverable/govalle/design')).toEqual({
       start: '2026-04-01',
-      end: '2026-04-20'
+      end: '2026-04-20',
+      done: false
     })
   })
 
@@ -268,16 +292,16 @@ describe('deliverableWindows / visibleForDeliverable', () => {
     expect(visibleForDeliverable(t, windows, '2026-03-31')).toBe(false)
   })
 
-  it('keeps an overdue unchecked task visible, but hides a finished one', () => {
+  it("keeps a task visible past its deliverable's end date whether or not it's done", () => {
+    // Completion is never a visibility signal — a task only leaves the board
+    // by being archived, not by being checked off. See the archive-only test
+    // below for the one case that does hide it.
     expect(
       visibleForDeliverable(task(' ', 'deliverable/govalle/design'), windows, '2026-06-01')
     ).toBe(true)
     expect(
       visibleForDeliverable(task('x', 'deliverable/govalle/design'), windows, '2026-06-01')
-    ).toBe(false)
-    expect(
-      visibleForDeliverable(task('a', 'deliverable/govalle/design'), windows, '2026-06-01')
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it('shows a task tagged for a deliverable that does not exist, rather than hiding work', () => {
@@ -352,6 +376,66 @@ describe('project status', () => {
     notes.set('A.md', parseNote('A.md', '---\ntype: project\nproject: a\nstatus: completed\n---\n'))
     notes.set('Z.md', parseNote('Z.md', '---\ntype: project\nproject: z\n---\n'))
     expect(buildPlannerModel(notes).projects.map((p) => p.slug)).toEqual(['z', 'a'])
+  })
+})
+
+// A deliverable's bar color: normal while on track, red once its own end date
+// has slipped, gray once it's finished (even if that happened late).
+describe('deliverableBarStatus', () => {
+  const project = (deliverables: string[]): Map<string, NoteMeta> => {
+    const notes = new Map<string, NoteMeta>()
+    notes.set(
+      'P.md',
+      parseNote(
+        'P.md',
+        ['---', 'type: project', 'project: p', '---', ...deliverables, ''].join('\n')
+      )
+    )
+    return notes
+  }
+  const OPEN = ['- [ ] A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a']
+  const DONE = ['- [x] A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a']
+  const DELIVERABLE_DONE_TASK_OPEN = [
+    '- [x] A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a',
+    '    - [ ] Sub @deliverable(p/a)'
+  ]
+  const TASK_DONE_DELIVERABLE_OPEN = [
+    '- [ ] A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a',
+    '    - [x] Sub @deliverable(p/a)'
+  ]
+  const BOTH_DONE = [
+    '- [x] A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a',
+    '    - [x] Sub @deliverable(p/a)'
+  ]
+
+  it('is active before its end date', () => {
+    const d = buildPlannerModel(project(OPEN)).byId.get('deliverable/p/a')!
+    expect(deliverableBarStatus(d, '2026-01-15')).toBe('active')
+  })
+
+  it('is overdue past its end date while still open', () => {
+    const d = buildPlannerModel(project(OPEN)).byId.get('deliverable/p/a')!
+    expect(deliverableBarStatus(d, '2026-02-02')).toBe('overdue')
+  })
+
+  it('is done once complete, even past its end date, not overdue', () => {
+    const d = buildPlannerModel(project(DONE)).byId.get('deliverable/p/a')!
+    expect(deliverableBarStatus(d, '2026-03-01')).toBe('done')
+  })
+
+  it('is not done while a member task is still open, even if the deliverable itself is checked', () => {
+    const d = buildPlannerModel(project(DELIVERABLE_DONE_TASK_OPEN)).byId.get('deliverable/p/a')!
+    expect(deliverableBarStatus(d, '2026-03-01')).toBe('overdue')
+  })
+
+  it('is not done while the deliverable itself is unchecked, even if every member task is done', () => {
+    const d = buildPlannerModel(project(TASK_DONE_DELIVERABLE_OPEN)).byId.get('deliverable/p/a')!
+    expect(deliverableBarStatus(d, '2026-03-01')).toBe('overdue')
+  })
+
+  it('is done only once the deliverable and every member task are both checked', () => {
+    const d = buildPlannerModel(project(BOTH_DONE)).byId.get('deliverable/p/a')!
+    expect(deliverableBarStatus(d, '2026-03-01')).toBe('done')
   })
 })
 

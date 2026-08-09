@@ -6,18 +6,20 @@
  *
  * Nothing here is stored in the index: a deliverable is a top-level checkbox
  * task in a `type: project` note with a `🛫`/`📅` span and its own
- * `#deliverable/<project>/<name>` tag, and its members are every task or 🏁
- * milestone in the vault carrying that tag.
+ * `@deliverable(<project>/<name>)` marker, and its members are every other task
+ * or 🏁 milestone in the vault carrying that same marker.
  */
 
 import type { NoteMeta, VaultPath } from '@shared/types'
 import {
   DEPENDS_RE,
   PRIORITY_RE,
+  dependsTag,
   parseDeliverableTag,
   stripInlineMarkers
 } from '@shared/parser/patterns'
 import {
+  deliverableMembershipOf,
   deliverableTagsOf,
   endDateOf,
   isProjectComplete,
@@ -101,7 +103,7 @@ export interface PlannerModel {
 }
 
 function dependenciesOf(text: string): string[] {
-  return [...text.matchAll(DEPENDS_RE)].map((m) => m[1])
+  return [...text.matchAll(DEPENDS_RE)].map(dependsTag)
 }
 
 export function buildPlannerModel(
@@ -165,7 +167,7 @@ export function buildPlannerModel(
   for (const meta of notes.values()) {
     const isProject = isProjectNote(meta)
     for (const task of meta.tasks) {
-      for (const tag of deliverableTagsOf(task.tags, task.text)) {
+      for (const tag of deliverableMembershipOf(task.tags, task.text)) {
         const deliverable = byId.get(tag)
         // The deliverable's own defining line is not one of its member tasks.
         if (!deliverable || (deliverable.path === meta.path && deliverable.line === task.line))
@@ -194,7 +196,7 @@ export function buildPlannerModel(
         date,
         important: PRIORITY_RE.test(milestone.text)
       }
-      const tags = deliverableTagsOf(milestone.tags, milestone.text)
+      const tags = deliverableMembershipOf(milestone.tags, milestone.text)
       let placed = false
       for (const tag of tags) {
         const deliverable = byId.get(tag)
@@ -358,6 +360,21 @@ export function wouldCycle(model: PlannerModel, predecessor: string, dependent: 
     queue.push(...(model.dependents.get(current) ?? []))
   }
   return false
+}
+
+export type DeliverableBarStatus = 'active' | 'overdue' | 'done'
+
+/**
+ * Bar color state: `done` wins over `overdue` — a finished deliverable past
+ * its due date is not late, it's just late-finished. `done` requires the
+ * deliverable's own checkbox *and* every member task checked — `d.percent`
+ * alone isn't enough, since it's only the member-task ratio (or, with no
+ * members, just the deliverable's own checkbox) and never both at once.
+ */
+export function deliverableBarStatus(d: PlannerDeliverable, today: string): DeliverableBarStatus {
+  if (isTaskDone(d) && d.tasks.every((t) => t.done)) return 'done'
+  if (d.end < today) return 'overdue'
+  return 'active'
 }
 
 /** Deliverables whose start precedes the end of something they depend on. */

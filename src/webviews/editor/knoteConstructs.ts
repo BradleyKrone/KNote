@@ -24,12 +24,14 @@ import {
   WidgetType
 } from '@codemirror/view'
 import { isStaleError } from '@shared/errors'
-import { isImage } from '@shared/pathUtils'
-import type { BoardColumn } from '@shared/types'
+import { definingDeliverableTag } from '@shared/deliverables'
+import { isDrawioFile, isImage, resolveEmbedPath, samePath } from '@shared/pathUtils'
+import type { BoardColumn, NoteMeta } from '@shared/types'
 import {
   ARCHIVED_CHAR,
   BLOCK_ID_RE,
   DATE_ENTERED_RE,
+  DELIVERABLE_REF_RE,
   MACHINE_ENTRY_RE,
   MILESTONE_LINE_RE,
   PRIORITY_RE,
@@ -42,8 +44,8 @@ import {
   TASK_LINE_RE,
   WIKI_LINK_RE
 } from '@shared/parser/patterns'
-import { host } from '../shared/rpc'
-import { promptReason, showToast, useConfigStore } from '../shared/stores'
+import { host, on } from '../shared/rpc'
+import { promptReason, showToast, useConfigStore, useIndexStore } from '../shared/stores'
 import { checkboxRange } from './constructLogic'
 import { isNoteEmbedLine } from './embedLogic'
 import { hangingIndentEm } from './hangingIndent'
@@ -252,7 +254,10 @@ class WikiLinkWidget extends WidgetType {
     a.addEventListener('mousedown', (e) => e.preventDefault())
     a.addEventListener('click', (e) => {
       e.preventDefault()
-      void host.openWikiTarget(this.target)
+      // A bare link to a raw .drawio file (not wrapped in an image embed)
+      // opens straight in the draw.io editor rather than as a wiki note.
+      if (isDrawioFile(this.target)) void host.openWithDrawio(this.target)
+      else void host.openWikiTarget(this.target)
     })
     return a
   }
@@ -262,6 +267,67 @@ class WikiLinkWidget extends WidgetType {
     return true
   }
 }
+
+/** `@deliverable(project/name)` marker → a pill naming `project/deliverable`,
+ *  deliberately styled apart from `.cm-knote-tag` (see editor.css) since it's
+ *  structural membership, not a content tag. Non-interactive, unlike
+ *  WikiLinkWidget — there's nowhere to navigate to. Filled when the line
+ *  itself *defines* the deliverable, outlined when it merely joins one
+ *  defined elsewhere, so the two read as visually distinct at a glance. */
+class DeliverableRefWidget extends WidgetType {
+  constructor(
+    private readonly project: string,
+    private readonly name: string,
+    private readonly isDefining: boolean
+  ) {
+    super()
+  }
+  eq(other: DeliverableRefWidget): boolean {
+    return (
+      other.project === this.project &&
+      other.name === this.name &&
+      other.isDefining === this.isDefining
+    )
+  }
+  toDOM(): HTMLElement {
+    const span = document.createElement('span')
+    span.className = this.isDefining ? 'cm-knote-deliverable-ref' : 'cm-knote-deliverable-join'
+    span.textContent = `${this.project}/${this.name}`
+    span.title = `${this.project}/${this.name}`
+    return span
+  }
+  ignoreEvent(): boolean {
+    return true
+  }
+}
+
+// Live `<img>` elements currently in the DOM, keyed by the vault-relative
+// path they show, so an `attachmentChanged` event (e.g. a draw.io diagram
+// edited and saved in its own editor) can reload exactly the images
+// affected. CM6 recycles a widget's DOM node across redraws whenever a new
+// widget instance is eq() to the old one — toDOM() is only called once per
+// distinct DOM node — so a per-instance listener would miss later changes;
+// this registry survives regardless of widget-object churn.
+const liveImages = new Map<string, Set<HTMLImageElement>>()
+
+/** `src` resolved against the open note's folder, or null for an external/data URI. */
+function resolvedAttachmentPath(src: string): string | null {
+  if (/^[a-z][a-z0-9+.-]*:/i.test(src)) return null
+  const folder =
+    notePath && notePath.includes('/') ? notePath.slice(0, notePath.lastIndexOf('/')) : ''
+  return resolveEmbedPath(folder, src)
+}
+
+on('attachmentChanged', (changedPath) => {
+  for (const [key, imgs] of liveImages) {
+    if (!samePath(key, changedPath)) continue
+    for (const img of imgs) {
+      void host.attachmentUri(`/${key}`).then((uri) => {
+        if (uri) img.src = uri
+      })
+    }
+  }
+})
 
 class ImageWidget extends WidgetType {
   constructor(private readonly src: string) {
@@ -279,8 +345,38 @@ class ImageWidget extends WidgetType {
       if (uri) img.src = uri
       else wrap.classList.add('cm-knote-image-missing')
     })
+    const resolved = resolvedAttachmentPath(this.src)
+    if (resolved) {
+      let set = liveImages.get(resolved)
+      if (!set) {
+        set = new Set()
+        liveImages.set(resolved, set)
+      }
+      set.add(img)
+    }
     wrap.appendChild(img)
+    // draw.io's "editable image" exports (.drawio.svg/.drawio.png) render as
+    // plain images above, but double-click hands them to the Draw.io
+    // Integration extension for editing instead of doing nothing.
+    if (isDrawioFile(this.src)) {
+      wrap.classList.add('cm-knote-image-drawio')
+      wrap.title = 'Double-click to edit in draw.io'
+      wrap.addEventListener('dblclick', (e) => {
+        e.preventDefault()
+        void host.openWithDrawio(this.src)
+      })
+    }
     return wrap
+  }
+  destroy(dom: HTMLElement): void {
+    const resolved = resolvedAttachmentPath(this.src)
+    if (!resolved) return
+    const img = dom.querySelector('img')
+    const set = liveImages.get(resolved)
+    if (img && set) {
+      set.delete(img)
+      if (set.size === 0) liveImages.delete(resolved)
+    }
   }
 }
 
@@ -337,12 +433,13 @@ function buildDecorations(view: EditorView): DecorationSet {
   const revealed = revealedLines(view)
   const { doc } = view.state
   const columns = useConfigStore.getState().vaultConfig.columns
+  const meta = notePath ? useIndexStore.getState().notes.get(notePath) : undefined
 
   for (const visible of view.visibleRanges) {
     let pos = visible.from
     while (pos <= visible.to) {
       const line = doc.lineAt(pos)
-      decorateLine(view, line, revealed.has(line.number), columns, decorations)
+      decorateLine(view, line, revealed.has(line.number), columns, meta, decorations)
       pos = line.to + 1
     }
   }
@@ -354,6 +451,7 @@ function decorateLine(
   line: { from: number; to: number; number: number; text: string },
   isRevealed: boolean,
   columns: BoardColumn[],
+  meta: NoteMeta | undefined,
   out: Range<Decoration>[]
 ): void {
   const text = line.text
@@ -385,6 +483,10 @@ function decorateLine(
     }
   }
 
+  // Task checkbox: replace the `[c]` bracket with a clickable widget.
+  const box = checkboxRange(text)
+  const definingTag = box && !box.isSubtask ? definingDeliverableTag(text, true, meta, true) : null
+
   // Whole-line styling (always applied, never hidden).
   if (REASON_FOR_RE.test(text) || STATUS_CHANGED_RE.test(text) || DATE_ENTERED_RE.test(text)) {
     out.push(Decoration.line({ class: 'cm-knote-meta' }).range(line.from))
@@ -392,10 +494,10 @@ function decorateLine(
     out.push(Decoration.line({ class: 'cm-knote-milestone' }).range(line.from))
   } else if (MACHINE_ENTRY_RE.test(text)) {
     out.push(Decoration.line({ class: 'cm-knote-machine' }).range(line.from))
+  } else if (definingTag) {
+    out.push(Decoration.line({ class: 'cm-knote-deliverable-define' }).range(line.from))
   }
 
-  // Task checkbox: replace the `[c]` bracket with a clickable widget.
-  const box = checkboxRange(text)
   if (box) {
     if (box.statusChar === ARCHIVED_CHAR) {
       out.push(Decoration.line({ class: 'cm-knote-archived' }).range(line.from))
@@ -483,6 +585,24 @@ function decorateLine(
     const from = line.from + hashIndex
     if (inCode(view, from)) continue
     out.push(Decoration.mark({ class: 'cm-knote-tag' }).range(from, from + 1 + tagName.length))
+  }
+
+  // @deliverable(project/name) markers — collapsed to a pill naming just the
+  // deliverable, same reveal-on-caret treatment [[wiki links]] get; raw text stays
+  // visible (and editable) on the line the caret is on. Filled when this match is
+  // the one the line itself defines, outlined when it's merely a join elsewhere.
+  DELIVERABLE_REF_RE.lastIndex = 0
+  for (let m = DELIVERABLE_REF_RE.exec(text); m; m = DELIVERABLE_REF_RE.exec(text)) {
+    const from = line.from + m.index
+    const to = from + m[0].length
+    if (inCode(view, from) || isRevealed) continue
+    const isDefining = definingTag === `deliverable/${m[1]}/${m[2]}`
+    out.push(
+      Decoration.replace({ widget: new DeliverableRefWidget(m[1], m[2], isDefining) }).range(
+        from,
+        to
+      )
+    )
   }
 
   // Hide a trailing `^block-id` anchor (the target of a [[Note#^id]] link, added

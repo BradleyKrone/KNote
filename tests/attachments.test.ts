@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile, mkdir } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import * as vault from '../src/core/vaultService'
-import { saveImageAttachment } from '../src/core/attachments'
+import { createDrawioDiagram, saveImageAttachment } from '../src/core/attachments'
 
 vi.mock('dayjs', () => {
   const fixed = () => ({ format: () => '20260724120000' })
@@ -57,5 +57,35 @@ describe('saveImageAttachment', () => {
     )
     const saved = await saveImageAttachment('image/png', Buffer.from('x'))
     expect(saved).toBe('Media/Pasted image 20260724120000.png')
+  })
+})
+
+describe('createDrawioDiagram', () => {
+  let dir: string
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'knote-attach-'))
+    vault.setVault(dir)
+  })
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('writes an empty .drawio.svg into the default attachments folder', async () => {
+    const saved = await createDrawioDiagram()
+    expect(saved).toBe(`${ATT}/Diagram 20260724120000.drawio.svg`)
+    const onDisk = await readFile(join(dir, saved))
+    expect(onDisk.length).toBe(0)
+  })
+
+  it('uniquifies the filename when it collides with an existing file', async () => {
+    // uniquify() only splits on the last dot, so a same-second collision on a
+    // double-extension name lands the disambiguator before .svg, not before
+    // .drawio.svg as a whole — same behavior every other attachment type gets.
+    const first = await createDrawioDiagram()
+    const second = await createDrawioDiagram()
+    expect(second).not.toBe(first)
+    expect(second).toBe(`${ATT}/Diagram 20260724120000.drawio 1.svg`)
   })
 })

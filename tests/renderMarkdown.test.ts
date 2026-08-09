@@ -54,6 +54,11 @@ describe('renderKnoteMarkdown', () => {
     expect(html).toContain('alt="shot.png"')
   })
 
+  it('adds the drawio class to a .drawio.svg image embed for its light backing', () => {
+    const html = renderKnoteMarkdown('![[diagram.drawio.svg]]\n', opts)
+    expect(html).toContain('class="knote-embed-image knote-embed-image-drawio"')
+  })
+
   it('marks an unresolved image embed instead of emitting a broken img', () => {
     const html = renderKnoteMarkdown('![[gone.png]]\n', opts)
     expect(html).toContain('knote-embed-missing')

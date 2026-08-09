@@ -316,6 +316,30 @@ body {
   font-size: 0.9em;
 }
 
+/* @deliverable(project/name) on the line that *defines* the deliverable —
+ * same pill shape as .cm-knote-tag but a different fill so it reads as a
+ * distinct kind of thing at a glance. */
+.cm-knote-deliverable-ref {
+  color: #000;
+  background-color: #4caf50;
+  border-radius: 8px;
+  padding: 0.05em 0.45em;
+  font-size: 0.9em;
+}
+
+/* @deliverable(project/name) on a line that only *joins* a deliverable —
+ * same green identity as .cm-knote-deliverable-ref, but outlined rather than
+ * filled, so a defining line's pill reads as solid/primary and a joining
+ * line's reads as a lighter reference to it. */
+.cm-knote-deliverable-join {
+  color: #238b45;
+  background-color: transparent;
+  border: 1px solid #238b45;
+  border-radius: 8px;
+  padding: 0.03em 0.4em;
+  font-size: 0.9em;
+}
+
 /* State pill trailing a top-level task line — its current Kanban column. */
 .cm-knote-state {
   display: inline-block;
@@ -352,6 +376,9 @@ body {
 .cm-knote-milestone {
   font-weight: 700;
 }
+.cm-knote-deliverable-define {
+  font-weight: 700;
+}
 .cm-knote-machine {
   color: var(--vscode-charts-orange, inherit);
 }
@@ -366,6 +393,24 @@ body {
   content: '⚠ image not found';
   color: var(--vscode-errorForeground);
   font-size: 0.85em;
+}
+.cm-knote-image-drawio img {
+  cursor: pointer;
+  outline: 1px dashed var(--vscode-descriptionForeground);
+  outline-offset: 2px;
+  /* draw.io's SVG exports have a transparent canvas and default black
+     lines/arrows, which disappear on a dark theme without a light backing. */
+  background: #fff;
+  border-radius: 4px;
+  padding: 4px;
+}
+/* Same fix for a draw.io diagram rendered via renderMarkdown.ts — embed
+   cards and link-hover previews inside this editor, not the inline widget
+   above. */
+.knote-embed-image-drawio {
+  background: #fff;
+  border-radius: 4px;
+  padding: 4px;
 }
 
 /* Fold gutter: reveal collapse arrows on hover so the gutter stays quiet,

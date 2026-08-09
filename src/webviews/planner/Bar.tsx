@@ -11,7 +11,7 @@ import {
   type Domain,
   type Zoom
 } from './plannerLayout'
-import type { PlannerDeliverable, PlannerMilestone } from './plannerSelectors'
+import type { DeliverableBarStatus, PlannerDeliverable, PlannerMilestone } from './plannerSelectors'
 import type { DragMode } from './useBarDrag'
 
 const BAR_HEIGHT = 18
@@ -24,6 +24,7 @@ interface Props {
   domain: Domain
   zoom: Zoom
   colorIndex: number
+  status: DeliverableBarStatus
   violated: boolean
   dragging: boolean
   linkTarget: boolean
@@ -39,6 +40,7 @@ export function Bar({
   domain,
   zoom,
   colorIndex,
+  status,
   violated,
   dragging,
   linkTarget,
@@ -52,6 +54,7 @@ export function Bar({
   const className = [
     'planner-bar',
     `planner-color-${colorIndex % 6}`,
+    status !== 'active' ? `bar-${status}` : '',
     dragging ? 'dragging' : '',
     violated ? 'violated' : '',
     linkTarget ? 'link-target' : ''
@@ -65,8 +68,8 @@ export function Bar({
       data-deliverable={deliverable.id}
       style={{ left: x, width, height: BAR_HEIGHT, top: (ROW_HEIGHT - BAR_HEIGHT) / 2 }}
       title={`${deliverable.label} · ${start} → ${end} · ${deliverable.percent}%${
-        violated ? ' · starts before a deliverable it depends on finishes' : ''
-      }`}
+        status === 'overdue' ? ' · overdue' : ''
+      }${violated ? ' · starts before a deliverable it depends on finishes' : ''}`}
       onPointerDown={(e) => onGrip(e, 'move')}
       onDoubleClick={onOpen}
       onContextMenu={onContextMenu}

@@ -241,11 +241,11 @@ describe('collectCards deliverable windows', () => {
       'Work.md',
       [
         '- [ ] plain task',
-        '- [ ] current work #deliverable/p/current',
-        '- [ ] future work #deliverable/p/future',
-        '- [ ] late work #deliverable/p/past',
-        '- [x] finished work #deliverable/p/past',
-        '- [ ] orphan work #deliverable/p/ghost',
+        '- [ ] current work @deliverable(p/current)',
+        '- [ ] future work @deliverable(p/future)',
+        '- [ ] late work @deliverable(p/past)',
+        '- [x] finished work @deliverable(p/past)',
+        '- [ ] orphan work @deliverable(p/ghost)',
         ''
       ].join('\n')
     )
@@ -254,8 +254,17 @@ describe('collectCards deliverable windows', () => {
   const labels = (filters: BoardFilters = baseFilters): string[] =>
     collectCards(notes, { kind: 'note', path: 'Work.md' }, filters).map((c) => c.displayText)
 
-  it('shows current and overdue-unchecked work, hides not-yet-started and finished-on-time work', () => {
-    expect(labels()).toEqual(['plain task', 'current work', 'late work', 'orphan work'])
+  it('shows current, overdue and finished work, hides only not-yet-started work', () => {
+    // Completion is never a visibility signal — "finished work" stays on the
+    // board once its deliverable has started, exactly like "late work". Only
+    // "future work" (deliverable hasn't started yet) is gated out.
+    expect(labels()).toEqual([
+      'plain task',
+      'current work',
+      'late work',
+      'finished work',
+      'orphan work'
+    ])
   })
 
   it('shows everything again under the escape-hatch toggle', () => {
@@ -276,8 +285,31 @@ describe('collectCards deliverable windows', () => {
     expect(project.map((c) => c.displayText)).toEqual(['Current', 'Past'])
   })
 
-  it('never lets a closed deliverable shrink the tag dropdown', () => {
-    expect(boardTags(notes, { kind: 'note', path: 'Work.md' })).toContain('deliverable/p/future')
+  it('leaves definesDeliverable/progress null on an ordinary task, including one that joins a deliverable', () => {
+    // "Current"/"Past" in Project.md are written with the legacy #deliverable/…
+    // tag, which deliverableMembershipOf still reads as membership but
+    // definingDeliverableTag does not recognize as a *defining* line (it only
+    // reads the current @deliverable(...) text marker — see the "defines a
+    // deliverable" describe block below for that case).
+    const work = collectCards(
+      notes,
+      { kind: 'note', path: 'Work.md' },
+      {
+        ...baseFilters,
+        ignoreDeliverableWindow: true
+      }
+    )
+    const currentWork = work.find((c) => c.displayText === 'current work')
+    expect(currentWork?.definesDeliverable).toBeNull()
+    expect(currentWork?.progress).toBeNull()
+  })
+
+  it('never surfaces a deliverable join marker as a #tag in the dropdown', () => {
+    // Joining a deliverable is `@deliverable(...)`, not a #tag, so it must
+    // never show up alongside real content tags.
+    expect(boardTags(notes, { kind: 'note', path: 'Work.md' })).not.toContain(
+      'deliverable/p/future'
+    )
   })
 
   describe('deliverableScope (the Boards tree filter)', () => {
@@ -324,5 +356,125 @@ describe('collectCards deliverable windows', () => {
         scoped({ kind: 'deliverable', tag: 'deliverable/p/current', label: 'Current' })
       ).toEqual(['Current', 'current work'])
     })
+  })
+})
+
+describe('collectCards deliverable-defining card', () => {
+  const notes = new Map<string, NoteMeta>()
+  notes.set(
+    'Project.md',
+    parseNote(
+      'Project.md',
+      [
+        '---',
+        'type: project',
+        'project: p',
+        '---',
+        '- [ ] Design 🛫 2026-07-01 📅 2026-07-31 @deliverable(p/design)',
+        '- [ ] Permits 🛫 2026-07-01 📅 2026-07-31 @deliverable(p/permits)',
+        '- [ ] task 1 @deliverable(p/design)',
+        ''
+      ].join('\n')
+    )
+  )
+  notes.set(
+    'Work.md',
+    parseNote(
+      'Work.md',
+      [
+        '- [x] Sketch layout @deliverable(p/design)',
+        '- [ ] Pick materials @deliverable(p/design)',
+        ''
+      ].join('\n')
+    )
+  )
+  const baseFilters: BoardFilters = { tag: null, text: '', ignoreDeliverableWindow: true }
+
+  it("marks the defining card and rolls up its member tasks' completion", () => {
+    const project = collectCards(notes, { kind: 'note', path: 'Project.md' }, baseFilters)
+    const design = project.find((c) => c.displayText === 'Design')
+    expect(design?.definesDeliverable).toBe('deliverable/p/design')
+    // 2 members: "Sketch layout"/"Pick materials" in Work.md, plus "task 1"
+    // below, a plain top-level task in the *same* project note that joins
+    // the same deliverable without a span of its own.
+    expect(design?.progress).toEqual({ done: 1, total: 3 })
+  })
+
+  it('does not mistake an undated top-level task in the project note for a second defining line', () => {
+    // Regression: a plain task in the project note carrying the same
+    // @deliverable(...) marker but no 🛫/📅 span must not itself be flagged
+    // as "defining" just because it's top-level in the right note — only
+    // "Design", which actually carries the span, defines the deliverable.
+    const project = collectCards(notes, { kind: 'note', path: 'Project.md' }, baseFilters)
+    const task1 = project.find((c) => c.displayText === 'task 1')
+    expect(task1?.definesDeliverable).toBeNull()
+    expect(task1?.progress).toBeNull()
+  })
+
+  it('reports total: 0 for a deliverable with no member tasks yet', () => {
+    const project = collectCards(notes, { kind: 'note', path: 'Project.md' }, baseFilters)
+    const permits = project.find((c) => c.displayText === 'Permits')
+    expect(permits?.definesDeliverable).toBe('deliverable/p/permits')
+    expect(permits?.progress).toEqual({ done: 0, total: 0 })
+  })
+
+  it('leaves definesDeliverable/progress null on a card that only joins', () => {
+    const work = collectCards(notes, { kind: 'note', path: 'Work.md' }, baseFilters)
+    const pickMaterials = work.find((c) => c.displayText === 'Pick materials')
+    expect(pickMaterials?.definesDeliverable).toBeNull()
+    expect(pickMaterials?.progress).toBeNull()
+  })
+})
+
+describe('collectCards deliverable overdue', () => {
+  // Windows fixed safely in the past (design) and safely in the future
+  // (landscaping) so these assertions hold regardless of the real clock —
+  // collectCards reads `now` from dayjs(), not an injectable date.
+  const notes = new Map<string, NoteMeta>()
+  notes.set(
+    'Project.md',
+    parseNote(
+      'Project.md',
+      [
+        '---',
+        'type: project',
+        'project: p',
+        '---',
+        '- [ ] Design 🛫 2020-01-01 📅 2020-01-31 @deliverable(p/design)',
+        '- [ ] Landscaping 🛫 2020-01-01 📅 2099-01-01 @deliverable(p/landscaping)',
+        ''
+      ].join('\n')
+    )
+  )
+  notes.set(
+    'Work.md',
+    parseNote(
+      'Work.md',
+      [
+        '- [ ] design task, no due of its own @deliverable(p/design)',
+        '- [ ] landscaping task, no due of its own @deliverable(p/landscaping)',
+        ''
+      ].join('\n')
+    )
+  )
+  const baseFilters: BoardFilters = { tag: null, text: '', ignoreDeliverableWindow: true }
+
+  it('flags a member task as overdue via its deliverable, even with no @due() of its own', () => {
+    const work = collectCards(notes, { kind: 'note', path: 'Work.md' }, baseFilters)
+    const task = work.find((c) => c.displayText === 'design task, no due of its own')
+    expect(task?.due).toBeNull()
+    expect(task?.overdueDeliverables).toEqual(['deliverable/p/design'])
+  })
+
+  it('leaves a member task alone when its deliverable is not yet due', () => {
+    const work = collectCards(notes, { kind: 'note', path: 'Work.md' }, baseFilters)
+    const task = work.find((c) => c.displayText === 'landscaping task, no due of its own')
+    expect(task?.overdueDeliverables).toEqual([])
+  })
+
+  it('the defining card itself is also flagged', () => {
+    const project = collectCards(notes, { kind: 'note', path: 'Project.md' }, baseFilters)
+    const design = project.find((c) => c.displayText === 'Design')
+    expect(design?.overdueDeliverables).toEqual(['deliverable/p/design'])
   })
 })

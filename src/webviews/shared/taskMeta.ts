@@ -1,11 +1,13 @@
 import {
   DEPENDS_RE,
   DUE_RE,
+  dependsTag,
   preservingBlockId,
   PRIORITY_RE,
   START_RE,
   TAG_RE
 } from '@shared/parser/patterns'
+import { deliverableRefMarker, deliverableRefsOf } from '@shared/deliverables'
 
 /** Display label for a priority level (0 = none), shared by the board card,
  *  the priority picker, and the editor's live-preview pill. */
@@ -29,6 +31,14 @@ export function insertTag(text: string, tag: string): string {
     while ((m = TAG_RE.exec(t))) existing.add(m[2])
     if (existing.has(tag)) return t
     return `${normalize(t)} #${tag}`.trim()
+  })
+}
+
+/** Append an `@deliverable(project/name)` join marker if not already present; idempotent. */
+export function insertDeliverableRef(text: string, tag: string): string {
+  return preservingBlockId(text, (t) => {
+    if (deliverableRefsOf(t).includes(tag)) return t
+    return `${normalize(t)} ${deliverableRefMarker(tag)}`.trim()
   })
 }
 
@@ -68,20 +78,36 @@ export function setDeliverableDates(text: string, start: string, end: string): s
   })
 }
 
-/** Append a `⛓ #deliverable/...` dependency marker; idempotent. */
+/** Append a `⛓ @deliverable(project/name)` dependency marker; idempotent. */
 export function addDependency(text: string, predecessorTag: string): string {
   if (dependencies(text).includes(predecessorTag)) return text
-  return preservingBlockId(text, (t) => `${normalize(t)} ⛓ #${predecessorTag}`.trim())
-}
-
-/** Remove one `⛓ #deliverable/...` dependency marker, leaving any others. */
-export function removeDependency(text: string, predecessorTag: string): string {
   return preservingBlockId(text, (t) =>
-    normalize(t.replace(DEPENDS_RE, (match, tag: string) => (tag === predecessorTag ? '' : match)))
+    `${normalize(t)} ⛓ ${deliverableRefMarker(predecessorTag)}`.trim()
   )
 }
 
-/** The predecessor tags a line declares (bare, no `#`). */
+/**
+ * Remove one dependency marker naming `predecessorTag`, leaving any others —
+ * whichever form it was written in (current `⛓ @deliverable(...)`, or a
+ * legacy `⛓ #deliverable/...`).
+ */
+export function removeDependency(text: string, predecessorTag: string): string {
+  return preservingBlockId(text, (t) =>
+    normalize(
+      t.replace(
+        DEPENDS_RE,
+        (
+          match,
+          legacy: string | undefined,
+          project: string | undefined,
+          name: string | undefined
+        ) => ((legacy ?? `deliverable/${project}/${name}`) === predecessorTag ? '' : match)
+      )
+    )
+  )
+}
+
+/** The predecessor tags a line declares (bare, no `#`), whichever marker form each was written in. */
 export function dependencies(text: string): string[] {
-  return [...text.matchAll(DEPENDS_RE)].map((m) => m[1])
+  return [...text.matchAll(DEPENDS_RE)].map(dependsTag)
 }

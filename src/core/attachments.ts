@@ -26,3 +26,19 @@ export async function saveImageAttachment(mime: string, bytes: Buffer): Promise<
   const fileName = `Pasted image ${dayjs().format('YYYYMMDDHHmmss')}.${ext}`
   return vault.createBinaryFile(joinRel(config.attachmentsFolder, fileName), bytes)
 }
+
+/**
+ * Create a blank draw.io diagram (the .drawio.svg "editable image" format) in
+ * the vault's configured attachments folder. Written empty — same as the
+ * Draw.io Integration extension's own "New Diagram" command writes for a
+ * fresh .drawio file — its editor treats an empty document as a blank canvas.
+ */
+export async function createDrawioDiagram(): Promise<VaultPath> {
+  const config = await getVaultConfig()
+  // Millisecond precision: unlike saveImageAttachment's single .ext, a
+  // same-second collision here would get uniquified as "….drawio 1.svg"
+  // (vaultService's uniquify only splits on the last dot) instead of
+  // "…-1.drawio.svg", which would stop isDrawioFile from recognizing it.
+  const fileName = `Diagram ${dayjs().format('YYYYMMDDHHmmssSSS')}.drawio.svg`
+  return vault.createBinaryFile(joinRel(config.attachmentsFolder, fileName), Buffer.alloc(0))
+}
