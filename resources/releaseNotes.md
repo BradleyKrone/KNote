@@ -3,6 +3,14 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.2.2
+
+- Fixed Kanban cards having no way to open their task once **Group by note**
+  was ticked — the note name under a card is what opened it, and grouping
+  hides that name. Double-clicking a card now opens its note at the task's
+  line, on every board (including **Open Board for This Note**, which never
+  had a click-through either).
+
 ## 2.2.1
 
 - Fixed Gantt bars showing through the Planner's sticky task-name column
