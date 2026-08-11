@@ -88,6 +88,64 @@ describe('parseNote', () => {
     expect(meta.tasks[1].line).toBe(1)
   })
 
+  it('surfaces a task’s own note body, excluding the auto-managed lines', () => {
+    const meta = parseNote(
+      'a.md',
+      '- [w] task\n  Reason for Waiting: parts ⏳ 2026-08-04\n  - Status Changed: 7/14/2026\n  - Date Entered: 7/1/2026\n  - Notes: free text\n  - and more\n'
+    )
+    expect(meta.tasks[0].noteLines).toEqual(['  - Notes: free text', '  - and more'])
+    // The managed lines are still surfaced as their own fields.
+    expect(meta.tasks[0]).toMatchObject({
+      statusChanged: '7/14/2026',
+      dateEntered: '7/1/2026',
+      waitingReason: 'parts',
+      waitingFollowUp: '2026-08-04'
+    })
+  })
+
+  it('gives a task with no note block an empty body', () => {
+    const meta = parseNote('a.md', '- [ ] bare\n- [ ] another\n')
+    expect(meta.tasks[0].noteLines).toEqual([])
+    expect(meta.tasks[1].noteLines).toEqual([])
+  })
+
+  it('leaves the body empty when the block is nothing but managed lines', () => {
+    const meta = parseNote('a.md', '- [ ] t\n  - Status Changed: n/a\n  - Date Entered: 7/1/2026\n')
+    expect(meta.tasks[0].noteLines).toEqual([])
+    expect(meta.tasks[0].statusChanged).toBeNull()
+  })
+
+  it('keeps a duplicate managed line out of the note body', () => {
+    const meta = parseNote(
+      'a.md',
+      '- [ ] t\n  - Status Changed: 7/14/2026\n  - Status Changed: 7/10/2026\n  - Notes: kept\n'
+    )
+    expect(meta.tasks[0].noteLines).toEqual(['  - Notes: kept'])
+    expect(meta.tasks[0].statusChanged).toBe('7/14/2026')
+  })
+
+  it('stops a parent’s note body before a nested sub-task and its own notes', () => {
+    const meta = parseNote(
+      'a.md',
+      '- [ ] parent\n  - Notes: mine\n  - [ ] child\n    - Notes: theirs\n'
+    )
+    expect(meta.tasks[0].noteLines).toEqual(['  - Notes: mine'])
+    expect(meta.tasks[1].noteLines).toEqual(['    - Notes: theirs'])
+  })
+
+  it('keeps blank lines inside a note body but drops the leading one', () => {
+    const meta = parseNote(
+      'a.md',
+      '- [ ] t\n  - Status Changed: 7/1/2026\n\n  - Notes: one\n\n  two\n'
+    )
+    expect(meta.tasks[0].noteLines).toEqual(['  - Notes: one', '', '  two'])
+  })
+
+  it('never carries a \\r into the note body of a CRLF note', () => {
+    const meta = parseNote('a.md', '- [ ] t\r\n  - Notes: one\r\n  - two\r\n')
+    expect(meta.tasks[0].noteLines).toEqual(['  - Notes: one', '  - two'])
+  })
+
   it('does not treat checkbox-looking lines inside fences as tasks', () => {
     const meta = parseNote('a.md', '```\n- [ ] fake\n```\n\n- [ ] real\n')
     expect(meta.tasks).toHaveLength(1)

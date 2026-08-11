@@ -14,6 +14,7 @@ import {
   makeBlockId,
   withoutAnchor
 } from '@shared/blockAnchor'
+import { noteBodyFromText, noteBodyIndent, taskChildIndent } from '@shared/parser/taskNoteBody'
 import { host } from '../shared/rpc'
 import { showToast, useConfigStore, useIndexStore } from '../shared/stores'
 import type { BoardCard, BoardScope } from './boardSelectors'
@@ -101,15 +102,56 @@ export async function reorderCard(card: BoardCard, before: BoardCard | null): Pr
  * dropping it would silently break every link pointing at this task.
  */
 export async function updateCardText(card: BoardCard, newText: string): Promise<void> {
+  const rewritten = rewrittenTaskLine(card, newText)
+  if (rewritten === null) return
+  await guarded(host.replaceLine(card.path, card.line, card.rawLine, rewritten))
+}
+
+/**
+ * The card's raw line with `newText` spliced in as the task text — indent,
+ * bullet, status char and `^anchor` all preserved — or null when the text is
+ * empty or unchanged and there's nothing to write.
+ */
+function rewrittenTaskLine(card: BoardCard, newText: string): string | null {
   const m = TASK_LINE_RE.exec(card.rawLine)
-  if (!m) return
+  if (!m) return null
   const clean = withoutAnchor(newText.trim().replace(/\s*\n\s*/g, ' '))
-  if (!clean || clean === withoutAnchor(card.text)) return
+  if (!clean || clean === withoutAnchor(card.text)) return null
   // indent + bullet + " [c]" ends at m[1].len + m[2].len + 4
   const prefix = card.rawLine.slice(0, m[1].length + m[2].length + 4)
   const id = blockIdOf(card.rawLine)
-  const rewritten = id ? anchorLine(`${prefix} ${clean}`, id) : `${prefix} ${clean}`
-  await guarded(host.replaceLine(card.path, card.line, card.rawLine, rewritten))
+  return id ? anchorLine(`${prefix} ${clean}`, id) : `${prefix} ${clean}`
+}
+
+/**
+ * Save the task editor: the task's line text and its own note block, in one
+ * verified edit — one undo step, and refused outright rather than half-applied
+ * if the note moved under us. `bodyText` is the editor's plain text, re-indented
+ * to whatever the existing block uses (falling back to the task's indent + 2
+ * for a task getting its first note).
+ *
+ * Resolves false when the write was refused as stale, so the dialog can stay
+ * open holding the user's text instead of silently discarding it.
+ */
+export async function updateCardNote(
+  card: BoardCard,
+  taskText: string,
+  bodyText: string
+): Promise<boolean> {
+  const indent = noteBodyIndent(card.noteLines, taskChildIndent(card.rawLine))
+  const body = noteBodyFromText(bodyText, indent)
+  const line = rewrittenTaskLine(card, taskText)
+  const bodyUnchanged =
+    body.length === card.noteLines.length && body.every((l, i) => l === card.noteLines[i])
+  if (line === null && bodyUnchanged) return true
+  try {
+    await host.setTaskTextAndNotes(card.path, card.line, card.rawLine, line ?? card.rawLine, body)
+    return true
+  } catch (err) {
+    if (!isStaleError(err)) throw err
+    showToast('Note changed on disk — nothing was saved')
+    return false
+  }
 }
 
 export async function deleteCard(card: BoardCard): Promise<void> {

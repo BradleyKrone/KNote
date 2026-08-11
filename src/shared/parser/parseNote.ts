@@ -179,26 +179,41 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
     // `Status Changed`/`Date Entered` lines attached under the task, wherever
     // they sit in its own note block (a blank line or the other of the pair
     // may come first — see `ownNoteBlockEnd`).
+    // Everything in the block that isn't one of those auto-managed lines is the
+    // task's own note text, kept verbatim (indent and all) for the board's task
+    // editor to edit and write back.
     let statusChanged: string | null = null
+    let sawStatusChanged = false
     let dateEntered: string | null = null
+    const noteLines: string[] = []
     const blockEnd = ownNoteBlockEnd(cleanLines, line, indent)
     for (let i = line + 1; i < blockEnd; i++) {
       const l = cleanLines[i]
-      if (statusChanged === null) {
-        const sm = STATUS_CHANGED_RE.exec(l)
-        if (sm) {
+      // Each meta line is recognised by its pattern alone, never by "haven't
+      // captured one yet": a duplicate has to stay out of `noteLines` too, the
+      // way `planTaskMetaEdit` collapses duplicates rather than demoting the
+      // extras to note text. `n/a` parses to a null date but is still a status
+      // line, hence the separate `sawStatusChanged` flag.
+      const sm = STATUS_CHANGED_RE.exec(l)
+      if (sm) {
+        if (!sawStatusChanged) {
+          sawStatusChanged = true
           statusChanged = sm[1].toLowerCase() === STATUS_CHANGED_UNSET ? null : sm[1]
-          continue
         }
+        continue
       }
-      if (dateEntered === null) {
-        const dm = DATE_ENTERED_RE.exec(l)
-        if (dm) {
-          dateEntered = dm[1]
-          continue
-        }
+      const dm = DATE_ENTERED_RE.exec(l)
+      if (dm) {
+        if (dateEntered === null) dateEntered = dm[1]
+        continue
       }
+      if (REASON_FOR_RE.test(l)) continue
+      noteLines.push(l)
     }
+    // Leading blanks sit between the managed lines and the note body; the write
+    // path strips them too, so dropping them here keeps read/write round-trips
+    // stable. Blanks *inside* the body are the user's own and stay.
+    while (noteLines.length > 0 && /^\s*$/.test(noteLines[0])) noteLines.shift()
 
     meta.tasks.push({
       line,
@@ -211,7 +226,8 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
       waitingFollowUp,
       waitingReason,
       statusChanged,
-      dateEntered
+      dateEntered,
+      noteLines
     } as TaskItem)
   })
 }

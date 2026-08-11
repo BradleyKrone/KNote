@@ -51,6 +51,63 @@ async function applyAndMaybeSave(
   if (wasClean) await doc.save()
 }
 
+/**
+ * Fold a `planTaskMetaEdit` splice into `edit` as a document edit.
+ *
+ * With `newTaskLineText` the whole thing collapses to a single replace
+ * spanning the task line *and* its old block. That isn't just tidier: staging
+ * a separate replace for the task line would end at exactly the offset the
+ * pure-insert case below starts at, and VS Code makes no promise about how it
+ * orders two edits touching the same position. One replace has no such
+ * ambiguity, and it stays correct in every shape — no old block (the range is
+ * the task line alone), an emptied block (the range swallows it, leaving no
+ * blank line behind), or both sides non-empty.
+ *
+ * Without it, three shapes, and the middle one is why this lives in one place
+ * rather than at each call site: a pure insert hangs the new lines off the end
+ * of the task line; a plan with nothing left to write has to swallow the
+ * *preceding* newline too, or the delete leaves an empty line dangling under
+ * the task; anything else is a plain range replace.
+ */
+function applyBlockPlan(
+  doc: vscode.TextDocument,
+  edit: vscode.WorkspaceEdit,
+  plan: { start: number; deleteCount: number; insert: string[] },
+  taskLine: number,
+  newTaskLineText?: string
+): void {
+  if (newTaskLineText !== undefined) {
+    const last = plan.deleteCount > 0 ? plan.start + plan.deleteCount - 1 : taskLine
+    edit.replace(
+      doc.uri,
+      new vscode.Range(taskLine, 0, last, doc.lineAt(last).text.length),
+      [newTaskLineText, ...plan.insert].join('\n')
+    )
+    return
+  }
+  if (plan.deleteCount === 0) {
+    if (plan.insert.length > 0) {
+      edit.insert(doc.uri, doc.lineAt(taskLine).range.end, '\n' + plan.insert.join('\n'))
+    }
+    return
+  }
+  const first = plan.start
+  const last = plan.start + plan.deleteCount - 1
+  if (plan.insert.length === 0) {
+    const prev = first - 1
+    edit.delete(
+      doc.uri,
+      new vscode.Range(prev, doc.lineAt(prev).text.length, last, doc.lineAt(last).text.length)
+    )
+    return
+  }
+  edit.replace(
+    doc.uri,
+    new vscode.Range(first, 0, last, doc.lineAt(last).text.length),
+    plan.insert.join('\n')
+  )
+}
+
 /** Range covering a whole line including its EOL (or the preceding EOL for the last line). */
 function wholeLineRange(doc: vscode.TextDocument, line: number): vscode.Range {
   if (line + 1 < doc.lineCount) {
@@ -110,31 +167,43 @@ export async function setTaskStatusMeta(
   // never includes in its splice, so both edits compose safely.
   const lines: string[] = []
   for (let i = 0; i < doc.lineCount; i++) lines.push(doc.lineAt(i).text)
-  const plan = planTaskMetaEdit(lines, target, meta)
-  if (plan.deleteCount === 0) {
-    if (plan.insert.length > 0) {
-      edit.insert(doc.uri, doc.lineAt(target).range.end, '\n' + plan.insert.join('\n'))
-    }
-  } else {
-    const first = plan.start
-    const last = plan.start + plan.deleteCount - 1
-    if (plan.insert.length === 0) {
-      // Nothing left to write (e.g. the block was only the reason line, now
-      // cleared): take the preceding newline with it, or the delete would
-      // leave an empty line hanging under the task.
-      const prev = first - 1
-      edit.delete(
-        doc.uri,
-        new vscode.Range(prev, doc.lineAt(prev).text.length, last, doc.lineAt(last).text.length)
-      )
-    } else {
-      edit.replace(
-        doc.uri,
-        new vscode.Range(first, 0, last, doc.lineAt(last).text.length),
-        plan.insert.join('\n')
-      )
-    }
+  applyBlockPlan(doc, edit, planTaskMetaEdit(lines, target, meta), target)
+  await applyAndMaybeSave(doc, edit)
+}
+
+/**
+ * Rewrite a task's line text *and* its attached note body in one verified edit
+ * — what the board's task editor saves. One edit rather than two so the whole
+ * change is a single undo step, and so a stale note can't reject half of it
+ * after the other half has already landed.
+ *
+ * The auto-managed `Reason for` / `Status Changed` / `Date Entered` lines are
+ * not the caller's to send: `planTaskMetaEdit` carries whatever is already
+ * there straight through, so the editor can't drop them.
+ */
+export async function setTaskTextAndNotes(
+  rel: VaultPath,
+  lineNo: number,
+  expectedText: string,
+  newLineText: string,
+  noteLines: string[]
+): Promise<void> {
+  const doc = openDocFor(rel)
+  if (!doc) {
+    await lineEdit.setTaskTextAndNotes(rel, lineNo, expectedText, newLineText, noteLines)
+    void vaultIndex.indexFile(rel)
+    return
   }
+  const target = locateLine(doc, lineNo, expectedText)
+  if (target === -1) throw stale(rel)
+  if (!TASK_LINE_RE.test(doc.lineAt(target).text)) throw stale(rel)
+
+  // Planned against the pre-edit line array, as in setTaskStatusMeta; the line
+  // and its block go in as one replace (see applyBlockPlan).
+  const lines: string[] = []
+  for (let i = 0; i < doc.lineCount; i++) lines.push(doc.lineAt(i).text)
+  const edit = new vscode.WorkspaceEdit()
+  applyBlockPlan(doc, edit, planTaskMetaEdit(lines, target, { noteLines }), target, newLineText)
   await applyAndMaybeSave(doc, edit)
 }
 

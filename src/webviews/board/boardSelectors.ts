@@ -52,6 +52,8 @@ export interface BoardCard {
   statusChanged: string | null
   /** Date (M/D/YYYY) the task's note template was seeded, if present */
   dateEntered: string | null
+  /** The task's own note text (indented, auto-managed meta lines excluded) — what the card's task editor edits */
+  noteLines: string[]
 }
 
 export function scopeLabel(scope: BoardScope): string {
@@ -97,7 +99,8 @@ export function toCard(
     waitingReason: task.waitingReason,
     rawLine: task.rawLine,
     statusChanged: task.statusChanged,
-    dateEntered: task.dateEntered
+    dateEntered: task.dateEntered,
+    noteLines: task.noteLines
   }
 }
 

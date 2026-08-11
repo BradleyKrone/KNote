@@ -80,6 +80,21 @@ export interface HostApi {
     targetChar: string,
     meta: { reasonLine?: string | null; statusChangedLine?: string }
   ): Promise<void>
+  /**
+   * Rewrite a task's line text and its attached note body together — what the
+   * board's task editor saves. One call rather than a line edit plus a note
+   * edit, so the change is a single undo step and can't land half-applied.
+   * `noteLines` are the free note lines only, already indented; the
+   * auto-managed `Reason for` / `Status Changed` / `Date Entered` lines are
+   * carried over host-side and must not be included.
+   */
+  setTaskTextAndNotes(
+    path: VaultPath,
+    line: number,
+    expectedText: string,
+    newLineText: string,
+    noteLines: string[]
+  ): Promise<void>
   deleteLine(path: VaultPath, line: number, expectedText: string): Promise<void>
   moveLine(
     path: VaultPath,

@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../shared/components/ConfirmDialog'
 import { ReasonDialog } from '../shared/components/ReasonDialog'
 import { Toast } from '../shared/components/Toast'
 import { BoardView } from './BoardView'
+import { TaskNoteDialog } from './TaskNoteDialog'
 import type { BoardScope } from './boardSelectors'
 
 const { scope = { kind: 'global' }, initialFilter = null } = bootstrap<{
@@ -23,6 +24,8 @@ initStores()
 createRoot(document.getElementById('root')!).render(
   <>
     <BoardView scope={scope} initialFilter={initialFilter} />
+    {/* Before ConfirmDialog, so its own discard-changes prompt paints on top. */}
+    <TaskNoteDialog />
     <ConfirmDialog />
     <ReasonDialog />
     <Toast />
