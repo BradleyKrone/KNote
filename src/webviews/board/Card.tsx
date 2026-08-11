@@ -195,7 +195,23 @@ export function Card({
       ]
         .filter(Boolean)
         .join(' ')}
-      {...(editing ? {} : { ...drag.listeners, ...drag.attributes })}
+      title="Double-click to open this task in its note"
+      {...(editing
+        ? {}
+        : {
+            ...drag.listeners,
+            ...drag.attributes,
+            // The card body is the open-source affordance. The note chip below
+            // does the same on a single click, but it's hidden whenever the
+            // note name is already obvious (grouped board, per-note board) —
+            // this is what's left, so it can't be gated on `showNote`.
+            onDoubleClick: () => {
+              // Double-clicking text selects a word; drop it so the card
+              // doesn't keep a stray highlight once the editor takes focus.
+              window.getSelection()?.removeAllRanges()
+              openSource(card)
+            }
+          })}
     >
       {!editing && <DeliverableBadge card={card} />}
       {editing ? (
@@ -238,6 +254,7 @@ export function Card({
                   e.stopPropagation()
                   openSource(card)
                 }}
+                onDoubleClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
               >
                 {card.noteTitle}
@@ -252,7 +269,7 @@ export function Card({
               </span>
             ))}
           </div>
-          <div className="board-card-actions">
+          <div className="board-card-actions" onDoubleClick={(e) => e.stopPropagation()}>
             <button
               className="board-card-action"
               title="Copy link to task — paste it in any note to link straight back here"

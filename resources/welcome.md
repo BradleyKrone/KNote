@@ -277,6 +277,10 @@ task somewhere in your vault:
 - Cards support edit-in-place, archive (`- [a]` — struck through, off the
   board), delete, add-card (into the scoped note or your Inbox note), and
   same-note reordering.
+- **Jump to the task** — double-click a card to open its note at the task's
+  line. The note name under a card does the same on a single click, where it's
+  shown (it's hidden when the note is already obvious — grouped boards and
+  per-note boards).
 - **🔗 Copy link to task** — hovering a card shows a link button that copies a
   `[[Note#^id|Task text]]` link to that task, adding the hidden `^anchor` to
   the source note first if the line doesn't have one. Paste it into any note to
