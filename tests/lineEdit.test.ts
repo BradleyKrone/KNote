@@ -9,7 +9,8 @@ import {
   insertLine,
   moveLine,
   replaceLine,
-  setTaskStatusMeta
+  setTaskStatusMeta,
+  setTaskTextAndNotes
 } from '../src/core/lineEdit'
 
 let dir: string
@@ -320,5 +321,79 @@ describe('appendLine', () => {
     await seed('a.md', 'one\r\ntwo')
     await appendLine('a.md', 'three')
     expect(await read('a.md')).toBe('one\r\ntwo\r\nthree\r\n')
+  })
+})
+
+/**
+ * The disk half of the board's task editor. The live-buffer half lives in
+ * `verifiedEdit` and is covered by `test/integration/taskNotesEdit.test.ts`;
+ * both consume the same `planTaskMetaEdit` splice.
+ */
+describe('setTaskTextAndNotes', () => {
+  const seeded =
+    '- [ ] task\n  - Status Changed: 7/14/2026\n  - Date Entered: 7/1/2026\n  - Notes: original\n- [ ] sibling\n'
+
+  it('rewrites the line and the note body in one write, keeping the managed lines', async () => {
+    await seed('a.md', seeded)
+    await setTaskTextAndNotes('a.md', 0, '- [ ] task', '- [ ] renamed #tag', [
+      '  - Notes: rewritten'
+    ])
+    expect(await read('a.md')).toBe(
+      '- [ ] renamed #tag\n  - Status Changed: 7/14/2026\n  - Date Entered: 7/1/2026\n  - Notes: rewritten\n- [ ] sibling\n'
+    )
+  })
+
+  it('leaves the sibling task below untouched', async () => {
+    await seed('a.md', seeded)
+    await setTaskTextAndNotes('a.md', 0, '- [ ] task', '- [ ] task', ['  - Notes: x'])
+    expect(await read('a.md')).toContain('- [ ] sibling\n')
+  })
+
+  it('adds a note block to a task that had none', async () => {
+    await seed('a.md', '- [ ] bare\n- [ ] next\n')
+    await setTaskTextAndNotes('a.md', 0, '- [ ] bare', '- [ ] bare', ['  - Notes: brand new'])
+    expect(await read('a.md')).toBe('- [ ] bare\n  - Notes: brand new\n- [ ] next\n')
+  })
+
+  it('clears the body without leaving a blank line behind', async () => {
+    await seed('a.md', '- [ ] t\n  - Notes: gone\n- [ ] next\n')
+    await setTaskTextAndNotes('a.md', 0, '- [ ] t', '- [ ] t', [])
+    expect(await read('a.md')).toBe('- [ ] t\n- [ ] next\n')
+  })
+
+  it('preserves the ^block anchor the caller carries over', async () => {
+    await seed('a.md', '- [ ] task ^abc123\n  - Notes: n\n')
+    await setTaskTextAndNotes('a.md', 0, '- [ ] task ^abc123', '- [ ] renamed ^abc123', [
+      '  - Notes: n'
+    ])
+    expect(await read('a.md')).toBe('- [ ] renamed ^abc123\n  - Notes: n\n')
+  })
+
+  it('keeps a CRLF file CRLF throughout', async () => {
+    await seed('a.md', '- [ ] t\r\n  - Notes: old\r\n- [ ] next\r\n')
+    await setTaskTextAndNotes('a.md', 0, '- [ ] t', '- [ ] t2', ['  - Notes: new'])
+    expect(await read('a.md')).toBe('- [ ] t2\r\n  - Notes: new\r\n- [ ] next\r\n')
+  })
+
+  it('handles a task on the last line of the file', async () => {
+    await seed('a.md', 'intro\n- [ ] last\n')
+    await setTaskTextAndNotes('a.md', 1, '- [ ] last', '- [ ] last!', ['  - Notes: n'])
+    expect(await read('a.md')).toBe('intro\n- [ ] last!\n  - Notes: n\n')
+  })
+
+  it('refuses with KNOTE_STALE and writes nothing when the line moved', async () => {
+    await seed('a.md', '- [ ] changed on disk\n')
+    await expect(
+      setTaskTextAndNotes('a.md', 0, '- [ ] task', '- [ ] x', ['  - Notes: n'])
+    ).rejects.toThrow(/KNOTE_STALE/)
+    expect(await read('a.md')).toBe('- [ ] changed on disk\n')
+  })
+
+  it('refuses when the located line is no longer a task line', async () => {
+    await seed('a.md', 'plain text\n')
+    await expect(setTaskTextAndNotes('a.md', 0, 'plain text', '- [ ] x', [])).rejects.toThrow(
+      /KNOTE_STALE/
+    )
+    expect(await read('a.md')).toBe('plain text\n')
   })
 })

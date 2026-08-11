@@ -274,9 +274,17 @@ task somewhere in your vault:
 
   Hover either chip for the distance in words ("in 4 days", "3 days ago") —
   the ⏳ follow-up chip also shows the reason the task is parked.
-- Cards support edit-in-place, archive (`- [a]` — struck through, off the
-  board), delete, add-card (into the scoped note or your Inbox note), and
-  same-note reordering.
+- **✏️ Edit task and notes** — the pencil on a card opens a dialog holding the
+  task line (with the #tag / priority / 📅 due-date buttons) **and the task's own
+  indented note block** underneath it. Edit either, hit Save, and both go back
+  into the source note as one verified edit — one undo step, and refused
+  outright rather than half-written if the note moved on disk meanwhile. The
+  notes stay in the note; the board is just another window onto them.
+  `Reason for <Column>`, `Status Changed` and `Date Entered` show read-only:
+  KNote writes those itself, and typing one into the notes box won't hijack the
+  real thing. `Ctrl/Cmd+Enter` saves, `Esc` cancels.
+- Cards also support archive (`- [a]` — struck through, off the board), delete,
+  add-card (into the scoped note or your Inbox note), and same-note reordering.
 - **Jump to the task** — double-click a card to open its note at the task's
   line. The note name under a card does the same on a single click, where it's
   shown (it's hidden when the note is already obvious — grouped boards and

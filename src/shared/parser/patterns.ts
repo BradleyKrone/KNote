@@ -272,6 +272,17 @@ export function ownNoteBlockEnd(lines: string[], taskIdx: number, taskIndentLen:
 }
 
 /**
+ * Is this note-block line one KNote manages for itself (`Reason for <Column>`,
+ * `Status Changed`, `Date Entered`) rather than the user's own note text?
+ * The parser keeps these out of `TaskItem.noteLines` and `planTaskMetaEdit`
+ * re-emits them itself, so the two have to agree on the boundary — otherwise
+ * the board would show one thing and overwrite another.
+ */
+export function isManagedNoteLine(line: string): boolean {
+  return REASON_FOR_RE.test(line) || STATUS_CHANGED_RE.test(line) || DATE_ENTERED_RE.test(line)
+}
+
+/**
  * Plan the edit that updates a task's attached `Reason for <Column>` /
  * `Status Changed` lines. Unlike the old 2-line peek, this searches the
  * task's whole own-note block (`ownNoteBlockEnd`) so an existing line is
@@ -285,20 +296,33 @@ export function ownNoteBlockEnd(lines: string[], taskIdx: number, taskIndentLen:
  * `requireReason` column, so moving out of one clears it in the same edit —
  * and because the follow-up date rides on that same line, the date goes with
  * it rather than outliving the column it belongs to.
+ *
+ * `noteLines` replaces the task's own note *body* — everything in the block
+ * that isn't one of those auto-managed lines. It is three-state as well:
+ * `undefined` leaves the body alone (what every status-change caller wants),
+ * an array replaces it wholesale, and `[]` clears it back to just the managed
+ * lines. Supplying it also pulls `Date Entered` out of the body and re-emits
+ * it with the other managed lines — left in the body it would be replaced
+ * along with the note text, silently losing the date. It stays in the body
+ * when `noteLines` is `undefined` so an ordinary status change keeps it
+ * exactly where the user put it.
+ *
  * Returns a splice: replace `lines[start .. start+deleteCount)` with `insert`.
  */
 export function planTaskMetaEdit(
   lines: string[],
   taskIdx: number,
-  updates: { reasonLine?: string | null; statusChangedLine?: string }
+  updates: { reasonLine?: string | null; statusChangedLine?: string; noteLines?: string[] }
 ): { start: number; deleteCount: number; insert: string[] } {
   const m = TASK_LINE_RE.exec(lines[taskIdx])
   const indentLen = m ? m[1].length : 0
   const end = ownNoteBlockEnd(lines, taskIdx, indentLen)
   const block = lines.slice(taskIdx + 1, end)
+  const replacingBody = updates.noteLines !== undefined
 
   let existingReason: string | undefined
   let existingStatus: string | undefined
+  let existingDateEntered: string | undefined
   const rest: string[] = []
   for (const line of block) {
     if (REASON_FOR_RE.test(line)) {
@@ -309,20 +333,36 @@ export function planTaskMetaEdit(
       if (existingStatus === undefined) existingStatus = line
       continue
     }
+    if (replacingBody && DATE_ENTERED_RE.test(line)) {
+      if (existingDateEntered === undefined) existingDateEntered = line
+      continue
+    }
     rest.push(line)
   }
   // Drop blank lines that sit at the top of the block, between the
   // auto-managed reason/status lines and the note content below — moves must
   // never leave (or accumulate) a gap there. Blank lines further down, within
-  // the user's own note text, are left alone.
-  while (rest.length > 0 && /^\s*$/.test(rest[0])) rest.shift()
+  // the user's own note text, are left alone. Applied to a replacement body
+  // too, so a note typed with a leading newline can't open that gap either.
+  // A replacement body is filtered, not trusted: typing `- Status Changed: …`
+  // into the notes box would otherwise be promoted to the real stamp on the
+  // next parse, clobbering it. Those lines are read-only in the editor, and the
+  // host is what enforces that.
+  const body = replacingBody
+    ? (updates.noteLines as string[]).filter((l) => !isManagedNoteLine(l))
+    : rest
+  while (body.length > 0 && /^\s*$/.test(body[0])) body.shift()
+  // Trailing blanks likewise: `ownNoteBlockEnd` never includes them, so leaving
+  // them here would grow the block by a line on every save.
+  while (body.length > 0 && /^\s*$/.test(body[body.length - 1])) body.pop()
 
   const insert: string[] = []
   const reason = updates.reasonLine === undefined ? existingReason : updates.reasonLine
   if (reason != null) insert.push(reason)
   const status = updates.statusChangedLine ?? existingStatus
   if (status !== undefined) insert.push(status)
-  insert.push(...rest)
+  if (existingDateEntered !== undefined) insert.push(existingDateEntered)
+  insert.push(...body)
   return { start: taskIdx + 1, deleteCount: block.length, insert }
 }
 

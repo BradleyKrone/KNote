@@ -105,6 +105,14 @@ export interface TaskItem {
   statusChanged: string | null
   /** Date (M/D/YYYY) from an attached `Date Entered: <date>` note line, if present */
   dateEntered: string | null
+  /**
+   * The task's own attached-note lines, verbatim and still indented — the block
+   * `ownNoteBlockEnd` delimits, minus the auto-managed `Reason for` /
+   * `Status Changed` / `Date Entered` lines, which are surfaced as the fields
+   * above instead. Empty for a task with no note. This is the free note text
+   * the board's task editor edits.
+   */
+  noteLines: string[]
 }
 
 export interface MilestoneItem {

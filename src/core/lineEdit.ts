@@ -82,6 +82,35 @@ export async function setTaskStatusMeta(
   await writeFileAtomic(rel, lines.join(eol))
 }
 
+/**
+ * Verified rewrite of a task's line text plus its attached note body, in one
+ * atomic write — the disk half of the board's task editor. The auto-managed
+ * `Reason for` / `Status Changed` / `Date Entered` lines are preserved by
+ * `planTaskMetaEdit`, not supplied by the caller.
+ */
+export async function setTaskTextAndNotes(
+  rel: VaultPath,
+  lineNo: number,
+  expectedText: string,
+  newLineText: string,
+  noteLines: string[]
+): Promise<void> {
+  const { eol, lines } = await readNoteLines(rel)
+  const target = locateLine(lines, lineNo, expectedText)
+  if (target === -1) throw new Error(`${STALE_ERROR}: line changed on disk in ${rel}`)
+  if (!TASK_LINE_RE.test(lines[target])) {
+    throw new Error(`${STALE_ERROR}: line changed on disk in ${rel}`)
+  }
+
+  // Planned before the line is swapped: the plan's splice starts below the task
+  // line, so the order of the two mutations doesn't matter, but planning first
+  // keeps this identical to the live-buffer path in verifiedEdit.
+  const plan = planTaskMetaEdit(lines, target, { noteLines })
+  lines[target] = newLineText
+  lines.splice(plan.start, plan.deleteCount, ...plan.insert)
+  await writeFileAtomic(rel, lines.join(eol))
+}
+
 /** Verified line delete (Kanban "delete card"). */
 export async function deleteLine(
   rel: VaultPath,

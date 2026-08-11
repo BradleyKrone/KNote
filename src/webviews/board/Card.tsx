@@ -1,14 +1,12 @@
-import { useRef, useState } from 'react'
 import dayjs from 'dayjs'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { Archive, CalendarDays, Hourglass, Link2, Package, Pencil, X } from 'lucide-react'
-import { withoutAnchor } from '@shared/blockAnchor'
 import { parseDeliverableTag } from '@shared/parser/patterns'
 import { isTaskDone } from '@shared/deliverables'
 import { confirm } from '../shared/stores'
-import { archiveCard, copyCardLink, deleteCard, openSource, updateCardText } from './boardActions'
+import { archiveCard, copyCardLink, deleteCard, openSource } from './boardActions'
 import { dueState, followUpState, type BoardCard } from './boardSelectors'
-import { TaskMetaToolbar, blurTargetIsPicker } from '../shared/components/TaskMetaToolbar'
+import { editTaskNote } from './taskNoteStore'
 import { formatTimeUntil } from '../shared/dates'
 import { PRIORITY_LABELS } from '../shared/taskMeta'
 
@@ -164,22 +162,6 @@ export function Card({
   const drag = useDraggable({ id, data: { card } })
   // Cards are also drop targets so same-note reordering can insert before them
   const drop = useDroppable({ id: `over:${id}`, data: { card }, disabled: drag.isDragging })
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(withoutAnchor(card.text))
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  const startEdit = (): void => {
-    // Without the `^anchor` — it's link plumbing, not task text, and tidying it
-    // away here would break every link pointing at this task. updateCardText
-    // puts it back.
-    setDraft(withoutAnchor(card.text))
-    setEditing(true)
-  }
-
-  const submitEdit = (): void => {
-    setEditing(false)
-    void updateCardText(card, draft)
-  }
 
   return (
     <div
@@ -196,135 +178,102 @@ export function Card({
         .filter(Boolean)
         .join(' ')}
       title="Double-click to open this task in its note"
-      {...(editing
-        ? {}
-        : {
-            ...drag.listeners,
-            ...drag.attributes,
-            // The card body is the open-source affordance. The note chip below
-            // does the same on a single click, but it's hidden whenever the
-            // note name is already obvious (grouped board, per-note board) —
-            // this is what's left, so it can't be gated on `showNote`.
-            onDoubleClick: () => {
-              // Double-clicking text selects a word; drop it so the card
-              // doesn't keep a stray highlight once the editor takes focus.
-              window.getSelection()?.removeAllRanges()
-              openSource(card)
-            }
-          })}
+      {...drag.listeners}
+      {...drag.attributes}
+      // The card body is the open-source affordance. The note chip below does
+      // the same on a single click, but it's hidden whenever the note name is
+      // already obvious (grouped board, per-note board) — this is what's left,
+      // so it can't be gated on `showNote`.
+      onDoubleClick={() => {
+        // Double-clicking text selects a word; drop it so the card doesn't
+        // keep a stray highlight once the editor takes focus.
+        window.getSelection()?.removeAllRanges()
+        openSource(card)
+      }}
     >
-      {!editing && <DeliverableBadge card={card} />}
-      {editing ? (
-        <div className="board-card-edit" onPointerDown={(e) => e.stopPropagation()}>
-          <TaskMetaToolbar value={draft} onChange={setDraft} textareaRef={textareaRef} />
-          <textarea
-            ref={textareaRef}
-            className="board-add-input"
-            autoFocus
-            rows={3}
-            value={draft}
-            placeholder="Task text — add #tags, 📅 2026-07-15, !! priority…"
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={(e) => {
-              if (!blurTargetIsPicker(e)) submitEdit()
+      <DeliverableBadge card={card} />
+      <div className="board-card-text">
+        {card.priority > 0 && (
+          <span className={`prio prio-${card.priority}`}>{PRIORITY_LABELS[card.priority]}</span>
+        )}
+        {card.displayText}
+      </div>
+      <div className="board-card-meta">
+        {showNote && (
+          <span
+            className="board-card-note"
+            title={card.path}
+            onClick={(e) => {
+              e.stopPropagation()
+              openSource(card)
             }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                submitEdit()
-              }
-              if (e.key === 'Escape') setEditing(false)
-            }}
-          />
-        </div>
-      ) : (
-        <>
-          <div className="board-card-text">
-            {card.priority > 0 && (
-              <span className={`prio prio-${card.priority}`}>{PRIORITY_LABELS[card.priority]}</span>
-            )}
-            {card.displayText}
-          </div>
-          <div className="board-card-meta">
-            {showNote && (
-              <span
-                className="board-card-note"
-                title={card.path}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  openSource(card)
-                }}
-                onDoubleClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-              >
-                {card.noteTitle}
-              </span>
-            )}
-            <DueChip card={card} />
-            <WaitingChip card={card} />
-            <DeliverableChips card={card} />
-            {card.tags.map((t) => (
-              <span key={t} className="board-card-tag">
-                #{t}
-              </span>
-            ))}
-          </div>
-          <div className="board-card-actions" onDoubleClick={(e) => e.stopPropagation()}>
-            <button
-              className="board-card-action"
-              title="Copy link to task — paste it in any note to link straight back here"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation()
-                void copyCardLink(card)
-              }}
-            >
-              <Link2 size={12} />
-            </button>
-            <button
-              className="board-card-action"
-              title="Edit task (add tags, dates…)"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation()
-                startEdit()
-              }}
-            >
-              <Pencil size={12} />
-            </button>
-            <button
-              className="board-card-action"
-              title="Archive task (strikes it through and removes it from the board)"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation()
-                void confirm(
-                  'Archive this task? It will be struck through and removed from the board.'
-                ).then((ok) => {
-                  if (ok) void archiveCard(card)
-                })
-              }}
-            >
-              <Archive size={12} />
-            </button>
-            <button
-              className="board-card-action danger"
-              title="Delete task line"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation()
-                void confirm('Delete this task line from its note?', { danger: true }).then(
-                  (ok) => {
-                    if (ok) void deleteCard(card)
-                  }
-                )
-              }}
-            >
-              <X size={12} />
-            </button>
-          </div>
-        </>
-      )}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            {card.noteTitle}
+          </span>
+        )}
+        <DueChip card={card} />
+        <WaitingChip card={card} />
+        <DeliverableChips card={card} />
+        {card.tags.map((t) => (
+          <span key={t} className="board-card-tag">
+            #{t}
+          </span>
+        ))}
+      </div>
+      <div className="board-card-actions" onDoubleClick={(e) => e.stopPropagation()}>
+        <button
+          className="board-card-action"
+          title="Copy link to task — paste it in any note to link straight back here"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            void copyCardLink(card)
+          }}
+        >
+          <Link2 size={12} />
+        </button>
+        <button
+          className="board-card-action"
+          title="Edit task and its notes"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            editTaskNote(card)
+          }}
+        >
+          <Pencil size={12} />
+        </button>
+        <button
+          className="board-card-action"
+          title="Archive task (strikes it through and removes it from the board)"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            void confirm(
+              'Archive this task? It will be struck through and removed from the board.'
+            ).then((ok) => {
+              if (ok) void archiveCard(card)
+            })
+          }}
+        >
+          <Archive size={12} />
+        </button>
+        <button
+          className="board-card-action danger"
+          title="Delete task line"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            void confirm('Delete this task line from its note?', { danger: true }).then((ok) => {
+              if (ok) void deleteCard(card)
+            })
+          }}
+        >
+          <X size={12} />
+        </button>
+      </div>
     </div>
   )
 }

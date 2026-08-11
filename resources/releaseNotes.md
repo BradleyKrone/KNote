@@ -3,6 +3,22 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.3.0
+
+- **Edit a task's full notes from the Kanban board.** The pencil on a card
+  used to open a one-line box that could only edit the task text — and it
+  silently flattened anything you typed onto multiple lines. It now opens a
+  dialog holding both the task line and the task's own indented note block,
+  so the notes you keep under a task are editable from the board instead of
+  only from the note. Saving writes the line and the notes back to the source
+  note as a single verified edit: one undo step, and refused outright rather
+  than half-applied if the note changed on disk while the dialog was open.
+- `Reason for <Column>`, `Status Changed` and `Date Entered` are shown in the
+  dialog but not hand-editable — KNote maintains those itself, and a line
+  typed into the notes box that looks like one of them is no longer able to
+  hijack the real stamp. A `Date Entered` line can no longer be lost when the
+  note body around it is rewritten.
+
 ## 2.2.2
 
 - Fixed Kanban cards having no way to open their task once **Group by note**

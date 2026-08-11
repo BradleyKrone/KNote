@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode'
 import dayjs from 'dayjs'
-import type { BoardColumn } from '@shared/types'
+import type { BoardColumn, VaultPath } from '@shared/types'
 import {
   ARCHIVED_CHAR,
   DATE_ENTERED_RE,
@@ -240,6 +240,18 @@ export function registerTaskCommands(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('knote.insertCheckbox', insertCheckbox),
     vscode.commands.registerCommand('knote.insertTaskNote', insertTaskNote),
     vscode.commands.registerCommand('knote.insertMilestone', () => insertMilestone(false)),
-    vscode.commands.registerCommand('knote.insertMilestoneImportant', () => insertMilestone(true))
+    vscode.commands.registerCommand('knote.insertMilestoneImportant', () => insertMilestone(true)),
+    // The board's task-editor save, as a command. Deliberately not contributed
+    // to package.json, so it never shows in the palette — same as
+    // `knote.filterBoard`/`knote.searchTag`. It exists so the integration
+    // harness can drive the live-buffer half of this write, which it cannot
+    // reach through the board webview; the WorkspaceEdit range arithmetic is
+    // exactly where a bug strands a blank line or eats a character, so leaving
+    // it uncovered is the worse trade. Pure pass-through — no logic here.
+    vscode.commands.registerCommand(
+      'knote.setTaskNote',
+      (path: VaultPath, line: number, expected: string, newLine: string, body: string[]) =>
+        verifiedEdit.setTaskTextAndNotes(path, line, expected, newLine, body)
+    )
   )
 }
