@@ -10,6 +10,7 @@ import { currentVaultRoot } from '../engine'
 import { vaultNoteRel } from '../paths'
 import { attach, broadcast } from '../rpc/webviewRpc'
 import { createHostHandlers } from '../rpc/hostHandlers'
+import { attachmentUriFor, openWithDrawio } from './attachmentUri'
 import { webviewHtml, webviewResourceRoots } from './webviewHtml'
 
 const VIEW_TYPE = 'knote.board'
@@ -34,7 +35,18 @@ function wirePanel(
 ): void {
   const key = scopeKey(scope)
   panels.set(key, panel)
-  const rpc = attach(panel.webview, createHostHandlers())
+  // Plus the two attachment handlers, which are per-panel everywhere because
+  // they need a note to resolve against. A board has no single note — its cards
+  // come from all over the vault — so the webview resolves references against
+  // the card's own note first and sends vault-root-relative paths (a leading
+  // `/`, which `resolveEmbedPath` reads as exactly that). The board's task
+  // editor is a full live-preview editor, so without these its images, embeds,
+  // hover previews and draw.io links would all reject as unknown methods.
+  const rpc = attach(panel.webview, {
+    ...createHostHandlers(),
+    attachmentUri: (src: string) => attachmentUriFor(src, null, panel.webview),
+    openWithDrawio: (src: string) => openWithDrawio(src, null)
+  })
   panel.webview.html = webviewHtml(
     panel.webview,
     context.extensionUri,

@@ -4,7 +4,7 @@
 
 import { promises as fs } from 'fs'
 import type { VaultPath } from '@shared/types'
-import { planTaskMetaEdit, TASK_LINE_RE } from '@shared/parser/patterns'
+import { planTaskMetaEdit, taskBlockMatches, TASK_LINE_RE } from '@shared/parser/patterns'
 import { toAbs, writeFileAtomic } from './vaultService'
 import { isConflictError, STALE_ERROR } from '@shared/errors'
 
@@ -83,17 +83,20 @@ export async function setTaskStatusMeta(
 }
 
 /**
- * Verified rewrite of a task's line text plus its attached note body, in one
- * atomic write — the disk half of the board's task editor. The auto-managed
- * `Reason for` / `Status Changed` / `Date Entered` lines are preserved by
- * `planTaskMetaEdit`, not supplied by the caller.
+ * Verified rewrite of a task's line text plus its whole attached block, in one
+ * atomic write — the disk half of the board's task editor. The task's own
+ * auto-managed `Reason for` / `Status Changed` / `Date Entered` lines are
+ * preserved by `planTaskMetaEdit`, not supplied by the caller. `expectedBlock`
+ * widens the staleness check from the task line to the whole block — see
+ * `HostApi.setTaskTextAndNotes`.
  */
 export async function setTaskTextAndNotes(
   rel: VaultPath,
   lineNo: number,
   expectedText: string,
   newLineText: string,
-  noteLines: string[]
+  blockLines: string[],
+  expectedBlock?: string[]
 ): Promise<void> {
   const { eol, lines } = await readNoteLines(rel)
   const target = locateLine(lines, lineNo, expectedText)
@@ -101,11 +104,14 @@ export async function setTaskTextAndNotes(
   if (!TASK_LINE_RE.test(lines[target])) {
     throw new Error(`${STALE_ERROR}: line changed on disk in ${rel}`)
   }
+  if (expectedBlock && !taskBlockMatches(lines, target, expectedBlock)) {
+    throw new Error(`${STALE_ERROR}: block changed on disk in ${rel}`)
+  }
 
   // Planned before the line is swapped: the plan's splice starts below the task
   // line, so the order of the two mutations doesn't matter, but planning first
   // keeps this identical to the live-buffer path in verifiedEdit.
-  const plan = planTaskMetaEdit(lines, target, { noteLines })
+  const plan = planTaskMetaEdit(lines, target, { blockLines })
   lines[target] = newLineText
   lines.splice(plan.start, plan.deleteCount, ...plan.insert)
   await writeFileAtomic(rel, lines.join(eol))

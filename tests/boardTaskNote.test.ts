@@ -37,10 +37,48 @@ describe('updateCardNote', () => {
     const c = card(seeded)
     await updateCardNote(c, 'task', '- Notes: rewritten\n- second')
 
-    expect(setTaskTextAndNotes).toHaveBeenCalledWith('Note.md', 0, '- [ ] task', '- [ ] task', [
-      '  - Notes: rewritten',
-      '  - second'
+    expect(setTaskTextAndNotes).toHaveBeenCalledWith(
+      'Note.md',
+      0,
+      '- [ ] task',
+      '- [ ] task',
+      ['  - Notes: rewritten', '  - second'],
+      // The block the dialog was showing, so the host can refuse a save whose
+      // subtree moved underneath it.
+      ['  - Notes: original']
+    )
+  })
+
+  it('edits sub-tasks along with the notes, and sends them back as one block', async () => {
+    const c = card(
+      '- [ ] task\n  - Status Changed: 7/14/2026\n  - Notes: mine\n  - [ ] child\n    - Status Changed: 7/2/2026\n'
+    )
+    // What the dialog shows: the whole subtree, dedented — its own managed line
+    // excluded, the child's kept.
+    expect(c.blockLines).toEqual([
+      '  - Notes: mine',
+      '  - [ ] child',
+      '    - Status Changed: 7/2/2026'
     ])
+
+    await updateCardNote(c, 'task', '- Notes: mine\n- [x] child\n  - Status Changed: 7/2/2026')
+    expect(setTaskTextAndNotes.mock.calls[0][4]).toEqual([
+      '  - Notes: mine',
+      '  - [x] child',
+      '    - Status Changed: 7/2/2026'
+    ])
+  })
+
+  it('does not re-indent a block whose lines share no common indent', async () => {
+    // A same-indent list item under the task leaves the block's common indent
+    // empty; `noteBodyToText` hands those lines back verbatim, so the way in
+    // must not fall back to the task's indent or the block gains two spaces on
+    // every save. Round-tripping the text unchanged has to write it unchanged.
+    const c = card('- [ ] task\n- flush note\n  - deeper\n')
+    expect(c.blockLines).toEqual(['- flush note', '  - deeper'])
+
+    await updateCardNote(c, 'task!', '- flush note\n  - deeper')
+    expect(setTaskTextAndNotes.mock.calls[0][4]).toEqual(['- flush note', '  - deeper'])
   })
 
   it('keeps a tab-indented block on tabs', async () => {

@@ -14,9 +14,9 @@ import {
   makeBlockId,
   withoutAnchor
 } from '@shared/blockAnchor'
-import { noteBodyFromText, noteBodyIndent, taskChildIndent } from '@shared/parser/taskNoteBody'
+import { blockBaseIndent, noteBodyFromText, taskChildIndent } from '@shared/parser/taskNoteBody'
 import { host } from '../shared/rpc'
-import { showToast, useConfigStore, useIndexStore } from '../shared/stores'
+import { showToast, useIndexStore } from '../shared/stores'
 import type { BoardCard, BoardScope } from './boardSelectors'
 
 function staleToast(): void {
@@ -124,11 +124,16 @@ function rewrittenTaskLine(card: BoardCard, newText: string): string | null {
 }
 
 /**
- * Save the task editor: the task's line text and its own note block, in one
- * verified edit — one undo step, and refused outright rather than half-applied
- * if the note moved under us. `bodyText` is the editor's plain text, re-indented
- * to whatever the existing block uses (falling back to the task's indent + 2
- * for a task getting its first note).
+ * Save the task editor: the task's line text and its whole attached block —
+ * sub-tasks and all — in one verified edit: one undo step, and refused outright
+ * rather than half-applied if the note moved under us. `bodyText` is the
+ * editor's plain text, re-indented to whatever the existing block uses (falling
+ * back to the task's indent + 2 for a task getting its first note).
+ *
+ * The block the card was showing rides along as `expectedBlock`, so a save is
+ * refused when anything inside it moved — not just the task line. The dialog
+ * now edits a subtree, and a sub-task ticked in the editor meanwhile has to
+ * survive.
  *
  * Resolves false when the write was refused as stale, so the dialog can stay
  * open holding the user's text instead of silently discarding it.
@@ -138,14 +143,21 @@ export async function updateCardNote(
   taskText: string,
   bodyText: string
 ): Promise<boolean> {
-  const indent = noteBodyIndent(card.noteLines, taskChildIndent(card.rawLine))
+  const indent = blockBaseIndent(card.blockLines, taskChildIndent(card.rawLine))
   const body = noteBodyFromText(bodyText, indent)
   const line = rewrittenTaskLine(card, taskText)
   const bodyUnchanged =
-    body.length === card.noteLines.length && body.every((l, i) => l === card.noteLines[i])
+    body.length === card.blockLines.length && body.every((l, i) => l === card.blockLines[i])
   if (line === null && bodyUnchanged) return true
   try {
-    await host.setTaskTextAndNotes(card.path, card.line, card.rawLine, line ?? card.rawLine, body)
+    await host.setTaskTextAndNotes(
+      card.path,
+      card.line,
+      card.rawLine,
+      line ?? card.rawLine,
+      body,
+      card.blockLines
+    )
     return true
   } catch (err) {
     if (!isStaleError(err)) throw err
@@ -159,22 +171,29 @@ export async function deleteCard(card: BoardCard): Promise<void> {
 }
 
 /**
- * "Add card": appends a checkbox line to the scoped note or the inbox.
+ * "Add card": appends a checkbox line to the scoped note, or to this week's
+ * weekly note when the board isn't scoped to one note (global/folder view).
  * `reasonLine`, when given, is appended as a second (attached-note) line
- * directly under the new task.
+ * directly under the new task; `bodyText` (the new-card dialog's notes box)
+ * is re-indented and appended under that, same as an existing task's notes.
  */
 export async function addCard(
   scope: BoardScope,
   statusChar: string,
   text: string,
+  bodyText: string,
   reasonLine?: string
 ): Promise<void> {
-  await useConfigStore.getState().load()
-  const config = useConfigStore.getState().vaultConfig
-  const target = scope.kind === 'note' ? scope.path : config.inboxNote
-  const line =
-    `- [${statusChar}] ${text.trim()}` + (reasonLine !== undefined ? '\n' + reasonLine : '')
-  await host.appendToNote(target, line)
+  const taskLine = `- [${statusChar}] ${text.trim()}`
+  const lines = [taskLine]
+  if (reasonLine !== undefined) lines.push(reasonLine)
+  lines.push(...noteBodyFromText(bodyText, taskChildIndent(taskLine)))
+  const line = lines.join('\n')
+  if (scope.kind === 'note') {
+    await host.appendToNote(scope.path, line)
+  } else {
+    await host.appendToWeeklyNote(line)
+  }
 }
 
 /** Open the card's source note in a VS Code editor, landing on its line. */

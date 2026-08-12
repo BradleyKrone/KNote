@@ -106,13 +106,18 @@ export interface TaskItem {
   /** Date (M/D/YYYY) from an attached `Date Entered: <date>` note line, if present */
   dateEntered: string | null
   /**
-   * The task's own attached-note lines, verbatim and still indented — the block
-   * `ownNoteBlockEnd` delimits, minus the auto-managed `Reason for` /
+   * The task's whole attached block, verbatim and still indented: everything
+   * nested under it — its notes, its sub-tasks, their notes, nested bullets,
+   * tables, fenced code — minus this task's *own* auto-managed `Reason for` /
    * `Status Changed` / `Date Entered` lines, which are surfaced as the fields
-   * above instead. Empty for a task with no note. This is the free note text
-   * the board's task editor edits.
+   * above instead. A descendant's managed lines stay in here: they belong to
+   * the sub-task, not to this one. See `taskBlockLines`.
+   *
+   * Always empty for a subtask. Only top-level tasks become board cards, and
+   * only a card gets the task editor — filling this in at every level would
+   * store the same text once per level of nesting in the index.
    */
-  noteLines: string[]
+  blockLines: string[]
 }
 
 export interface MilestoneItem {
@@ -218,8 +223,6 @@ export interface VaultConfig {
   /** Vault path of the template note used for new weekly notes ('' = none) */
   weeklyTemplate: string
   templatesFolder: string
-  /** Note that receives cards created on the global board */
-  inboxNote: string
   /** Vault-relative folder pasted/dropped images are saved into */
   attachmentsFolder: string
   columns: BoardColumn[]
@@ -249,7 +252,6 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   weeklyFormat: 'YYYY-M-D',
   weeklyTemplate: '',
   templatesFolder: 'Knote Resources/Templates',
-  inboxNote: 'Inbox.md',
   attachmentsFolder: 'Knote Resources/Attachments',
   columns: [
     { name: 'To Do', char: ' ' },

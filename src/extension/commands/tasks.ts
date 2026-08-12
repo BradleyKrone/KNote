@@ -250,8 +250,14 @@ export function registerTaskCommands(context: vscode.ExtensionContext): void {
     // it uncovered is the worse trade. Pure pass-through — no logic here.
     vscode.commands.registerCommand(
       'knote.setTaskNote',
-      (path: VaultPath, line: number, expected: string, newLine: string, body: string[]) =>
-        verifiedEdit.setTaskTextAndNotes(path, line, expected, newLine, body)
+      (
+        path: VaultPath,
+        line: number,
+        expected: string,
+        newLine: string,
+        body: string[],
+        expectedBlock?: string[]
+      ) => verifiedEdit.setTaskTextAndNotes(path, line, expected, newLine, body, expectedBlock)
     )
   )
 }

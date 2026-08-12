@@ -17,7 +17,7 @@
 import * as vscode from 'vscode'
 import type { VaultPath } from '@shared/types'
 import { STALE_ERROR } from '@shared/errors'
-import { planTaskMetaEdit, TASK_LINE_RE } from '@shared/parser/patterns'
+import { planTaskMetaEdit, taskBlockMatches, TASK_LINE_RE } from '@shared/parser/patterns'
 import * as lineEdit from '../core/lineEdit'
 import * as vaultIndex from '../core/indexer/vaultIndex'
 import { openDocFor } from './paths'
@@ -172,25 +172,37 @@ export async function setTaskStatusMeta(
 }
 
 /**
- * Rewrite a task's line text *and* its attached note body in one verified edit
- * — what the board's task editor saves. One edit rather than two so the whole
- * change is a single undo step, and so a stale note can't reject half of it
- * after the other half has already landed.
+ * Rewrite a task's line text *and* its whole attached block in one verified
+ * edit — what the board's task editor saves. One edit rather than two so the
+ * whole change is a single undo step, and so a stale note can't reject half of
+ * it after the other half has already landed.
  *
- * The auto-managed `Reason for` / `Status Changed` / `Date Entered` lines are
- * not the caller's to send: `planTaskMetaEdit` carries whatever is already
- * there straight through, so the editor can't drop them.
+ * The task's own auto-managed `Reason for` / `Status Changed` / `Date Entered`
+ * lines are not the caller's to send: `planTaskMetaEdit` carries whatever is
+ * already there straight through, so the editor can't drop them. A sub-task's
+ * own stamps ride along in `blockLines` — they belong to the block.
+ *
+ * `expectedBlock` widens the staleness check from the task line to the whole
+ * block; see `HostApi.setTaskTextAndNotes`.
  */
 export async function setTaskTextAndNotes(
   rel: VaultPath,
   lineNo: number,
   expectedText: string,
   newLineText: string,
-  noteLines: string[]
+  blockLines: string[],
+  expectedBlock?: string[]
 ): Promise<void> {
   const doc = openDocFor(rel)
   if (!doc) {
-    await lineEdit.setTaskTextAndNotes(rel, lineNo, expectedText, newLineText, noteLines)
+    await lineEdit.setTaskTextAndNotes(
+      rel,
+      lineNo,
+      expectedText,
+      newLineText,
+      blockLines,
+      expectedBlock
+    )
     void vaultIndex.indexFile(rel)
     return
   }
@@ -202,8 +214,9 @@ export async function setTaskTextAndNotes(
   // and its block go in as one replace (see applyBlockPlan).
   const lines: string[] = []
   for (let i = 0; i < doc.lineCount; i++) lines.push(doc.lineAt(i).text)
+  if (expectedBlock && !taskBlockMatches(lines, target, expectedBlock)) throw stale(rel)
   const edit = new vscode.WorkspaceEdit()
-  applyBlockPlan(doc, edit, planTaskMetaEdit(lines, target, { noteLines }), target, newLineText)
+  applyBlockPlan(doc, edit, planTaskMetaEdit(lines, target, { blockLines }), target, newLineText)
   await applyAndMaybeSave(doc, edit)
 }
 

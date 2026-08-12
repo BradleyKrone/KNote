@@ -5,6 +5,7 @@
 
 import '../shared/webview.css'
 import './editor.css'
+import './editorShell.css'
 import { createRoot } from 'react-dom/client'
 import { bootstrap, on } from '../shared/rpc'
 import { initStores } from '../shared/stores'

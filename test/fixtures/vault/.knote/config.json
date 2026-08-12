@@ -3,7 +3,6 @@
   "weeklyFormat": "YYYY-M-D",
   "weeklyTemplate": "",
   "templatesFolder": "Knote Resources/Templates",
-  "inboxNote": "Inbox.md",
   "attachmentsFolder": "Knote Resources/Attachments",
   "columns": [
     { "name": "To Do", "char": " " },

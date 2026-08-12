@@ -81,19 +81,28 @@ export interface HostApi {
     meta: { reasonLine?: string | null; statusChangedLine?: string }
   ): Promise<void>
   /**
-   * Rewrite a task's line text and its attached note body together — what the
-   * board's task editor saves. One call rather than a line edit plus a note
+   * Rewrite a task's line text and its whole attached block together — what the
+   * board's task editor saves. One call rather than a line edit plus a block
    * edit, so the change is a single undo step and can't land half-applied.
-   * `noteLines` are the free note lines only, already indented; the
-   * auto-managed `Reason for` / `Status Changed` / `Date Entered` lines are
-   * carried over host-side and must not be included.
+   * `blockLines` is everything nested under the task, sub-tasks included,
+   * already indented; the task's *own* auto-managed `Reason for` /
+   * `Status Changed` / `Date Entered` lines are carried over host-side and must
+   * not be included (a sub-task's own stamps must be — they're part of the
+   * block).
+   *
+   * `expectedBlock` is the block the editor was showing, in `taskBlockLines`
+   * form. When given, the write is refused with KNOTE_STALE unless the note's
+   * current block still matches it exactly. `expectedText` alone only covers
+   * the task line, and this write now reaches a whole subtree — without this a
+   * stale save would silently swallow a sub-task someone ticked meanwhile.
    */
   setTaskTextAndNotes(
     path: VaultPath,
     line: number,
     expectedText: string,
     newLineText: string,
-    noteLines: string[]
+    blockLines: string[],
+    expectedBlock?: string[]
   ): Promise<void>
   deleteLine(path: VaultPath, line: number, expectedText: string): Promise<void>
   moveLine(
@@ -115,6 +124,17 @@ export interface HostApi {
     text: string
   ): Promise<void>
   appendToNote(path: VaultPath, text: string): Promise<void>
+
+  /**
+   * Append `text` to this week's weekly note (creating it from the
+   * configured weekly template first if it doesn't exist yet), landing it
+   * at the end of the note's "Tasks" section when it has one, or at the end
+   * of the file otherwise. Used by the board's "Add card" when it isn't
+   * scoped to a single note (global/folder view), so quick-added cards land
+   * in the weekly note like everything else captured day-to-day, rather
+   * than needing a separate inbox note.
+   */
+  appendToWeeklyNote(text: string): Promise<VaultPath>
 
   /**
    * Create a note with the given content, returning the path it actually

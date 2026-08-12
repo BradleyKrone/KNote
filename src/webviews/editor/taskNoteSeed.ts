@@ -10,6 +10,7 @@ import {
   TASK_LINE_RE
 } from '@shared/parser/patterns'
 import { blockIdOf } from '@shared/blockAnchor'
+import { isTopLevelTask } from './editorMode'
 
 export interface TaskNoteSeed {
   /** Document offset to insert at (end of the task line or its last meta line). */
@@ -51,7 +52,9 @@ export function planTaskNoteSeed(
   if (line.text.slice(range.head - line.from).trim() !== '') return null
 
   const task = TASK_LINE_RE.exec(line.text)
-  if (!task || task[1].length > 0) return null // top-level tasks only
+  // Top-level tasks only — and nothing in a fragment is, so Enter in the
+  // board's task editor is always just a newline, never a meta template.
+  if (!task || !isTopLevelTask(state, task[1])) return null
   if ((task[4]?.trim() ?? '') === '') return null // don't seed an empty checkbox
 
   // Step over any Reason/Status lines already directly under the task, the

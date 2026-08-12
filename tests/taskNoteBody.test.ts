@@ -1,10 +1,37 @@
 import { describe, expect, it } from 'vitest'
 import {
+  blockBaseIndent,
   noteBodyFromText,
   noteBodyIndent,
   noteBodyToText,
   taskChildIndent
 } from '@shared/parser/taskNoteBody'
+
+describe('blockBaseIndent', () => {
+  it('uses the fallback only when there is no block yet', () => {
+    expect(blockBaseIndent([], '  ')).toBe('  ')
+    expect(blockBaseIndent(['    - deep'], '  ')).toBe('    ')
+  })
+
+  it('returns no indent for a block whose lines share none, ignoring the fallback', () => {
+    // The fallback here would re-indent the whole block on every save;
+    // `noteBodyToText` hands these lines back verbatim, so this must too.
+    expect(blockBaseIndent(['- flush', '  - deeper'], '  ')).toBe('')
+  })
+
+  it('is the exact inverse of noteBodyToText', () => {
+    for (const block of [
+      ['  - Notes: a', '  - b'],
+      ['\t- tabbed', '\t\t- deeper'],
+      ['- flush', '  - deeper'],
+      ['  - a', '', '  - b'],
+      ['  - Notes: x', '  - [ ] child', '    - Status Changed: 7/2/2026']
+    ]) {
+      const text = noteBodyToText(block)
+      expect(noteBodyFromText(text, blockBaseIndent(block, '  '))).toEqual(block)
+    }
+  })
+})
 
 describe('taskChildIndent', () => {
   it('is the task’s own indent plus two, matching what the seeders write', () => {

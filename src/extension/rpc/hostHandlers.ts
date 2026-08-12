@@ -17,6 +17,7 @@ import * as vault from '../../core/vaultService'
 import * as verifiedEdit from '../verifiedEdit'
 import { setFrontmatter } from '../frontmatterEdit'
 import { openWikiTarget } from '../providers/wikiLinks'
+import { appendToWeeklyNoteTasks } from '../commands/weeklyNotes'
 import { openNoteInLiveEditor } from '../views/liveEditorProvider'
 import { whenIndexBuilt } from '../engine'
 import { uriForRel } from '../paths'
@@ -89,6 +90,8 @@ export function createHostHandlers(): HostHandlers {
     moveLine: verifiedEdit.moveLine,
     insertLine: verifiedEdit.insertLine,
     appendToNote: verifiedEdit.appendToNote,
+
+    appendToWeeklyNote: (text: string) => appendToWeeklyNoteTasks(text),
 
     createNote: async (path: VaultPath, content: string) => {
       const created = await vault.createFile(path, content)

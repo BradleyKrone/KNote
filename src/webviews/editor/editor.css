@@ -1,18 +1,7 @@
-/* Live-preview editor: fill the whole webview viewport. */
-html,
-body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-#root {
-  height: 100vh;
-}
-
-.cm-editor {
-  height: 100%;
-}
+/* Live-preview editor content styling. Imported by the editor webview *and* by
+   the board, whose task dialog embeds the same CodeMirror view — so everything
+   here has to be about `.cm-*` content and nothing about the page it sits on
+   (that lives in editorShell.css). */
 
 /* --- Live-preview markdown styling (see livePreview.ts) ---
    Inline `.cm-md-*` classes style the content; full-line `.cm-md-*-line`

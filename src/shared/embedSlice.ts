@@ -21,7 +21,7 @@ export function stripFrontmatter(content: string): string {
 }
 
 /** Exclusive end line (0-based) of a heading's section: the next heading at the same or a higher level. */
-function headingSectionEnd(
+export function headingSectionEnd(
   meta: NoteMeta,
   startLine: number,
   level: number,

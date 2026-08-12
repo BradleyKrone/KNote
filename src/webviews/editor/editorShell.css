@@ -1,0 +1,18 @@
+/* Page shell for the live-preview editor's own webview: fill the viewport.
+   Deliberately apart from editor.css, which is only the `.cm-*` content
+   styling and is shared — the board imports it for the task dialog's embedded
+   editor, where a viewport-height box and a restyled #root would be wrong. */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  height: 100vh;
+}
+
+#root .cm-editor {
+  height: 100%;
+}

@@ -6,9 +6,9 @@
 // rendering (livePreview.ts) and KNote widgets (knoteConstructs.ts) are added
 // on top in later phases.
 
-import { EditorState, Prec, type Text } from '@codemirror/state'
+import { EditorState, Prec, type Extension, type Text } from '@codemirror/state'
 import { EditorView, keymap, drawSelection, highlightActiveLine } from '@codemirror/view'
-import { defaultKeymap, indentWithTab } from '@codemirror/commands'
+import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { syntaxHighlighting } from '@codemirror/language'
 import { markdown } from '@codemirror/lang-markdown'
 import { Strikethrough, Table, Autolink } from '@lezer/markdown'
@@ -24,6 +24,7 @@ import { tableRender } from './tableRender'
 import { mermaidRender } from './mermaidRender'
 import { embedRender } from './embedRender'
 import { knoteConstructs } from './knoteConstructs'
+import { editorKind, type EditorKind } from './editorMode'
 import { pasteImage } from './pasteImage'
 import { formatKeymap } from './markdownFormatting'
 import { taskFold } from './taskFold'
@@ -63,6 +64,22 @@ const outboundSync = EditorView.updateListener.of((update) => {
   if (edits.length > 0) vscodeApi.postMessage({ type: 'knote:cm-edits', edits })
 })
 
+export interface CreateEditorOptions {
+  parent: HTMLElement
+  doc: string
+  /**
+   * What this view is showing — see `editorKind`. `'note'` (the default) posts
+   * every change to the host as `knote:cm-edits` and keeps no undo history,
+   * because VS Code owns the TextDocument's stack. `'fragment'` does neither:
+   * nothing but liveEditorProvider handles those messages, and a detached
+   * buffer has no TextDocument to undo through, so it gets CodeMirror's own
+   * `history()` instead.
+   */
+  kind?: EditorKind
+  /** Appended last — what the embedding view adds for itself (the task dialog's Mod-Enter save). */
+  extensions?: Extension[]
+}
+
 /**
  * The document is held in LF internally — deliberately no
  * `EditorState.lineSeparator` facet, so CodeMirror splits `\r\n` on the way in
@@ -72,10 +89,12 @@ const outboundSync = EditorView.updateListener.of((update) => {
  * The note's real EOL lives on the host side only, and is reapplied there when
  * an edit is written to the TextDocument.
  */
-export function createEditor(opts: { parent: HTMLElement; doc: string }): EditorView {
+export function createEditor(opts: CreateEditorOptions): EditorView {
+  const kind = opts.kind ?? 'note'
   const state = EditorState.create({
     doc: opts.doc,
     extensions: [
+      editorKind.of(kind),
       EditorState.allowMultipleSelections.of(true),
       highlightActiveLine(),
       drawSelection(),
@@ -107,7 +126,8 @@ export function createEditor(opts: { parent: HTMLElement; doc: string }): Editor
       keymap.of([...formatKeymap, ...defaultKeymap, ...searchKeymap, indentWithTab]),
       search(),
       knoteTheme,
-      outboundSync
+      ...(kind === 'note' ? [outboundSync] : [history(), keymap.of(historyKeymap)]),
+      ...(opts.extensions ?? [])
     ]
   })
   return new EditorView({ state, parent: opts.parent })

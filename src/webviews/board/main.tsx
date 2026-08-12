@@ -1,5 +1,10 @@
 import { createRoot } from 'react-dom/client'
 import '../shared/webview.css'
+// The card pencil opens the same live-preview editor a note uses, so the board
+// needs its `.cm-*` content styling too. After webview.css, so the `.cm-*`
+// rules win; the editor's own page-shell CSS (editorShell.css) is *not*
+// imported — that one sizes a whole webview.
+import '../editor/editor.css'
 import type { DeliverableScopeFilter } from '@shared/deliverables'
 import { bootstrap, vscodeApi } from '../shared/rpc'
 import { initStores } from '../shared/stores'
