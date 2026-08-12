@@ -47,11 +47,16 @@ import {
 import { host, on } from '../shared/rpc'
 import { promptReason, showToast, useConfigStore, useIndexStore } from '../shared/stores'
 import { checkboxRange } from './constructLogic'
+import { editorKind, isTopLevelTask } from './editorMode'
 import { isNoteEmbedLine } from './embedLogic'
 import { hangingIndentEm } from './hangingIndent'
 import { isCollapsedMermaidFence } from './mermaidRender'
 
-// One webview edits exactly one note; its vault-relative path is set at init.
+// One webview holds exactly one live CodeMirror view; the vault-relative path
+// of the note it belongs to is set at init. A fragment view (the board's task
+// editor) sets it too — attachments, embeds and wiki links all resolve relative
+// to the card's note. It is only the *line numbers* that a fragment can't share
+// with the host; see `editorKind`.
 let notePath: string | null = null
 export function setNotePath(path: string | null): void {
   notePath = path
@@ -70,10 +75,15 @@ const MD_IMAGE_RE = /!\[[^\]]*\]\(([^)]+)\)/g
  * status menu. No-op when the char is already `target.char`.
  */
 export async function setCheckboxStatus(
+  view: EditorView,
   line0: number,
   rawLine: string,
   target: BoardColumn
 ): Promise<void> {
+  // Unreachable in a fragment — nothing there is top-level, so the Kanban
+  // status menu never opens. Guarded anyway: this posts an absolute line
+  // number, which in a fragment addresses some unrelated line of the note.
+  if (view.state.facet(editorKind) === 'fragment') return
   const m = TASK_LINE_RE.exec(rawLine)
   if (!m || notePath === null) return
   const current = m[3]
@@ -100,16 +110,33 @@ export async function setCheckboxStatus(
 }
 
 /**
- * Rewrite a sub-task line to checked/unchecked via a verified full-line
- * replace, keeping a trailing `✅ <date>` completion marker in sync — added
- * with today's date on check, removed on uncheck. Sub-tasks are simple
- * toggles, not Kanban cards, so no reason prompt or `Status Changed` stamp.
- * No-op when the line isn't a task or nothing changes.
+ * Rewrite a sub-task line to checked/unchecked, keeping a trailing `✅ <date>`
+ * completion marker in sync — added with today's date on check, removed on
+ * uncheck. Sub-tasks are simple toggles, not Kanban cards, so no reason prompt
+ * or `Status Changed` stamp. No-op when the line isn't a task or nothing
+ * changes.
+ *
+ * In a note this is a verified full-line replace against the host. In a
+ * fragment it is a plain local transaction: the host has no idea what line this
+ * is, and the whole fragment goes back as one verified edit when the dialog
+ * saves — so a tick is a pending change the user can still undo or cancel,
+ * exactly like typing.
  */
-async function rewriteSubtask(line0: number, rawLine: string, done: boolean): Promise<void> {
-  if (notePath === null) return
+async function rewriteSubtask(
+  view: EditorView,
+  line0: number,
+  rawLine: string,
+  done: boolean
+): Promise<void> {
   const newLine = setTaskDone(rawLine, done, dayjs().format('YYYY-MM-DD'))
   if (newLine === null || newLine === rawLine) return
+  if (view.state.facet(editorKind) === 'fragment') {
+    const line = view.state.doc.line(line0 + 1)
+    if (line.text !== rawLine) return // the widget is looking at a stale line
+    view.dispatch({ changes: { from: line.from, to: line.to, insert: newLine } })
+    return
+  }
+  if (notePath === null) return
   try {
     await host.replaceLine(notePath, line0, rawLine, newLine)
   } catch (err) {
@@ -119,20 +146,21 @@ async function rewriteSubtask(line0: number, rawLine: string, done: boolean): Pr
 }
 
 /** Flip a sub-task between checked and unchecked (stamping/clearing its date). Driven by a click. */
-async function toggleSubtask(line0: number, rawLine: string): Promise<void> {
+async function toggleSubtask(view: EditorView, line0: number, rawLine: string): Promise<void> {
   const m = TASK_LINE_RE.exec(rawLine)
   if (!m) return
   const done = m[3] === 'x' || m[3] === 'X'
-  await rewriteSubtask(line0, rawLine, !done)
+  await rewriteSubtask(view, line0, rawLine, !done)
 }
 
 /** Set a sub-task's checked state explicitly. Driven by the right-click menu. */
 export async function setSubtaskChecked(
+  view: EditorView,
   line0: number,
   rawLine: string,
   checked: boolean
 ): Promise<void> {
-  await rewriteSubtask(line0, rawLine, checked)
+  await rewriteSubtask(view, line0, rawLine, checked)
 }
 
 // ---------- Widgets ----------
@@ -154,7 +182,7 @@ class CheckboxWidget extends WidgetType {
       other.rawLine === this.rawLine
     )
   }
-  toDOM(): HTMLElement {
+  toDOM(view: EditorView): HTMLElement {
     const box = document.createElement('span')
     box.className = 'cm-knote-check'
     box.dataset.status = this.statusChar
@@ -169,7 +197,7 @@ class CheckboxWidget extends WidgetType {
       box.addEventListener('mousedown', (e) => e.preventDefault())
       box.addEventListener('click', (e) => {
         e.preventDefault()
-        void toggleSubtask(this.line0, this.rawLine)
+        void toggleSubtask(view, this.line0, this.rawLine)
       })
     } else {
       box.title = 'Right-click to change status'
@@ -256,7 +284,7 @@ class WikiLinkWidget extends WidgetType {
       e.preventDefault()
       // A bare link to a raw .drawio file (not wrapped in an image embed)
       // opens straight in the draw.io editor rather than as a wiki note.
-      if (isDrawioFile(this.target)) void host.openWithDrawio(this.target)
+      if (isDrawioFile(this.target)) void host.openWithDrawio(attachmentRef(this.target))
       else void host.openWikiTarget(this.target)
     })
     return a
@@ -318,6 +346,21 @@ function resolvedAttachmentPath(src: string): string | null {
   return resolveEmbedPath(folder, src)
 }
 
+/**
+ * What to hand `host.attachmentUri` / `host.openWithDrawio`: the reference
+ * already resolved against this view's note, as a vault-root-relative `/path`.
+ *
+ * Resolving here rather than host-side is what lets a panel that isn't tied to
+ * one note serve these at all — the board's task editor shows a card's block,
+ * and a board's cards come from every note in the vault. External and `data:`
+ * URIs pass straight through; so does anything that escapes the vault, which
+ * the host rejects for itself.
+ */
+function attachmentRef(src: string): string {
+  const resolved = resolvedAttachmentPath(src)
+  return resolved === null ? src : `/${resolved}`
+}
+
 on('attachmentChanged', (changedPath) => {
   for (const [key, imgs] of liveImages) {
     if (!samePath(key, changedPath)) continue
@@ -341,7 +384,7 @@ class ImageWidget extends WidgetType {
     wrap.className = 'cm-knote-image'
     const img = document.createElement('img')
     img.alt = this.src
-    void host.attachmentUri(this.src).then((uri) => {
+    void host.attachmentUri(attachmentRef(this.src)).then((uri) => {
       if (uri) img.src = uri
       else wrap.classList.add('cm-knote-image-missing')
     })
@@ -363,7 +406,7 @@ class ImageWidget extends WidgetType {
       wrap.title = 'Double-click to edit in draw.io'
       wrap.addEventListener('dblclick', (e) => {
         e.preventDefault()
-        void host.openWithDrawio(this.src)
+        void host.openWithDrawio(attachmentRef(this.src))
       })
     }
     return wrap
@@ -484,8 +527,12 @@ function decorateLine(
   }
 
   // Task checkbox: replace the `[c]` bracket with a clickable widget.
+  // `checkboxRange` calls anything indented a sub-task; in a fragment even a
+  // flush-left checkbox is one, since the whole document is nested inside the
+  // task it belongs to.
   const box = checkboxRange(text)
-  const definingTag = box && !box.isSubtask ? definingDeliverableTag(text, true, meta, true) : null
+  const topLevel = box !== null && isTopLevelTask(view.state, TASK_LINE_RE.exec(text)?.[1] ?? '')
+  const definingTag = topLevel ? definingDeliverableTag(text, true, meta, true) : null
 
   // Whole-line styling (always applied, never hidden).
   if (REASON_FOR_RE.test(text) || STATUS_CHANGED_RE.test(text) || DATE_ENTERED_RE.test(text)) {
@@ -504,7 +551,7 @@ function decorateLine(
     }
     // Top-level tasks get a pill naming their current Kanban column, placed
     // right after the checkbox.
-    if (!box.isSubtask) {
+    if (topLevel) {
       const label = taskStateLabel(box.statusChar, columns)
       if (label) {
         out.push(
@@ -519,7 +566,7 @@ function decorateLine(
       const from = line.from + box.from
       out.push(
         Decoration.replace({
-          widget: new CheckboxWidget(box.statusChar, box.isSubtask, line.number - 1, text)
+          widget: new CheckboxWidget(box.statusChar, !topLevel, line.number - 1, text)
         }).range(from, line.from + box.to)
       )
     }

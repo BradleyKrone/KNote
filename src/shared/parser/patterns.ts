@@ -256,6 +256,13 @@ export const LIST_ITEM_RE = /^(\s*)([-*+]|\d+[.)])\s/
  * line of any depth, so a nested subtask (and its own meta) is never swept
  * in, and trailing blanks are excluded. Returns `taskIdx + 1` for a task
  * with no note.
+ *
+ * This is the *narrow* block, and its one remaining job is to bound the
+ * auto-managed region: `Reason for` / `Status Changed` / `Date Entered` for
+ * this task and no other. Everything nested under the task — sub-tasks and
+ * all — is `taskBlockEnd` below. Deliberately fence-blind: the managed lines
+ * always sit directly under the task and above any fenced code, so tracking
+ * fences here would buy nothing and change what a status change may rewrite.
  */
 export function ownNoteBlockEnd(lines: string[], taskIdx: number, taskIndentLen: number): number {
   let lastNonBlank = taskIdx
@@ -271,15 +278,135 @@ export function ownNoteBlockEnd(lines: string[], taskIdx: number, taskIndentLen:
   return lastNonBlank + 1
 }
 
+/** A ``` / ~~~ fence line at any indent. Group 1 = the marker run, group 2 = the rest (info string on an opener, nothing on a closer). */
+const FENCE_RE = /^\s*(`{3,}|~{3,})(.*)$/
+
+/**
+ * Exclusive end index of a task's *whole* attached block: everything nested
+ * under it — its notes, its sub-tasks, their notes, nested bullets, tables and
+ * fenced code. A strict superset of `ownNoteBlockEnd`, and what the board's
+ * task editor shows and rewrites.
+ *
+ * It ends at the first line that is outdented past the task, and at a
+ * same-indent line that is either a checkbox (a *sibling* task) or not a list
+ * item at all (a heading or paragraph). Both of those same-indent halves
+ * matter: a sibling `- [ ] next` passes `LIST_ITEM_RE`, so without the
+ * checkbox test the block would run to the end of the file.
+ *
+ * Fenced code is consumed verbatim, with the indent and checkbox rules
+ * suspended, so a sample containing `- [ ] fake` stays in the block rather
+ * than truncating it. The fence tracking is hand-rolled rather than borrowed
+ * from the remark scaffold because `planTaskMetaEdit` runs in the extension
+ * host over a plain `string[]` with no parse: read and write have to reach the
+ * same answer from the same input, or the board would show one block and
+ * overwrite another.
+ *
+ * A fence only holds while its content stays indented to at least the fence's
+ * own column. Dedent past that and the fence has left the list item the task
+ * owns — which is how CommonMark reads it too, so remark's mask has already
+ * scored a `- [ ] x` down there as a *real* top-level task. Swallowing it
+ * would put the same line in two places at once: its own card, and inside this
+ * task's block, where the next save would delete it. Both that case and an
+ * unterminated fence end the block where it stood before the opener, rather
+ * than trusting a fence that turned out not to contain what it looked like it
+ * did.
+ *
+ * Trailing blanks are excluded. Returns `taskIdx + 1` for a task with nothing
+ * under it.
+ */
+export function taskBlockEnd(lines: string[], taskIdx: number, taskIndentLen: number): number {
+  let lastNonBlank = taskIdx
+  let fence: string | null = null
+  let fenceIndent = 0
+  // Where the block ended just before the current fence opened, so a fence that
+  // turns out not to hold can be backed out of wholesale.
+  let beforeFence = taskIdx
+  for (let i = taskIdx + 1; i < lines.length; i++) {
+    const text = lines[i]
+    const blank = /^\s*$/.test(text)
+    const indent = blank ? 0 : (/^[ \t]*/.exec(text)?.[0].length ?? 0)
+    if (fence !== null) {
+      if (!blank && indent < fenceIndent) return beforeFence + 1
+      lastNonBlank = i
+      const close = FENCE_RE.exec(text)
+      if (close && close[1].startsWith(fence) && close[2].trim() === '') fence = null
+      continue
+    }
+    if (blank) continue
+    if (indent < taskIndentLen) break
+    if (indent === taskIndentLen && (TASK_LINE_RE.test(text) || !LIST_ITEM_RE.test(text))) break
+    const open = FENCE_RE.exec(text)
+    if (open) {
+      beforeFence = lastNonBlank
+      fence = open[1]
+      fenceIndent = indent
+    }
+    lastNonBlank = i
+  }
+  if (fence !== null) return beforeFence + 1
+  return lastNonBlank + 1
+}
+
 /**
  * Is this note-block line one KNote manages for itself (`Reason for <Column>`,
  * `Status Changed`, `Date Entered`) rather than the user's own note text?
- * The parser keeps these out of `TaskItem.noteLines` and `planTaskMetaEdit`
+ * The parser keeps these out of `TaskItem.blockLines` and `planTaskMetaEdit`
  * re-emits them itself, so the two have to agree on the boundary — otherwise
  * the board would show one thing and overwrite another.
  */
 export function isManagedNoteLine(line: string): boolean {
   return REASON_FOR_RE.test(line) || STATUS_CHANGED_RE.test(line) || DATE_ENTERED_RE.test(line)
+}
+
+/**
+ * A task's whole attached block (`taskBlockEnd`) as the board's task editor
+ * sees it: verbatim and still indented, minus the auto-managed lines that
+ * belong to *this* task — the ones inside its narrow `ownNoteBlockEnd` range,
+ * which are surfaced as `TaskItem` fields and re-emitted by `planTaskMetaEdit`
+ * instead. A *descendant's* own `Status Changed` / `Date Entered` /
+ * `Reason for` lines sit outside that range and survive verbatim: they belong
+ * to the sub-task, not to this one.
+ *
+ * The single point of agreement between the three sides that must never
+ * drift — the parser reading a block out, the write path replacing one, and
+ * the staleness check that refuses a write when the block moved underneath.
+ */
+export function taskBlockLines(lines: string[], taskIdx: number): string[] {
+  const m = TASK_LINE_RE.exec(lines[taskIdx])
+  const indentLen = m ? m[1].length : 0
+  const narrowEnd = ownNoteBlockEnd(lines, taskIdx, indentLen)
+  const wideEnd = taskBlockEnd(lines, taskIdx, indentLen)
+  const block = lines
+    .slice(taskIdx + 1, wideEnd)
+    .filter((line, i) => !(taskIdx + 1 + i < narrowEnd && isManagedNoteLine(line)))
+  // Leading blanks sit between the managed lines and the note body; the write
+  // path strips them too, so dropping them here keeps round-trips stable.
+  while (block.length > 0 && /^\s*$/.test(block[0])) block.shift()
+  return block
+}
+
+/**
+ * Does the task at `taskIdx` still have exactly the block the editor was shown?
+ * The staleness check behind `setTaskTextAndNotes`'s `expectedBlock`: a task
+ * rewrite now replaces a whole subtree, so verifying the task line alone would
+ * let a stale save swallow a sub-task somebody ticked in the meantime.
+ */
+export function taskBlockMatches(lines: string[], taskIdx: number, expected: string[]): boolean {
+  const current = taskBlockLines(lines, taskIdx)
+  return current.length === expected.length && current.every((l, i) => l === expected[i])
+}
+
+/**
+ * Drop auto-managed lines from the head of a replacement body — the part above
+ * its first checkbox, which is the region that parses back as *this* task's own
+ * meta. Everything from the first sub-task down is that sub-task's and passes
+ * through untouched.
+ */
+function filterOwnManagedLines(body: string[]): string[] {
+  const firstBox = body.findIndex((l) => TASK_LINE_RE.test(l))
+  const head = firstBox === -1 ? body : body.slice(0, firstBox)
+  const tail = firstBox === -1 ? [] : body.slice(firstBox)
+  return [...head.filter((l) => !isManagedNoteLine(l)), ...tail]
 }
 
 /**
@@ -297,43 +424,53 @@ export function isManagedNoteLine(line: string): boolean {
  * and because the follow-up date rides on that same line, the date goes with
  * it rather than outliving the column it belongs to.
  *
- * `noteLines` replaces the task's own note *body* — everything in the block
- * that isn't one of those auto-managed lines. It is three-state as well:
- * `undefined` leaves the body alone (what every status-change caller wants),
- * an array replaces it wholesale, and `[]` clears it back to just the managed
- * lines. Supplying it also pulls `Date Entered` out of the body and re-emits
- * it with the other managed lines — left in the body it would be replaced
- * along with the note text, silently losing the date. It stays in the body
- * when `noteLines` is `undefined` so an ordinary status change keeps it
- * exactly where the user put it.
+ * `blockLines` replaces the task's whole attached block — everything under it
+ * that isn't one of *its own* auto-managed lines, sub-tasks included. It is
+ * three-state as well: `undefined` leaves the block alone (what every
+ * status-change caller wants), an array replaces it wholesale, and `[]` clears
+ * it back to just the managed lines. Supplying it also widens the range being
+ * rewritten from `ownNoteBlockEnd` to `taskBlockEnd` — a status change must
+ * never reach a sub-task, but the board's task editor edits the whole subtree —
+ * and pulls `Date Entered` out of the body to re-emit it with the other managed
+ * lines, since left in the body it would be replaced along with the note text,
+ * silently losing the date. It stays in the body when `blockLines` is
+ * `undefined` so an ordinary status change keeps it exactly where the user put
+ * it.
  *
  * Returns a splice: replace `lines[start .. start+deleteCount)` with `insert`.
  */
 export function planTaskMetaEdit(
   lines: string[],
   taskIdx: number,
-  updates: { reasonLine?: string | null; statusChangedLine?: string; noteLines?: string[] }
+  updates: { reasonLine?: string | null; statusChangedLine?: string; blockLines?: string[] }
 ): { start: number; deleteCount: number; insert: string[] } {
   const m = TASK_LINE_RE.exec(lines[taskIdx])
   const indentLen = m ? m[1].length : 0
-  const end = ownNoteBlockEnd(lines, taskIdx, indentLen)
+  const replacingBody = updates.blockLines !== undefined
+  const narrowEnd = ownNoteBlockEnd(lines, taskIdx, indentLen)
+  const end = replacingBody ? taskBlockEnd(lines, taskIdx, indentLen) : narrowEnd
   const block = lines.slice(taskIdx + 1, end)
-  const replacingBody = updates.noteLines !== undefined
 
   let existingReason: string | undefined
   let existingStatus: string | undefined
   let existingDateEntered: string | undefined
   const rest: string[] = []
-  for (const line of block) {
-    if (REASON_FOR_RE.test(line)) {
+  for (let i = 0; i < block.length; i++) {
+    const line = block[i]
+    // Only the managed lines inside the *narrow* block are this task's; past it
+    // they belong to a sub-task and are ordinary content here. When the body
+    // isn't being replaced the two ranges coincide, so this is always true and
+    // the partition is byte-identical to what it has always done.
+    const isOwnMeta = taskIdx + 1 + i < narrowEnd
+    if (isOwnMeta && REASON_FOR_RE.test(line)) {
       if (existingReason === undefined) existingReason = line
       continue
     }
-    if (STATUS_CHANGED_RE.test(line)) {
+    if (isOwnMeta && STATUS_CHANGED_RE.test(line)) {
       if (existingStatus === undefined) existingStatus = line
       continue
     }
-    if (replacingBody && DATE_ENTERED_RE.test(line)) {
+    if (isOwnMeta && replacingBody && DATE_ENTERED_RE.test(line)) {
       if (existingDateEntered === undefined) existingDateEntered = line
       continue
     }
@@ -347,10 +484,11 @@ export function planTaskMetaEdit(
   // A replacement body is filtered, not trusted: typing `- Status Changed: …`
   // into the notes box would otherwise be promoted to the real stamp on the
   // next parse, clobbering it. Those lines are read-only in the editor, and the
-  // host is what enforces that.
-  const body = replacingBody
-    ? (updates.noteLines as string[]).filter((l) => !isManagedNoteLine(l))
-    : rest
+  // host is what enforces that. But only up to the body's first checkbox: past
+  // that the line is a *sub-task's* own stamp, which the editor legitimately
+  // shows and must round-trip — filtering the whole body would delete every
+  // sub-task's `Status Changed` on every save.
+  const body = replacingBody ? filterOwnManagedLines(updates.blockLines as string[]) : rest
   while (body.length > 0 && /^\s*$/.test(body[0])) body.shift()
   // Trailing blanks likewise: `ownNoteBlockEnd` never includes them, so leaving
   // them here would grow the block by a line on every save.

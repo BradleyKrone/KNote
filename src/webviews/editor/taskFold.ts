@@ -29,6 +29,7 @@ import {
   type ViewUpdate
 } from '@codemirror/view'
 import { TASK_LINE_RE } from '@shared/parser/patterns'
+import { isTopLevelTask } from './editorMode'
 
 /** Leading-whitespace width in columns (tabs expand to the next multiple of 2). */
 function indentColumns(text: string): number {
@@ -118,9 +119,10 @@ function buildGroupBoxes(state: EditorState): DecorationSet {
   while (n <= doc.lines) {
     const line = doc.line(n)
     const m = TASK_LINE_RE.exec(line.text)
-    // Only top-level (unindented) tasks anchor a card; nested sub-tasks are
-    // grouped visually by the enclosing card, not boxed again.
-    if (!m || m[1].length > 0) {
+    // Only top-level tasks anchor a card; nested sub-tasks are grouped visually
+    // by the enclosing card, not boxed again — and in a fragment, which is one
+    // task's interior, nothing is top-level, so no card is drawn at all.
+    if (!m || !isTopLevelTask(state, m[1])) {
       n++
       continue
     }

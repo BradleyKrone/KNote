@@ -19,93 +19,12 @@
 import * as vscode from 'vscode'
 import type { CmEdit, EditorSyncMessage } from '@shared/editorSync'
 import { applyCmEdits, isEditorSyncMessage } from '@shared/editorSync'
-import { isImage, resolveEmbedPath } from '@shared/pathUtils'
 import { relForUri } from '../paths'
-import { toAbs } from '../../core/vaultService'
+import { attachmentUriFor, openWithDrawio } from './attachmentUri'
 import { attach, currentActiveNoteRel, setActiveNote } from '../rpc/webviewRpc'
 import { createHostHandlers } from '../rpc/hostHandlers'
 import { currentVaultRoot } from '../engine'
 import { webviewHtml, webviewResourceRoots } from './webviewHtml'
-
-/**
- * Resolve a note-relative image/embed reference to a webview-safe URI, with
- * the file's mtime appended as a cache-busting query param. Without it, a
- * widget that reloads the same path after the file changed on disk (e.g. a
- * draw.io diagram edited and saved in its own editor) can get served stale
- * bytes straight out of the webview's resource cache — same URL in, same
- * cached response out.
- */
-async function attachmentUriFor(
-  src: string,
-  document: vscode.TextDocument,
-  webview: vscode.Webview
-): Promise<string | null> {
-  if (/^[a-z][a-z0-9+.-]*:/i.test(src)) return src // data:, already a URI
-  const noteRel = relForUri(document.uri)
-  const folder = noteRel && noteRel.includes('/') ? noteRel.slice(0, noteRel.lastIndexOf('/')) : ''
-  const rel = resolveEmbedPath(folder, src)
-  if (!rel || !isImage(rel)) return null
-  try {
-    const fileUri = vscode.Uri.file(toAbs(rel))
-    const stat = await vscode.workspace.fs.stat(fileUri)
-    const uri = webview.asWebviewUri(fileUri).toString()
-    return `${uri}${uri.includes('?') ? '&' : '?'}v=${stat.mtime}`
-  } catch {
-    return null // escapes the vault, or doesn't exist
-  }
-}
-
-const DRAWIO_EXTENSION_ID = 'hediet.vscode-drawio'
-// Verified against hediet.vscode-drawio's own package.json: the text-based
-// editor handles .drawio/.drawio.svg (and .dio/.dio.svg), the binary one
-// handles .drawio.png/.dio.png.
-const DRAWIO_TEXT_VIEW_TYPE = 'hediet.vscode-drawio-text'
-const DRAWIO_BINARY_VIEW_TYPE = 'hediet.vscode-drawio'
-
-/** Resolve a note-relative draw.io reference to an absolute file Uri, or null if it escapes the vault. */
-function resolveDrawioUri(src: string, document: vscode.TextDocument): vscode.Uri | null {
-  const noteRel = relForUri(document.uri)
-  const folder = noteRel && noteRel.includes('/') ? noteRel.slice(0, noteRel.lastIndexOf('/')) : ''
-  const rel = resolveEmbedPath(folder, src)
-  if (!rel) return null
-  try {
-    return vscode.Uri.file(toAbs(rel))
-  } catch {
-    return null
-  }
-}
-
-/**
- * Open a draw.io diagram (an absolute file Uri) in the Draw.io Integration
- * extension's editor. KNote never bundles that editor itself (see
- * CLAUDE.md's offline rule) — if the extension isn't installed, this prompts
- * rather than doing nothing silently. Shared by the RPC handler below and by
- * the "Insert Draw.io Diagram" command, which already has an absolute Uri
- * for the file it just created.
- */
-export async function openDrawioUri(uri: vscode.Uri): Promise<void> {
-  if (!vscode.extensions.getExtension(DRAWIO_EXTENSION_ID)) {
-    const action = await vscode.window.showWarningMessage(
-      'KNote: editing draw.io diagrams needs the Draw.io Integration extension.',
-      'Search Marketplace'
-    )
-    if (action) {
-      void vscode.commands.executeCommand('workbench.extensions.search', DRAWIO_EXTENSION_ID)
-    }
-    return
-  }
-  const viewType = uri.path.toLowerCase().endsWith('.png')
-    ? DRAWIO_BINARY_VIEW_TYPE
-    : DRAWIO_TEXT_VIEW_TYPE
-  await vscode.commands.executeCommand('vscode.openWith', uri, viewType)
-}
-
-/** Resolve a note-relative draw.io reference (from the editor's RPC) and open it. */
-async function openWithDrawio(src: string, document: vscode.TextDocument): Promise<void> {
-  const uri = resolveDrawioUri(src, document)
-  if (!uri) return
-  await openDrawioUri(uri)
-}
 
 const LIVE_EDITOR_VIEW_TYPE = 'knote.liveEditor'
 
@@ -219,8 +138,8 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
     // with every other KNote webview, plus attachmentUri bound to this panel.
     const rpc = attach(webview, {
       ...createHostHandlers(),
-      attachmentUri: (src: string) => attachmentUriFor(src, document, webview),
-      openWithDrawio: (src: string) => openWithDrawio(src, document)
+      attachmentUri: (src: string) => attachmentUriFor(src, relForUri(document.uri), webview),
+      openWithDrawio: (src: string) => openWithDrawio(src, relForUri(document.uri))
     })
 
     const key = document.uri.toString()

@@ -10,7 +10,7 @@ import { wrapEmbedForInsertion } from '@shared/embedInsert'
 import { getVaultConfig } from '../../core/vaultConfig'
 import * as vault from '../../core/vaultService'
 import { uriForRel, vaultNoteRel } from '../paths'
-import { openDrawioUri } from '../views/liveEditorProvider'
+import { openDrawioUri } from '../views/attachmentUri'
 
 async function insertDrawioDiagram(): Promise<void> {
   const editor = vscode.window.activeTextEditor

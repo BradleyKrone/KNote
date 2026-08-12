@@ -131,7 +131,8 @@ Markdown:
 - **Tasks group into cards** — a top-level task with indented detail beneath
   it (its `Status Changed` / `Date Entered` / `Notes` block and any sub-tasks)
   is wrapped in a light box, so it's clear at a glance what belongs to which
-  task. A lone task with no detail isn't boxed.
+  task. A lone task with no detail isn't boxed. That box is exactly what the
+  board's card pencil opens for editing — see **✏️ Edit a task** below.
 - **Fold task detail — or a whole heading section — out of the way** — any line
   with indented content below it (a task's detail block and sub-tasks, nested
   lists, note bodies) gets a collapse arrow in the left gutter on hover, and so
@@ -274,17 +275,36 @@ task somewhere in your vault:
 
   Hover either chip for the distance in words ("in 4 days", "3 days ago") —
   the ⏳ follow-up chip also shows the reason the task is parked.
-- **✏️ Edit task and notes** — the pencil on a card opens a dialog holding the
-  task line (with the #tag / priority / 📅 due-date buttons) **and the task's own
-  indented note block** underneath it. Edit either, hit Save, and both go back
-  into the source note as one verified edit — one undo step, and refused
-  outright rather than half-written if the note moved on disk meanwhile. The
-  notes stay in the note; the board is just another window onto them.
-  `Reason for <Column>`, `Status Changed` and `Date Entered` show read-only:
-  KNote writes those itself, and typing one into the notes box won't hijack the
-  real thing. `Ctrl/Cmd+Enter` saves, `Esc` cancels.
+- **✏️ Edit a task** — the pencil on a card opens a dialog holding the task line
+  (with the #tag / priority / 📅 due-date buttons) and, underneath it,
+  **everything nested under that task**: its notes, its sub-tasks, *their*
+  notes, nested bullets, tables and fenced code. Not a plain text box — it's the
+  same **Live Preview editor** notes use, so you get clickable checkboxes,
+  `[[link]]` and `#tag` autocomplete, rendered tables, Mermaid, note embeds,
+  hover previews, paste-an-image, spell check and `Ctrl+F` find, right there in
+  the dialog.
+- **➕ Add card** opens that same dialog empty instead of a one-line input —
+  fill in the task text, tags, due date and any notes/sub-tasks up front.
+  Nothing is written until you save: **Create** appends the finished task (and
+  its `Reason for <Column>` line, for a Require-reason column) in one go;
+  **Cancel** discards it.
+
+  | In the dialog | What happens |
+  | --- | --- |
+  | Tick a sub-task | Changes it *in the dialog only* — nothing is written until Save, and `Ctrl+Z` undoes it |
+  | Save | The task line **and the whole block** go back as one verified edit: one undo step, refused outright rather than half-written if anything in the block moved meanwhile |
+  | Cancel / `Esc` | Throws the lot away (with a confirm if you've typed something) |
+  | `Ctrl/Cmd+Enter` | Saves from anywhere in the dialog |
+
+  This task's own `Reason for <Column>`, `Status Changed` and `Date Entered` are
+  KNote's to write, so they show read-only in the row above the editor — and
+  typing one into the editor won't hijack the real thing. A **sub-task's** own
+  stamps are different: they're part of the block, so they show in the editor
+  and are kept exactly as they are. The notes stay in the note; the board is
+  just another window onto them.
 - Cards also support archive (`- [a]` — struck through, off the board), delete,
-  add-card (into the scoped note or your Inbox note), and same-note reordering.
+  add-card (into the scoped note, or this week's weekly note when the board
+  isn't scoped to one note), and same-note reordering.
 - **Jump to the task** — double-click a card to open its note at the task's
   line. The note name under a card does the same on a single click, where it's
   shown (it's hidden when the note is already obvious — grouped boards and

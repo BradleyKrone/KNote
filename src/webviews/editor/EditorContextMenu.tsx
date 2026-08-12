@@ -84,6 +84,7 @@ import { host } from '../shared/rpc'
 import { toggleWrap } from './markdownFormatting'
 import { mdLinkAt, type MdLink } from './mdLinkLogic'
 import { setCheckboxStatus, setSubtaskChecked, getNotePath } from './knoteConstructs'
+import { isTopLevelTask } from './editorMode'
 import { copyTaskLink } from './taskLink'
 import { misspelledRangeAt, type WordSpan } from './spellcheck/spellCheck'
 import { suggestWords } from './spellcheck/dictionary'
@@ -172,7 +173,9 @@ function readLineCtx(view: EditorView, pos: number): LineCtx {
     line0: line.number - 1,
     text: line.text,
     isTask: task != null,
-    isSubtask: task != null && task[1].length > 0,
+    // A fragment is one task's interior, so even a flush-left checkbox there is
+    // a sub-task: a plain toggle, with no Kanban column menu and no task link.
+    isSubtask: task != null && !isTopLevelTask(view.state, task[1]),
     isMilestone: MILESTONE_LINE_RE.test(line.text),
     isMachine: MACHINE_ENTRY_RE.test(line.text),
     due: lineDue(line.text),
@@ -246,12 +249,12 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
     if (open.onCheckbox && ctx.isSubtask) {
       items = subtaskCheckboxItems(ctx, (checked) => {
         close()
-        void setSubtaskChecked(ctx.line0, ctx.text, checked)
+        void setSubtaskChecked(view, ctx.line0, ctx.text, checked)
       })
     } else if (open.onCheckbox) {
       items = checkboxItems(ctx, columns, (col) => {
         close()
-        void setCheckboxStatus(ctx.line0, ctx.text, col)
+        void setCheckboxStatus(view, ctx.line0, ctx.text, col)
       })
     } else if (open.spell) {
       items = [...spellItems(view, open.spell, close), ...main()]

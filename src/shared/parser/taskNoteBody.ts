@@ -45,6 +45,19 @@ export function noteBodyIndent(body: string[], fallback: string): string {
 }
 
 /**
+ * The base indent a block round-trips through: whatever its own lines already
+ * share, and `fallback` only when there is no block yet (a task getting its
+ * first note). Deliberately *not* `noteBodyIndent(block, fallback)`: a block
+ * whose lines share no common prefix — a fenced code sample dedented to column
+ * 0, say — is what `noteBodyToText` hands back verbatim, so re-applying the
+ * fallback on the way in would indent the whole thing by two on every save.
+ * `noteBodyToText` and `noteBodyFromText` have to be exact inverses.
+ */
+export function blockBaseIndent(block: string[], fallback: string): string {
+  return block.length === 0 ? fallback : noteBodyIndent(block, '')
+}
+
+/**
  * Block lines → the text the editor shows: the block's common indent stripped
  * off the front of every line, blank lines emptied. Anything indented deeper
  * keeps its *relative* indent, so a nested sub-bullet under `- Notes:` survives

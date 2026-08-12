@@ -246,7 +246,6 @@ export function SettingsApp(): React.JSX.Element {
 
           {category === 'kanban' && (
             <>
-              {field('Inbox note', 'inboxNote', 'receives cards added on the global board')}
               <div className="settings-field">
                 <label>
                   <span className="settings-label">Columns</span>

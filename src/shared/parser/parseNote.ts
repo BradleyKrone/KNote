@@ -33,6 +33,7 @@ import {
   MACHINE_ENTRY_RE,
   MILESTONE_LINE_RE,
   ownNoteBlockEnd,
+  taskBlockLines,
   REASON_FOR_RE,
   STATUS_CHANGED_RE,
   STATUS_CHANGED_UNSET,
@@ -178,14 +179,12 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
 
     // `Status Changed`/`Date Entered` lines attached under the task, wherever
     // they sit in its own note block (a blank line or the other of the pair
-    // may come first — see `ownNoteBlockEnd`).
-    // Everything in the block that isn't one of those auto-managed lines is the
-    // task's own note text, kept verbatim (indent and all) for the board's task
-    // editor to edit and write back.
+    // may come first — see `ownNoteBlockEnd`). The *narrow* block on purpose:
+    // it stops before the first sub-task, so a parent with no stamp of its own
+    // can never inherit its child's.
     let statusChanged: string | null = null
     let sawStatusChanged = false
     let dateEntered: string | null = null
-    const noteLines: string[] = []
     const blockEnd = ownNoteBlockEnd(cleanLines, line, indent)
     for (let i = line + 1; i < blockEnd; i++) {
       const l = cleanLines[i]
@@ -208,12 +207,7 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
         continue
       }
       if (REASON_FOR_RE.test(l)) continue
-      noteLines.push(l)
     }
-    // Leading blanks sit between the managed lines and the note body; the write
-    // path strips them too, so dropping them here keeps read/write round-trips
-    // stable. Blanks *inside* the body are the user's own and stay.
-    while (noteLines.length > 0 && /^\s*$/.test(noteLines[0])) noteLines.shift()
 
     meta.tasks.push({
       line,
@@ -227,7 +221,9 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
       waitingReason,
       statusChanged,
       dateEntered,
-      noteLines
+      // The *wide* block, and only for a task that can become a card — see
+      // `TaskItem.blockLines`.
+      blockLines: isSubtask ? [] : taskBlockLines(cleanLines, line)
     } as TaskItem)
   })
 }

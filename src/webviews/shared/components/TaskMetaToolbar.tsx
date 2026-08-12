@@ -9,11 +9,6 @@ import { DatePickerContent } from './DatePickerContent'
 
 type PickerKind = 'tag' | 'priority' | 'date' | null
 
-/** While a picker popover is open, its blur (which steals focus from the field) must not submit an in-progress edit. */
-export function blurTargetIsPicker(e: React.FocusEvent): boolean {
-  return !!(e.relatedTarget as HTMLElement | null)?.closest('.popover-panel, .task-meta-toolbar')
-}
-
 interface Props {
   value: string
   onChange: (next: string) => void

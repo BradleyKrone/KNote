@@ -1,14 +1,12 @@
-import { useRef, useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { Archive, Plus } from 'lucide-react'
 import type { BoardColumn } from '@shared/types'
 import { titleOf } from '@shared/pathUtils'
-import { formatReasonLine } from '@shared/parser/patterns'
-import { confirm, promptReason } from '../shared/stores'
-import { addCard, archiveCards } from './boardActions'
+import { confirm } from '../shared/stores'
+import { archiveCards } from './boardActions'
 import type { BoardCard, BoardScope } from './boardSelectors'
 import { Card } from './Card'
-import { TaskMetaToolbar, blurTargetIsPicker } from '../shared/components/TaskMetaToolbar'
+import { addTaskNote } from './taskNoteStore'
 
 interface Props {
   column: BoardColumn
@@ -22,29 +20,6 @@ export function Column({ column, cards, scope, groupByNote }: Props): React.JSX.
     id: `col:${column.char}`,
     data: { column }
   })
-  const [adding, setAdding] = useState(false)
-  const [text, setText] = useState('')
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  const submit = (): void => {
-    const value = text.trim()
-    setAdding(false)
-    setText('')
-    if (!value) return
-    if (!column.requireReason) {
-      void addCard(scope, column.char, value)
-      return
-    }
-    void promptReason(column.name).then((result) => {
-      if (!result) return
-      void addCard(
-        scope,
-        column.char,
-        value,
-        formatReasonLine('  ', column.name, result.reason, result.followUp)
-      )
-    })
-  }
 
   const groups: Array<{ note: string | null; cards: BoardCard[] }> = []
   if (groupByNote) {
@@ -93,37 +68,9 @@ export function Column({ column, cards, scope, groupByNote }: Props): React.JSX.
             ))}
           </div>
         ))}
-        {adding ? (
-          <div className="board-card-edit">
-            <TaskMetaToolbar value={text} onChange={setText} textareaRef={textareaRef} />
-            <textarea
-              ref={textareaRef}
-              className="board-add-input"
-              autoFocus
-              rows={2}
-              placeholder="Task text…"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onBlur={(e) => {
-                if (!blurTargetIsPicker(e)) submit()
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  submit()
-                }
-                if (e.key === 'Escape') {
-                  setAdding(false)
-                  setText('')
-                }
-              }}
-            />
-          </div>
-        ) : (
-          <button className="board-add-btn" onClick={() => setAdding(true)}>
-            <Plus size={14} /> Add card
-          </button>
-        )}
+        <button className="board-add-btn" onClick={() => addTaskNote(scope, column)}>
+          <Plus size={14} /> Add card
+        </button>
       </div>
     </div>
   )

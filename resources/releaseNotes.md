@@ -3,6 +3,25 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.4.0
+
+- **The board's task editor now edits the whole block, in a real editor.**
+  The pencil on a card used to open a plain-text box holding just the task's
+  own note lines; it now opens the task's entire attached block — sub-tasks,
+  their notes, nested bullets, tables, fenced code — in the same Live Preview
+  editor notes use, with clickable checkboxes, `[[link]]`/`#tag`
+  autocomplete, rendered tables, Mermaid, note embeds, hover previews,
+  paste-an-image and spell check. Saving still writes the task line and its
+  whole block back as one verified edit — one undo step, refused outright
+  rather than half-written if anything in the block changed on disk
+  meanwhile, including a sub-task ticked elsewhere while the dialog was open.
+- **Add card opens that same dialog, empty.** Instead of a one-line text
+  input, **➕ Add card** now opens the full task editor so tags, due date and
+  notes/sub-tasks can be filled in before the task exists at all — nothing
+  is written until **Create** (or **Cancel** to discard it). On a board
+  that isn't scoped to a single note, new cards now land under the
+  **Tasks** heading of this week's weekly note instead of the inbox note.
+
 ## 2.3.0
 
 - **Edit a task's full notes from the Kanban board.** The pencil on a card

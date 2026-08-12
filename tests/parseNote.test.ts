@@ -93,7 +93,7 @@ describe('parseNote', () => {
       'a.md',
       '- [w] task\n  Reason for Waiting: parts ⏳ 2026-08-04\n  - Status Changed: 7/14/2026\n  - Date Entered: 7/1/2026\n  - Notes: free text\n  - and more\n'
     )
-    expect(meta.tasks[0].noteLines).toEqual(['  - Notes: free text', '  - and more'])
+    expect(meta.tasks[0].blockLines).toEqual(['  - Notes: free text', '  - and more'])
     // The managed lines are still surfaced as their own fields.
     expect(meta.tasks[0]).toMatchObject({
       statusChanged: '7/14/2026',
@@ -105,13 +105,13 @@ describe('parseNote', () => {
 
   it('gives a task with no note block an empty body', () => {
     const meta = parseNote('a.md', '- [ ] bare\n- [ ] another\n')
-    expect(meta.tasks[0].noteLines).toEqual([])
-    expect(meta.tasks[1].noteLines).toEqual([])
+    expect(meta.tasks[0].blockLines).toEqual([])
+    expect(meta.tasks[1].blockLines).toEqual([])
   })
 
   it('leaves the body empty when the block is nothing but managed lines', () => {
     const meta = parseNote('a.md', '- [ ] t\n  - Status Changed: n/a\n  - Date Entered: 7/1/2026\n')
-    expect(meta.tasks[0].noteLines).toEqual([])
+    expect(meta.tasks[0].blockLines).toEqual([])
     expect(meta.tasks[0].statusChanged).toBeNull()
   })
 
@@ -120,17 +120,88 @@ describe('parseNote', () => {
       'a.md',
       '- [ ] t\n  - Status Changed: 7/14/2026\n  - Status Changed: 7/10/2026\n  - Notes: kept\n'
     )
-    expect(meta.tasks[0].noteLines).toEqual(['  - Notes: kept'])
+    expect(meta.tasks[0].blockLines).toEqual(['  - Notes: kept'])
     expect(meta.tasks[0].statusChanged).toBe('7/14/2026')
   })
 
-  it('stops a parent’s note body before a nested sub-task and its own notes', () => {
+  it('takes a nested sub-task and its own notes into the parent’s block', () => {
     const meta = parseNote(
       'a.md',
       '- [ ] parent\n  - Notes: mine\n  - [ ] child\n    - Notes: theirs\n'
     )
-    expect(meta.tasks[0].noteLines).toEqual(['  - Notes: mine'])
-    expect(meta.tasks[1].noteLines).toEqual(['    - Notes: theirs'])
+    expect(meta.tasks[0].blockLines).toEqual([
+      '  - Notes: mine',
+      '  - [ ] child',
+      '    - Notes: theirs'
+    ])
+    // Never filled in for a subtask: it can't become a card, so nothing would
+    // read it, and every level would store the same text again.
+    expect(meta.tasks[1].blockLines).toEqual([])
+  })
+
+  it('keeps a sub-task’s own managed lines in the parent’s block but not its own', () => {
+    const meta = parseNote(
+      'a.md',
+      '- [ ] parent\n  - Status Changed: 7/1/2026\n  - [ ] child\n    - Status Changed: 7/2/2026\n'
+    )
+    expect(meta.tasks[0].blockLines).toEqual(['  - [ ] child', '    - Status Changed: 7/2/2026'])
+    expect(meta.tasks[0].statusChanged).toBe('7/1/2026')
+  })
+
+  it('never lets a parent inherit its child’s Status Changed', () => {
+    const meta = parseNote(
+      'a.md',
+      '- [ ] parent\n  - [ ] child\n    - Status Changed: 7/2/2026\n    - Date Entered: 7/1/2026\n'
+    )
+    expect(meta.tasks[0].statusChanged).toBeNull()
+    expect(meta.tasks[0].dateEntered).toBeNull()
+    expect(meta.tasks[0].blockLines).toEqual([
+      '  - [ ] child',
+      '    - Status Changed: 7/2/2026',
+      '    - Date Entered: 7/1/2026'
+    ])
+    expect(meta.tasks[1].statusChanged).toBe('7/2/2026')
+  })
+
+  it('stops a block at a sibling task, a heading, and trailing blanks', () => {
+    const meta = parseNote(
+      'a.md',
+      '- [ ] a\n  - mine\n- [ ] b\n  - theirs\n\n## Later\n\n- [ ] c\n  - last\n\n'
+    )
+    expect(meta.tasks[0].blockLines).toEqual(['  - mine'])
+    expect(meta.tasks[1].blockLines).toEqual(['  - theirs'])
+    expect(meta.tasks[2].blockLines).toEqual(['  - last'])
+  })
+
+  it('carries a fenced block through, checkbox-looking lines and all', () => {
+    const meta = parseNote(
+      'a.md',
+      '- [ ] t\n  - Notes: see below\n  ```sh\n  - [ ] not a task\n  echo hi\n  ```\nnext\n'
+    )
+    // One real task — the fenced line is masked out of task detection — and the
+    // fence doesn't truncate the block it sits in.
+    expect(meta.tasks).toHaveLength(1)
+    expect(meta.tasks[0].blockLines).toEqual([
+      '  - Notes: see below',
+      '  ```sh',
+      '  - [ ] not a task',
+      '  echo hi',
+      '  ```'
+    ])
+  })
+
+  it('never sweeps a task the mask scored as real into another task’s block', () => {
+    // Fence content dedented to column 0 leaves the list item, so remark reads
+    // the checkbox as its own top-level task. The block has to agree, or the
+    // same line would be both its own card and part of this one's block.
+    const meta = parseNote('a.md', '- [ ] t\n  - Notes: real\n  ```sh\n- [ ] also real\n  ```\n')
+    expect(meta.tasks.map((t) => t.rawLine)).toEqual(['- [ ] t', '- [ ] also real'])
+    expect(meta.tasks[0].blockLines).toEqual(['  - Notes: real'])
+  })
+
+  it('keeps a tab-indented subtree verbatim', () => {
+    const meta = parseNote('a.md', '- [ ] t\n\t- [ ] child\n\t\t- deep\n')
+    expect(meta.tasks[0].blockLines).toEqual(['\t- [ ] child', '\t\t- deep'])
   })
 
   it('keeps blank lines inside a note body but drops the leading one', () => {
@@ -138,12 +209,12 @@ describe('parseNote', () => {
       'a.md',
       '- [ ] t\n  - Status Changed: 7/1/2026\n\n  - Notes: one\n\n  two\n'
     )
-    expect(meta.tasks[0].noteLines).toEqual(['  - Notes: one', '', '  two'])
+    expect(meta.tasks[0].blockLines).toEqual(['  - Notes: one', '', '  two'])
   })
 
   it('never carries a \\r into the note body of a CRLF note', () => {
     const meta = parseNote('a.md', '- [ ] t\r\n  - Notes: one\r\n  - two\r\n')
-    expect(meta.tasks[0].noteLines).toEqual(['  - Notes: one', '  - two'])
+    expect(meta.tasks[0].blockLines).toEqual(['  - Notes: one', '  - two'])
   })
 
   it('does not treat checkbox-looking lines inside fences as tasks', () => {

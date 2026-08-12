@@ -470,24 +470,6 @@ button {
   border-color: var(--interactive-accent);
 }
 
-.board-card-edit {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.board-add-input {
-  width: 100%;
-  resize: vertical;
-  background: var(--vscode-input-background);
-  color: var(--vscode-input-foreground);
-  border: 1px solid var(--vscode-input-border, var(--border-color));
-  border-radius: 6px;
-  padding: 6px 8px;
-  font-size: 13px;
-  font-family: inherit;
-}
-
 .task-meta-toolbar {
   display: flex;
   gap: 2px;
@@ -712,7 +694,7 @@ button {
 /* ---------- Board task editor (card pencil → task + its notes) ---------- */
 
 .task-note-panel {
-  width: 620px;
+  width: 820px;
   max-width: calc(100vw - 40px);
   display: flex;
   flex-direction: column;
@@ -746,18 +728,33 @@ button {
   color: var(--text-muted);
 }
 
-/* Monospace and no soft-wrap: this is indented Markdown, and the indent is
-   what decides whether a line stays attached to the task. */
-.task-note-body {
-  width: 100%;
-  min-height: 200px;
-  max-height: 50vh;
-  resize: vertical;
-  font-family: var(--vscode-editor-font-family, monospace);
-  font-size: 12.5px;
-  line-height: 1.5;
-  white-space: pre;
-  overflow-x: auto;
+/* The task's whole block in a live-preview CodeMirror view — the same editor a
+   note uses (see TaskNoteDialog). The box scrolls internally so a long subtree
+   can't push the dialog's Save button off screen. */
+.task-note-cm {
+  display: flex;
+  min-height: 220px;
+  max-height: 55vh;
+  overflow: hidden;
+  border: 1px solid var(--vscode-input-border, var(--border-color));
+  border-radius: 4px;
+  background: var(--vscode-input-background, transparent);
+}
+
+.task-note-cm:focus-within {
+  border-color: var(--vscode-focusBorder, var(--accent));
+}
+
+.task-note-cm .cm-editor {
+  flex: 1;
+  /* Without min-width:0 a wide table or code block makes the flex item grow
+     instead of scrolling, and the dialog itself widens off screen. */
+  min-width: 0;
+  max-height: 55vh;
+}
+
+.task-note-cm .cm-scroller {
+  overflow: auto;
 }
 
 .task-note-hint {
