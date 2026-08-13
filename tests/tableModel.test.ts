@@ -49,7 +49,8 @@ describe('parseTable', () => {
       rows: [
         ['Bolt', '12'],
         ['Nut', '3']
-      ]
+      ],
+      indent: ''
     })
   })
 
@@ -59,11 +60,29 @@ describe('parseTable', () => {
   })
 
   it('ignores blank lines and tolerates a header-only table', () => {
-    expect(parseTable('| A | B |\n')).toEqual({ header: ['A', 'B'], aligns: [], rows: [] })
+    expect(parseTable('| A | B |\n')).toEqual({
+      header: ['A', 'B'],
+      aligns: [],
+      rows: [],
+      indent: ''
+    })
   })
 
   it('returns an empty model for empty input', () => {
-    expect(parseTable('')).toEqual({ header: [], aligns: [], rows: [] })
+    expect(parseTable('')).toEqual({ header: [], aligns: [], rows: [], indent: '' })
+  })
+
+  // A table nested under a task (indentTable in tableEdit.ts) keeps its
+  // indentation on the model, so a structural rewrite puts it back — without
+  // this, the first insert-row would spring the table flush-left again.
+  it('records the block’s leading indentation', () => {
+    const raw = ['  | A | B |', '  |---|---|', '  | 1 | 2 |'].join('\n')
+    expect(parseTable(raw)).toEqual({
+      header: ['A', 'B'],
+      aligns: ['', ''],
+      rows: [['1', '2']],
+      indent: '  '
+    })
   })
 })
 
@@ -78,6 +97,18 @@ describe('columnAtOffset', () => {
   it('does not count an escaped pipe as a column boundary', () => {
     const escaped = '| a \\| b | c |'
     expect(columnAtOffset(escaped, escaped.indexOf('c'))).toBe(1)
+  })
+
+  // Regression: indentTable (tableEdit.ts) nests a table under a task by
+  // adding plain leading spaces to its raw lines. Before this, the leading
+  // whitespace meant `startsWith('|')` never matched, so the loop counted the
+  // table's own opening pipe as a column boundary and every column on an
+  // indented line resolved one too high — a right-click on the first cell of
+  // an indented table would silently act on the second column instead.
+  it('skips leading indentation before the opening pipe', () => {
+    const indented = '    | Name | Qty |'
+    expect(columnAtOffset(indented, indented.indexOf('Name'))).toBe(0)
+    expect(columnAtOffset(indented, indented.indexOf('Qty'))).toBe(1)
   })
 })
 
@@ -94,6 +125,14 @@ describe('cellOffsets', () => {
     const line = 'a | b | c'
     expect(cellOffsets(line).map((r) => line.slice(r.from, r.to))).toEqual(['a ', ' b ', ' c'])
   })
+
+  it('skips leading indentation before the opening pipe (indentTable nesting)', () => {
+    const indented = '    | Name | Qty |'
+    expect(cellOffsets(indented).map((r) => indented.slice(r.from, r.to))).toEqual([
+      ' Name ',
+      ' Qty '
+    ])
+  })
 })
 
 describe('columnWidths', () => {
@@ -101,12 +140,13 @@ describe('columnWidths', () => {
     const table: ParsedTable = {
       header: ['Name', 'Q'],
       aligns: ['', ''],
-      rows: [['Bolt', '12']]
+      rows: [['Bolt', '12']],
+      indent: ''
     }
     expect(columnWidths(table)).toEqual([4, 3])
   })
   it('accounts for the extra backslash width of an escaped pipe', () => {
-    const table: ParsedTable = { header: ['A'], aligns: [''], rows: [['a|b']] }
+    const table: ParsedTable = { header: ['A'], aligns: [''], rows: [['a|b']], indent: '' }
     expect(columnWidths(table)).toEqual([4]) // "a\|b" is 4 chars once escaped
   })
 })
@@ -116,7 +156,8 @@ describe('serializeTable', () => {
     const table: ParsedTable = {
       header: ['Name', 'Qty'],
       aligns: ['', ''],
-      rows: [['Bolt', '12']]
+      rows: [['Bolt', '12']],
+      indent: ''
     }
     expect(serializeTable(table)).toBe(
       ['| Name | Qty |', '| ---- | --- |', '| Bolt | 12  |'].join('\n')
@@ -127,20 +168,21 @@ describe('serializeTable', () => {
     const table: ParsedTable = {
       header: ['A', 'B', 'C'],
       aligns: ['left', 'center', 'right'],
-      rows: []
+      rows: [],
+      indent: ''
     }
     const lines = serializeTable(table).split('\n')
     expect(parseAligns(lines[1])).toEqual(['left', 'center', 'right'])
   })
 
   it('escapes a literal pipe in a cell so it round-trips through parseTable', () => {
-    const table: ParsedTable = { header: ['A'], aligns: [''], rows: [['a | b']] }
+    const table: ParsedTable = { header: ['A'], aligns: [''], rows: [['a | b']], indent: '' }
     const raw = serializeTable(table)
     expect(parseTable(raw).rows).toEqual([['a | b']])
   })
 
   it('serializes a header-only (0-row) table', () => {
-    const table: ParsedTable = { header: ['A', 'B'], aligns: ['', ''], rows: [] }
+    const table: ParsedTable = { header: ['A', 'B'], aligns: ['', ''], rows: [], indent: '' }
     expect(parseTable(serializeTable(table))).toEqual(table)
   })
 
@@ -154,7 +196,12 @@ describe('serializeTable', () => {
 
 describe('blankRowSource', () => {
   it('is a blank row padded to the table’s column widths', () => {
-    const table: ParsedTable = { header: ['Name', 'Qty'], aligns: ['', ''], rows: [['Bolt', '12']] }
+    const table: ParsedTable = {
+      header: ['Name', 'Qty'],
+      aligns: ['', ''],
+      rows: [['Bolt', '12']],
+      indent: ''
+    }
     expect(blankRowSource(table)).toBe('|      |     |')
   })
 
@@ -177,7 +224,8 @@ describe('emptyTableSource', () => {
       rows: [
         ['', '', ''],
         ['', '', '']
-      ]
+      ],
+      indent: ''
     })
   })
 })
@@ -189,7 +237,8 @@ describe('insertTableRow / removeTableRow', () => {
     rows: [
       ['1', '2'],
       ['3', '4']
-    ]
+    ],
+    indent: ''
   }
 
   it('inserts a blank row at the given index', () => {
@@ -213,8 +262,13 @@ describe('insertTableRow / removeTableRow', () => {
   })
 
   it('removing the last data row leaves a valid header-only table', () => {
-    const oneRow: ParsedTable = { header: ['A'], aligns: [''], rows: [['1']] }
-    expect(removeTableRow(oneRow, 0)).toEqual({ header: ['A'], aligns: [''], rows: [] })
+    const oneRow: ParsedTable = { header: ['A'], aligns: [''], rows: [['1']], indent: '' }
+    expect(removeTableRow(oneRow, 0)).toEqual({
+      header: ['A'],
+      aligns: [''],
+      rows: [],
+      indent: ''
+    })
   })
 
   it('is a no-op when the index is out of range', () => {
@@ -226,14 +280,16 @@ describe('insertTableColumn / removeTableColumn', () => {
   const table: ParsedTable = {
     header: ['A', 'B'],
     aligns: ['left', 'right'],
-    rows: [['1', '2']]
+    rows: [['1', '2']],
+    indent: ''
   }
 
   it('inserts a blank column at the given index', () => {
     expect(insertTableColumn(table, 1)).toEqual({
       header: ['A', 'Column 3', 'B'],
       aligns: ['left', '', 'right'],
-      rows: [['1', '', '2']]
+      rows: [['1', '', '2']],
+      indent: ''
     })
   })
 
@@ -241,12 +297,13 @@ describe('insertTableColumn / removeTableColumn', () => {
     expect(removeTableColumn(table, 0)).toEqual({
       header: ['B'],
       aligns: ['right'],
-      rows: [['2']]
+      rows: [['2']],
+      indent: ''
     })
   })
 
   it('refuses to remove the last remaining column', () => {
-    const oneCol: ParsedTable = { header: ['A'], aligns: [''], rows: [['1']] }
+    const oneCol: ParsedTable = { header: ['A'], aligns: [''], rows: [['1']], indent: '' }
     expect(removeTableColumn(oneCol, 0)).toEqual(oneCol)
   })
 })
@@ -272,7 +329,8 @@ describe('setCell', () => {
     rows: [
       ['1', '2'],
       ['3', '4']
-    ]
+    ],
+    indent: ''
   }
 
   it('replaces a body cell without touching the others', () => {
@@ -327,7 +385,8 @@ describe('pasteGrid', () => {
   const table: ParsedTable = {
     header: ['A', 'B'],
     aligns: ['', ''],
-    rows: [['1', '2']]
+    rows: [['1', '2']],
+    indent: ''
   }
 
   it('fills cells from the given corner, leaving the rest alone', () => {

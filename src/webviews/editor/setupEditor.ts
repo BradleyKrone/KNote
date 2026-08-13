@@ -99,7 +99,19 @@ export function createEditor(opts: CreateEditorOptions): EditorView {
       highlightActiveLine(),
       drawSelection(),
       EditorView.lineWrapping,
-      markdown({ extensions: [Strikethrough, Table, Autolink], codeLanguages: codeLanguageFor }),
+      markdown({
+        // `remove: ['IndentedCode']`: KNote never authors 4-space indented code
+        // blocks (Insert ▸ Code block always fences with ```), but `indentTable`
+        // (tableEdit.ts) nests a table under a task by indenting its raw lines
+        // with plain spaces — nothing but visual styling, not real block
+        // nesting. Without this, a table indented two "Indent table" clicks (4
+        // spaces) or more stops parsing as a `Table` node and instead becomes an
+        // indented `CodeBlock`, which drops it out of tableRender's rendering
+        // and out of readTableCtx's right-click detection (tableEdit.ts) — the
+        // Table submenu simply stops appearing.
+        extensions: [Strikethrough, Table, Autolink, { remove: ['IndentedCode'] }],
+        codeLanguages: codeLanguageFor
+      }),
       syntaxHighlighting(knoteHighlightStyle, { fallback: true }),
       // Before tableRender: its decorations read the active-cell / table-source
       // state fields, and a state field can only read one declared before it.

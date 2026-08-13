@@ -7,6 +7,14 @@ export interface ParsedTable {
   header: string[]
   aligns: Align[]
   rows: string[][]
+  /**
+   * The block's leading whitespace, taken from its first line — how a table
+   * nests under a task (`indentTable` in tableEdit.ts). Carried on the model so
+   * `parseTable` → transform → `serializeTable` is a true round trip: every
+   * structural op rewrites the whole block, and without this an indented table
+   * would spring back flush-left the first time a row or column was touched.
+   */
+  indent: string
 }
 
 /** Split one pipe-table row into trimmed cell strings (handles `\|` escapes). */
@@ -51,7 +59,7 @@ export function parseAligns(line: string): Align[] {
  */
 export function parseTable(raw: string): ParsedTable {
   const lines = raw.split(/\r?\n/).filter((l) => l.trim() !== '')
-  if (lines.length === 0) return { header: [], aligns: [], rows: [] }
+  if (lines.length === 0) return { header: [], aligns: [], rows: [], indent: '' }
 
   const header = splitRow(lines[0])
   const aligns = lines.length > 1 ? parseAligns(lines[1]) : []
@@ -60,7 +68,23 @@ export function parseTable(raw: string): ParsedTable {
     const cells = splitRow(lines[r])
     rows.push(header.map((_, i) => cells[i] ?? ''))
   }
-  return { header, aligns, rows }
+  return { header, aligns, rows, indent: leadingWhitespace(lines[0]) }
+}
+
+/** A line's leading spaces/tabs. */
+function leadingWhitespace(lineText: string): string {
+  return /^[ \t]*/.exec(lineText)![0]
+}
+
+/**
+ * Index just past the line's opening pipe, skipping any leading indentation
+ * first — a table nested under a task (see `indentTable` in tableEdit.ts) is
+ * indented with plain spaces, so the opening `|` isn't necessarily at index 0
+ * the way `splitRow`'s own `line.trim()` assumes.
+ */
+function afterOpenPipe(lineText: string): number {
+  const indent = leadingWhitespace(lineText).length
+  return lineText[indent] === '|' ? indent + 1 : indent
 }
 
 /**
@@ -70,7 +94,7 @@ export function parseTable(raw: string): ParsedTable {
  * editing view back to a column.
  */
 export function columnAtOffset(lineText: string, offset: number): number {
-  const start = lineText.startsWith('|') ? 1 : 0
+  const start = afterOpenPipe(lineText)
   let col = 0
   for (let i = start; i < offset && i < lineText.length; i++) {
     if (lineText[i] === '\\' && lineText[i + 1] === '|') {
@@ -90,7 +114,7 @@ export function columnAtOffset(lineText: string, offset: number): number {
  * alignment while being typed into, instead of drifting with the raw pipes.
  */
 export function cellOffsets(lineText: string): Array<{ from: number; to: number }> {
-  const start = lineText.startsWith('|') ? 1 : 0
+  const start = afterOpenPipe(lineText)
   const end =
     lineText.endsWith('|') && !lineText.endsWith('\\|') ? lineText.length - 1 : lineText.length
   const ranges: Array<{ from: number; to: number }> = []
@@ -154,17 +178,20 @@ function alignDelim(align: Align, width: number): string {
 /**
  * Serialize a table model back to raw pipe-table markdown, padding every
  * column to its widest cell (min width 3) so columns line up when the raw
- * pipes are shown in the editing view.
+ * pipes are shown in the editing view. Every line carries the block's own
+ * `indent`, so rewriting a table nested under a task keeps it nested.
  */
 export function serializeTable(table: ParsedTable): string {
-  const { header, aligns, rows } = table
+  const { header, aligns, rows, indent } = table
   const widths = columnWidths(table)
   const pad = (cells: string[]): string =>
-    '| ' + cells.map((c, i) => escapeCell(c ?? '').padEnd(widths[i])).join(' | ') + ' |'
+    indent + '| ' + cells.map((c, i) => escapeCell(c ?? '').padEnd(widths[i])).join(' | ') + ' |'
 
   const lines: string[] = []
   lines.push(pad(header))
-  lines.push('| ' + widths.map((w, i) => alignDelim(aligns[i] ?? '', w)).join(' | ') + ' |')
+  lines.push(
+    indent + '| ' + widths.map((w, i) => alignDelim(aligns[i] ?? '', w)).join(' | ') + ' |'
+  )
   for (const row of rows) lines.push(pad(header.map((_, i) => row[i] ?? '')))
   return lines.join('\n')
 }
@@ -177,6 +204,7 @@ export function serializeTable(table: ParsedTable): string {
  */
 export function blankRowSource(table: ParsedTable): string {
   return (
+    table.indent +
     '| ' +
     columnWidths(table)
       .map((w) => ' '.repeat(w))
@@ -190,7 +218,7 @@ export function emptyTableSource(rows: number, cols: number): string {
   const header = Array.from({ length: cols }, (_, i) => `Column ${i + 1}`)
   const aligns: Align[] = Array.from({ length: cols }, () => '')
   const body = Array.from({ length: rows }, () => Array.from({ length: cols }, () => ''))
-  return serializeTable({ header, aligns, rows: body })
+  return serializeTable({ header, aligns, rows: body, indent: '' })
 }
 
 /** Insert a blank data row at `atIndex` (0-based; `rows.length` appends). */
@@ -220,7 +248,7 @@ export function insertTableColumn(table: ParsedTable, atIndex: number): ParsedTa
     r.splice(atIndex, 0, '')
     return r
   })
-  return { header, aligns, rows }
+  return { ...table, header, aligns, rows }
 }
 
 /** Remove the column at `atIndex`. No-op if it's the only column or out of range. */
@@ -235,7 +263,7 @@ export function removeTableColumn(table: ParsedTable, atIndex: number): ParsedTa
     r.splice(atIndex, 1)
     return r
   })
-  return { header, aligns, rows }
+  return { ...table, header, aligns, rows }
 }
 
 /**

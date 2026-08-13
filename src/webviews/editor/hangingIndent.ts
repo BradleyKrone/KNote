@@ -17,7 +17,7 @@
 
 import { LIST_ITEM_RE, TASK_LINE_RE } from '@shared/parser/patterns'
 
-const SPACE_EM = 0.274
+export const SPACE_EM = 0.274
 const DIGIT_EM = 0.539
 const ORDERED_DOT_EM = 0.217
 const ORDERED_PAREN_EM = 0.302
@@ -42,7 +42,7 @@ const CHECKBOX_EM = 0.85 * (1.05 + 0.25)
  * counts a tab as 2 because it measures structural nesting depth, not pixels.
  */
 const TAB_SIZE = 4
-function leadingColumns(indent: string): number {
+export function leadingColumns(indent: string): number {
   let col = 0
   for (const ch of indent) {
     if (ch === '\t') col += TAB_SIZE - (col % TAB_SIZE)

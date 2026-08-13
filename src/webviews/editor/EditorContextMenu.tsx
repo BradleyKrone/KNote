@@ -41,6 +41,8 @@ import {
   ExternalLink,
   Eye,
   Flag,
+  IndentDecrease,
+  IndentIncrease,
   Italic,
   Link,
   Link2,
@@ -115,6 +117,7 @@ import { commitActiveCell, setTableSource } from './tableCellEdit'
 import {
   deleteColumn,
   deleteRow,
+  indentTable,
   insertColumn,
   insertRow,
   insertTableAt,
@@ -441,6 +444,20 @@ function tableItems(
       icon: <Trash2 size={ICON} />,
       disabled: table.table.header.length <= 1,
       onClick: run(() => deleteColumn(view, table, table.colIndex))
+    },
+    { separator: true },
+    {
+      // The table block is atomic (tableRender.ts), so there's no caret to park
+      // on one of its own lines to select-and-Tab it the ordinary way — this is
+      // how it nests under a task's checkbox instead.
+      label: 'Indent table',
+      icon: <IndentIncrease size={ICON} />,
+      onClick: run(() => indentTable(view, table, 'more'))
+    },
+    {
+      label: 'Outdent table',
+      icon: <IndentDecrease size={ICON} />,
+      onClick: run(() => indentTable(view, table, 'less'))
     },
     { separator: true },
     {

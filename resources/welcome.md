@@ -52,8 +52,10 @@ Markdown:
   Pasting spreadsheet data (tab-separated, one line per row) fills the cells
   around the caret and grows the table to fit. Right-click anywhere for
   **Insert ▸ Table…** (pick a row/column count), or right-click a cell for
-  **Table ▸** to insert/delete the row or column under it — or
-  **Table ▸ Edit table source** to hand-edit the raw Markdown.
+  **Table ▸** to insert/delete the row or column under it, **Table ▸ Indent
+  table** / **Outdent table** to nest the whole table under a task (so it's
+  part of that checkbox item) or pull it back out, or **Table ▸ Edit table
+  source** to hand-edit the raw Markdown.
 - **`` ```mermaid `` code blocks render as real diagrams** (flowcharts,
   sequence diagrams, and anything else Mermaid supports); click a diagram to
   drop your cursor in and edit the raw source, exactly like every other
