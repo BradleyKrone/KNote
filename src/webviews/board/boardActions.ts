@@ -5,7 +5,12 @@
 
 import dayjs from 'dayjs'
 import { isStaleError } from '@shared/errors'
-import { ARCHIVED_CHAR, statusChangedLineForTask, TASK_LINE_RE } from '@shared/parser/patterns'
+import {
+  ARCHIVED_CHAR,
+  STATUS_CHANGED_UNSET,
+  statusChangedLineForTask,
+  TASK_LINE_RE
+} from '@shared/parser/patterns'
 import {
   anchorLine,
   blockIdOf,
@@ -174,8 +179,12 @@ export async function deleteCard(card: BoardCard): Promise<void> {
  * "Add card": appends a checkbox line to the scoped note, or to this week's
  * weekly note when the board isn't scoped to one note (global/folder view).
  * `reasonLine`, when given, is appended as a second (attached-note) line
- * directly under the new task; `bodyText` (the new-card dialog's notes box)
- * is re-indented and appended under that, same as an existing task's notes.
+ * directly under the new task, then the same `Status Changed: n/a` +
+ * `Date Entered: <today>` stamp a task typed straight into a note gets
+ * (`insertTaskNote` / `planTaskNoteSeed`) — a board-created card should carry
+ * the same template as any other, not a bare checkbox. `bodyText` (the
+ * new-card dialog's notes box) is re-indented and appended under that, same
+ * as an existing task's notes.
  */
 export async function addCard(
   scope: BoardScope,
@@ -185,9 +194,12 @@ export async function addCard(
   reasonLine?: string
 ): Promise<void> {
   const taskLine = `- [${statusChar}] ${text.trim()}`
+  const childIndent = taskChildIndent(taskLine)
   const lines = [taskLine]
   if (reasonLine !== undefined) lines.push(reasonLine)
-  lines.push(...noteBodyFromText(bodyText, taskChildIndent(taskLine)))
+  lines.push(`${childIndent}- Status Changed: ${STATUS_CHANGED_UNSET}`)
+  lines.push(`${childIndent}- Date Entered: ${dayjs().format('M/D/YYYY')}`)
+  lines.push(...noteBodyFromText(bodyText, childIndent))
   const line = lines.join('\n')
   if (scope.kind === 'note') {
     await host.appendToNote(scope.path, line)

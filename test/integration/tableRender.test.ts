@@ -31,6 +31,18 @@
 //   - right-click Table ▸ Edit table source, then click away
 //   - scroll a focused cell out of the viewport and back
 //   - find/replace hitting text inside a table reveals its source
+//   - right-click a cell, Table ▸ Indent table; the whole rendered grid
+//     visibly shifts right one indent level (not just the source text), and
+//     Outdent table on the same table shifts it back — including from the raw
+//     pipe (Edit table source) view
+//   - indent a table under a task until it's the last thing in that task's
+//     detail block: the table's own left/right border and background join
+//     the task's group card, with a matching rounded bottom edge; outdent it
+//     back out and the card closes above it instead
+//   - right-click a cell of an already-indented table: Table ▸ is still there,
+//     and its row/column ops act on that cell and leave the table indented.
+//     Tab and the arrow keys still cross cells inside it rather than dropping
+//     out of the table
 
 import * as assert from 'assert'
 import * as vscode from 'vscode'
@@ -67,11 +79,29 @@ const CONTENT = [
 const CRLF_NOTE = 'Table Test CRLF.md'
 const CRLF_CONTENT = CONTENT.replace(/\n/g, '\r\n')
 
+// A table nested under a task (right-click Table ▸ Indent table). Its lines are
+// indented past the 4 spaces CommonMark would otherwise read as a code block,
+// which is the shape that used to stop parsing as a table altogether.
+const NESTED_NOTE = 'Table Test Nested.md'
+const NESTED_CONTENT = [
+  '# Nested Table Test',
+  '',
+  '- [ ] Restock the bins',
+  '      | Name | Qty |',
+  '      | ---- | --: |',
+  '      | Bolt | 12  |',
+  '      | Nut  | 3   |',
+  '',
+  'Some prose after the task.',
+  ''
+].join('\n')
+
 describe('pipe tables in the live-preview editor', () => {
   before(async () => {
     await activateExtension()
     await writeNoteOnDisk(NOTE, CONTENT)
     await writeNoteOnDisk(CRLF_NOTE, CRLF_CONTENT)
+    await writeNoteOnDisk(NESTED_NOTE, NESTED_CONTENT)
   })
 
   afterEach(async () => {
@@ -113,5 +143,20 @@ describe('pipe tables in the live-preview editor', () => {
       message: 'CRLF content to remain byte-identical to the fixture'
     })
     assert.strictEqual(await readNoteOnDisk(CRLF_NOTE), CRLF_CONTENT)
+  })
+
+  it('leaves a table nested under a task byte-identical on disk', async () => {
+    // The indentation is the whole point: it's what an over-eager re-pad on
+    // open would strip, and it's what the right-click menu's hit-testing
+    // depends on still being there.
+    await vscode.commands.executeCommand('knote.openLivePreview', vaultUri(NESTED_NOTE))
+    await waitFor(() => activeCustomViewType() === 'knote.liveEditor', {
+      message: 'active tab to become the live-preview custom editor'
+    })
+
+    await waitFor(async () => (await readNoteOnDisk(NESTED_NOTE)) === NESTED_CONTENT, {
+      message: 'nested-table content to remain byte-identical to the fixture'
+    })
+    assert.strictEqual(await readNoteOnDisk(NESTED_NOTE), NESTED_CONTENT)
   })
 })

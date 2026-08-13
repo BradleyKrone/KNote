@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
-import { Archive, CalendarDays, Hourglass, Link2, Package, Pencil, X } from 'lucide-react'
+import { Archive, CalendarDays, Hourglass, Link2, Package, X } from 'lucide-react'
 import { parseDeliverableTag } from '@shared/parser/patterns'
 import { isTaskDone } from '@shared/deliverables'
 import { confirm } from '../shared/stores'
@@ -177,18 +177,19 @@ export function Card({
       ]
         .filter(Boolean)
         .join(' ')}
-      title="Double-click to open this task in its note"
+      title="Double-click to edit this task"
       {...drag.listeners}
       {...drag.attributes}
-      // The card body is the open-source affordance. The note chip below does
-      // the same on a single click, but it's hidden whenever the note name is
-      // already obvious (grouped board, per-note board) — this is what's left,
-      // so it can't be gated on `showNote`.
+      // The card body opens the task-and-block edit dialog. The note chip
+      // below opens the real note on a single click instead — the one
+      // remaining way to jump straight to the file — but it's hidden
+      // whenever the note name is already obvious (grouped board, per-note
+      // board), so it can't be relied on as the card's only affordance.
       onDoubleClick={() => {
         // Double-clicking text selects a word; drop it so the card doesn't
-        // keep a stray highlight once the editor takes focus.
+        // keep a stray highlight once the dialog takes focus.
         window.getSelection()?.removeAllRanges()
-        openSource(card)
+        editTaskNote(card)
       }}
     >
       <DeliverableBadge card={card} />
@@ -233,17 +234,6 @@ export function Card({
           }}
         >
           <Link2 size={12} />
-        </button>
-        <button
-          className="board-card-action"
-          title="Edit task and its notes"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation()
-            editTaskNote(card)
-          }}
-        >
-          <Pencil size={12} />
         </button>
         <button
           className="board-card-action"

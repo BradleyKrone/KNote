@@ -56,6 +56,59 @@ export const knoteHighlightStyle = HighlightStyle.define([
   { tag: t.invalid, color: 'var(--vscode-errorForeground)' }
 ])
 
+/**
+ * CM6 tooltip styling (autocomplete popup + z-index), factored out of
+ * `knoteTheme` so the board task dialog's lightweight title field
+ * (`board/taskTitleField.ts`) can share it without pulling in the rest of
+ * the full note editor's theme — the popup should look and read the same
+ * wherever it opens.
+ */
+export const knoteTooltipTheme = EditorView.theme({
+  // Tooltips (autocomplete, hover previews) render via `tooltips({ parent:
+  // document.body })`, escaping the board task dialog's `.modal-overlay`
+  // (z-index 2000, its own stacking context) — CM6's base theme z-index of
+  // 500 loses to that sibling and renders invisibly behind it.
+  '.cm-tooltip': {
+    zIndex: 2500
+  },
+  // Autocomplete popup (#tags, @deliverables and [[wiki links]]), mapped onto
+  // VS Code's suggestion-widget theme colors so it matches the native editor
+  // instead of CM6's unthemed default (white background, black text).
+  '.cm-tooltip.cm-tooltip-autocomplete': {
+    border: '1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border, transparent))',
+    borderRadius: '4px',
+    backgroundColor:
+      'var(--vscode-editorSuggestWidget-background, var(--vscode-editorWidget-background))',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+  },
+  '.cm-tooltip-autocomplete > ul': {
+    fontFamily: "var(--vscode-font-family, -apple-system, 'Segoe UI', system-ui, sans-serif)",
+    fontSize: '13px',
+    maxHeight: '16em'
+  },
+  '.cm-tooltip-autocomplete > ul > li': {
+    padding: '2px 8px',
+    color: 'var(--vscode-editorSuggestWidget-foreground, var(--vscode-editor-foreground))'
+  },
+  '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+    backgroundColor:
+      'var(--vscode-editorSuggestWidget-selectedBackground, var(--vscode-list-activeSelectionBackground))',
+    color:
+      'var(--vscode-editorSuggestWidget-selectedForeground, var(--vscode-list-activeSelectionForeground))'
+  },
+  '.cm-completionMatchedText': {
+    color:
+      'var(--vscode-editorSuggestWidget-highlightForeground, var(--vscode-list-highlightForeground))',
+    textDecoration: 'none',
+    fontWeight: 'bold'
+  },
+  '.cm-completionDetail': {
+    color: 'var(--vscode-descriptionForeground)',
+    fontStyle: 'normal',
+    marginLeft: '0.75em'
+  }
+})
+
 export const knoteTheme = EditorView.theme({
   '&': {
     color: 'var(--vscode-editor-foreground)',
@@ -102,41 +155,6 @@ export const knoteTheme = EditorView.theme({
   },
   '.cm-activeLine': {
     backgroundColor: 'var(--vscode-editor-lineHighlightBackground, transparent)'
-  },
-  // Autocomplete popup (#tags and [[wiki links]]), mapped onto VS Code's
-  // suggestion-widget theme colors so it matches the native editor.
-  '.cm-tooltip.cm-tooltip-autocomplete': {
-    border: '1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border, transparent))',
-    borderRadius: '4px',
-    backgroundColor:
-      'var(--vscode-editorSuggestWidget-background, var(--vscode-editorWidget-background))',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
-  },
-  '.cm-tooltip-autocomplete > ul': {
-    fontFamily: "var(--vscode-font-family, -apple-system, 'Segoe UI', system-ui, sans-serif)",
-    fontSize: '13px',
-    maxHeight: '16em'
-  },
-  '.cm-tooltip-autocomplete > ul > li': {
-    padding: '2px 8px',
-    color: 'var(--vscode-editorSuggestWidget-foreground, var(--vscode-editor-foreground))'
-  },
-  '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
-    backgroundColor:
-      'var(--vscode-editorSuggestWidget-selectedBackground, var(--vscode-list-activeSelectionBackground))',
-    color:
-      'var(--vscode-editorSuggestWidget-selectedForeground, var(--vscode-list-activeSelectionForeground))'
-  },
-  '.cm-completionMatchedText': {
-    color:
-      'var(--vscode-editorSuggestWidget-highlightForeground, var(--vscode-list-highlightForeground))',
-    textDecoration: 'none',
-    fontWeight: 'bold'
-  },
-  '.cm-completionDetail': {
-    color: 'var(--vscode-descriptionForeground)',
-    fontStyle: 'normal',
-    marginLeft: '0.75em'
   },
   // Misspelled words: a red wavy underline, matching VS Code's own squiggles
   // (see spellcheck/spellCheck.ts). Uses text-decoration so it follows the word

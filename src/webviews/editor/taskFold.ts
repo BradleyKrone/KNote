@@ -96,6 +96,30 @@ const taskFolding = [
 // Group box
 // ---------------------------------------------------------------------------
 
+/**
+ * The last line of the top-level task's group that encloses `lineNumber`, or
+ * null when no task's indented block reaches that far. Shared with
+ * tableRender.ts: a rendered table replaces its own lines with one block
+ * widget, so unlike ordinary text it never gets `buildGroupBoxes`'s per-line
+ * `cm-knote-group-*` decorations — there's no `.cm-line` left for them to
+ * attach to — and has to ask this directly to draw its own matching border.
+ */
+export function enclosingGroupLastLine(state: EditorState, lineNumber: number): number | null {
+  const doc = state.doc
+  for (let n = lineNumber - 1; n >= 1; n--) {
+    const line = doc.line(n)
+    const m = TASK_LINE_RE.exec(line.text)
+    if (m && isTopLevelTask(state, m[1])) {
+      const last = lastChildLine(state, n)
+      return lineNumber <= last ? last : null
+    }
+    // Flush-left and not a task: the indented chain back to any task already
+    // broke here, so no task further up could reach `lineNumber` either.
+    if (line.text.trim() !== '' && indentColumns(line.text) === 0) return null
+  }
+  return null
+}
+
 /** Start positions of the currently-folded ranges. */
 function foldedStarts(state: EditorState): Set<number> {
   const starts = new Set<number>()

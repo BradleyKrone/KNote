@@ -84,18 +84,50 @@ const cellCommit = Annotation.define<number>()
 let nextSessionId = 1
 
 /**
- * The table block containing `pos`. Shared with tableEdit.ts's structural ops —
- * it lives here so tableEdit can depend on this module rather than the reverse.
+ * The table block containing `pos`, as whole lines. Shared with tableEdit.ts's
+ * structural ops — it lives here so tableEdit can depend on this module rather
+ * than the reverse.
+ *
+ * Both halves of that "whole lines" matter for an indented table (`indentTable`
+ * in tableEdit.ts, nesting one under a task):
+ *
+ *  - the `Table` syntax node starts at the first `|`, *past* the indent, but
+ *    every caller's `tableFrom` is a line start — that's what tableRender's
+ *    replace decoration spans, what `posAtDOM` on the rendered widget answers,
+ *    and what `cellRange` (tableCellLogic.ts) insists on. Returning the node's
+ *    own `from` made the two disagree by exactly the indent width, so a
+ *    right-click on an indented table resolved no table at all and the Table
+ *    submenu vanished.
+ *  - `pos` itself can land in the leading indent — a click in the rendered
+ *    widget's left gutter, or a `tableFrom` line start — which is outside the
+ *    node, so the search retries from the line's first non-blank character.
  */
 export function findTableAt(
   state: EditorState,
   pos: number
 ): { from: number; to: number; raw: string } | null {
+  return tableBlockAt(state, pos) ?? tableBlockAt(state, textStartOf(state, pos))
+}
+
+function tableBlockAt(
+  state: EditorState,
+  pos: number
+): { from: number; to: number; raw: string } | null {
   for (let n = syntaxTree(state).resolveInner(pos, 1); n; n = n.parent!) {
-    if (n.name === 'Table') return { from: n.from, to: n.to, raw: state.sliceDoc(n.from, n.to) }
+    if (n.name === 'Table') {
+      const first = state.doc.lineAt(n.from)
+      const last = state.doc.lineAt(Math.max(n.from, n.to - 1))
+      return { from: first.from, to: last.to, raw: state.sliceDoc(first.from, last.to) }
+    }
     if (!n.parent) break
   }
   return null
+}
+
+/** Offset of the first non-blank character on the line holding `pos`. */
+function textStartOf(state: EditorState, pos: number): number {
+  const line = state.doc.lineAt(pos)
+  return line.from + (/^[ \t]*/.exec(line.text)?.[0].length ?? 0)
 }
 
 function changeTouches(tr: Transaction, from: number, to: number): boolean {

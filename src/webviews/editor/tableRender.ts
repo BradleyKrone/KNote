@@ -28,21 +28,48 @@ import {
   tableSourceField,
   type ActiveCell
 } from './tableCellEdit'
+import { leadingColumns, SPACE_EM } from './hangingIndent'
+import { enclosingGroupLastLine } from './taskFold'
 import { maskActiveCell } from './tableCellLogic'
 import { cellOffsets, columnWidths, parseTable, type Align } from './tableModel'
 
 /** A cell's markdown `<br>` breaks, split out so they render as real ones. */
 const BR = /<br\s*\/?>/i
 
+/**
+ * The table block's own leading whitespace — from `indentTable` (tableEdit.ts)
+ * nesting it under a task, or hand-typed — in em, the same space-width used
+ * for hanging indent. Needed because the widget below replaces the block's
+ * raw text wholesale, so any indentation in the source would otherwise be
+ * silently swallowed rather than rendered: unlike ordinary text, where leading
+ * spaces are just glyphs that push the line right on their own, nothing here
+ * paints them for us.
+ */
+export function leadingIndentEm(raw: string): number {
+  const indent = /^[ \t]*/.exec(raw)?.[0] ?? ''
+  return indent ? leadingColumns(indent) * SPACE_EM : 0
+}
+
 function sameCell(a: ActiveCell | null, b: ActiveCell | null): boolean {
   if (!a || !b) return a === b
   return a.id === b.id && a.row === b.row && a.col === b.col
 }
 
+/** Whether a table falls inside a task's group card, and whether it closes it. */
+export interface TableGroupInfo {
+  isLast: boolean
+}
+
+function sameGroup(a: TableGroupInfo | null, b: TableGroupInfo | null): boolean {
+  if (!a || !b) return a === b
+  return a.isLast === b.isLast
+}
+
 class TableWidget extends WidgetType {
   constructor(
     private readonly raw: string,
-    private readonly active: ActiveCell | null
+    private readonly active: ActiveCell | null,
+    private readonly group: TableGroupInfo | null
   ) {
     super()
   }
@@ -50,6 +77,7 @@ class TableWidget extends WidgetType {
   eq(other: TableWidget): boolean {
     return (
       sameCell(other.active, this.active) &&
+      sameGroup(other.group, this.group) &&
       maskActiveCell(other.raw, other.active) === maskActiveCell(this.raw, this.active)
     )
   }
@@ -57,6 +85,18 @@ class TableWidget extends WidgetType {
   toDOM(view: EditorView): HTMLElement {
     const wrap = document.createElement('div')
     wrap.className = 'cm-md-table-wrap'
+    // The widget replaces the block's raw text wholesale, so unlike ordinary
+    // text it can't pick up buildGroupBoxes's per-line `cm-knote-group-*`
+    // decorations (there's no `.cm-line` left for them to attach to) — apply
+    // the same classes here so a table nested under a task still reads as
+    // part of that task's card instead of dropping out of it.
+    let indentEm = leadingIndentEm(this.raw)
+    if (this.group) {
+      wrap.classList.add('cm-knote-group-line')
+      if (this.group.isLast) wrap.classList.add('cm-knote-group-last')
+      indentEm += 0.7 // matches --knote-group-line's own padding-left
+    }
+    if (indentEm) wrap.style.paddingLeft = `${indentEm}em`
     const table = buildTable(this.raw)
     wrap.appendChild(table)
 
@@ -207,9 +247,14 @@ function buildDecorations(state: EditorState): TableDecorations {
       } else {
         const raw = doc.sliceString(first.from, last.to)
         const cell = active && active.tableFrom === first.from ? active : null
+        const groupLastLine = enclosingGroupLastLine(state, firstNum)
+        const group =
+          groupLastLine != null && groupLastLine >= lastNum
+            ? { isLast: groupLastLine === lastNum }
+            : null
         decorations.push(
           Decoration.replace({
-            widget: new TableWidget(raw, cell),
+            widget: new TableWidget(raw, cell, group),
             block: true
           }).range(first.from, last.to)
         )

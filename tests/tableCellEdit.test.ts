@@ -19,7 +19,7 @@ import {
   setTableSource,
   tableCellEdit
 } from '@/editor/tableCellEdit'
-import { tableRender } from '@/editor/tableRender'
+import { leadingIndentEm, tableRender } from '@/editor/tableRender'
 
 const TABLE = ['| Name | Qty |', '| ---- | --- |', '| Bolt | 12  |', '| Nut  | 3   |'].join('\n')
 const LEAD = 'intro\n\n'
@@ -32,7 +32,7 @@ function mkState(doc = DOC): EditorState {
   const state = EditorState.create({
     doc,
     extensions: [
-      markdown({ extensions: [Strikethrough, Table, Autolink] }),
+      markdown({ extensions: [Strikethrough, Table, Autolink, { remove: ['IndentedCode'] }] }),
       // Order matters: tableRender's decorations read these fields, and a state
       // field can only read one declared before it.
       tableCellEdit,
@@ -136,5 +136,44 @@ describe('activeCellField', () => {
   it('is cleared by an explicit deactivate', () => {
     const state = apply(activate(mkState()), { effects: setActiveCell.of(null) })
     expect(state.field(activeCellField)).toBeNull()
+  })
+
+  // Regression: on a table nested under a task, `findTableAt` couldn't resolve
+  // the session's own `tableFrom` (a line start, sitting in the indent rather
+  // than inside the `Table` node), so every check below read "the table is
+  // gone" and ended the session — which also made Tab/Enter/arrow navigation
+  // fall straight out of an indented table (see `move` in tableCellEdit.ts).
+  it('survives an unrelated edit when the table is indented under a task', () => {
+    const nested = TABLE.split('\n')
+      .map((l) => `  ${l}`)
+      .join('\n')
+    const doc = `- [ ] Restock the bins\n${nested}\n\nouter\n`
+    const from = doc.indexOf('  | Name')
+    let state = apply(mkState(doc), {
+      effects: setActiveCell.of({ tableFrom: from, row: 0, col: 0, id: 7 })
+    })
+    state = apply(state, { changes: { from: 0, insert: 'x' } })
+    expect(state.field(activeCellField)).not.toBeNull()
+  })
+})
+
+describe("leadingIndentEm (rendering indentTable's leading whitespace)", () => {
+  // The em width of one space, restated from hangingIndent.ts so a change
+  // there shows up here as a deliberate edit rather than a silent drift.
+  const SPACE = 0.274
+
+  it('is zero for a flush-left table, so no padding is added', () => {
+    expect(leadingIndentEm(TABLE)).toBe(0)
+  })
+
+  it("measures the raw block's own leading whitespace, matching indentTable's 2-space unit", () => {
+    const indented = TABLE.split('\n')
+      .map((l) => `  ${l}`)
+      .join('\n')
+    expect(leadingIndentEm(indented)).toBeCloseTo(2 * SPACE, 3)
+  })
+
+  it('expands a leading tab to the next multiple of 4, matching CSS tab-size', () => {
+    expect(leadingIndentEm(`\t${TABLE}`)).toBeCloseTo(4 * SPACE, 3)
   })
 })

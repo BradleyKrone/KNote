@@ -6,7 +6,8 @@
 // parseTable, per the GFM spec) are dropped for good the first time a table
 // with that quirk is touched here.
 
-import type { EditorState } from '@codemirror/state'
+import { indentLess, indentMore } from '@codemirror/commands'
+import { EditorSelection, type EditorState } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import { activateCell, findTableAt } from './tableCellEdit'
 import {
@@ -77,8 +78,14 @@ export function tableCtxFromSource(state: EditorState, pos: number): TableCtx | 
  * Row/column context for a right-click at `pos` on `targetEl` — from DOM
  * hit-testing when the table is rendered as a real `<table>` (see
  * tableRender.ts), or from raw pipe-text offsets when it's in the
- * source-revealed editing view. Null when the click isn't inside a table, or
- * lands in the rendered widget's own padding rather than on a cell.
+ * source-revealed editing view. Null when the click isn't inside a table at
+ * all.
+ *
+ * A click inside the rendered widget's own padding (not on a cell) falls back
+ * to the position-based lookup too, rather than coming up empty: an indented
+ * table (`indentTable`, below) grows that padding into a whole left gutter —
+ * `leadingIndentEm` in tableRender.ts — that's easy to land a right-click in
+ * without a Table submenu turning up at all.
  *
  * Must be called before anything dispatches: `posAtDOM` only answers for DOM
  * CodeMirror still owns, and any transaction that changes the active cell
@@ -90,9 +97,8 @@ export function readTableCtx(
   targetEl: HTMLElement | null
 ): TableCtx | null {
   const wrap = targetEl?.closest('.cm-md-table-wrap')
-  if (wrap) {
-    const cell = targetEl?.closest('td, th') as HTMLTableCellElement | null
-    if (!cell) return null
+  const cell = wrap ? (targetEl?.closest('td, th') as HTMLTableCellElement | null) : null
+  if (wrap && cell) {
     const tableFrom = posAtDOMSafe(view, wrap)
     // Fall back to the mouse position when the widget's DOM can't be placed:
     // better a table resolved from coordinates than the wrong table entirely.
@@ -190,4 +196,26 @@ export function insertTableAt(view: EditorView, rows: number, cols: number): voi
     { tableFrom: head + lead.length, row: -1, col: 0 },
     { from: head, insert: `${lead}${table}${trail}` }
   )
+}
+
+/**
+ * Indent or dedent every line of the whole table by one indent unit, as a
+ * single edit — how a table nests under a task's checkbox line, since the
+ * table's own lines are atomic (see tableRender.ts) and a caret can never
+ * rest on one to select and Tab it the ordinary way. Driven from the
+ * right-click Table menu rather than a keybinding: that menu already
+ * resolves `ctx` reliably from wherever the user actually clicked (a cell,
+ * or the raw source view), so this needs no caret-position guesswork of
+ * its own.
+ */
+export function indentTable(view: EditorView, ctx: TableCtx, dir: 'more' | 'less'): void {
+  const found = findTableAt(view.state, ctx.tableFrom)
+  if (!found) return
+  const to = Math.max(found.from, found.to - 1)
+  // A selection-only dispatch isn't a history step on its own (see
+  // EditorView docs on annotations.addToHistory), so this doesn't add a
+  // separate undo entry ahead of the indent/dedent itself.
+  view.dispatch({ selection: EditorSelection.range(found.from, to) })
+  ;(dir === 'more' ? indentMore : indentLess)(view)
+  view.focus()
 }

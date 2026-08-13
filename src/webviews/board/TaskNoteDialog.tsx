@@ -10,6 +10,7 @@ import { createEditor } from '../editor/setupEditor'
 import { TaskMetaToolbar } from '../shared/components/TaskMetaToolbar'
 import { confirm, promptReason } from '../shared/stores'
 import { addCard, updateCardNote } from './boardActions'
+import { createTaskTitleEditor, syncTaskTitleEditor } from './taskTitleField'
 import { useTaskNoteStore } from './taskNoteStore'
 
 /**
@@ -47,7 +48,8 @@ export function TaskNoteDialog(): React.JSX.Element | null {
   // view, so its first render has to wait for the editor to exist.
   const [view, setView] = useState<EditorView | null>(null)
   const initial = useRef({ taskText: '' })
-  const taskRef = useRef<HTMLTextAreaElement>(null)
+  const titleCmHost = useRef<HTMLDivElement>(null)
+  const titleViewRef = useRef<EditorView | null>(null)
   const cmHost = useRef<HTMLDivElement>(null)
   // The keymap below is built once per card, but `save` closes over state that
   // changes on every keystroke — the ref is what keeps Ctrl+Enter from firing a
@@ -55,7 +57,7 @@ export function TaskNoteDialog(): React.JSX.Element | null {
   const saveRef = useRef<() => void>(() => {})
 
   useEffect(() => {
-    if (!target || !cmHost.current) return
+    if (!target || !cmHost.current || !titleCmHost.current) return
     // Without the `^anchor` — it's link plumbing, not task text, and tidying it
     // away here would break every link pointing at this task. The save puts it
     // back. A brand-new card starts blank.
@@ -64,6 +66,14 @@ export function TaskNoteDialog(): React.JSX.Element | null {
     setBodyDirty(false)
     setSaving(false)
     initial.current = { taskText: text }
+    const titleView = createTaskTitleEditor({
+      parent: titleCmHost.current,
+      doc: text,
+      placeholderText: '',
+      onChange: setTaskText,
+      onEnter: () => saveRef.current()
+    })
+    titleViewRef.current = titleView
     // Images, embeds and wiki links in the block resolve relative to the note
     // the card lives in, not to whatever note the board was opened from. A
     // new card scoped to the global/folder board has no note yet — it'll
@@ -104,10 +114,18 @@ export function TaskNoteDialog(): React.JSX.Element | null {
       ]
     })
     setView(created)
-    // The block is what the pencil is now for; the task line is one Tab away.
-    created.focus()
+    if (target.kind === 'create') {
+      // A brand-new task has no title yet — start the cursor there, not in
+      // the (empty) notes block.
+      titleView.focus()
+    } else {
+      // The block is what the pencil is now for; the task line is one Tab away.
+      created.focus()
+    }
     return () => {
       created.destroy()
+      titleView.destroy()
+      titleViewRef.current = null
       setView(null)
       setNotePath(null)
     }
@@ -193,23 +211,16 @@ export function TaskNoteDialog(): React.JSX.Element | null {
         <div className="task-note-title">
           {target.kind === 'edit' ? 'Edit task' : `New task — ${target.column.name}`}
         </div>
-        <TaskMetaToolbar value={taskText} onChange={setTaskText} textareaRef={taskRef} />
-        <textarea
-          ref={taskRef}
-          className="panel-input task-note-line"
-          rows={2}
+        <TaskMetaToolbar
           value={taskText}
-          placeholder="Task text — add #tags, 📅 2026-07-15, !! priority…"
-          onChange={(e) => setTaskText(e.target.value)}
-          onKeyDown={(e) => {
-            // A task line can't hold a newline, so plain Enter saves here —
-            // same as the old inline editor. In the notes box it must not.
-            if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
-              e.preventDefault()
-              save()
-            }
+          onChange={(next) => {
+            setTaskText(next)
+            if (titleViewRef.current) syncTaskTitleEditor(titleViewRef.current, next)
           }}
+          onDone={() => titleViewRef.current?.focus()}
         />
+        <div className="task-note-body-label">Title — #tags, 📅 dates, !! priority</div>
+        <div className="task-note-line" ref={titleCmHost} />
 
         {target.kind === 'edit' && (
           <div className="task-note-meta">

@@ -52,8 +52,10 @@ Markdown:
   Pasting spreadsheet data (tab-separated, one line per row) fills the cells
   around the caret and grows the table to fit. Right-click anywhere for
   **Insert ▸ Table…** (pick a row/column count), or right-click a cell for
-  **Table ▸** to insert/delete the row or column under it — or
-  **Table ▸ Edit table source** to hand-edit the raw Markdown.
+  **Table ▸** to insert/delete the row or column under it, **Table ▸ Indent
+  table** / **Outdent table** to nest the whole table under a task (so it's
+  part of that checkbox item) or pull it back out, or **Table ▸ Edit table
+  source** to hand-edit the raw Markdown.
 - **`` ```mermaid `` code blocks render as real diagrams** (flowcharts,
   sequence diagrams, and anything else Mermaid supports); click a diagram to
   drop your cursor in and edit the raw source, exactly like every other
@@ -131,8 +133,9 @@ Markdown:
 - **Tasks group into cards** — a top-level task with indented detail beneath
   it (its `Status Changed` / `Date Entered` / `Notes` block and any sub-tasks)
   is wrapped in a light box, so it's clear at a glance what belongs to which
-  task. A lone task with no detail isn't boxed. That box is exactly what the
-  board's card pencil opens for editing — see **✏️ Edit a task** below.
+  task. A lone task with no detail isn't boxed. That box is exactly what
+  double-clicking the board's card opens for editing — see **✏️ Edit a
+  task** below.
 - **Fold task detail — or a whole heading section — out of the way** — any line
   with indented content below it (a task's detail block and sub-tasks, nested
   lists, note bodies) gets a collapse arrow in the left gutter on hover, and so
@@ -275,7 +278,7 @@ task somewhere in your vault:
 
   Hover either chip for the distance in words ("in 4 days", "3 days ago") —
   the ⏳ follow-up chip also shows the reason the task is parked.
-- **✏️ Edit a task** — the pencil on a card opens a dialog holding the task line
+- **✏️ Edit a task** — double-clicking a card opens a dialog holding the task line
   (with the #tag / priority / 📅 due-date buttons) and, underneath it,
   **everything nested under that task**: its notes, its sub-tasks, *their*
   notes, nested bullets, tables and fenced code. Not a plain text box — it's the
@@ -305,10 +308,9 @@ task somewhere in your vault:
 - Cards also support archive (`- [a]` — struck through, off the board), delete,
   add-card (into the scoped note, or this week's weekly note when the board
   isn't scoped to one note), and same-note reordering.
-- **Jump to the task** — double-click a card to open its note at the task's
-  line. The note name under a card does the same on a single click, where it's
-  shown (it's hidden when the note is already obvious — grouped boards and
-  per-note boards).
+- **Jump to the task** — click the note name under a card to open its note
+  at the task's line, where it's shown (it's hidden when the note is
+  already obvious — grouped boards and per-note boards).
 - **🔗 Copy link to task** — hovering a card shows a link button that copies a
   `[[Note#^id|Task text]]` link to that task, adding the hidden `^anchor` to
   the source note first if the line doesn't have one. Paste it into any note to

@@ -709,8 +709,23 @@ button {
 }
 
 .task-note-line {
+  display: flex;
   width: 100%;
-  resize: vertical;
+  min-height: 2.6em;
+  max-height: 6em;
+  border: 1px solid var(--vscode-input-border, var(--border-color));
+  border-radius: 4px;
+  background: var(--vscode-input-background, transparent);
+}
+.task-note-line:focus-within {
+  border-color: var(--vscode-focusBorder, var(--accent));
+}
+.task-note-line .cm-editor {
+  flex: 1;
+  min-width: 0;
+}
+.task-note-line .cm-scroller {
+  overflow: auto;
 }
 
 .task-note-meta {
