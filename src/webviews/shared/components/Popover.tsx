@@ -62,10 +62,15 @@ export function Popover({
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose()
     }
-    document.addEventListener('mousedown', onDown)
+    // Capture, not bubble: callers around the app (drag handles, the modal
+    // overlay) call stopPropagation on their own mousedown/pointerdown
+    // handlers, which would otherwise swallow the event before it ever
+    // bubbles up to a plain document listener — leaving an outside click
+    // unable to close the popover at all.
+    document.addEventListener('mousedown', onDown, true)
     document.addEventListener('keydown', onKey)
     return () => {
-      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('mousedown', onDown, true)
       document.removeEventListener('keydown', onKey)
     }
   }, [anchorEl, onClose])
