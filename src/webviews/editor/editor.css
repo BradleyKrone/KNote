@@ -512,12 +512,11 @@
   padding: 0.5em 0.9em;
   overflow-x: auto;
 }
-/* Set once the embed resolves: the whole card is then a link to its note. */
+/* Set once the embed resolves: the title becomes a link to its note. The rest
+   of the card (blank space, rendered body) isn't a link — clicking there just
+   edits the embed, so it keeps the text cursor a click elsewhere gets. */
 .cm-knote-embed-open {
-  cursor: pointer;
-}
-.cm-knote-embed-open:hover {
-  background: var(--vscode-list-hoverBackground, rgba(127, 127, 127, 0.08));
+  cursor: text;
 }
 .cm-knote-embed-title {
   color: var(--vscode-textLink-foreground);
@@ -525,9 +524,11 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   width: fit-content;
+  cursor: pointer;
 }
-.cm-knote-embed-open:hover .cm-knote-embed-title {
+.cm-knote-embed-title:hover {
   text-decoration: underline;
+  background: var(--vscode-list-hoverBackground, rgba(127, 127, 127, 0.08));
 }
 .cm-knote-embed-loading {
   min-height: 2em;

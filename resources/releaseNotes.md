@@ -3,6 +3,33 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.5.0
+
+- **Double-click a card to edit it.** The pencil button on a card is gone —
+  double-clicking the card body now opens the task-and-block edit dialog
+  directly. Click the note name under a card (where it's shown) to jump to
+  the note instead.
+- **Link a card to a deliverable from the board.** The task dialog's toolbar
+  gains a 📦 button that opens the same deliverable picker the planner uses,
+  so a card can be tied to a project deliverable without hand-typing
+  `@deliverable(project/name)`.
+- **Indent or outdent a table under a task.** Right-click a table and choose
+  **Table ▸ Indent table** / **Outdent table** to nest the whole table under
+  a task's checkbox, or pull it back out — a rendered table has no caret to
+  park on for the ordinary Tab-to-indent, since it's one atomic block.
+- The task dialog's title field is a real single-line editor now: `#tags`,
+  `!!` priority and 📅 dates render styled the same way they do on the card
+  and in a note, instead of showing raw markup as plain text. Pasting
+  multi-line text into it is flattened onto one line instead of splitting
+  the task across lines.
+- Fixed a popup (the tag/priority/date/deliverable picker) in the task
+  dialog sometimes not closing on an outside click.
+- Fixed right-clicking an indented table losing its **Table ▸** submenu
+  entirely.
+- Cards added from the board now get the same `Status Changed` / `Date
+  Entered` stamp a task typed straight into a note gets, instead of a bare
+  checkbox line.
+
 ## 2.4.0
 
 - **The board's task editor now edits the whole block, in a real editor.**

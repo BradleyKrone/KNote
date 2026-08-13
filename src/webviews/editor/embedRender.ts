@@ -168,13 +168,14 @@ class EmbedWidget extends WidgetType {
       renderCard(wrap, embed.content, embed.path)
     })
 
-    // Clicking the card opens the embedded note, the same way clicking a
-    // `[[link]]` chip does — an embed is a link that happens to show its target's
-    // contents, and treating it as one is what Obsidian does too. Alt+click is
-    // the escape hatch: it drops the cursor onto the embed's line and reveals the
-    // raw `![[...]]` source for editing (arrowing onto the line still works too).
-    // Wiki links inside the card stop the event before it reaches here, so they
-    // still open their own target.
+    // Only the title is a link to the embedded note — the same rule as an
+    // inline `[[link]]` chip, which opens on its own text and nowhere else.
+    // Clicking anywhere else in the card (its body, or blank space in the
+    // padded box around it) instead drops the cursor onto the embed's line
+    // and reveals the raw `![[...]]` source, same as Alt+click used to be the
+    // only way to do. Wiki links inside the card stop the event before it
+    // reaches here, so they still open their own target regardless of where
+    // in the card they sit.
     wrap.addEventListener('mousedown', (e) => {
       // Keep the click from placing the caret / starting a drag-selection, which
       // would swap this DOM for the raw source before the click ever landed.
@@ -183,7 +184,8 @@ class EmbedWidget extends WidgetType {
     wrap.addEventListener('click', (e) => {
       e.preventDefault()
       e.stopPropagation()
-      if (e.altKey || open === null) {
+      const onTitle = header.contains(e.target as Node)
+      if (!onTitle || e.altKey || open === null) {
         revealSource()
         return
       }

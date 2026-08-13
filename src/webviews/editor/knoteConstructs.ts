@@ -279,8 +279,15 @@ class WikiLinkWidget extends WidgetType {
     a.className = 'cm-knote-wikilink'
     a.textContent = this.display
     a.title = this.target
-    a.addEventListener('mousedown', (e) => e.preventDefault())
+    // Only the primary button opens the link. A right-click (or any other
+    // button) falls through to ignoreEvent()'s default handling below, so it
+    // lands the caret at the nearer edge of the widget — the end of the link
+    // when clicked on its right side — instead of navigating.
+    a.addEventListener('mousedown', (e) => {
+      if (e.button === 0) e.preventDefault()
+    })
     a.addEventListener('click', (e) => {
+      if (e.button !== 0) return
       e.preventDefault()
       // A bare link to a raw .drawio file (not wrapped in an image embed)
       // opens straight in the draw.io editor rather than as a wiki note.
@@ -289,10 +296,13 @@ class WikiLinkWidget extends WidgetType {
     })
     return a
   }
-  // Ignore editor-level mouse events (the default) so a click follows the link
-  // rather than placing the caret and revealing the raw `[[link]]` markdown.
-  ignoreEvent(): boolean {
-    return true
+  // Ignore editor-level mouse events for a primary-button click (so it follows
+  // the link rather than placing the caret and revealing the raw `[[link]]`
+  // markdown) but let anything else — a right-click in particular — fall
+  // through to CodeMirror's normal handling, which places the caret at
+  // whichever edge of the replaced range is nearer the click.
+  ignoreEvent(event: Event): boolean {
+    return !('button' in event) || (event as MouseEvent).button === 0
   }
 }
 
