@@ -17,7 +17,7 @@ import { search, searchKeymap } from '@codemirror/search'
 import { completionKeymap } from '@codemirror/autocomplete'
 import type { CmEdit, CmPos } from '@shared/editorSync'
 import { vscodeApi } from '../shared/rpc'
-import { knoteTheme, knoteHighlightStyle } from './theme'
+import { knoteTheme, knoteTooltipTheme, knoteHighlightStyle } from './theme'
 import { livePreview } from './livePreview'
 import { tableCellEdit } from './tableCellEdit'
 import { tableRender } from './tableRender'
@@ -126,6 +126,7 @@ export function createEditor(opts: CreateEditorOptions): EditorView {
       keymap.of([...formatKeymap, ...defaultKeymap, ...searchKeymap, indentWithTab]),
       search(),
       knoteTheme,
+      knoteTooltipTheme,
       ...(kind === 'note' ? [outboundSync] : [history(), keymap.of(historyKeymap)]),
       ...(opts.extensions ?? [])
     ]
