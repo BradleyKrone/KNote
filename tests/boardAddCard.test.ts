@@ -23,22 +23,27 @@ describe('addCard', () => {
     appendToWeeklyNote.mockClear()
   })
 
-  it('appends a bare task line when there is no body or reason', async () => {
+  it('stamps Status Changed / Date Entered even with no body or reason', async () => {
     await addCard({ kind: 'note', path: 'Note.md' }, ' ', 'task text', '')
 
-    expect(appendToNote).toHaveBeenCalledWith('Note.md', '- [ ] task text')
+    const [, line] = appendToNote.mock.calls[0] as [string, string]
+    const rows = line.split('\n')
+    expect(rows[0]).toBe('- [ ] task text')
+    expect(rows[1]).toBe('  - Status Changed: n/a')
+    expect(rows[2]).toMatch(/^ {2}- Date Entered: \d{1,2}\/\d{1,2}\/\d{4}$/)
+    expect(rows).toHaveLength(3)
   })
 
-  it('re-indents the composed body under the new task line', async () => {
+  it('re-indents the composed body under the stamped meta lines', async () => {
     await addCard({ kind: 'note', path: 'Note.md' }, ' ', 'task', '- first\n- second')
 
-    expect(appendToNote).toHaveBeenCalledWith(
-      'Note.md',
-      ['- [ ] task', '  - first', '  - second'].join('\n')
-    )
+    const [, line] = appendToNote.mock.calls[0] as [string, string]
+    const rows = line.split('\n')
+    expect(rows.slice(0, 1)).toEqual(['- [ ] task'])
+    expect(rows.slice(3)).toEqual(['  - first', '  - second'])
   })
 
-  it('puts the reason line right under the task, ahead of the body', async () => {
+  it('puts the reason line right under the task, ahead of the stamp and body', async () => {
     await addCard(
       { kind: 'note', path: 'Note.md' },
       'w',
@@ -47,16 +52,20 @@ describe('addCard', () => {
       '  Reason for Waiting: blocked ⏳ 2026-08-18'
     )
 
-    expect(appendToNote).toHaveBeenCalledWith(
-      'Note.md',
-      ['- [w] task', '  Reason for Waiting: blocked ⏳ 2026-08-18', '  - note'].join('\n')
-    )
+    const [, line] = appendToNote.mock.calls[0] as [string, string]
+    const rows = line.split('\n')
+    expect(rows[0]).toBe('- [w] task')
+    expect(rows[1]).toBe('  Reason for Waiting: blocked ⏳ 2026-08-18')
+    expect(rows[2]).toBe('  - Status Changed: n/a')
+    expect(rows[4]).toBe('  - note')
   })
 
   it('goes to the weekly note for a global/folder scope', async () => {
     await addCard({ kind: 'global' }, ' ', 'task', '')
 
-    expect(appendToWeeklyNote).toHaveBeenCalledWith('- [ ] task')
+    expect(appendToWeeklyNote).toHaveBeenCalled()
+    const [line] = appendToWeeklyNote.mock.calls[0] as [string]
+    expect(line.split('\n')[0]).toBe('- [ ] task')
     expect(appendToNote).not.toHaveBeenCalled()
   })
 })

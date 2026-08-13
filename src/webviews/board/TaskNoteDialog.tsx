@@ -69,7 +69,7 @@ export function TaskNoteDialog(): React.JSX.Element | null {
     const titleView = createTaskTitleEditor({
       parent: titleCmHost.current,
       doc: text,
-      placeholderText: 'Task text — add #tags, 📅 2026-07-15, !! priority…',
+      placeholderText: '',
       onChange: setTaskText,
       onEnter: () => saveRef.current()
     })
@@ -114,8 +114,14 @@ export function TaskNoteDialog(): React.JSX.Element | null {
       ]
     })
     setView(created)
-    // The block is what the pencil is now for; the task line is one Tab away.
-    created.focus()
+    if (target.kind === 'create') {
+      // A brand-new task has no title yet — start the cursor there, not in
+      // the (empty) notes block.
+      titleView.focus()
+    } else {
+      // The block is what the pencil is now for; the task line is one Tab away.
+      created.focus()
+    }
     return () => {
       created.destroy()
       titleView.destroy()
@@ -213,6 +219,7 @@ export function TaskNoteDialog(): React.JSX.Element | null {
           }}
           onDone={() => titleViewRef.current?.focus()}
         />
+        <div className="task-note-body-label">Title — #tags, 📅 dates, !! priority</div>
         <div className="task-note-line" ref={titleCmHost} />
 
         {target.kind === 'edit' && (
