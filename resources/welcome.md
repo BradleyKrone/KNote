@@ -383,6 +383,7 @@ In the chart:
 | Right-click a deliverable → **Depends on ▸** | every other deliverable, ticked where it's already a predecessor — click to add or remove. Anything that would create a loop is greyed out and labelled *would loop* |
 | Right-click a row | also: add a deliverable / task / milestone |
 | day / week / month | zoom; **Today** re-centres on the today line |
+| **Locked / Unlocked** button | dragging is off by default so you can't nudge a bar by accident — click it to unlock before dragging, then lock again when you're done. Right-click actions (Edit dates…, Depends on ▸, etc.) work either way |
 
 Bar fill is % complete — the share of the deliverable's tasks that are
 checked (or its own checkbox if it has none). A bar that starts before
