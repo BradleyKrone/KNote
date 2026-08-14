@@ -426,6 +426,62 @@ describe('collectCards deliverable-defining card', () => {
   })
 })
 
+describe('collectCards — a dated member task in the project note', () => {
+  // Regression, from a real vault: "Doze Assist Video" is an ordinary task that
+  // joins a deliverable, but it is top-level, lives in the project note and
+  // carries a 📅 of its own — so the old last-in-file rule let it overwrite the
+  // deliverable's window with its own single day. On 2026-08-13 that window
+  // ("2026-08-14 → 2026-08-14") read as not-yet-started and the entire
+  // deliverable — every task in it, and its own defining line — vanished from
+  // the board.
+  const notes = new Map<string, NoteMeta>()
+  notes.set(
+    'Doze.md',
+    parseNote(
+      'Doze.md',
+      [
+        '---',
+        'type: project',
+        'project: doze-assist',
+        '---',
+        '- [ ] MTP & MG QSM planning meeting @deliverable(doze-assist/mtp-mg-qsm-planning-meeting) 🛫 2026-08-12 📅 2026-08-27',
+        '- [w] Doze Assist Video 📅 2026-08-14 #Doze_Assist @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)',
+        '- [ ] Planning Meeting Machine @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)',
+        '- [ ] Machine setup @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)',
+        ''
+      ].join('\n')
+    )
+  )
+  const baseFilters: BoardFilters = { tag: null, text: '' }
+  const cards = (): ReturnType<typeof collectCards> =>
+    collectCards(notes, { kind: 'note', path: 'Doze.md' }, baseFilters)
+
+  beforeEach(() => vi.setSystemTime(new Date('2026-08-13T12:00:00')))
+
+  it('keeps the whole deliverable on the board', () => {
+    expect(cards().map((c) => c.displayText)).toEqual([
+      'MTP & MG QSM planning meeting',
+      'Doze Assist Video',
+      'Planning Meeting Machine',
+      'Machine setup'
+    ])
+  })
+
+  it('leaves the member card claiming no deliverable of its own', () => {
+    const video = cards().find((c) => c.displayText === 'Doze Assist Video')
+    expect(video?.definesDeliverable).toBeNull()
+    expect(video?.progress).toBeNull()
+  })
+
+  it('counts the member toward the deliverable card’s progress', () => {
+    const deliverable = cards().find((c) => c.displayText === 'MTP & MG QSM planning meeting')
+    expect(deliverable?.definesDeliverable).toBe(
+      'deliverable/doze-assist/mtp-mg-qsm-planning-meeting'
+    )
+    expect(deliverable?.progress).toEqual({ done: 0, total: 3 })
+  })
+})
+
 describe('collectCards deliverable overdue', () => {
   // Windows fixed safely in the past (design) and safely in the future
   // (landscaping) so these assertions hold regardless of the real clock —

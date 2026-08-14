@@ -24,9 +24,9 @@ import {
   WidgetType
 } from '@codemirror/view'
 import { isStaleError } from '@shared/errors'
-import { definingDeliverableTag } from '@shared/deliverables'
+import { definingDeliverableLines } from '@shared/deliverables'
 import { isDrawioFile, isImage, resolveEmbedPath, samePath } from '@shared/pathUtils'
-import type { BoardColumn, NoteMeta } from '@shared/types'
+import type { BoardColumn } from '@shared/types'
 import {
   ARCHIVED_CHAR,
   BLOCK_ID_RE,
@@ -487,12 +487,14 @@ function buildDecorations(view: EditorView): DecorationSet {
   const { doc } = view.state
   const columns = useConfigStore.getState().vaultConfig.columns
   const meta = notePath ? useIndexStore.getState().notes.get(notePath) : undefined
+  // Elected once per pass, not per line — the election is note-wide.
+  const definingLines = definingDeliverableLines(meta)
 
   for (const visible of view.visibleRanges) {
     let pos = visible.from
     while (pos <= visible.to) {
       const line = doc.lineAt(pos)
-      decorateLine(view, line, revealed.has(line.number), columns, meta, decorations)
+      decorateLine(view, line, revealed.has(line.number), columns, definingLines, decorations)
       pos = line.to + 1
     }
   }
@@ -504,7 +506,7 @@ function decorateLine(
   line: { from: number; to: number; number: number; text: string },
   isRevealed: boolean,
   columns: BoardColumn[],
-  meta: NoteMeta | undefined,
+  definingLines: ReturnType<typeof definingDeliverableLines>,
   out: Range<Decoration>[]
 ): void {
   const text = line.text
@@ -541,8 +543,16 @@ function decorateLine(
   // flush-left checkbox is one, since the whole document is nested inside the
   // task it belongs to.
   const box = checkboxRange(text)
-  const topLevel = box !== null && isTopLevelTask(view.state, TASK_LINE_RE.exec(text)?.[1] ?? '')
-  const definingTag = topLevel ? definingDeliverableTag(text, true, meta, true) : null
+  const taskMatch = TASK_LINE_RE.exec(text)
+  const topLevel = box !== null && isTopLevelTask(view.state, taskMatch?.[1] ?? '')
+  // Which line defines a deliverable is settled across the whole note (several
+  // lines can carry the same marker), so it comes from the index rather than
+  // from this line alone — but the index trails the buffer by a debounce, so
+  // only trust it while the line still reads the way the index last saw it.
+  // Mismatched means "not yet", never "highlight the wrong line".
+  const defining = topLevel ? definingLines.get(line.number - 1) : undefined
+  const definingTag =
+    defining && defining.task.text === (taskMatch?.[4] ?? '').trim() ? defining.tag : null
 
   // Whole-line styling (always applied, never hidden).
   if (REASON_FOR_RE.test(text) || STATUS_CHANGED_RE.test(text) || DATE_ENTERED_RE.test(text)) {

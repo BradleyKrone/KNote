@@ -10,15 +10,24 @@
  * by carrying that same marker anywhere else in the vault — the same syntax
  * either way, deliberately not a `#tag`, so a deliverable never clutters the
  * Tags tree, `#` autocomplete, or a generic tag pill. What makes one line
- * *defining* rather than a member is purely structural (top-level, in the
- * project's own note, carrying a span), never the marker itself — see
- * `deliverableTagsOf` below. Notes written before this switch may still carry
- * a defining line's identity as a literal `#deliverable/…` tag instead; that
- * legacy form still reads (`deliverableTagsOf` recognizes both), but nothing
- * writes it any more.
+ * *defining* rather than a member is structural (top-level, in the project's
+ * own note, carrying a span), never the marker itself — see `deliverableTagsOf`
+ * below. Notes written before this switch may still carry a defining line's
+ * identity as a literal `#deliverable/…` tag instead; that legacy form still
+ * reads (`deliverableTagsOf` recognizes both), but nothing writes it any more.
+ *
+ * Those structural tests don't single a line out on their own: a member task
+ * that happens to live in the project note, sit at top level and carry a `📅`
+ * of its own looks exactly like a definition. So exactly one line per tag is
+ * *elected* — by `electedDeliverableLines`, reached through
+ * `definingDeliverableTagInNote` (one line) or `deliverableDefinitions` (the
+ * vault) — and every caller asking "is this the definition?" must go through
+ * one of those two. Answering it independently is what let a dated member task
+ * overwrite its deliverable's window and sweep the whole deliverable off the
+ * Kanban board.
  */
 
-import type { NoteMeta, TaskItem } from './types'
+import type { NoteMeta, TaskItem, VaultPath } from './types'
 import {
   ARCHIVED_CHAR,
   DELIVERABLE_REF_RE,
@@ -183,26 +192,157 @@ export function deliverableMembershipOf(tags: readonly string[], text = ''): str
   return deliverableTagsOf(tags, text)
 }
 
-/** Bare `deliverable/<project>/<name>` tag this line defines, or null. A
- *  defining line is a top-level task, in a `type: project` note, carrying
- *  `@deliverable(...)` for that note's own project — same rule as
- *  `deliverableTagsOf`, just narrowed to "this note". `requireSpan` additionally
- *  demands the `📅`/`@due(...)` end date `deliverableWindows()` requires before
- *  it'll schedule the tag at all (`🛫`/start is optional, same as there) — pass
- *  `true` wherever "defining" needs to mean "this is *the* entry", `false`
- *  where a not-yet-dated task should still count as one in progress (e.g. the
- *  editor's right-click menu, which offers "Set start/due date" precisely for
- *  a line that hasn't been dated yet). */
-export function definingDeliverableTag(
-  text: string,
-  isTopLevelTask: boolean,
+/**
+ * The bare `deliverable/<project>/<name>` tag a line *could* be claiming: a
+ * top-level task, in a `type: project` note, carrying a deliverable marker for
+ * that note's own project. Legacy `#deliverable/…` counts too (it goes through
+ * `deliverableTagsOf`), so notes written before the switch to `@deliverable(...)`
+ * still define their deliverables.
+ *
+ * "Could be" is the whole point: several lines in one note satisfy this at
+ * once, because a member task living in the project note carries the very same
+ * marker. Nothing may use this alone to mean "this *is* the definition" — that
+ * question belongs to `definingDeliverableLines` below, and answering it here
+ * is what used to let a dated member task overwrite its own deliverable's
+ * schedule. The one legitimate caller is the editor's right-click menu, which
+ * has to offer "Set start/due date" on a deliverable that has no date yet and
+ * so cannot have been elected.
+ */
+export function claimableDeliverableTag(
   meta: NoteMeta | undefined,
-  requireSpan = false
+  task: Pick<TaskItem, 'text' | 'tags' | 'isSubtask'>
 ): string | null {
-  if (!isTopLevelTask || !meta || !isProjectNote(meta)) return null
-  if (requireSpan && !endDateOf(text)) return null
+  if (!meta || task.isSubtask || !isProjectNote(meta)) return null
   const slug = projectSlug(meta)
-  return deliverableRefsOf(text).find((t) => parseDeliverableTag(t)?.project === slug) ?? null
+  return (
+    deliverableTagsOf(task.tags, task.text).find((t) => parseDeliverableTag(t)?.project === slug) ??
+    null
+  )
+}
+
+/**
+ * Every deliverable a note *defines*, tag → the one winning line. One pass, and
+ * the only place the winner is ever chosen:
+ *
+ *  1. Only a candidate carrying a `📅`/`@due(...)` end date can define at all —
+ *     that's the date `deliverableWindows` needs before it can schedule the tag.
+ *  2. Among a tag's candidates, the one whose own label slugifies back to the
+ *     deliverable's name wins. `deliverableLine()` in the planner mints a
+ *     deliverable as `- [ ] <name> … @deliverable(<project>/<slugify(name)>)`,
+ *     so a definition matches itself by construction — which holds even when a
+ *     dated member task ends up *above* it in the file.
+ *  3. Failing that (someone edited a deliverable's title without renaming its
+ *     tag), the first candidate in document order wins, so a definition is
+ *     never lost merely because it was renamed.
+ */
+function electedDeliverableLines(meta: NoteMeta): Map<string, TaskItem> {
+  const elected = new Map<string, TaskItem>()
+  if (!isProjectNote(meta)) return elected
+  const byName = new Set<string>()
+  for (const task of meta.tasks) {
+    const tag = claimableDeliverableTag(meta, task)
+    if (!tag || !endDateOf(task.text)) continue
+    const named =
+      slugify(stripInlineMarkers(task.text)) === slugify(parseDeliverableTag(tag)!.deliverable)
+    // Rule 2 beats rule 3, but only the *first* name match takes the tag.
+    if (elected.has(tag) && !(named && !byName.has(tag))) continue
+    elected.set(tag, task)
+    if (named) byName.add(tag)
+  }
+  return elected
+}
+
+/**
+ * Every line of one note that *defines* a deliverable: 0-based line number →
+ * the elected task and the tag it claims. Note-scoped on purpose, so the editor
+ * can ask per keystroke without walking the vault; `deliverableDefinitions`
+ * layers the whole vault on top. The task comes back with it so a caller
+ * holding a possibly-stale line number can confirm it's still looking at the
+ * same text before acting on the answer.
+ */
+export function definingDeliverableLines(
+  meta: NoteMeta | undefined
+): Map<number, { tag: string; task: TaskItem }> {
+  const byLine = new Map<number, { tag: string; task: TaskItem }>()
+  if (!meta) return byLine
+  for (const [tag, task] of electedDeliverableLines(meta)) byLine.set(task.line, { tag, task })
+  return byLine
+}
+
+/** A deliverable's defining line — where it is, what it's called, when it runs. */
+export interface DeliverableDefinition {
+  /** Bare `deliverable/<project>/<name>` tag. */
+  tag: string
+  path: VaultPath
+  /** 0-based line number of the defining task, as `TaskItem.line`. */
+  line: number
+  rawLine: string
+  /** The task's text as written (markers and all) — for `⛓` dependencies and the like. */
+  text: string
+  /** The line's own text with inline markers stripped — the deliverable's display name. */
+  label: string
+  /** YYYY-MM-DD — falls back to `end` when the line carries no `🛫`. */
+  start: string
+  /** YYYY-MM-DD */
+  end: string
+  /** Whether the defining line's own checkbox is checked. */
+  done: boolean
+  statusChar: string
+}
+
+/**
+ * Every deliverable's defining line, keyed by its bare tag — the single pass
+ * the planner, the board, the progress count and the `@deliverable(...)` picker
+ * all read, so none of them can disagree about which line is *the* deliverable.
+ * Notes are visited in index order and the first to claim a tag keeps it, which
+ * only comes up when two notes share a project slug.
+ */
+export function deliverableDefinitions(
+  notes: ReadonlyMap<string, NoteMeta>
+): Map<string, DeliverableDefinition> {
+  const definitions = new Map<string, DeliverableDefinition>()
+  for (const meta of notes.values()) {
+    for (const [tag, task] of electedDeliverableLines(meta)) {
+      if (definitions.has(tag)) continue
+      // electedDeliverableLines only elects lines that carry an end date.
+      const end = endDateOf(task.text)!
+      const start = startDateOf(task.text) ?? end
+      definitions.set(tag, {
+        tag,
+        path: meta.path,
+        line: task.line,
+        rawLine: task.rawLine,
+        text: task.text,
+        label: stripInlineMarkers(task.text) || tag,
+        start: start <= end ? start : end,
+        end,
+        done: isTaskDone(task),
+        statusChar: task.statusChar
+      })
+    }
+  }
+  return definitions
+}
+
+/** Key identifying one line of one note, for the lookup below. */
+export function deliverableLineKey(path: VaultPath, line: number): string {
+  return `${path} ${line}`
+}
+
+/**
+ * `deliverableDefinitions` inverted: elected line → the tag it defines, keyed
+ * by `deliverableLineKey`. What a caller holding a *line* (a board card, an
+ * editor decoration) needs in order to ask "is this one the definition?"
+ * without re-deriving the answer.
+ */
+export function definingTagByLine(
+  definitions: ReadonlyMap<string, DeliverableDefinition>
+): Map<string, string> {
+  const byLine = new Map<string, string>()
+  for (const definition of definitions.values()) {
+    byLine.set(deliverableLineKey(definition.path, definition.line), definition.tag)
+  }
+  return byLine
 }
 
 /** Bare `deliverable/<project>/<name>` tag → the `@deliverable(project/name)` text a task/milestone joins it with. */
@@ -233,11 +373,13 @@ export interface DeliverableProgress {
 export function deliverableProgress(
   notes: ReadonlyMap<string, NoteMeta>
 ): Map<string, DeliverableProgress> {
+  const definingTags = definingTagByLine(deliverableDefinitions(notes))
   const progress = new Map<string, DeliverableProgress>()
   for (const meta of notes.values()) {
     for (const task of meta.tasks) {
+      const defines = definingTags.get(deliverableLineKey(meta.path, task.line))
       for (const tag of deliverableMembershipOf(task.tags, task.text)) {
-        if (definingDeliverableTag(task.text, !task.isSubtask, meta, true) === tag) continue
+        if (defines === tag) continue
         const entry = progress.get(tag) ?? { done: 0, total: 0 }
         entry.total++
         if (isTaskDone(task)) entry.done++
@@ -250,27 +392,20 @@ export function deliverableProgress(
 
 /**
  * Every deliverable's date window, keyed by its bare tag
- * (`deliverable/govalle/design`). Only top-level tasks in project notes define
- * a window — a tagged task elsewhere is a *member*, never a definition, so a
- * stray tag can't silently redefine the schedule. A deliverable with no `📅`
- * end date has no window and is skipped: it can't be scheduled yet.
+ * (`deliverable/govalle/design`) — straight off `deliverableDefinitions`, so
+ * only a deliverable's *own elected* line sets its schedule. A tagged task
+ * anywhere else is a member, never a definition, and that includes a dated
+ * top-level task sitting in the project note itself: letting one of those set
+ * the window is precisely how a whole deliverable's worth of tasks used to
+ * drop off the board. A deliverable with no `📅` end date has no window and is
+ * skipped: it can't be scheduled yet.
  */
 export function deliverableWindows(
   notes: ReadonlyMap<string, NoteMeta>
 ): Map<string, DeliverableWindow> {
   const windows = new Map<string, DeliverableWindow>()
-  for (const meta of notes.values()) {
-    if (!isProjectNote(meta)) continue
-    for (const task of meta.tasks) {
-      if (task.isSubtask) continue
-      const end = endDateOf(task.text)
-      if (!end) continue
-      const start = startDateOf(task.text) ?? end
-      for (const tag of deliverableTagsOf(task.tags, task.text)) {
-        if (!parseDeliverableTag(tag)) continue
-        windows.set(tag, { start: start <= end ? start : end, end, done: isTaskDone(task) })
-      }
-    }
+  for (const [tag, definition] of deliverableDefinitions(notes)) {
+    windows.set(tag, { start: definition.start, end: definition.end, done: definition.done })
   }
   return windows
 }
@@ -339,30 +474,20 @@ export interface DeliverableOption {
  * offered.
  */
 export function liveDeliverables(notes: ReadonlyMap<string, NoteMeta>): DeliverableOption[] {
-  const windows = deliverableWindows(notes)
   const closed = closedDeliverableTags(notes)
-  const labels = new Map<string, string>()
-  for (const meta of notes.values()) {
-    if (!isProjectNote(meta)) continue
-    for (const task of meta.tasks) {
-      // Same defining criteria as deliverableWindows above (top-level, own span) —
-      // a task that only *joins* the deliverable must never supply its label.
-      if (task.isSubtask || !endDateOf(task.text)) continue
-      for (const tag of deliverableTagsOf(task.tags, task.text)) {
-        if (windows.has(tag)) labels.set(tag, stripInlineMarkers(task.text) || tag)
-      }
-    }
-  }
   const out: DeliverableOption[] = []
-  for (const [tag, window] of windows) {
-    if (closed.has(tag) || window.done) continue
+  // The label comes off the defining line, never off a task that merely joins
+  // the deliverable — otherwise the picker offers a deliverable under some
+  // member task's name.
+  for (const [tag, definition] of deliverableDefinitions(notes)) {
+    if (closed.has(tag) || definition.done) continue
     const parsed = parseDeliverableTag(tag)
     if (!parsed) continue
     out.push({
       tag,
       project: parsed.project,
       deliverable: parsed.deliverable,
-      label: labels.get(tag) ?? `${parsed.project}/${parsed.deliverable}`
+      label: definition.label
     })
   }
   return out.sort((a, b) => a.label.localeCompare(b.label))

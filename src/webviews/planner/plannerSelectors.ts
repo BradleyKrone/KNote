@@ -7,27 +7,23 @@
  * Nothing here is stored in the index: a deliverable is a top-level checkbox
  * task in a `type: project` note with a `🛫`/`📅` span and its own
  * `@deliverable(<project>/<name>)` marker, and its members are every other task
- * or 🏁 milestone in the vault carrying that same marker.
+ * or 🏁 milestone in the vault carrying that same marker. *Which* line that is
+ * comes from `deliverableDefinitions` in `@shared/deliverables` — the same pass
+ * the Kanban board reads, so the two views can't drift.
  */
 
 import type { NoteMeta, VaultPath } from '@shared/types'
+import { DEPENDS_RE, PRIORITY_RE, dependsTag, stripInlineMarkers } from '@shared/parser/patterns'
+import type { DeliverableDefinition } from '@shared/deliverables'
 import {
-  DEPENDS_RE,
-  PRIORITY_RE,
-  dependsTag,
-  parseDeliverableTag,
-  stripInlineMarkers
-} from '@shared/parser/patterns'
-import {
+  deliverableDefinitions,
   deliverableMembershipOf,
-  deliverableTagsOf,
   endDateOf,
   isProjectComplete,
   isProjectNote,
   isTaskDone,
   projectEndDate,
-  projectSlug,
-  startDateOf
+  projectSlug
 } from '@shared/deliverables'
 
 /** A line the planner can point at and verify-rewrite. */
@@ -113,6 +109,16 @@ export function buildPlannerModel(
 ): PlannerModel {
   const projects: PlannerProject[] = []
   const byId = new Map<string, PlannerDeliverable>()
+  // Which line defines which deliverable is decided in exactly one place, shared
+  // with the Kanban board — see `deliverableDefinitions`. The planner must not
+  // re-derive it: when it did, board and planner disagreed about a deliverable's
+  // window and its tasks silently vanished from the board.
+  const definitionsByPath = new Map<VaultPath, DeliverableDefinition[]>()
+  for (const definition of deliverableDefinitions(notes).values()) {
+    const forNote = definitionsByPath.get(definition.path)
+    if (forNote) forNote.push(definition)
+    else definitionsByPath.set(definition.path, [definition])
+  }
 
   // Pass 1 — projects and their deliverable definitions.
   for (const meta of notes.values()) {
@@ -131,32 +137,25 @@ export function buildPlannerModel(
       complete: isProjectComplete(meta),
       percent: 0
     }
-    for (const task of meta.tasks) {
-      if (task.isSubtask) continue
-      const end = endDateOf(task.text)
-      if (!end) continue
-      const tag = deliverableTagsOf(task.tags, task.text).find(
-        (t) => parseDeliverableTag(t)?.project === slug
-      )
-      if (!tag || byId.has(tag)) continue
-      const start = startDateOf(task.text) ?? end
+    for (const definition of definitionsByPath.get(meta.path) ?? []) {
+      if (byId.has(definition.tag)) continue
       const deliverable: PlannerDeliverable = {
-        id: tag,
+        id: definition.tag,
         project: slug,
-        label: stripInlineMarkers(task.text) || tag,
-        path: meta.path,
-        line: task.line,
-        rawLine: task.rawLine,
-        start: start <= end ? start : end,
-        end,
-        statusChar: task.statusChar,
-        dependsOn: dependenciesOf(task.text),
+        label: definition.label,
+        path: definition.path,
+        line: definition.line,
+        rawLine: definition.rawLine,
+        start: definition.start,
+        end: definition.end,
+        statusChar: definition.statusChar,
+        dependsOn: dependenciesOf(definition.text),
         tasks: [],
         milestones: [],
         percent: 0
       }
       project.deliverables.push(deliverable)
-      byId.set(tag, deliverable)
+      byId.set(definition.tag, deliverable)
     }
     projects.push(project)
   }

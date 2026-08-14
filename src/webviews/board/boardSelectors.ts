@@ -10,7 +10,9 @@ import {
   stripInlineMarkers
 } from '@shared/parser/patterns'
 import {
-  definingDeliverableTag,
+  definingTagByLine,
+  deliverableDefinitions,
+  deliverableLineKey,
   deliverableMembershipOf,
   deliverableProgress,
   deliverableWindows,
@@ -66,18 +68,20 @@ export function toCard(
   meta: NoteMeta,
   task: NoteMeta['tasks'][number],
   progress?: ReadonlyMap<string, DeliverableProgress>,
-  overdueTags?: ReadonlySet<string>
+  overdueTags?: ReadonlySet<string>,
+  /** `definingTagByLine(deliverableDefinitions(notes))` — omit and no card claims to define one. */
+  definingTags?: ReadonlyMap<string, string>
 ): BoardCard {
   const due = DUE_RE.exec(task.text)
   const prio = PRIORITY_RE.exec(task.text)
   const displayText = stripInlineMarkers(task.text)
-  // Board cards are only ever built for top-level tasks (collectCards skips
-  // isSubtask before calling toCard), so `true` here is always correct.
-  // requireSpan: true — a card only counts as *the* deliverable when it
-  // actually carries the 🛫/📅 span, not just the marker; otherwise a plain
-  // top-level task in the project note that merely joins the same deliverable
-  // (no dates of its own) would be mistaken for a second defining line.
-  const definesDeliverable = definingDeliverableTag(task.text, true, meta, true)
+  // Whether this card *is* a deliverable is a vault-wide question, not a
+  // per-line one: a top-level task in the project note carrying the same marker
+  // and a 📅 of its own is indistinguishable from the definition until one of
+  // the two is elected. So look the elected line up rather than re-deciding it
+  // here — deciding it here is what made a member task render as a second,
+  // rival deliverable card.
+  const definesDeliverable = definingTags?.get(deliverableLineKey(meta.path, task.line)) ?? null
   const deliverables = deliverableMembershipOf(task.tags, task.text)
   return {
     path: meta.path,
@@ -220,6 +224,7 @@ export function collectCards(
   // running (or overdue) — see visibleForDeliverable. Both views read the same
   // index map, so this needs nothing from the host.
   const windows = filters.ignoreDeliverableWindow ? null : deliverableWindows(notes)
+  const definingTags = definingTagByLine(deliverableDefinitions(notes))
   const progress = deliverableProgress(notes)
   const now = dayjs().format('YYYY-MM-DD')
   const overdueTags = overdueDeliverables(notes, now)
@@ -230,7 +235,7 @@ export function collectCards(
       if (task.statusChar === ARCHIVED_CHAR) continue
       if (task.isSubtask) continue
       if (windows && !visibleForDeliverable(task, windows, now)) continue
-      const card = toCard(meta, task, progress, overdueTags)
+      const card = toCard(meta, task, progress, overdueTags, definingTags)
       if (
         filters.tag &&
         !card.tags.some((t) => t === filters.tag || t.startsWith(filters.tag + '/'))

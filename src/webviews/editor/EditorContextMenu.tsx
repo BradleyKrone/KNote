@@ -70,7 +70,12 @@ import {
   MILESTONE_LINE_RE,
   TASK_LINE_RE
 } from '@shared/parser/patterns'
-import { definingDeliverableTag, liveDeliverables } from '@shared/deliverables'
+import {
+  claimableDeliverableTag,
+  definingDeliverableLines,
+  liveDeliverables
+} from '@shared/deliverables'
+import { extractTags } from '@shared/parser/mdScaffold'
 import { Popover } from '../shared/components/Popover'
 import { ContextMenuList, type MenuEntry } from '../shared/components/ContextMenuList'
 import { LinkPickerContent } from '../shared/components/LinkPickerContent'
@@ -190,15 +195,30 @@ function readLineCtx(view: EditorView, pos: number): LineCtx {
 /**
  * The bare `deliverable/<project>/<name>` tag the right-clicked line itself
  * *defines*, or null when it's an ordinary task/milestone (including one that
- * merely *joins* a deliverable). A defining line is a top-level task carrying
- * a `@deliverable(...)` marker for the open note's own project — the same
- * structural rule `deliverableTagsOf` documents, just narrowed to "this note".
+ * merely *joins* a deliverable — several lines in the project note can carry
+ * the same marker, and only the elected one is the deliverable).
+ *
+ * The undated case is the reason this isn't a plain `definingDeliverableLines`
+ * lookup: a line with no `📅` yet can't be elected (nothing can schedule it),
+ * but it's precisely the line "Set start/due date" exists for. So an undated
+ * top-level line claiming a tag nobody else has taken still counts.
  */
 function ownDeliverableTag(ctx: LineCtx, notes: ReadonlyMap<VaultPath, NoteMeta>): string | null {
-  if (!ctx.isTask) return null
+  if (!ctx.isTask || ctx.isSubtask) return null
   const path = getNotePath()
   const meta = path ? notes.get(path) : undefined
-  return definingDeliverableTag(ctx.text, !ctx.isSubtask, meta)
+  if (!meta) return null
+  const elected = definingDeliverableLines(meta)
+  const own = elected.get(ctx.line0)
+  if (own) return own.tag
+  if (ctx.due) return null
+  const claim = claimableDeliverableTag(meta, {
+    text: ctx.text,
+    tags: extractTags(ctx.text),
+    isSubtask: false
+  })
+  if (!claim) return null
+  return [...elected.values()].some((e) => e.tag === claim) ? null : claim
 }
 
 export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Element | null {

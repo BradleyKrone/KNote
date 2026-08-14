@@ -6,6 +6,7 @@ import {
   collectMachines,
   collectMilestones,
   collectProjectDeliverables,
+  collectProjects,
   relativeLabel
 } from '@ext/trees/quickAccessSelectors'
 
@@ -217,6 +218,53 @@ describe('collectProjectDeliverables', () => {
 
   it('returns nothing for an unknown project slug', () => {
     expect(collectProjectDeliverables(notes, 'nope')).toEqual([])
+  })
+
+  it('does not list a dated member task in the project note as a second row', () => {
+    // Regression: "Doze Assist Video" is a member, but it is top-level, in the
+    // project note and carries a 📅 of its own — so the tree listed it as a
+    // deliverable in its own right, giving one deliverable two rows under the
+    // same tag.
+    const doze = vault([
+      'Doze.md',
+      [
+        '---',
+        'type: project',
+        'project: doze-assist',
+        '---',
+        '- [ ] Tech Demo 2026 🛫 2026-09-14 📅 2026-09-20 @deliverable(doze-assist/tech-demo-2026)',
+        '- [w] Doze Assist Video 📅 2026-08-14 @deliverable(doze-assist/tech-demo-2026)',
+        ''
+      ].join('\n')
+    ])
+    expect(collectProjectDeliverables(doze, 'doze-assist')).toEqual([
+      {
+        kind: 'deliverable',
+        tag: 'deliverable/doze-assist/tech-demo-2026',
+        project: 'doze-assist',
+        label: 'Tech Demo 2026',
+        done: false
+      }
+    ])
+  })
+
+  it('counts and spans a project by its deliverables alone, not its member tasks', () => {
+    const doze = vault([
+      'Doze.md',
+      [
+        '---',
+        'type: project',
+        'project: doze-assist',
+        'end: 2026-09-30',
+        '---',
+        '- [ ] Tech Demo 2026 🛫 2026-09-14 📅 2026-09-20 @deliverable(doze-assist/tech-demo-2026)',
+        '- [w] Doze Assist Video 📅 2026-12-31 @deliverable(doze-assist/tech-demo-2026)',
+        ''
+      ].join('\n')
+    ])
+    const project = collectProjects(doze, '2026-08-13')[0]
+    expect(project.deliverables).toBe(1)
+    expect([project.start, project.end]).toEqual(['2026-09-14', '2026-09-20'])
   })
 })
 
