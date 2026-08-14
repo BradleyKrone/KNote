@@ -28,6 +28,8 @@ interface Props {
   violated: boolean
   dragging: boolean
   linkTarget: boolean
+  /** Board-wide drag lock — grips stay visible but inert so the bar can still be opened/right-clicked. */
+  locked: boolean
   onGrip: (e: React.PointerEvent, mode: DragMode) => void
   onOpen: () => void
   onContextMenu: (e: React.MouseEvent) => void
@@ -44,6 +46,7 @@ export function Bar({
   violated,
   dragging,
   linkTarget,
+  locked,
   onGrip,
   onOpen,
   onContextMenu
@@ -57,7 +60,8 @@ export function Bar({
     status !== 'active' ? `bar-${status}` : '',
     dragging ? 'dragging' : '',
     violated ? 'violated' : '',
-    linkTarget ? 'link-target' : ''
+    linkTarget ? 'link-target' : '',
+    locked ? 'locked' : ''
   ]
     .filter(Boolean)
     .join(' ')
@@ -69,7 +73,9 @@ export function Bar({
       style={{ left: x, width, height: BAR_HEIGHT, top: (ROW_HEIGHT - BAR_HEIGHT) / 2 }}
       title={`${deliverable.label} · ${start} → ${end} · ${deliverable.percent}%${
         status === 'overdue' ? ' · overdue' : ''
-      }${violated ? ' · starts before a deliverable it depends on finishes' : ''}`}
+      }${violated ? ' · starts before a deliverable it depends on finishes' : ''}${
+        locked ? ' · locked — unlock the board to drag' : ''
+      }`}
       onPointerDown={(e) => onGrip(e, 'move')}
       onDoubleClick={onOpen}
       onContextMenu={onContextMenu}

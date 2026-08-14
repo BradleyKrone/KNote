@@ -316,6 +316,47 @@ describe('deliverableWindows / visibleForDeliverable', () => {
   })
 })
 
+describe('planner and board agree on which line defines a deliverable', () => {
+  // The two views used to answer this separately — the planner first-in-file,
+  // the board last-in-file — so a dated member task living in the project note
+  // gave the deliverable one span on the Gantt chart and a different, single-day
+  // one on the Kanban board (which then hid the whole deliverable).
+  const notes = new Map<VaultPath, NoteMeta>()
+  notes.set(
+    'Doze.md',
+    parseNote(
+      'Doze.md',
+      [
+        '---',
+        'type: project',
+        'project: doze-assist',
+        '---',
+        '- [ ] MTP & MG QSM planning meeting @deliverable(doze-assist/mtp-mg-qsm-planning-meeting) 🛫 2026-08-12 📅 2026-08-27',
+        '- [w] Doze Assist Video 📅 2026-08-14 @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)',
+        ''
+      ].join('\n')
+    )
+  )
+  const tag = 'deliverable/doze-assist/mtp-mg-qsm-planning-meeting'
+
+  it('draws the bar over the defining line’s span, not the member’s date', () => {
+    const deliverable = buildPlannerModel(notes).byId.get(tag)
+    expect(deliverable?.label).toBe('MTP & MG QSM planning meeting')
+    expect([deliverable?.start, deliverable?.end]).toEqual(['2026-08-12', '2026-08-27'])
+  })
+
+  it('gives the board the identical window', () => {
+    const deliverable = buildPlannerModel(notes).byId.get(tag)
+    const window = deliverableWindows(notes).get(tag)
+    expect([window?.start, window?.end]).toEqual([deliverable?.start, deliverable?.end])
+  })
+
+  it('files the dated member as one of the deliverable’s tasks', () => {
+    const deliverable = buildPlannerModel(notes).byId.get(tag)
+    expect(deliverable?.tasks.map((t) => t.text)).toEqual(['Doze Assist Video'])
+  })
+})
+
 // A project can declare its own target end date and be closed off; both change
 // what the planner lets you do with it.
 describe('project status', () => {

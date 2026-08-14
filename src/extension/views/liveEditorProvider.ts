@@ -35,6 +35,9 @@ const LIVE_EDITOR_VIEW_TYPE = 'knote.liveEditor'
 const openPanels = new Map<string, vscode.WebviewPanel>()
 const pendingReveal = new Map<string, number>()
 
+/** workspaceState key under which a note's collapsed-section text keys are stored. */
+const foldStateKey = (path: string): string => `knote.foldState:${path}`
+
 /**
  * Open a note in the live-preview editor (not the raw text editor), optionally
  * jumping to a 0-based line. Used by the board/timeline/etc. so clicking a task
@@ -67,6 +70,8 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
       enableScripts: true,
       localResourceRoots: webviewResourceRoots(this.context.extensionUri, currentVaultRoot())
     }
+
+    const notePath = relForUri(document.uri)
 
     // Host-side text mirror. When CodeMirror sends edits we predict the text
     // they will produce and stash it in `expectedText`; the change event that
@@ -120,6 +125,9 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
     const msgSub = webview.onDidReceiveMessage((raw: unknown) => {
       if (!isEditorSyncMessage(raw)) return // RPC messages are handled by attach()
       if (raw.type === 'knote:cm-edits') applyWebviewEdits(raw.edits)
+      else if (raw.type === 'knote:fold-state' && notePath) {
+        void this.context.workspaceState.update(foldStateKey(notePath), raw.keys)
+      }
     })
 
     const changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
@@ -138,8 +146,8 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
     // with every other KNote webview, plus attachmentUri bound to this panel.
     const rpc = attach(webview, {
       ...createHostHandlers(),
-      attachmentUri: (src: string) => attachmentUriFor(src, relForUri(document.uri), webview),
-      openWithDrawio: (src: string) => openWithDrawio(src, relForUri(document.uri))
+      attachmentUri: (src: string) => attachmentUriFor(src, notePath, webview),
+      openWithDrawio: (src: string) => openWithDrawio(src, notePath)
     })
 
     const key = document.uri.toString()
@@ -148,9 +156,12 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
     pendingReveal.delete(key)
 
     webview.html = webviewHtml(webview, this.context.extensionUri, 'editor', 'KNote', {
-      path: relForUri(document.uri),
+      path: notePath,
       // Raw text, EOL and all — CodeMirror normalizes it to LF on the way in.
       text: document.getText(),
+      foldedKeys: notePath
+        ? this.context.workspaceState.get<string[]>(foldStateKey(notePath), [])
+        : [],
       ...(revealLine !== undefined ? { line: revealLine } : {})
     })
 
@@ -158,7 +169,6 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
     // sidebar panels (Backlinks/Outline/Properties) — which key off that —
     // would otherwise never learn a note is open here. Track active-note
     // identity ourselves, on open and on every tab/split focus change.
-    const notePath = relForUri(document.uri)
     setActiveNote(notePath)
     const viewStateSub = panel.onDidChangeViewState((e) => {
       if (e.webviewPanel.active) setActiveNote(notePath)

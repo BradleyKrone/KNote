@@ -103,12 +103,22 @@ the board and the planner agree without importing each other:
 - A **deliverable** is a *top-level* checkbox task in that note carrying
   `@deliverable(<project>/<name>)` — exactly two segments inside the parens,
   enforced by `DELIVERABLE_TAG_RE`/`DELIVERABLE_REF_RE`. What makes a line
-  the *defining* one rather than a member is purely structural (top-level,
-  in the project's own note, carrying a span) — never the marker itself, so
-  the same marker also doubles as the join syntax below. Notes written before
-  this switch may still carry a defining line's identity as a literal
+  the *defining* one rather than a member is structural (top-level, in the
+  project's own note, carrying a span) — never the marker itself, so the same
+  marker also doubles as the join syntax below. Notes written before this
+  switch may still carry a defining line's identity as a literal
   `#deliverable/…` tag; that legacy form still reads, but nothing writes it
   any more.
+- Those structural tests don't single a line out on their own — a *member*
+  task that happens to sit at top level in the project note with a `📅` of
+  its own looks identical — so exactly one line per tag is **elected**, by
+  `electedDeliverableLines` in `shared/deliverables.ts`: the line whose text
+  slugifies back to the deliverable's name, else the first in document order.
+  Every caller asking "is this the definition?" must go through
+  `deliverableDefinitions` (vault-wide, what the planner and board both read)
+  or `definingDeliverableLines` (one note, what the editor reads). Answering
+  it independently is exactly how the board and planner once disagreed about
+  a deliverable's window and swept its whole task list off the Kanban board.
 - Its **bar** spans `🛫`/`@start(YYYY-MM-DD)` → `📅`/`@due(...)`
   (`START_RE`, `DUE_RE`). No `🛫` means start falls back to end — a point,
   not a span.

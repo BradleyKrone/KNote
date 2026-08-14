@@ -28,6 +28,7 @@ import { editorKind, type EditorKind } from './editorMode'
 import { pasteImage } from './pasteImage'
 import { formatKeymap } from './markdownFormatting'
 import { taskFold } from './taskFold'
+import { foldPersistence } from './foldPersist'
 import { taskEnterKeymap } from './taskEnter'
 import { knoteAutocomplete } from './completions'
 import { linkHover } from './linkHover'
@@ -139,7 +140,9 @@ export function createEditor(opts: CreateEditorOptions): EditorView {
       search(),
       knoteTheme,
       knoteTooltipTheme,
-      ...(kind === 'note' ? [outboundSync] : [history(), keymap.of(historyKeymap)]),
+      ...(kind === 'note'
+        ? [outboundSync, foldPersistence]
+        : [history(), keymap.of(historyKeymap)]),
       ...(opts.extensions ?? [])
     ]
   })

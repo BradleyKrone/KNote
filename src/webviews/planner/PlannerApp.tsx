@@ -13,9 +13,11 @@ import {
   Flag,
   Link2,
   ListPlus,
+  Lock,
   Package,
   Plus,
-  RotateCcw
+  RotateCcw,
+  Unlock
 } from 'lucide-react'
 import { DatePickerContent } from '../shared/components/DatePickerContent'
 import { host } from '../shared/rpc'
@@ -80,6 +82,10 @@ interface Pending {
 export function PlannerApp(): React.JSX.Element {
   const notes = useIndexStore((s) => s.notes)
   const [zoom, setZoom] = useState<Zoom>('week')
+  // Locked by default — a bare drag on a bar is too easy to trigger by
+  // accident while scrolling or reading the chart. Unlocking is a deliberate
+  // per-session choice; it isn't persisted, so a reopened planner is safe again.
+  const [locked, setLocked] = useState(true)
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
   const [projectFilter, setProjectFilter] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ row: PlannerRow; point: { x: number; y: number } } | null>(
@@ -254,6 +260,26 @@ export function PlannerApp(): React.JSX.Element {
   }, [model, scrollToToday])
   useEffect(() => scrollToToday(), [zoom, scrollToToday])
 
+  // ---------- Default collapse ----------
+  // Start every deliverable collapsed so the chart opens showing just the
+  // deliverable bars, not every task under them. Runs once, the first time
+  // the model has data — later index deltas must not stomp on the user's
+  // own expand/collapse choices.
+  const collapsedOnce = useRef(false)
+  useEffect(() => {
+    if (collapsedOnce.current || model.byId.size === 0) return
+    collapsedOnce.current = true
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      for (const project of model.projects) {
+        for (const deliverable of project.deliverables) {
+          next.add(`d:${deliverable.id}`)
+        }
+      }
+      return next
+    })
+  }, [model])
+
   // ---------- Actions ----------
   const toggle = (key: string): void =>
     setCollapsed((prev) => {
@@ -316,35 +342,37 @@ export function PlannerApp(): React.JSX.Element {
   }
 
   /**
-   * One row per other deliverable, checked where it's already a predecessor of
-   * `d`. Clicking toggles the `⛓` marker. A candidate that would close a loop
-   * (it already comes *after* `d`) is shown disabled rather than hidden, so the
-   * reason it isn't offered is visible.
+   * One row per other deliverable *in the same project* — dependencies can't
+   * cross projects, so the list isn't diluted with candidates that could
+   * never legally be picked. Checked where it's already a predecessor of `d`.
+   * Clicking toggles the `⛓` marker. A candidate that would close a loop (it
+   * already comes *after* `d`) is shown disabled rather than hidden, so the
+   * reason it isn't offered is visible. A completed candidate is dropped
+   * entirely to keep the list from growing without bound — unless `d`
+   * already depends on it, in which case it stays so the link can be undone.
    */
   const dependencyEntries = (d: PlannerDeliverable): MenuEntry[] => {
-    const entries: MenuEntry[] = []
-    for (const project of model.projects) {
-      const candidates = project.deliverables.filter((c) => c.id !== d.id)
-      if (candidates.length === 0) continue
-      if (model.projects.length > 1) entries.push({ separator: true })
-      for (const candidate of candidates) {
-        const linked = d.dependsOn.includes(candidate.id)
-        const cycles = !linked && wouldCycle(model, candidate.id, d.id)
-        entries.push({
-          label: candidate.label,
-          checked: linked,
-          detail: cycles ? 'would loop' : `ends ${candidate.end}`,
-          disabled: cycles,
-          onClick: () => {
-            setMenu(null)
-            void (linked ? unlinkDependency(d, candidate.id) : linkDependency(d, candidate.id))
-          }
-        })
+    const project = model.projects.find((p) => p.slug === d.project)
+    const candidates = (project?.deliverables ?? []).filter(
+      (c) =>
+        c.id !== d.id && (d.dependsOn.includes(c.id) || deliverableBarStatus(c, today) !== 'done')
+    )
+    if (candidates.length === 0)
+      return [{ label: 'No other deliverables yet', disabled: true, onClick: () => {} }]
+    return candidates.map((candidate) => {
+      const linked = d.dependsOn.includes(candidate.id)
+      const cycles = !linked && wouldCycle(model, candidate.id, d.id)
+      return {
+        label: candidate.label,
+        checked: linked,
+        detail: cycles ? 'would loop' : `ends ${candidate.end}`,
+        disabled: cycles,
+        onClick: () => {
+          setMenu(null)
+          void (linked ? unlinkDependency(d, candidate.id) : linkDependency(d, candidate.id))
+        }
       }
-    }
-    if (entries.length === 0)
-      entries.push({ label: 'No other deliverables yet', disabled: true, onClick: () => {} })
-    return entries
+    })
   }
 
   const menuItems = (row: PlannerRow): MenuEntry[] => {
@@ -497,6 +525,17 @@ export function PlannerApp(): React.JSX.Element {
           <button className="icon-btn" onClick={scrollToToday}>
             Today
           </button>
+          <button
+            className={`icon-btn planner-lock-btn${locked ? ' active' : ''}`}
+            onClick={() => setLocked((l) => !l)}
+            title={
+              locked
+                ? 'Bars are locked — click to unlock and allow dragging'
+                : 'Bars are unlocked — click to lock and prevent dragging'
+            }
+          >
+            {locked ? <Lock size={14} /> : <Unlock size={14} />} {locked ? 'Locked' : 'Unlocked'}
+          </button>
           <button className="icon-btn" onClick={askNewProject} title="Create a new project note">
             <Plus size={14} /> Project
           </button>
@@ -579,7 +618,11 @@ export function PlannerApp(): React.JSX.Element {
                             violated={violated.has(row.deliverable.id)}
                             dragging={drag?.id === row.deliverable.id}
                             linkTarget={linkTargetId === row.deliverable.id}
-                            onGrip={(e, mode) => bar.start(e, row.deliverable.id, mode)}
+                            locked={locked}
+                            onGrip={(e, mode) => {
+                              if (locked) return
+                              bar.start(e, row.deliverable.id, mode)
+                            }}
                             onOpen={() => openRow(row)}
                             onContextMenu={(e) => {
                               e.preventDefault()

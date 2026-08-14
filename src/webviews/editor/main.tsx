@@ -13,15 +13,17 @@ import { refreshEmbedCards } from './embedRender'
 import { createEditor } from './setupEditor'
 import { wireInboundSync, revealLine } from './sync'
 import { setNotePath } from './knoteConstructs'
+import { applyFoldedLineKeys } from './foldPersist'
 import { EditorDialogs } from './EditorDialogs'
 
 interface EditorBootstrap {
   path: string | null
   text: string
   line?: number
+  foldedKeys?: string[]
 }
 
-const { path = null, text = '', line } = bootstrap<EditorBootstrap>()
+const { path = null, text = '', line, foldedKeys } = bootstrap<EditorBootstrap>()
 
 setNotePath(path)
 initStores() // hydrates the vault config (Kanban columns) + index for the editor
@@ -31,6 +33,9 @@ const view = createEditor({
   doc: text
 })
 wireInboundSync(view)
+
+// Restore whichever sections were collapsed when the note was last open.
+if (foldedKeys) applyFoldedLineKeys(view, foldedKeys)
 
 // Jump to the requested line when the note is opened to a specific task.
 if (typeof line === 'number') revealLine(view, line)

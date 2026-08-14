@@ -11,14 +11,11 @@ import {
   stripInlineMarkers
 } from '@shared/parser/patterns'
 import {
-  deliverableTagsOf,
-  endDateOf,
+  deliverableDefinitions,
   isProjectComplete,
   isProjectNote,
-  isTaskDone,
   projectEndDate,
-  projectSlug,
-  startDateOf
+  projectSlug
 } from '@shared/deliverables'
 
 // ---------- Boards ----------
@@ -226,6 +223,10 @@ export interface ProjectNode {
  * can't disagree about what counts as a project or a deliverable.
  */
 export function collectProjects(notes: Map<string, NoteMeta>, today: string): ProjectNode[] {
+  // One row per *elected* deliverable — see `deliverableDefinitions`. Rolling up
+  // every dated top-level line instead would double-count a member task that
+  // lives in the project note, inflating the count and widening the span.
+  const definitions = [...deliverableDefinitions(notes).values()]
   const projects: ProjectNode[] = []
   for (const meta of notes.values()) {
     if (!isProjectNote(meta)) continue
@@ -234,17 +235,12 @@ export function collectProjects(notes: Map<string, NoteMeta>, today: string): Pr
     let end: string | null = null
     let deliverables = 0
     let open = 0
-    for (const task of meta.tasks) {
-      if (task.isSubtask) continue
-      const taskEnd = endDateOf(task.text)
-      if (!taskEnd) continue
-      const own = deliverableTagsOf(task.tags, task.text)
-      if (!own.some((t) => parseDeliverableTag(t)?.project === slug)) continue
+    for (const definition of definitions) {
+      if (parseDeliverableTag(definition.tag)?.project !== slug) continue
       deliverables++
-      if (!isTaskDone(task)) open++
-      const taskStart = startDateOf(task.text) ?? taskEnd
-      if (start === null || taskStart < start) start = taskStart
-      if (end === null || taskEnd > end) end = taskEnd
+      if (!definition.done) open++
+      if (start === null || definition.start < start) start = definition.start
+      if (end === null || definition.end > end) end = definition.end
     }
     const complete = isProjectComplete(meta)
     const dueDate = projectEndDate(meta)
@@ -279,32 +275,28 @@ export interface ProjectDeliverableNode {
 }
 
 /**
- * One row per deliverable defined on `projectSlug` — the same defining rule
- * `collectProjects` rolls up (a top-level task with a `📅` end date carrying
- * that project's `deliverable/<project>/<name>` tag), just not aggregated.
- * The Boards tree's "Filter by Project" section expands a project into these.
+ * One row per deliverable defined on `projectSlug` — the same elected lines
+ * `collectProjects` aggregates, just listed. The Boards tree's "Filter by
+ * Project" section expands a project into these.
+ *
+ * Reading the election rather than re-deriving it is what keeps a member task
+ * that carries a `📅` of its own from appearing as a second row for a
+ * deliverable that already exists.
  */
 export function collectProjectDeliverables(
   notes: Map<string, NoteMeta>,
   projectSlug: string
 ): ProjectDeliverableNode[] {
   const out: ProjectDeliverableNode[] = []
-  for (const meta of notes.values()) {
-    for (const task of meta.tasks) {
-      if (task.isSubtask) continue
-      if (!endDateOf(task.text)) continue
-      const tag = deliverableTagsOf(task.tags, task.text).find(
-        (t) => parseDeliverableTag(t)?.project === projectSlug
-      )
-      if (!tag) continue
-      out.push({
-        kind: 'deliverable',
-        tag,
-        project: projectSlug,
-        label: stripInlineMarkers(task.text) || tag,
-        done: isTaskDone(task)
-      })
-    }
+  for (const definition of deliverableDefinitions(notes).values()) {
+    if (parseDeliverableTag(definition.tag)?.project !== projectSlug) continue
+    out.push({
+      kind: 'deliverable',
+      tag: definition.tag,
+      project: projectSlug,
+      label: definition.label,
+      done: definition.done
+    })
   }
   out.sort((a, b) => a.label.localeCompare(b.label))
   return out
