@@ -30,7 +30,10 @@ export function foldedLineKeys(state: EditorState): string[] {
  * folding. Split out from `applyFoldedLineKeys` so it can be unit-tested
  * against a plain `EditorState` — building an `EditorView` needs a DOM.
  */
-export function foldEffectsFor(state: EditorState, keys: readonly string[]): StateEffect<unknown>[] {
+export function foldEffectsFor(
+  state: EditorState,
+  keys: readonly string[]
+): StateEffect<unknown>[] {
   if (keys.length === 0) return []
   const need = new Map<string, number>()
   for (const key of keys) need.set(key, (need.get(key) ?? 0) + 1)

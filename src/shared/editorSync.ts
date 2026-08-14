@@ -63,10 +63,7 @@ export interface FoldStateMessage {
 }
 
 export type EditorSyncMessage =
-  | CmEditsMessage
-  | HostUpdateMessage
-  | RevealLineMessage
-  | FoldStateMessage
+  CmEditsMessage | HostUpdateMessage | RevealLineMessage | FoldStateMessage
 
 /**
  * A replacement in plain string offsets. Only ever used *within* one side of

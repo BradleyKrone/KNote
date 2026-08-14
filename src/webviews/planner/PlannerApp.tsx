@@ -355,8 +355,7 @@ export function PlannerApp(): React.JSX.Element {
     const project = model.projects.find((p) => p.slug === d.project)
     const candidates = (project?.deliverables ?? []).filter(
       (c) =>
-        c.id !== d.id &&
-        (d.dependsOn.includes(c.id) || deliverableBarStatus(c, today) !== 'done')
+        c.id !== d.id && (d.dependsOn.includes(c.id) || deliverableBarStatus(c, today) !== 'done')
     )
     if (candidates.length === 0)
       return [{ label: 'No other deliverables yet', disabled: true, onClick: () => {} }]

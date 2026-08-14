@@ -3,6 +3,26 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.6.0
+
+- **Collapsed sections are remembered per note.** Folding a heading or task
+  block in the Live Preview editor now persists — closing and reopening a
+  note leaves the same sections folded instead of resetting to fully
+  expanded.
+- **The planner opens with every deliverable collapsed**, showing just the
+  deliverable bars rather than every task under them.
+- **Bars are locked by default in the planner.** A new **Locked/Unlocked**
+  button in the toolbar has to be clicked before a bar can be dragged, so a
+  stray click while scrolling or reading the chart can't nudge a date by
+  accident. Right-click actions (Edit dates…, Depends on ▸, etc.) still work
+  either way.
+- The planner's **Depends on ▸** menu now only lists deliverables from the
+  same project (a dependency can't cross projects) and drops completed ones
+  unless already linked, instead of listing every deliverable in the vault.
+- Fixed a bug where a dated task in a project note could be mistaken for a
+  deliverable's own defining line, overwriting that deliverable's schedule
+  and sweeping its whole task list off the Kanban board.
+
 ## 2.5.0
 
 - **Double-click a card to edit it.** The pencil button on a card is gone —
