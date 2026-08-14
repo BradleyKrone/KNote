@@ -51,7 +51,22 @@ export interface RevealLineMessage {
   line: number
 }
 
-export type EditorSyncMessage = CmEditsMessage | HostUpdateMessage | RevealLineMessage
+/**
+ * Webview → host: which foldable lines are currently collapsed, identified by
+ * their trimmed line text (there's no stable heading/section id to key on).
+ * Sent whenever the fold state changes, and persisted so the note reopens
+ * with the same sections collapsed.
+ */
+export interface FoldStateMessage {
+  type: 'knote:fold-state'
+  keys: string[]
+}
+
+export type EditorSyncMessage =
+  | CmEditsMessage
+  | HostUpdateMessage
+  | RevealLineMessage
+  | FoldStateMessage
 
 /**
  * A replacement in plain string offsets. Only ever used *within* one side of

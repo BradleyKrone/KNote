@@ -144,7 +144,9 @@ Markdown:
   to a `…` (a task's card closes up around the single line), so a long note
   reads as a clean list of top-level tasks or headings; click the `…` or the
   arrow to expand. `Ctrl+Shift+[` / `Ctrl+Shift+]` fold / unfold the current
-  line; `Ctrl+Alt+[` / `Ctrl+Alt+]` fold / unfold everything.
+  line; `Ctrl+Alt+[` / `Ctrl+Alt+]` fold / unfold everything. Collapsed
+  sections are remembered per note, so closing and reopening a note leaves
+  the same sections folded.
 - **Spell checking** — misspelled words get a red wavy underline as you type
   (code, `[[wiki links]]`, `#tags`, URLs and frontmatter are skipped).
   **Right-click a flagged word** for suggested corrections; pick one to
