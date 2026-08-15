@@ -3,6 +3,25 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.7.0
+
+- **A Files panel in the sidebar.** The KNote sidebar gains a vault file
+  browser at the top — one folder at a time rather than an expanding tree.
+  Click a folder to go into it; the path row at the top of the list shows
+  where you are and jumps back to any level of it. It shows the vault as it
+  sits on disk: notes plus images, PDFs and `.drawio` diagrams, each opening
+  in its normal editor.
+- **Create, rename, move and delete from the Files panel.** Title-bar
+  buttons make a note or folder in the folder you're in; right-click a row
+  to rename it, move it to any folder in the vault, copy its full or
+  vault-relative path, or send it to the system trash. Rows can also be
+  dragged onto a folder to move them. Renaming or moving a note rewrites its
+  `[[links]]` vault-wide, and one undo reverses the move and the rewrites
+  together.
+- The Files panel follows the note you're editing — open a note from search,
+  a backlink or a `[[wiki link]]` and it browses to that note's folder and
+  highlights it.
+
 ## 2.6.0
 
 - **Collapsed sections are remembered per note.** Folding a heading or task

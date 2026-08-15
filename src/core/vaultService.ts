@@ -6,7 +6,7 @@
 // vitest and bundles anywhere; host-specific behavior (trash) is injected.
 
 import { promises as fs } from 'fs'
-import { dirname, join, resolve, sep } from 'path'
+import { dirname, resolve, sep } from 'path'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type {
   FileEntry,
@@ -15,7 +15,7 @@ import type {
   VaultInfo,
   VaultPath
 } from '@shared/types'
-import { isImage, isMarkdown, joinRel, nameOf, normalizeRel, parentOf } from '@shared/pathUtils'
+import { isMarkdown, joinRel, nameOf, normalizeRel, parentOf } from '@shared/pathUtils'
 import { getVaultConfig } from './vaultConfig'
 import { CONFLICT_ERROR } from '@shared/errors'
 
@@ -92,51 +92,68 @@ export function isIgnoredRel(rel: string): boolean {
     .some((seg) => IGNORED_DIRS.has(seg) || (seg.startsWith('.') && seg !== ''))
 }
 
+/**
+ * A vault holds whatever the user puts in it — notes, images, PDFs, draw.io
+ * diagrams — and the file tree shows all of it. The only thing hidden is
+ * KNote's own atomic-write scratch file, which would otherwise flicker into
+ * the tree for the moment between writing and renaming it over the target.
+ * (Dotfiles are filtered separately, at the point of the directory read.)
+ */
 function isVisibleFile(name: string): boolean {
-  return isMarkdown(name) || isImage(name)
+  return !name.endsWith('.knote-tmp')
 }
 
-export async function buildTree(): Promise<FileEntry[]> {
-  const root = getVaultRoot()
+/**
+ * One level of a vault folder — `''` is the root. Folders come back without
+ * `children`, so a caller walking a big vault only pays for the folders it
+ * actually opens.
+ */
+export async function readDir(rel: VaultPath): Promise<FileEntry[]> {
+  const relDir = normalizeRel(rel)
+  const absDir = toAbs(relDir)
   const config = await getVaultConfig()
-  const weeklyFolder = normalizeRel(config.weeklyFolder)
 
-  async function walk(absDir: string, relDir: string): Promise<FileEntry[]> {
-    let dirents
-    try {
-      dirents = await fs.readdir(absDir, { withFileTypes: true })
-    } catch {
-      return []
+  let dirents
+  try {
+    dirents = await fs.readdir(absDir, { withFileTypes: true })
+  } catch {
+    return []
+  }
+  const folders: FileEntry[] = []
+  const files: FileEntry[] = []
+  for (const d of dirents) {
+    const path = joinRel(relDir, d.name)
+    if (d.isDirectory()) {
+      if (IGNORED_DIRS.has(d.name) || d.name.startsWith('.')) continue
+      folders.push({ path, name: d.name, kind: 'folder' })
+    } else if (d.isFile()) {
+      if (d.name.startsWith('.') || !isVisibleFile(d.name)) continue
+      files.push({ path, name: d.name, kind: 'file' })
     }
-    const folders: FileEntry[] = []
-    const files: FileEntry[] = []
-    for (const d of dirents) {
-      const rel = joinRel(relDir, d.name)
-      if (d.isDirectory()) {
-        if (IGNORED_DIRS.has(d.name) || d.name.startsWith('.')) continue
-        folders.push({
-          path: rel,
-          name: d.name,
-          kind: 'folder',
-          children: await walk(join(absDir, d.name), rel)
-        })
-      } else if (d.isFile()) {
-        if (d.name.startsWith('.') || !isVisibleFile(d.name)) continue
-        files.push({ path: rel, name: d.name, kind: 'file' })
-      }
-    }
-    // numeric: true makes embedded numbers compare by value (so "9" sorts
-    // before "12"), which is what keeps date-stamped file names like weekly
-    // notes in chronological order instead of plain lexicographic order.
-    const byName = (a: FileEntry, b: FileEntry): number =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
-    folders.sort(byName)
-    // The weekly notes folder reads newest-first; every other folder stays A-Z.
-    files.sort(relDir === weeklyFolder ? (a, b) => byName(b, a) : byName)
-    return [...folders, ...files]
+  }
+  // numeric: true makes embedded numbers compare by value (so "9" sorts
+  // before "12"), which is what keeps date-stamped file names like weekly
+  // notes in chronological order instead of plain lexicographic order.
+  const byName = (a: FileEntry, b: FileEntry): number =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
+  folders.sort(byName)
+  // The weekly notes folder reads newest-first; every other folder stays A-Z.
+  files.sort(relDir === normalizeRel(config.weeklyFolder) ? (a, b) => byName(b, a) : byName)
+  return [...folders, ...files]
+}
+
+/** The whole vault as one nested tree — `readDir` applied recursively. */
+export async function buildTree(): Promise<FileEntry[]> {
+  async function walk(relDir: VaultPath): Promise<FileEntry[]> {
+    const entries = await readDir(relDir)
+    return Promise.all(
+      entries.map(async (entry) =>
+        entry.kind === 'folder' ? { ...entry, children: await walk(entry.path) } : entry
+      )
+    )
   }
 
-  return walk(root, '')
+  return walk('')
 }
 
 export async function readFile(rel: VaultPath): Promise<FileReadResult> {

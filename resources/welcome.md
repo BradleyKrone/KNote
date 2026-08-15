@@ -334,10 +334,11 @@ the main thing, the rows under it jump straight to one item.
 
 These all track the index live, so counts and lists follow your edits.
 
-## Sidebar: Search, Backlinks, Outline, Tags, Properties
+## Sidebar: Files, Search, Backlinks, Outline, Tags, Properties
 
-The **KNote icon in the Activity Bar** opens five panels:
+The **KNote icon in the Activity Bar** opens six panels:
 
+- **Files** — the vault's folder tree (see below).
 - **Search** — full-text with operators: `path:`, `tag:`, `file:`, quoted
   `"phrases"`, and `-excludes`. `tag:none` finds untagged notes.
 - **Backlinks** — every note linking to the active note, plus **unlinked
@@ -347,6 +348,45 @@ The **KNote icon in the Activity Bar** opens five panels:
 - **Tags** — every tag with usage counts; click to search, right-click to
   rename across the vault or deprecate (hide from pickers).
 - **Properties** — form-style frontmatter editing for the active note.
+
+## Files: browsing the vault
+
+The **Files** panel at the top of the KNote sidebar is a folder browser —
+**one folder at a time**, not an expanding tree. Click a folder and you go
+*into* it: the list becomes that folder's contents and nothing else.
+
+Where you are is the **single path row at the top of the list**,
+`MyVault / Clients / Acme` — which is also the way back out: **click it and
+pick any level of the path** to jump straight there, however deep you are.
+Nothing else takes up room; every other row is a real file or folder. (The
+panel title carries a short version of the same path, `FILES  Clients/Acme`,
+for when the list is scrolled past the row.)
+
+It shows the vault as it sits on disk — every folder, every note, plus
+images, PDFs and `.drawio` diagrams. Click a note to open it in Live
+Preview; anything that isn't a note opens in its normal editor.
+
+| Action | How |
+| --- | --- |
+| Go into a folder | Click it |
+| Go back out | Click the path row at the top of the list and pick the level you want, or the **↑** button in the title bar to go up one |
+| New note / new folder | The panel's title-bar buttons — these create **in the folder you're currently in** — or right-click a folder to create inside that one. Creating a folder steps you into it |
+| Rename | Right-click → **Rename…** — the extension stays selected out of the way, like the Explorer's F2 |
+| Move | **Drag a row onto a folder**; dropping on empty space means the folder you're in. Or right-click → **Move to Folder…** and pick any folder in the vault — which is how something gets moved back *out* of the folder you're in |
+| Delete | Right-click → **Move to Trash** — it goes to your system trash, never a hard delete |
+| Copy a path | Right-click → **Copy Full Path** for the absolute path on this machine (`C:\…\Vault\Clients\Acme\Notes.md`), or **Copy Vault Path** for the path relative to the vault (`Clients/Acme/Notes.md`) — the form that pastes straight into a `[[link]]` or an image embed. Select several rows first and you get one path per line |
+
+Two things worth knowing:
+
+- **Renaming or moving a note takes its `[[links]]` with it**, exactly as
+  renaming from VS Code's own Explorer does — and one **Ctrl+Z** undoes the
+  move *and* the link rewrites together, as a single step.
+- A move that would overwrite a note already in the target folder is
+  **refused**, not silently applied. Rename one of them first.
+
+The panel follows the note you're editing: open a note from Search, a
+backlink or a `[[wiki link]]` and Files browses to its folder and
+highlights it.
 
 ## Project Planner
 

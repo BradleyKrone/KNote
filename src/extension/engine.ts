@@ -28,6 +28,14 @@ const attachmentChangeEmitter = new vscode.EventEmitter<VaultPath>()
  */
 export const onAttachmentChange = attachmentChangeEmitter.event
 
+const fsChangeEmitter = new vscode.EventEmitter<void>()
+/**
+ * Fires on any watcher event at all — file or folder, markdown or not. The
+ * Files tree shows the vault as it sits on disk, and index deltas only ever
+ * cover markdown notes, so folders and attachments need their own signal.
+ */
+export const onVaultFsChange = fsChangeEmitter.event
+
 let vaultRoot: string | null = null
 
 // Providers, the custom editor and the sidebar views are all registered before
@@ -102,6 +110,7 @@ export async function startEngine(root: string, log: vscode.OutputChannel): Prom
  * attachmentAutoCleanup.ts instead, so nothing is cleaned twice.
  */
 async function handleWatcherEvent(rel: VaultPath, kind: string): Promise<void> {
+  fsChangeEmitter.fire()
   if (kind === 'change' && isMarkdown(rel)) {
     const oldContent = vaultIndex.getContent(rel)
     await vaultIndex.handleFsChange(rel, kind)

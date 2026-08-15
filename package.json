@@ -1,7 +1,7 @@
 {
   "name": "knote",
   "displayName": "KNote",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "KNote — a local-first Markdown vault with a checkbox-driven Kanban board, wiki links, and vault-wide search, as a VS Code extension",
   "publisher": "bradleykrone",
   "main": "./dist/extension.js",
@@ -74,6 +74,58 @@
       {
         "command": "knote.cleanupAttachments",
         "title": "KNote: Clean Up Orphaned Attachments"
+      },
+      {
+        "command": "knote.files.newNote",
+        "title": "KNote: New Note",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "knote.files.newFolder",
+        "title": "KNote: New Folder",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "knote.files.rename",
+        "title": "Rename…"
+      },
+      {
+        "command": "knote.files.copyPath",
+        "title": "Copy Full Path"
+      },
+      {
+        "command": "knote.files.copyRelativePath",
+        "title": "Copy Vault Path"
+      },
+      {
+        "command": "knote.files.delete",
+        "title": "Move to Trash"
+      },
+      {
+        "command": "knote.files.move",
+        "title": "KNote: Move Files"
+      },
+      {
+        "command": "knote.files.moveTo",
+        "title": "Move to Folder…"
+      },
+      {
+        "command": "knote.files.openFolder",
+        "title": "KNote: Open Folder in Files View"
+      },
+      {
+        "command": "knote.files.goUp",
+        "title": "Back",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "knote.files.goTo",
+        "title": "KNote: Go Back to a Folder in the Path"
+      },
+      {
+        "command": "knote.files.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
       },
       {
         "command": "knote.openWeeklyNote",
@@ -196,6 +248,10 @@
     "views": {
       "knote": [
         {
+          "id": "knote.files",
+          "name": "Files"
+        },
+        {
           "id": "knote.search",
           "name": "Search",
           "type": "webview"
@@ -259,7 +315,64 @@
           "group": "navigation@1"
         }
       ],
+      "view/title": [
+        {
+          "command": "knote.files.goUp",
+          "when": "view == knote.files && knote.filesInSubfolder",
+          "group": "navigation@0"
+        },
+        {
+          "command": "knote.files.newNote",
+          "when": "view == knote.files",
+          "group": "navigation@1"
+        },
+        {
+          "command": "knote.files.newFolder",
+          "when": "view == knote.files",
+          "group": "navigation@2"
+        },
+        {
+          "command": "knote.files.refresh",
+          "when": "view == knote.files",
+          "group": "navigation@3"
+        }
+      ],
       "view/item/context": [
+        {
+          "command": "knote.files.newNote",
+          "when": "view == knote.files && viewItem == knoteFolder",
+          "group": "1_new@1"
+        },
+        {
+          "command": "knote.files.newFolder",
+          "when": "view == knote.files && viewItem == knoteFolder",
+          "group": "1_new@2"
+        },
+        {
+          "command": "knote.files.copyPath",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|File)$/",
+          "group": "2_copy@1"
+        },
+        {
+          "command": "knote.files.copyRelativePath",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|File)$/",
+          "group": "2_copy@2"
+        },
+        {
+          "command": "knote.files.rename",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|File)$/",
+          "group": "3_modify@1"
+        },
+        {
+          "command": "knote.files.moveTo",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|File)$/",
+          "group": "3_modify@2"
+        },
+        {
+          "command": "knote.files.delete",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|File)$/",
+          "group": "3_modify@3"
+        },
         {
           "command": "knote.renameTag",
           "when": "view == knote.tags && viewItem == tag"
@@ -285,10 +398,54 @@
         {
           "command": "knote.openNoteAt",
           "when": "false"
+        },
+        {
+          "command": "knote.files.rename",
+          "when": "false"
+        },
+        {
+          "command": "knote.files.copyPath",
+          "when": "false"
+        },
+        {
+          "command": "knote.files.copyRelativePath",
+          "when": "false"
+        },
+        {
+          "command": "knote.files.delete",
+          "when": "false"
+        },
+        {
+          "command": "knote.files.refresh",
+          "when": "false"
+        },
+        {
+          "command": "knote.files.move",
+          "when": "false"
+        },
+        {
+          "command": "knote.files.moveTo",
+          "when": "false"
+        },
+        {
+          "command": "knote.files.openFolder",
+          "when": "false"
+        },
+        {
+          "command": "knote.files.goUp",
+          "when": "false"
+        },
+        {
+          "command": "knote.files.goTo",
+          "when": "false"
         }
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "knote.files",
+        "contents": "No KNote vault is open in this workspace.\n[Initialize Vault](command:knote.initializeVault)"
+      },
       {
         "view": "knote.weekly",
         "contents": "No KNote vault is open in this workspace.\n[Initialize Vault](command:knote.initializeVault)"
