@@ -16,6 +16,7 @@ import { registerBoardPanel } from './views/boardPanel'
 import { registerPanels } from './views/panels'
 import { registerLiveEditor } from './views/liveEditorProvider'
 import { registerSidebarViews } from './views/sidebarViews'
+import { registerFilesTree } from './trees/filesTree'
 import { registerTagsTree } from './trees/tagsTree'
 import { registerQuickAccessTrees } from './trees/quickAccess'
 import { registerWeeklyTree } from './trees/weeklyTree'
@@ -45,6 +46,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<KnoteA
   registerPanels(context)
   registerLiveEditor(context)
   registerSidebarViews(context)
+  registerFilesTree(context)
   registerTagsTree(context)
   registerQuickAccessTrees(context)
   registerWeeklyTree(context)

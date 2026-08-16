@@ -51,6 +51,13 @@ export function broadcast<E extends keyof HostEvents>(event: E, payload: HostEve
 // Preview note is already open still starts with the right note.
 let currentActiveNote: string | null = null
 
+const activeNoteEmitter = new vscode.EventEmitter<string | null>()
+/**
+ * The same active-note signal the webviews get, as a host-side event — for
+ * tree views (which can't receive a broadcast) that follow the open note.
+ */
+export const onActiveNoteChanged = activeNoteEmitter.event
+
 export function currentActiveNoteRel(): string | null {
   return currentActiveNote
 }
@@ -58,6 +65,7 @@ export function currentActiveNoteRel(): string | null {
 export function setActiveNote(path: string | null): void {
   currentActiveNote = path
   broadcast('activeNoteChanged', path)
+  activeNoteEmitter.fire(path)
 }
 
 /** Wire the host-side event sources into the broadcast channel. Call once at startup. */
