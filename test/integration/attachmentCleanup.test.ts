@@ -2,6 +2,11 @@
 // image embed, the save triggers the cleanup, and the image leaves the
 // attachments folder (to the OS trash). Also covers the shared-image guard and
 // the watcher path (deleting the note file itself from disk).
+//
+// The later cases cover the harder half: a file is written to disk the moment
+// it is pasted, so an embed added and then removed (or abandoned unsaved) never
+// appears in two versions of the note's *saved* text. Those leaked before the
+// buffer-history tracking in extension/attachmentAutoCleanup.
 
 import * as assert from 'assert'
 import { promises as fs } from 'fs'
@@ -96,5 +101,73 @@ describe('attachment auto-cleanup', () => {
       timeout: 10000,
       message: "the deleted note's orphaned image to be moved to the trash"
     })
+  })
+
+  it('trashes an image whose embed was added and removed before any save', async () => {
+    await writeImage(`${ATT}/never-saved.png`)
+    await writeNoteOnDisk('Cleanup E.md', '# Cleanup E\n\n')
+
+    const editor = await openNoteAtLine('Cleanup E.md', 2)
+    await editor.edit((b) => b.insert(new vscode.Position(2, 0), `![[${ATT}/never-saved.png]]\n`))
+    await delay(600) // let the change settle into the seen-set
+    await deleteLineAndSave(editor, 2)
+
+    await waitFor(async () => !(await imageExists(`${ATT}/never-saved.png`)), {
+      timeout: 10000,
+      message: 'an image embedded only in an unsaved buffer to be trashed on save'
+    })
+  })
+
+  it('trashes an image pasted into a note that is closed without saving', async () => {
+    await writeImage(`${ATT}/abandoned.png`)
+    await writeNoteOnDisk('Cleanup F.md', '# Cleanup F\n\n')
+
+    const editor = await openNoteAtLine('Cleanup F.md', 2)
+    await editor.edit((b) => b.insert(new vscode.Position(2, 0), `![[${ATT}/abandoned.png]]\n`))
+    await delay(600)
+    await closeAllEditors() // reverts the buffer, so disk never held the embed
+
+    // Must outlast CLOSE_SETTLE_MS in extension/attachmentAutoCleanup.
+    await waitFor(async () => !(await imageExists(`${ATT}/abandoned.png`)), {
+      timeout: 10000,
+      message: 'an image abandoned by closing without saving to be trashed'
+    })
+  })
+
+  it('keeps an image whose embed is removed and re-added before saving', async () => {
+    await writeImage(`${ATT}/put-back.png`)
+    await writeNoteOnDisk('Cleanup G.md', `# Cleanup G\n\n![[${ATT}/put-back.png]]\n`)
+
+    const editor = await openNoteAtLine('Cleanup G.md', 2)
+    await editor.edit((b) => b.delete(editor.document.lineAt(2).rangeIncludingLineBreak))
+    await delay(600)
+    await editor.edit((b) => b.insert(new vscode.Position(2, 0), `![[${ATT}/put-back.png]]\n`))
+    await editor.document.save()
+
+    await delay(2500)
+    assert.ok(
+      await imageExists(`${ATT}/put-back.png`),
+      'cutting an embed and pasting it back before saving must not trash the image'
+    )
+  })
+
+  it('keeps an image another note embeds even when added and removed unsaved', async () => {
+    await writeImage(`${ATT}/shared-unsaved.png`)
+    await writeNoteOnDisk('Cleanup H.md', '# Cleanup H\n\n')
+    await writeNoteOnDisk('Cleanup I.md', `# Cleanup I\n\n![[${ATT}/shared-unsaved.png]]\n`)
+    await delay(1500) // let the watcher index Cleanup I
+
+    const editor = await openNoteAtLine('Cleanup H.md', 2)
+    await editor.edit((b) =>
+      b.insert(new vscode.Position(2, 0), `![[${ATT}/shared-unsaved.png]]\n`)
+    )
+    await delay(600)
+    await deleteLineAndSave(editor, 2)
+
+    await delay(2500)
+    assert.ok(
+      await imageExists(`${ATT}/shared-unsaved.png`),
+      'an image still embedded elsewhere must survive the unsaved-buffer path too'
+    )
   })
 })

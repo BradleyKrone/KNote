@@ -71,6 +71,10 @@ function openBoard(context: vscode.ExtensionContext, scope: BoardScope): void {
   const existing = panels.get(scopeKey(scope))
   if (existing) {
     existing.reveal()
+    // Undo any project/deliverable narrowing left over from openBoardWithFilter
+    // — this is the plain "open the board" entry point, so it should always
+    // land on an unfiltered board rather than whatever was last picked.
+    broadcast('boardFilterChanged', { kind: 'all' })
     return
   }
   const panel = vscode.window.createWebviewPanel(

@@ -28,6 +28,23 @@ export function vaultNoteRel(doc: vscode.TextDocument): VaultPath | null {
   return rel
 }
 
+/**
+ * Vault-relative path for the note a tab is showing, else null. Covers both the
+ * plain text editor and the live-preview custom editor, which are different tab
+ * input types over the same underlying `.md` file.
+ */
+export function tabNoteRel(tab: vscode.Tab): VaultPath | null {
+  const input = tab.input
+  const uri =
+    input instanceof vscode.TabInputText || input instanceof vscode.TabInputCustom
+      ? input.uri
+      : null
+  if (!uri) return null
+  const rel = relForUri(uri)
+  if (rel === null || !isMarkdown(rel) || isIgnoredRel(rel)) return null
+  return rel
+}
+
 /** The open TextDocument for a vault path, if VS Code currently has it loaded. */
 export function openDocFor(rel: VaultPath): vscode.TextDocument | undefined {
   const abs = toAbs(rel).toLowerCase()

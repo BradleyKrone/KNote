@@ -1,22 +1,43 @@
 import { promises as fs } from 'fs'
 import type { VaultPath } from '@shared/types'
-import { isImage, isInside, parentOf, resolveEmbedPath, samePath } from '@shared/pathUtils'
+import {
+  isImage,
+  isInside,
+  normalizeRel,
+  parentOf,
+  resolveEmbedPath,
+  samePath
+} from '@shared/pathUtils'
 import { parseNote } from '@shared/parser/parseNote'
 import { getVaultConfig } from './vaultConfig'
 import * as vaultIndex from './indexer/vaultIndex'
 import * as vault from './vaultService'
 
 /**
- * Vault-relative attachment cleanup: when a note stops referencing an image
- * inside the configured attachments folder (edited out, or the note itself
- * deleted), the file is trashed — but only once no other note still embeds
- * it, so shared images are never touched.
+ * Vault-relative attachment cleanup: when nothing references an image inside
+ * the configured attachments folder anymore, the file is trashed — but only
+ * once no *other* note still embeds it, so shared images are never touched.
+ *
+ * Cleanup is driven by a list of **candidate refs** rather than by diffing two
+ * versions of a note's text. The caller decides what counts as a candidate:
+ * the editor half (extension/attachmentAutoCleanup) tracks every ref a buffer
+ * has held since its last save — so an image pasted and then undone before any
+ * save is still a candidate — while the watcher half (extension/engine) passes
+ * the refs of the note's previously indexed content.
  */
 
 const MD_IMAGE_RE = /!\[[^\]]*\]\(\s*(<[^>]*>|[^)\s]+)\s*\)/g
 
+/** What a cleanup pass actually did, so the host can log it instead of failing silently. */
+export interface CleanupResult {
+  trashed: VaultPath[]
+  failed: { path: VaultPath; error: string }[]
+}
+
+const EMPTY_RESULT: CleanupResult = { trashed: [], failed: [] }
+
 /** All vault-relative image paths a note's content refers to (wiki-embeds + standard markdown images). */
-function collectImageRefs(content: string, notePath: VaultPath): string[] {
+export function imageRefsOf(content: string, notePath: VaultPath): VaultPath[] {
   const baseFolder = parentOf(notePath)
   const refs: string[] = []
 
@@ -40,8 +61,13 @@ function collectImageRefs(content: string, notePath: VaultPath): string[] {
   return refs
 }
 
-function includesPath(list: string[], target: VaultPath): boolean {
+function includesPath(list: readonly string[], target: VaultPath): boolean {
   return list.some((r) => samePath(r, target))
+}
+
+/** Case-insensitive key for set membership, matching `samePath`'s comparison. */
+function pathKey(rel: string): string {
+  return normalizeRel(rel).toLowerCase()
 }
 
 /**
@@ -54,7 +80,7 @@ export async function findOrphanedAttachments(): Promise<VaultPath[]> {
 
   const referenced: string[] = []
   for (const [notePath, content] of vaultIndex.getAllContents()) {
-    referenced.push(...collectImageRefs(content, notePath))
+    referenced.push(...imageRefsOf(content, notePath))
   }
 
   const orphans: VaultPath[] = []
@@ -75,26 +101,69 @@ export async function findOrphanedAttachments(): Promise<VaultPath[]> {
   return orphans
 }
 
-function isReferencedElsewhere(attachmentRel: VaultPath, exceptNotePath: VaultPath): boolean {
+/**
+ * Every image ref held by a note other than `exceptNotePath`, as one pass over
+ * the index. Built once per cleanup rather than per candidate — the old
+ * per-candidate scan reparsed the whole vault for each removed image.
+ */
+function refsFromOtherNotes(exceptNotePath: VaultPath): Set<string> {
+  const keys = new Set<string>()
   for (const [notePath, content] of vaultIndex.getAllContents()) {
     if (samePath(notePath, exceptNotePath)) continue
-    if (includesPath(collectImageRefs(content, notePath), attachmentRel)) return true
+    for (const ref of imageRefsOf(content, notePath)) keys.add(pathKey(ref))
   }
-  return false
+  return keys
 }
 
-async function trashIfOrphaned(
-  rel: VaultPath,
+/**
+ * Trash whichever candidates are inside the attachments folder and unreferenced
+ * vault-wide. Candidates are deduped first: a note embedding the same image
+ * twice would otherwise trash it, then fail trashing the file it just removed.
+ */
+async function trashOrphans(
+  candidates: readonly string[],
   attachmentsFolder: string,
   exceptNotePath: VaultPath
-): Promise<void> {
-  if (!isInside(rel, attachmentsFolder)) return
-  if (isReferencedElsewhere(rel, exceptNotePath)) return
-  try {
-    await vault.deleteEntry(rel)
-  } catch {
-    // already gone, or otherwise untrashable — nothing to clean up
+): Promise<CleanupResult> {
+  const inFolder = new Map<string, VaultPath>()
+  for (const rel of candidates) {
+    const key = pathKey(rel)
+    if (!inFolder.has(key) && isInside(rel, attachmentsFolder)) {
+      inFolder.set(key, normalizeRel(rel))
+    }
   }
+  if (inFolder.size === 0) return EMPTY_RESULT
+
+  const stillUsed = refsFromOtherNotes(exceptNotePath)
+  const result: CleanupResult = { trashed: [], failed: [] }
+  for (const [key, rel] of inFolder) {
+    if (stillUsed.has(key)) continue
+    try {
+      await vault.deleteEntry(rel)
+      result.trashed.push(rel)
+    } catch (err) {
+      result.failed.push({ path: rel, error: err instanceof Error ? err.message : String(err) })
+    }
+  }
+  return result
+}
+
+/**
+ * Trash any candidate attachment that `newContent` no longer references.
+ * The primary entry point — see the module comment on where candidates come from.
+ */
+export async function cleanupUnreferenced(
+  notePath: VaultPath,
+  candidateRefs: readonly string[],
+  newContent: string
+): Promise<CleanupResult> {
+  if (candidateRefs.length === 0) return EMPTY_RESULT
+  const newRefs = imageRefsOf(newContent, notePath)
+  const removed = candidateRefs.filter((r) => !includesPath(newRefs, r))
+  if (removed.length === 0) return EMPTY_RESULT
+
+  const config = await getVaultConfig()
+  return trashOrphans(removed, config.attachmentsFolder, notePath)
 }
 
 /** Trash any attachment `notePath` stopped referencing between its old and new content. */
@@ -102,30 +171,19 @@ export async function cleanupRemovedAttachments(
   notePath: VaultPath,
   oldContent: string | undefined,
   newContent: string
-): Promise<void> {
-  if (!oldContent) return
-  const oldRefs = collectImageRefs(oldContent, notePath)
-  if (oldRefs.length === 0) return
-  const newRefs = collectImageRefs(newContent, notePath)
-  const removed = oldRefs.filter((r) => !includesPath(newRefs, r))
-  if (removed.length === 0) return
-
-  const config = await getVaultConfig()
-  for (const rel of removed) {
-    await trashIfOrphaned(rel, config.attachmentsFolder, notePath)
-  }
+): Promise<CleanupResult> {
+  if (!oldContent) return EMPTY_RESULT
+  return cleanupUnreferenced(notePath, imageRefsOf(oldContent, notePath), newContent)
 }
 
 /** Trash attachments a just-deleted note referenced, if nothing else still uses them. */
 export async function cleanupAttachmentsForDeletedNote(
   notePath: VaultPath,
   content: string
-): Promise<void> {
-  const refs = collectImageRefs(content, notePath)
-  if (refs.length === 0) return
+): Promise<CleanupResult> {
+  const refs = imageRefsOf(content, notePath)
+  if (refs.length === 0) return EMPTY_RESULT
 
   const config = await getVaultConfig()
-  for (const rel of refs) {
-    await trashIfOrphaned(rel, config.attachmentsFolder, notePath)
-  }
+  return trashOrphans(refs, config.attachmentsFolder, notePath)
 }

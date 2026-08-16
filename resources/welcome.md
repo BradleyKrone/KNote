@@ -491,8 +491,8 @@ with no members yet) its own checkbox isn't.
 
 ## Attachments clean themselves up
 
-When you delete the last `![[embed]]` of an image from a note (and save), or
-delete a note that embedded images, KNote moves the now-orphaned files out of
+When nothing references an image anymore — you deleted its last `![[embed]]`,
+or deleted the note that embedded it — KNote moves the now-orphaned file out of
 the attachments folder automatically:
 
 - **To the OS trash / Recycle Bin** — never permanently deleted; restore from
@@ -501,11 +501,15 @@ the attachments folder automatically:
   left untouched.
 - Works for `![[wiki embeds]]` and `![](markdown)` images alike, and also when
   a note is edited or deleted outside VS Code (the file watcher catches it).
-- Moving an embed between notes? Do the cut *and* the paste before saving the
-  first note — otherwise the image is trashed in between (recoverable from
-  the Recycle Bin).
+- **Changed your mind about a paste?** Pasting an image or inserting a diagram
+  writes the file immediately, so undoing it — or closing the note without
+  saving — trashes the file too, rather than leaving it behind.
+- Moving an embed between notes is safe: the destination note's buffer counts,
+  saved or not.
 - **KNote: Clean Up Orphaned Attachments** still exists for a full manual
-  sweep of anything that predates this feature.
+  sweep of anything that predates this feature. The KNote output channel notes
+  how many orphans it found when the vault opens, and logs every file the
+  automatic cleanup trashes (or fails to trash).
 
 ## Draw.io diagrams
 

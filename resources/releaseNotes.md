@@ -21,6 +21,24 @@ Extensions view.
 - The Files panel follows the note you're editing — open a note from search,
   a backlink or a `[[wiki link]]` and it browses to that note's folder and
   highlights it.
+- **Attachment cleanup catches the cases it used to miss.** Pasting an image
+  or inserting a diagram writes the file to the attachments folder straight
+  away, so undoing the paste — or closing the note without saving it — now
+  trashes that file instead of leaving it behind forever. Moving an embed
+  between notes no longer needs the cut and the paste to happen before the
+  first save either; the destination note counts whether it's been saved yet
+  or not.
+- The KNote output channel now logs every attachment the automatic cleanup
+  trashes, and says when one couldn't be trashed rather than staying silent.
+  Opening a vault also reports how many unreferenced images are sitting in the
+  attachments folder, so **KNote: Clean Up Orphaned Attachments** has
+  something to act on.
+- Fixed collapsed sections not being restored in longer notes — a folded
+  heading more than a few thousand characters into a note reopened expanded,
+  and reopening it that way could then drop the note's saved folds for good.
+- Fixed **KNote: Open Board** landing back on a stale **Filter by Project**
+  scope if the board was already open — it now always reveals the unfiltered
+  board, the same as opening it fresh.
 
 ## 2.6.0
 

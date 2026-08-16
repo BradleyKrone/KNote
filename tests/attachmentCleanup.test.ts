@@ -6,7 +6,9 @@ import * as vault from '../src/core/vaultService'
 import * as vaultIndex from '../src/core/indexer/vaultIndex'
 import {
   cleanupAttachmentsForDeletedNote,
-  cleanupRemovedAttachments
+  cleanupRemovedAttachments,
+  cleanupUnreferenced,
+  imageRefsOf
 } from '../src/core/attachmentCleanup'
 
 const ATT = 'Knote Resources/Attachments'
@@ -96,5 +98,109 @@ describe('attachment auto-cleanup', () => {
     vaultIndex.updateFromContent('Knote Resources/Note.md', oldContent)
     await cleanupRemovedAttachments('Knote Resources/Note.md', oldContent, '\n')
     expect(trashed).toEqual([`${ATT}/img.png`])
+  })
+
+  it('reports what a deleted note cleanup trashed', async () => {
+    const content = `![[${ATT}/reported.png]]\n`
+    vaultIndex.updateFromContent('Gone.md', content)
+    await vaultIndex.handleFsChange('Gone.md', 'unlink')
+    const result = await cleanupAttachmentsForDeletedNote('Gone.md', content)
+    expect(result.trashed).toEqual([`${ATT}/reported.png`])
+    expect(result.failed).toEqual([])
+  })
+})
+
+describe('imageRefsOf', () => {
+  it('collects wiki embeds and markdown images, skipping non-images and remote URLs', () => {
+    const content = [
+      `![[${ATT}/wiki.png]]`,
+      `![alt](${ATT.replace(/ /g, '%20')}/markdown.jpg)`,
+      '![[Some Note]]', // an embed, but not an image
+      '[[Knote Resources/Attachments/linked.png]]', // a link, not an embed
+      '![remote](https://example.com/nope.png)',
+      `![doc](${ATT}/manual.pdf)`
+    ].join('\n')
+    expect(imageRefsOf(content, 'Note.md')).toEqual([`${ATT}/wiki.png`, `${ATT}/markdown.jpg`])
+  })
+})
+
+// The bug this API exists for: an attachment is written to disk the moment it is
+// pasted, so a ref that only ever lived in an unsaved buffer never appears in
+// any two versions of the note's saved text. Candidates come from the buffer's
+// history instead — see extension/attachmentAutoCleanup.
+describe('cleanupUnreferenced', () => {
+  let dir: string
+  let trashed: string[]
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'knote-att-'))
+    vault.setVault(dir)
+    await vaultIndex.initIndex()
+    trashed = []
+    vault.setTrashHandler(async (abs) => {
+      trashed.push(abs.replace(dir, '').replace(/\\/g, '/').replace(/^\//, ''))
+    })
+  })
+
+  afterEach(async () => {
+    await vaultIndex.initIndex()
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('trashes a candidate the new content never contained', async () => {
+    vaultIndex.updateFromContent('Note.md', 'no embed\n')
+    const result = await cleanupUnreferenced('Note.md', [`${ATT}/pasted.png`], 'no embed\n')
+    expect(trashed).toEqual([`${ATT}/pasted.png`])
+    expect(result.trashed).toEqual([`${ATT}/pasted.png`])
+  })
+
+  it('keeps a candidate the new content still references', async () => {
+    const text = `kept ![[${ATT}/pasted.png]]\n`
+    vaultIndex.updateFromContent('Note.md', text)
+    await cleanupUnreferenced('Note.md', [`${ATT}/pasted.png`], text)
+    expect(trashed).toEqual([])
+  })
+
+  it('keeps a candidate another note still embeds', async () => {
+    vaultIndex.updateFromContent('A.md', 'gone\n')
+    vaultIndex.updateFromContent('B.md', `![[${ATT}/shared.png]]\n`)
+    await cleanupUnreferenced('A.md', [`${ATT}/shared.png`], 'gone\n')
+    expect(trashed).toEqual([])
+  })
+
+  it('ignores candidates outside the attachments folder', async () => {
+    vaultIndex.updateFromContent('Note.md', '\n')
+    await cleanupUnreferenced('Note.md', ['Elsewhere/photo.png'], '\n')
+    expect(trashed).toEqual([])
+  })
+
+  it('trashes a duplicated candidate exactly once', async () => {
+    vaultIndex.updateFromContent('Note.md', '\n')
+    const dupes = [`${ATT}/twice.png`, `${ATT}/twice.png`, `${ATT}/Twice.PNG`]
+    const result = await cleanupUnreferenced('Note.md', dupes, '\n')
+    expect(trashed).toEqual([`${ATT}/twice.png`])
+    expect(result.trashed).toHaveLength(1)
+    expect(result.failed).toEqual([])
+  })
+
+  it('reports a failing trash handler instead of swallowing it', async () => {
+    // What an untrashable file on OneDrive looks like: workspace.fs.delete
+    // rejects, and the user used to get no signal at all.
+    vault.setTrashHandler(async () => {
+      throw new Error('EPERM: operation not permitted')
+    })
+    vaultIndex.updateFromContent('Note.md', '\n')
+    const result = await cleanupUnreferenced('Note.md', [`${ATT}/locked.png`], '\n')
+    expect(result.trashed).toEqual([])
+    expect(result.failed).toEqual([
+      { path: `${ATT}/locked.png`, error: 'EPERM: operation not permitted' }
+    ])
+  })
+
+  it('is a no-op with no candidates', async () => {
+    vaultIndex.updateFromContent('Note.md', `![[${ATT}/img.png]]\n`)
+    const result = await cleanupUnreferenced('Note.md', [], '\n')
+    expect(trashed).toEqual([])
+    expect(result.trashed).toEqual([])
   })
 })

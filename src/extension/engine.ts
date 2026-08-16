@@ -9,7 +9,9 @@ import * as vault from '../core/vaultService'
 import * as vaultIndex from '../core/indexer/vaultIndex'
 import {
   cleanupAttachmentsForDeletedNote,
-  cleanupRemovedAttachments
+  cleanupRemovedAttachments,
+  findOrphanedAttachments,
+  type CleanupResult
 } from '../core/attachmentCleanup'
 import { getVaultConfig, setVaultConfig } from '../core/vaultConfig'
 import { markKnownContent, markOwnWrite, startWatching, stopWatching } from '../core/watcher'
@@ -38,6 +40,29 @@ export const onVaultFsChange = fsChangeEmitter.event
 
 let vaultRoot: string | null = null
 
+// The activation log channel, kept module-level so anything in the host can
+// report without threading it through every call. Null until a vault starts.
+let logChannel: vscode.OutputChannel | null = null
+
+/** Append a line to the KNote output channel (no-op before the engine starts). */
+function logLine(message: string): void {
+  logChannel?.appendLine(message)
+}
+
+/**
+ * Report what an attachment cleanup pass did. Failures used to be swallowed
+ * silently, which made an untrashable file (OneDrive/EPERM, a locked handle)
+ * indistinguishable from cleanup deciding the file was still in use.
+ */
+export function logCleanup(rel: VaultPath, result: CleanupResult): void {
+  if (result.trashed.length > 0) {
+    logLine(`Attachment cleanup: trashed ${result.trashed.join(', ')} (orphaned by ${rel})`)
+  }
+  for (const f of result.failed) {
+    logLine(`Attachment cleanup: could not trash ${f.path} — ${f.error}`)
+  }
+}
+
 // Providers, the custom editor and the sidebar views are all registered before
 // the engine starts, so a restored editor can ask for the index while it's
 // still being built and would otherwise be handed an empty vault. Callers that
@@ -61,6 +86,7 @@ export function notesMap(): Map<string, NoteMeta> {
 }
 
 export async function startEngine(root: string, log: vscode.OutputChannel): Promise<void> {
+  logChannel = log
   indexBuilt = new Promise<void>((resolve) => {
     markIndexBuilt = resolve
   })
@@ -97,6 +123,17 @@ export async function startEngine(root: string, log: vscode.OutputChannel): Prom
     log.appendLine(
       `Vault "${info.name}" (${info.root}) — indexed ${vaultIndex.getSnapshot().length} notes in ${Date.now() - started}ms`
     )
+
+    // Breadcrumb only — never trash automatically here. The index has just been
+    // built and a note that is momentarily missing from it would make its still
+    // -embedded images look orphaned, which would cost the user real files.
+    const orphans = await findOrphanedAttachments()
+    if (orphans.length > 0) {
+      log.appendLine(
+        `${orphans.length} attachment${orphans.length === 1 ? '' : 's'} in ${config.attachmentsFolder} ` +
+          `no note references — run "KNote: Clean Up Orphaned Attachments" to review and trash them.`
+      )
+    }
   } finally {
     markIndexBuilt()
   }
@@ -116,17 +153,19 @@ async function handleWatcherEvent(rel: VaultPath, kind: string): Promise<void> {
     await vaultIndex.handleFsChange(rel, kind)
     const newContent = vaultIndex.getContent(rel)
     if (oldContent !== undefined && newContent !== undefined && newContent !== oldContent) {
-      await cleanupRemovedAttachments(rel, oldContent, newContent)
+      logCleanup(rel, await cleanupRemovedAttachments(rel, oldContent, newContent))
     }
   } else if (kind === 'unlink' && isMarkdown(rel)) {
     const oldContent = vaultIndex.getContent(rel)
     await vaultIndex.handleFsChange(rel, kind)
-    if (oldContent !== undefined) await cleanupAttachmentsForDeletedNote(rel, oldContent)
+    if (oldContent !== undefined) {
+      logCleanup(rel, await cleanupAttachmentsForDeletedNote(rel, oldContent))
+    }
   } else if (kind === 'unlinkDir') {
     const deleted = [...vaultIndex.getAllContents()].filter(([path]) => isInside(path, rel))
     await vaultIndex.handleFsChange(rel, kind)
     for (const [path, content] of deleted) {
-      await cleanupAttachmentsForDeletedNote(path, content)
+      logCleanup(path, await cleanupAttachmentsForDeletedNote(path, content))
     }
   } else {
     if ((kind === 'add' || kind === 'change') && isImage(rel)) {
