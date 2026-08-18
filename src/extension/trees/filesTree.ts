@@ -557,7 +557,27 @@ export function registerFilesTree(context: vscode.ExtensionContext): void {
           )
           if (choice !== 'Move to Trash') return
         }
-        await vault.deleteEntry(path)
+        try {
+          await vault.deleteEntry(path)
+        } catch (err) {
+          // OS-trash can reject outright on some OneDrive/network-backed
+          // vault locations (sync lock, unsupported recycle-bin target) —
+          // surface it instead of leaving the user staring at nothing, and
+          // offer a way forward when trash just isn't available here.
+          const message = err instanceof Error ? err.message : String(err)
+          const choice = await vscode.window.showErrorMessage(
+            `KNote: couldn't move "${nameOf(path)}" to the trash. ${message}`,
+            'Delete Permanently'
+          )
+          if (choice !== 'Delete Permanently') return
+          const confirm = await vscode.window.showWarningMessage(
+            `Permanently delete "${nameOf(path)}"?`,
+            { modal: true, detail: 'This bypasses the trash and cannot be undone.' },
+            'Delete Permanently'
+          )
+          if (confirm !== 'Delete Permanently') return
+          await vault.deleteEntryPermanently(path)
+        }
         // Deleting the folder you're standing in would leave the view showing
         // a folder that no longer exists; step out to its parent.
         if (path === provider.currentFolder) goTo(parentOf(path))

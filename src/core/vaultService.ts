@@ -322,3 +322,15 @@ export async function deleteEntry(rel: VaultPath): Promise<void> {
   ownWriteMarker(abs)
   await trashHandler(abs)
 }
+
+/**
+ * Hard-deletes a file/folder, bypassing the OS trash entirely. Only meant
+ * as a fallback when trashHandler has already failed (e.g. a OneDrive/
+ * network-backed path the OS recycle-bin API rejects) — the caller is
+ * responsible for confirming with the user first, since this is unrecoverable.
+ */
+export async function deleteEntryPermanently(rel: VaultPath): Promise<void> {
+  const abs = toAbs(rel)
+  ownWriteMarker(abs)
+  await fs.rm(abs, { recursive: true, force: true })
+}

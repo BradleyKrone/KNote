@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import * as vault from '../src/core/vaultService'
+import { existsSync } from 'fs'
 
 describe('buildTree ordering', () => {
   it('sorts numbered file names chronologically, not lexicographically', async () => {
@@ -111,6 +112,35 @@ describe('readDir', () => {
     try {
       vault.setVault(dir)
       await expect(vault.readDir('../..')).rejects.toThrow()
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('deleteEntryPermanently', () => {
+  it('hard-deletes a file without going through the trash handler', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'knote-test-'))
+    try {
+      vault.setVault(dir)
+      await writeFile(join(dir, 'Note.md'), '')
+      // No setTrashHandler call in this file, so the default handler still
+      // throws — deleteEntryPermanently resolving proves it never touched it.
+      await vault.deleteEntryPermanently('Note.md')
+      expect(existsSync(join(dir, 'Note.md'))).toBe(false)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('hard-deletes a folder recursively', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'knote-test-'))
+    try {
+      vault.setVault(dir)
+      await mkdir(join(dir, 'Clients', 'Acme'), { recursive: true })
+      await writeFile(join(dir, 'Clients', 'Acme', 'Deep.md'), '')
+      await vault.deleteEntryPermanently('Clients')
+      expect(existsSync(join(dir, 'Clients'))).toBe(false)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }

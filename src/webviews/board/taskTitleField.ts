@@ -17,11 +17,12 @@ import {
   ViewPlugin,
   type ViewUpdate
 } from '@codemirror/view'
-import { PRIORITY_RE, TAG_RE } from '@shared/parser/patterns'
+import { DELIVERABLE_REF_RE, PRIORITY_RE, TAG_RE } from '@shared/parser/patterns'
 import { knoteAutocomplete } from '../editor/completions'
+import { DeliverableRefWidget } from '../editor/knoteConstructs'
 import { knoteTooltipTheme } from '../editor/theme'
 
-function buildDecorations(text: string): DecorationSet {
+function buildDecorations(text: string, definesDeliverable: string | null): DecorationSet {
   const decorations: Range<Decoration>[] = []
 
   TAG_RE.lastIndex = 0
@@ -42,21 +43,39 @@ function buildDecorations(text: string): DecorationSet {
     )
   }
 
+  // @deliverable(project/name) — same collapsed pill the note editor gives it
+  // (DeliverableRefWidget), rather than showing the raw markup here.
+  DELIVERABLE_REF_RE.lastIndex = 0
+  for (let m = DELIVERABLE_REF_RE.exec(text); m; m = DELIVERABLE_REF_RE.exec(text)) {
+    const from = m.index
+    const to = from + m[0].length
+    const isDefining = definesDeliverable === `deliverable/${m[1]}/${m[2]}`
+    decorations.push(
+      Decoration.replace({ widget: new DeliverableRefWidget(m[1], m[2], isDefining) }).range(
+        from,
+        to
+      )
+    )
+  }
+
   return Decoration.set(decorations, true)
 }
 
-const decorateTitle = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet
-    constructor(view: EditorView) {
-      this.decorations = buildDecorations(view.state.doc.toString())
-    }
-    update(update: ViewUpdate): void {
-      if (update.docChanged) this.decorations = buildDecorations(update.state.doc.toString())
-    }
-  },
-  { decorations: (plugin) => plugin.decorations }
-)
+const decorateTitle = (definesDeliverable: string | null) =>
+  ViewPlugin.fromClass(
+    class {
+      decorations: DecorationSet
+      constructor(view: EditorView) {
+        this.decorations = buildDecorations(view.state.doc.toString(), definesDeliverable)
+      }
+      update(update: ViewUpdate): void {
+        if (update.docChanged) {
+          this.decorations = buildDecorations(update.state.doc.toString(), definesDeliverable)
+        }
+      }
+    },
+    { decorations: (plugin) => plugin.decorations }
+  )
 
 const titleTheme = EditorView.theme({
   '.cm-scroller': { fontFamily: 'inherit', fontSize: '13px', overflow: 'auto' },
@@ -68,6 +87,13 @@ export interface TaskTitleEditorOptions {
   parent: HTMLElement
   doc: string
   placeholderText: string
+  /**
+   * The bare `deliverable/<project>/<name>` tag this task's line defines, if
+   * any — same value as `BoardCard.definesDeliverable` — so its
+   * `@deliverable(...)` pill renders filled rather than outlined, matching
+   * the note editor. `null` for a brand-new card, which can't define one yet.
+   */
+  definesDeliverable?: string | null
   /** Fired on every keystroke — mirrors the old controlled `<textarea>`'s onChange. */
   onChange: (text: string) => void
   /** A task's text is one line on disk, so Enter submits rather than inserting a newline. */
@@ -81,7 +107,7 @@ export function createTaskTitleEditor(opts: TaskTitleEditorOptions): EditorView 
     extensions: [
       EditorView.lineWrapping,
       placeholder(opts.placeholderText),
-      decorateTitle,
+      decorateTitle(opts.definesDeliverable ?? null),
       titleTheme,
       // The same VS Code-themed popup colors (and above-the-modal z-index)
       // the note editor's autocomplete uses, so it reads the same here.

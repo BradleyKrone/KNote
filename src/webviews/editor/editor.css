@@ -204,10 +204,18 @@
   /* Matches the cell padding the editor replaces, so nothing shifts. */
   padding: 0.35em 0.7em;
   min-height: 0;
-  caret-color: var(--vscode-editorCursor-foreground, currentColor);
 }
 .cm-md-table-cell-editor .cm-line {
   padding: 0;
+}
+/* The nested cell view draws its own synthetic cursor (see drawSelection()
+   in tableCellEdit.ts's cellExtensions) rather than relying on the native
+   caret, which the outer editor's own drawSelection() forces transparent on
+   every .cm-content descendant, this cell included. Color it to match the
+   theme, same as theme.ts does for the outer editor. */
+.cm-md-table-cell-editor .cm-cursor,
+.cm-md-table-cell-editor .cm-dropCursor {
+  border-left-color: var(--vscode-editorCursor-foreground, currentColor);
 }
 
 .cm-md-link {

@@ -52,10 +52,11 @@ Markdown:
   Pasting spreadsheet data (tab-separated, one line per row) fills the cells
   around the caret and grows the table to fit. Right-click anywhere for
   **Insert ▸ Table…** (pick a row/column count), or right-click a cell for
-  **Table ▸** to insert/delete the row or column under it, **Table ▸ Indent
-  table** / **Outdent table** to nest the whole table under a task (so it's
-  part of that checkbox item) or pull it back out, or **Table ▸ Edit table
-  source** to hand-edit the raw Markdown.
+  **Table ▸** to insert/delete the row or column under it, **Table ▸ Align
+  column ▸** to set that column's text to Left / Center / Right / Default,
+  **Table ▸ Indent table** / **Outdent table** to nest the whole table under a
+  task (so it's part of that checkbox item) or pull it back out, or
+  **Table ▸ Edit table source** to hand-edit the raw Markdown.
 - **`` ```mermaid `` code blocks render as real diagrams** (flowcharts,
   sequence diagrams, and anything else Mermaid supports); click a diagram to
   drop your cursor in and edit the raw source, exactly like every other
@@ -208,7 +209,7 @@ left, so you can pick one out at a glance instead of reading down the list:
 | **Insert ▸** Draw.io Diagram | Create a blank diagram in your attachments folder, embed it, and open it for editing |
 | **Task ▸** Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
 | **Task ▸** Copy link to task | *(task/milestone lines)* copy a `[[Note#^id\|Task text]]` link to this task (adding a hidden `^anchor` named after the task if needed) — paste it elsewhere to jump back |
-| **Table ▸** *(row/column actions)* | *(inside a table)* insert or delete the clicked row or column, or drop to the raw Markdown with Edit table source |
+| **Table ▸** *(row/column actions)* | *(inside a table)* insert or delete the clicked row or column, set the clicked column's alignment (Left/Center/Right/Default), or drop to the raw Markdown with Edit table source |
 | Open link / Copy link / Edit link… / Remove link | *(on a hyperlink)* open it in your browser, copy the bare URL, change its text/target, or unwrap it back to plain text |
 | Edit machine entry… | *(🚜 lines)* change the serial + date, keeping the activity text |
 | *Suggestions* / Add to dictionary / Ignore | *(misspelled words)* replace with a correction, add the word to your vault dictionary, or ignore it this session |
@@ -373,7 +374,7 @@ Preview; anything that isn't a note opens in its normal editor.
 | New note / new folder | The panel's title-bar buttons — these create **in the folder you're currently in** — or right-click a folder to create inside that one. Creating a folder steps you into it |
 | Rename | Right-click → **Rename…** — the extension stays selected out of the way, like the Explorer's F2 |
 | Move | **Drag a row onto a folder**; dropping on empty space means the folder you're in. Or right-click → **Move to Folder…** and pick any folder in the vault — which is how something gets moved back *out* of the folder you're in |
-| Delete | Right-click → **Move to Trash** — it goes to your system trash, never a hard delete |
+| Delete | Right-click → **Move to Trash** — it goes to your system trash; if that fails (e.g. OneDrive), KNote offers Delete Permanently instead |
 | Copy a path | Right-click → **Copy Full Path** for the absolute path on this machine (`C:\…\Vault\Clients\Acme\Notes.md`), or **Copy Vault Path** for the path relative to the vault (`Clients/Acme/Notes.md`) — the form that pastes straight into a `[[link]]` or an image embed. Select several rows first and you get one path per line |
 
 Two things worth knowing:

@@ -43,7 +43,7 @@ import {
   type Extension,
   type Transaction
 } from '@codemirror/state'
-import { EditorView, keymap, tooltips, type KeyBinding } from '@codemirror/view'
+import { EditorView, drawSelection, keymap, tooltips, type KeyBinding } from '@codemirror/view'
 import { Autolink, Strikethrough, Table } from '@lezer/markdown'
 import { knoteAutocomplete } from './completions'
 import { formatKeymap } from './markdownFormatting'
@@ -371,6 +371,10 @@ function cellExtensions(outer: EditorView, sessionId: number): Extension[] {
     Prec.highest(keymap.of(completionKeymap)),
     Prec.highest(keymap.of(cellKeymap(outer))),
     keymap.of(formatKeymap),
+    // The outer editor's own drawSelection() hides the native caret on every
+    // .cm-content descendant, including this nested view's — so this needs
+    // its own drawSelection() to draw a synthetic cursor, or none is visible.
+    drawSelection(),
     markdown({ extensions: [Strikethrough, Table, Autolink] }),
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     knoteAutocomplete,

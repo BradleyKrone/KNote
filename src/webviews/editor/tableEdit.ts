@@ -19,6 +19,8 @@ import {
   removeTableColumn,
   removeTableRow,
   serializeTable,
+  setColumnAlign,
+  type Align,
   type ParsedTable
 } from './tableModel'
 
@@ -168,6 +170,23 @@ export function deleteColumn(view: EditorView, ctx: TableCtx, atIndex: number): 
   applyTableEdit(view, ctx, removeTableColumn(ctx.table, atIndex), {
     row: ctx.rowIndex,
     col: Math.min(ctx.colIndex, atIndex)
+  })
+}
+
+/**
+ * Set the alignment of the column at `atIndex` and keep editing on the
+ * clicked cell — this only rewrites the delimiter row's dashes/colons
+ * (serializeTable), so the landing cell is unchanged from `ctx`.
+ */
+export function setColumnAlignment(
+  view: EditorView,
+  ctx: TableCtx,
+  atIndex: number,
+  align: Align
+): void {
+  applyTableEdit(view, ctx, setColumnAlign(ctx.table, atIndex, align), {
+    row: ctx.rowIndex,
+    col: ctx.colIndex
   })
 }
 
