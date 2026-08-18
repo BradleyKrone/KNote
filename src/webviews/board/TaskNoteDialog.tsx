@@ -70,6 +70,7 @@ export function TaskNoteDialog(): React.JSX.Element | null {
       parent: titleCmHost.current,
       doc: text,
       placeholderText: '',
+      definesDeliverable: target.kind === 'edit' ? target.card.definesDeliverable : null,
       onChange: setTaskText,
       onEnter: () => saveRef.current()
     })
@@ -219,7 +220,6 @@ export function TaskNoteDialog(): React.JSX.Element | null {
           }}
           onDone={() => titleViewRef.current?.focus()}
         />
-        <div className="task-note-body-label">Title — #tags, 📅 dates, !! priority</div>
         <div className="task-note-line" ref={titleCmHost} />
 
         {target.kind === 'edit' && (
@@ -245,21 +245,6 @@ export function TaskNoteDialog(): React.JSX.Element | null {
             table ops, sub-task toggles. The board already mounts ReasonDialog
             and Toast at its root, so only the menu is needed here. */}
         {view && <EditorContextMenu view={view} />}
-        <div className="task-note-hint">
-          {target.kind === 'edit' ? (
-            <>
-              Everything under the task, sub-tasks and all — tick one here and it saves with the
-              rest. This task&apos;s own Status Changed, Date Entered and Waiting reason are managed
-              by KNote and shown above; a sub-task&apos;s own stamps live in the editor and are
-              kept. <b>Ctrl/Cmd+Enter</b> saves.
-            </>
-          ) : (
-            <>
-              Sub-tasks typed here are created along with the task, in one go. <b>Ctrl/Cmd+Enter</b>{' '}
-              creates it.
-            </>
-          )}
-        </div>
 
         <div className="confirm-actions">
           <button className="icon-btn confirm-btn" onClick={requestClose}>

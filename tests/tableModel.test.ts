@@ -18,6 +18,7 @@ import {
   sanitizeCellText,
   serializeTable,
   setCell,
+  setColumnAlign,
   splitRow,
   type ParsedTable
 } from '@/editor/tableModel'
@@ -353,6 +354,29 @@ describe('setCell', () => {
   it('is a no-op for out-of-range coordinates', () => {
     expect(setCell(table, 9, 0, 'x')).toEqual(table)
     expect(setCell(table, 0, 9, 'x')).toEqual(table)
+  })
+})
+
+describe('setColumnAlign', () => {
+  const table: ParsedTable = {
+    header: ['A', 'B'],
+    aligns: ['', 'left'],
+    rows: [['1', '2']],
+    indent: ''
+  }
+
+  it('sets the given column, leaving the others untouched', () => {
+    expect(setColumnAlign(table, 0, 'center').aligns).toEqual(['center', 'left'])
+  })
+
+  it('round-trips through serializeTable as a `:--:`/`:--`/`--:` delimiter', () => {
+    const out = setColumnAlign(table, 0, 'right')
+    expect(serializeTable(out).split('\n')[1]).toBe('| ---: | :--- |')
+    expect(parseTable(serializeTable(out)).aligns).toEqual(['right', 'left'])
+  })
+
+  it('is a no-op for an out-of-range column', () => {
+    expect(setColumnAlign(table, 9, 'center')).toEqual(table)
   })
 })
 

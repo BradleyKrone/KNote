@@ -19,6 +19,7 @@ import {
   indentTable,
   insertRow,
   readTableCtx,
+  setColumnAlignment,
   tableCtxFromCell,
   tableCtxFromSource
 } from '@/editor/tableEdit'
@@ -301,6 +302,40 @@ describe('indented tables (nested under a task)', () => {
     for (const line of doc.split('\n').filter((l) => l.includes('|'))) {
       expect(line.startsWith(INDENT)).toBe(true)
     }
+  })
+})
+
+describe('setColumnAlignment (right-click Table ▸ Align column)', () => {
+  it('rewrites only the delimiter row, leaving header/body cells untouched', () => {
+    const view = fakeView(mkState())
+    const ctx = tableCtxFromSource(view.state, posOf(3, 'B2'))! // Bin column, row "Nut"
+    setColumnAlignment(view, ctx, ctx.colIndex, 'right')
+    const lines = view.state.doc.toString().split('\n')
+    const idx = lines.indexOf('| Name | Qty | Bin |')
+    const tableLines = lines.slice(idx, idx + 5)
+    expect(tableLines[0]).toBe('| Name | Qty | Bin |')
+    expect(tableLines[1]).toBe('| ---- | --- | ---: |')
+    expect(tableLines[3]).toBe('| Nut  | 3   | B2  |')
+  })
+
+  it('clears back to Default (no colon) when set to the empty alignment', () => {
+    const view = fakeView(mkState())
+    const ctx = tableCtxFromSource(view.state, posOf(3, 'B2'))! // Bin column
+    setColumnAlignment(view, ctx, ctx.colIndex, 'right')
+    // Re-resolve against the now-edited doc rather than reusing `ctx`, the
+    // same "each right-click re-resolves" pattern as the indentTable tests
+    // above — landing back on the Bin column via the still-unique "B2" cell.
+    const afterRight = tableCtxFromSource(view.state, view.state.doc.toString().indexOf('B2'))!
+    setColumnAlignment(view, afterRight, afterRight.colIndex, '')
+    const lines = view.state.doc.toString().split('\n')
+    expect(lines[lines.indexOf('| Name | Qty | Bin |') + 1]).toBe('| ---- | --- | --- |')
+  })
+
+  it('only touches the clicked table, not the second one', () => {
+    const view = fakeView(mkState())
+    const ctx = tableCtxFromSource(view.state, posOf(2, 'Bolt'))!
+    setColumnAlignment(view, ctx, 0, 'left')
+    expect(view.state.doc.toString()).toContain(SECOND)
   })
 })
 

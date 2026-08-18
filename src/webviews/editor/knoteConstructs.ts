@@ -312,7 +312,7 @@ class WikiLinkWidget extends WidgetType {
  *  WikiLinkWidget — there's nowhere to navigate to. Filled when the line
  *  itself *defines* the deliverable, outlined when it merely joins one
  *  defined elsewhere, so the two read as visually distinct at a glance. */
-class DeliverableRefWidget extends WidgetType {
+export class DeliverableRefWidget extends WidgetType {
   constructor(
     private readonly project: string,
     private readonly name: string,

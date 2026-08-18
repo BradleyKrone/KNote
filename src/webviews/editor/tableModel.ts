@@ -266,6 +266,14 @@ export function removeTableColumn(table: ParsedTable, atIndex: number): ParsedTa
   return { ...table, header, aligns, rows }
 }
 
+/** Set one column's alignment. Out-of-range `colIndex` is a no-op. */
+export function setColumnAlign(table: ParsedTable, colIndex: number, align: Align): ParsedTable {
+  if (colIndex < 0 || colIndex >= table.header.length) return table
+  const aligns = table.aligns.slice()
+  aligns[colIndex] = align
+  return { ...table, aligns }
+}
+
 /**
  * Replace one cell's text. `rowIndex` is -1 for the header, otherwise a 0-based
  * index into `rows`. Out-of-range coordinates are a no-op, so callers can hand

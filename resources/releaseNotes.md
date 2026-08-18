@@ -3,6 +3,20 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.8.0
+
+- **Table columns can be aligned.** Right-click a cell and use **Table ▸
+  Align column ▸** to set that column's text to Left, Center, Right, or back
+  to Default.
+- **Deleting a file offers a fallback when the trash can't be used.** If
+  moving something to the system trash fails (some OneDrive/network-backed
+  vault locations reject it), KNote now offers **Delete Permanently** instead
+  of leaving you stuck.
+- The board's task editor now shows `@deliverable(...)` references as the
+  same collapsed pill the note editor uses, instead of raw markup.
+- Fixed the cursor being invisible while editing a table cell in the Live
+  Preview editor.
+
 ## 2.7.0
 
 - **A Files panel in the sidebar.** The KNote sidebar gains a vault file

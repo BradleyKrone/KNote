@@ -29,6 +29,9 @@ import { useEffect, useState } from 'react'
 import { EditorSelection } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   BookPlus,
   Bold,
   CalendarDays,
@@ -50,6 +53,7 @@ import {
   Package,
   Pencil,
   Plus,
+  RemoveFormatting,
   Rows3,
   Scissors,
   SpellCheck,
@@ -127,8 +131,10 @@ import {
   insertRow,
   insertTableAt,
   readTableCtx,
+  setColumnAlignment,
   type TableCtx
 } from './tableEdit'
+import type { Align } from './tableModel'
 
 /** The line under the right-click, captured when the menu opens. */
 interface LineCtx {
@@ -416,6 +422,32 @@ function linkItems(
 }
 
 /**
+ * The clicked column's alignment choices — Default (no `:` in the delimiter
+ * row) plus Left/Center/Right, radio-style off the column's current `Align`
+ * in the parsed model. Only rewrites the delimiter row (setColumnAlignment),
+ * so this is safe to fire from any cell in the column, not just the header.
+ */
+function alignItems(
+  view: EditorView,
+  table: TableCtx,
+  run: (fn: () => void) => () => void
+): MenuEntry[] {
+  const current: Align = table.table.aligns[table.colIndex] ?? ''
+  const options: Array<{ label: string; align: Align; icon: React.ReactNode }> = [
+    { label: 'Default', align: '', icon: <RemoveFormatting size={ICON} /> },
+    { label: 'Left', align: 'left', icon: <AlignLeft size={ICON} /> },
+    { label: 'Center', align: 'center', icon: <AlignCenter size={ICON} /> },
+    { label: 'Right', align: 'right', icon: <AlignRight size={ICON} /> }
+  ]
+  return options.map((opt) => ({
+    label: opt.label,
+    icon: opt.icon,
+    checked: current === opt.align,
+    onClick: run(() => setColumnAlignment(view, table, table.colIndex, opt.align))
+  }))
+}
+
+/**
  * The Table submenu's items, shown when the right-click lands inside a table
  * (either the rendered `<table>` or the raw pipes shown while it's being
  * edited). The header/delimiter line only gets column actions plus "insert row
@@ -464,6 +496,11 @@ function tableItems(
       icon: <Trash2 size={ICON} />,
       disabled: table.table.header.length <= 1,
       onClick: run(() => deleteColumn(view, table, table.colIndex))
+    },
+    {
+      label: 'Align column',
+      icon: <AlignLeft size={ICON} />,
+      submenu: alignItems(view, table, run)
     },
     { separator: true },
     {
