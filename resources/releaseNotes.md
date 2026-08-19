@@ -3,6 +3,18 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.9.0
+
+- **A card's column can be changed from inside the task editor.** The task
+  dialog gains a **Status** picker at the top right — move a card to another
+  column without closing the dialog or dragging it. Like everything else in
+  the dialog it stays pending until Save, and moving into a Require-reason
+  column (such as Waiting) asks for the reason and follow-up date exactly as
+  dragging there does; moving anywhere else clears the old reason line. The
+  column change rides along in the same verified edit as the task text and
+  its notes, so it is one undo step and `Status Changed:` is re-stamped
+  with it.
+
 ## 2.8.0
 
 - **Table columns can be aligned.** Right-click a cell and use **Table ▸

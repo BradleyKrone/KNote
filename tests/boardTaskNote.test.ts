@@ -45,7 +45,9 @@ describe('updateCardNote', () => {
       ['  - Notes: rewritten', '  - second'],
       // The block the dialog was showing, so the host can refuse a save whose
       // subtree moved underneath it.
-      ['  - Notes: original']
+      ['  - Notes: original'],
+      // No status meta: the dialog's Status picker wasn't moved.
+      undefined
     )
   })
 
@@ -120,6 +122,28 @@ describe('updateCardNote', () => {
     const c = card(seeded)
     await expect(updateCardNote(c, 'task', '- Notes: original')).resolves.toBe(true)
     expect(setTaskTextAndNotes).not.toHaveBeenCalled()
+  })
+
+  it('swaps the status char in and stamps Status Changed when the column is moved', async () => {
+    const c = card('- [ ] task ^abc123\n  - Notes: n\n')
+    await updateCardNote(c, 'task', '- Notes: n', { char: 'w', reasonLine: '  - Reason for X' })
+
+    const call = setTaskTextAndNotes.mock.calls[0]
+    expect(call[3]).toBe('- [w] task ^abc123')
+    expect(call[6].reasonLine).toBe('  - Reason for X')
+    expect(call[6].statusChangedLine).toMatch(/^ {2}- Status Changed: \d+\/\d+\/\d{4}$/)
+  })
+
+  it('writes a status-only change, with neither the text nor the notes touched', async () => {
+    const c = card(seeded)
+    await expect(
+      updateCardNote(c, 'task', '- Notes: original', { char: 'x', reasonLine: null })
+    ).resolves.toBe(true)
+
+    const call = setTaskTextAndNotes.mock.calls[0]
+    expect(call[3]).toBe('- [x] task')
+    expect(call[4]).toEqual(['  - Notes: original'])
+    expect(call[6].reasonLine).toBeNull()
   })
 
   it('reports a stale refusal instead of throwing, so the dialog can stay open', async () => {

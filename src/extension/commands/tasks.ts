@@ -256,8 +256,10 @@ export function registerTaskCommands(context: vscode.ExtensionContext): void {
         expected: string,
         newLine: string,
         body: string[],
-        expectedBlock?: string[]
-      ) => verifiedEdit.setTaskTextAndNotes(path, line, expected, newLine, body, expectedBlock)
+        expectedBlock?: string[],
+        meta?: { reasonLine?: string | null; statusChangedLine?: string }
+      ) =>
+        verifiedEdit.setTaskTextAndNotes(path, line, expected, newLine, body, expectedBlock, meta)
     )
   )
 }

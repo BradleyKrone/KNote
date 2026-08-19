@@ -290,15 +290,16 @@ task somewhere in your vault:
   hover previews, paste-an-image, spell check and `Ctrl+F` find, right there in
   the dialog.
 - **➕ Add card** opens that same dialog empty instead of a one-line input —
-  fill in the task text, tags, due date and any notes/sub-tasks up front.
+  fill in the task text, tags, due date, column and any notes/sub-tasks up front.
   Nothing is written until you save: **Create** appends the finished task (and
   its `Reason for <Column>` line, for a Require-reason column) in one go;
   **Cancel** discards it.
 
   | In the dialog | What happens |
   | --- | --- |
+  | **Status** (top right) | Moves the card to another column without closing the dialog — pending like everything else until Save. A Require-reason column (Waiting) asks for the reason and follow-up date on save, exactly as dragging there does; moving anywhere else clears the old reason line |
   | Tick a sub-task | Changes it *in the dialog only* — nothing is written until Save, and `Ctrl+Z` undoes it |
-  | Save | The task line **and the whole block** go back as one verified edit: one undo step, refused outright rather than half-written if anything in the block moved meanwhile |
+  | Save | The task line **and the whole block** go back as one verified edit: one undo step, refused outright rather than half-written if anything in the block moved meanwhile. A column change rides along in that same edit, `Status Changed:` re-stamped with it |
   | Cancel / `Esc` | Throws the lot away (with a confirm if you've typed something) |
   | `Ctrl/Cmd+Enter` | Saves from anywhere in the dialog |
 

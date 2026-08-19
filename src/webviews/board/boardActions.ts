@@ -114,18 +114,25 @@ export async function updateCardText(card: BoardCard, newText: string): Promise<
 
 /**
  * The card's raw line with `newText` spliced in as the task text — indent,
- * bullet, status char and `^anchor` all preserved — or null when the text is
- * empty or unchanged and there's nothing to write.
+ * bullet and `^anchor` all preserved — and `statusChar`, when given, swapped
+ * into the checkbox. Null when neither the text nor the status char actually
+ * changes and there's nothing to write; an empty `newText` keeps the existing
+ * text rather than blanking the line, so a status-only change is still a write.
  */
-function rewrittenTaskLine(card: BoardCard, newText: string): string | null {
+function rewrittenTaskLine(card: BoardCard, newText: string, statusChar?: string): string | null {
   const m = TASK_LINE_RE.exec(card.rawLine)
   if (!m) return null
   const clean = withoutAnchor(newText.trim().replace(/\s*\n\s*/g, ' '))
-  if (!clean || clean === withoutAnchor(card.text)) return null
-  // indent + bullet + " [c]" ends at m[1].len + m[2].len + 4
-  const prefix = card.rawLine.slice(0, m[1].length + m[2].length + 4)
+  const textChanged = clean !== '' && clean !== withoutAnchor(card.text)
+  const char = statusChar ?? m[3]
+  if (!textChanged && char === m[3]) return null
+  const text = textChanged ? clean : withoutAnchor(card.text)
+  // indent + bullet + " [c]" — rebuilt rather than sliced, since the char may
+  // be changing; TASK_LINE_RE fixes the single space before the bracket.
+  const prefix = `${m[1]}${m[2]} [${char}]`
+  const rewritten = text ? `${prefix} ${text}` : prefix
   const id = blockIdOf(card.rawLine)
-  return id ? anchorLine(`${prefix} ${clean}`, id) : `${prefix} ${clean}`
+  return id ? anchorLine(rewritten, id) : rewritten
 }
 
 /**
@@ -140,20 +147,33 @@ function rewrittenTaskLine(card: BoardCard, newText: string): string | null {
  * now edits a subtree, and a sub-task ticked in the editor meanwhile has to
  * survive.
  *
+ * `status` is the column picked in the dialog, when it differs from the one the
+ * card is in: the new char goes into the rewritten task line and the same
+ * `Status Changed` stamp / `Reason for <Column>` handling a board drag gets
+ * rides along in the *same* verified edit — a second call couldn't, since this
+ * write is what makes `card.rawLine` stale.
+ *
  * Resolves false when the write was refused as stale, so the dialog can stay
  * open holding the user's text instead of silently discarding it.
  */
 export async function updateCardNote(
   card: BoardCard,
   taskText: string,
-  bodyText: string
+  bodyText: string,
+  status?: { char: string; reasonLine: string | null }
 ): Promise<boolean> {
   const indent = blockBaseIndent(card.blockLines, taskChildIndent(card.rawLine))
   const body = noteBodyFromText(bodyText, indent)
-  const line = rewrittenTaskLine(card, taskText)
+  const line = rewrittenTaskLine(card, taskText, status?.char)
   const bodyUnchanged =
     body.length === card.blockLines.length && body.every((l, i) => l === card.blockLines[i])
   if (line === null && bodyUnchanged) return true
+  const meta = status
+    ? {
+        reasonLine: status.reasonLine,
+        statusChangedLine: statusChangedLineForTask(card.rawLine, dayjs().format('M/D/YYYY'))
+      }
+    : undefined
   try {
     await host.setTaskTextAndNotes(
       card.path,
@@ -161,7 +181,8 @@ export async function updateCardNote(
       card.rawLine,
       line ?? card.rawLine,
       body,
-      card.blockLines
+      card.blockLines,
+      meta
     )
     return true
   } catch (err) {
