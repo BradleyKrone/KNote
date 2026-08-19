@@ -42,7 +42,8 @@ async function save(
   expected: string,
   newLine: string,
   body: string[],
-  expectedBlock?: string[]
+  expectedBlock?: string[],
+  meta?: { reasonLine?: string | null; statusChangedLine?: string }
 ): Promise<void> {
   await vscode.commands.executeCommand(
     'knote.setTaskNote',
@@ -51,7 +52,8 @@ async function save(
     expected,
     newLine,
     body,
-    expectedBlock
+    expectedBlock,
+    meta
   )
 }
 
@@ -105,6 +107,74 @@ describe('board task editor: task text + note block in one verified edit', () =>
     await waitFor(() => editor.document.getText() === before, {
       message: 'a single undo to restore the note exactly'
     })
+  })
+
+  it('changes the column, restamps Status Changed and rewrites the notes in one undo step', async () => {
+    // The dialog's Status picker: the new char rides in the task line while
+    // the stamp (and any reason line) rides in `meta`, so moving a card from
+    // inside the editor is the same single verified edit as any other save.
+    const NOTE = 'TaskNotesStatus.md'
+    await writeNoteOnDisk(NOTE, SEED)
+    const editor = await openNoteAtLine(NOTE, 2)
+    const before = editor.document.getText()
+
+    await save(
+      NOTE,
+      2,
+      '- [ ] First task',
+      '- [w] First task',
+      ['  - Notes: original text'],
+      undefined,
+      {
+        reasonLine: '  - Reason for Waiting: parts on order 📅 2026-09-01',
+        statusChangedLine: '  - Status Changed: 8/19/2026'
+      }
+    )
+
+    await waitFor(() => editor.document.lineAt(2).text === '- [w] First task', {
+      message: 'the status char to change in the buffer'
+    })
+    assert.strictEqual(
+      editor.document.lineAt(3).text,
+      '  - Reason for Waiting: parts on order 📅 2026-09-01'
+    )
+    assert.strictEqual(editor.document.lineAt(4).text, '  - Status Changed: 8/19/2026')
+    assert.strictEqual(editor.document.lineAt(5).text, '  - Date Entered: 7/1/2026')
+    assert.ok(
+      !editor.document.getText().includes('Status Changed: 7/14/2026'),
+      'the old stamp must be replaced, not duplicated'
+    )
+
+    await vscode.commands.executeCommand('undo')
+    await waitFor(() => editor.document.getText() === before, {
+      message: 'a single undo to restore the note exactly'
+    })
+  })
+
+  it('drops the reason line when the same save moves the task out of that column', async () => {
+    const NOTE = 'TaskNotesStatusOut.md'
+    await writeNoteOnDisk(
+      NOTE,
+      '# Out\n\n- [w] Parked\n  - Reason for Waiting: parts 📅 2026-09-01\n' +
+        '  - Status Changed: 7/14/2026\n  - Notes: keep me\n- [ ] Next\n'
+    )
+    const editor = await openNoteAtLine(NOTE, 2)
+
+    await save(NOTE, 2, '- [w] Parked', '- [x] Parked', ['  - Notes: keep me'], undefined, {
+      reasonLine: null,
+      statusChangedLine: '  - Status Changed: 8/19/2026'
+    })
+
+    await waitFor(() => editor.document.lineAt(2).text === '- [x] Parked', {
+      message: 'the status char to change in the buffer'
+    })
+    assert.strictEqual(editor.document.lineAt(3).text, '  - Status Changed: 8/19/2026')
+    assert.strictEqual(editor.document.lineAt(4).text, '  - Notes: keep me')
+    assert.strictEqual(editor.document.lineAt(5).text, '- [ ] Next')
+    assert.ok(
+      !editor.document.getText().includes('Reason for Waiting'),
+      'the reason must not outlive the column it belongs to'
+    )
   })
 
   it('adds a note block to a task that had none', async () => {
@@ -334,7 +404,10 @@ describe('board task editor: task text + note block in one verified edit', () =>
       message: 'the CRLF subtree write to land'
     })
     const onDisk = await readNoteOnDisk(NOTE)
-    assert.ok(!/[^\r]\n/.test(onDisk), `every newline must stay CRLF, got ${JSON.stringify(onDisk)}`)
+    assert.ok(
+      !/[^\r]\n/.test(onDisk),
+      `every newline must stay CRLF, got ${JSON.stringify(onDisk)}`
+    )
   })
 
   it('writes a subtree straight to disk when the note is not open', async () => {

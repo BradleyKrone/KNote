@@ -95,6 +95,14 @@ export interface HostApi {
    * current block still matches it exactly. `expectedText` alone only covers
    * the task line, and this write now reaches a whole subtree — without this a
    * stale save would silently swallow a sub-task someone ticked meanwhile.
+   *
+   * `meta` carries a status change made in the same save — the task editor
+   * lets a card's column be changed from inside the dialog, and the new status
+   * char rides along in `newLineText`. It's the same three-state `reasonLine` /
+   * `statusChangedLine` pair `setTaskStatusMeta` takes, so moving into or out
+   * of a `requireReason` column writes (or clears) its reason line and
+   * re-stamps `Status Changed` here rather than in a second edit against a line
+   * this one just made stale.
    */
   setTaskTextAndNotes(
     path: VaultPath,
@@ -102,7 +110,8 @@ export interface HostApi {
     expectedText: string,
     newLineText: string,
     blockLines: string[],
-    expectedBlock?: string[]
+    expectedBlock?: string[],
+    meta?: { reasonLine?: string | null; statusChangedLine?: string }
   ): Promise<void>
   deleteLine(path: VaultPath, line: number, expectedText: string): Promise<void>
   moveLine(

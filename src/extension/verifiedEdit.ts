@@ -183,7 +183,8 @@ export async function setTaskStatusMeta(
  * own stamps ride along in `blockLines` — they belong to the block.
  *
  * `expectedBlock` widens the staleness check from the task line to the whole
- * block; see `HostApi.setTaskTextAndNotes`.
+ * block, and `meta` carries a status change made in the same save; see
+ * `HostApi.setTaskTextAndNotes`.
  */
 export async function setTaskTextAndNotes(
   rel: VaultPath,
@@ -191,7 +192,8 @@ export async function setTaskTextAndNotes(
   expectedText: string,
   newLineText: string,
   blockLines: string[],
-  expectedBlock?: string[]
+  expectedBlock?: string[],
+  meta?: { reasonLine?: string | null; statusChangedLine?: string }
 ): Promise<void> {
   const doc = openDocFor(rel)
   if (!doc) {
@@ -201,7 +203,8 @@ export async function setTaskTextAndNotes(
       expectedText,
       newLineText,
       blockLines,
-      expectedBlock
+      expectedBlock,
+      meta
     )
     void vaultIndex.indexFile(rel)
     return
@@ -216,7 +219,13 @@ export async function setTaskTextAndNotes(
   for (let i = 0; i < doc.lineCount; i++) lines.push(doc.lineAt(i).text)
   if (expectedBlock && !taskBlockMatches(lines, target, expectedBlock)) throw stale(rel)
   const edit = new vscode.WorkspaceEdit()
-  applyBlockPlan(doc, edit, planTaskMetaEdit(lines, target, { blockLines }), target, newLineText)
+  applyBlockPlan(
+    doc,
+    edit,
+    planTaskMetaEdit(lines, target, { ...meta, blockLines }),
+    target,
+    newLineText
+  )
   await applyAndMaybeSave(doc, edit)
 }
 

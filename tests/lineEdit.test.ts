@@ -349,6 +349,44 @@ describe('setTaskTextAndNotes', () => {
     expect(await read('a.md')).toContain('- [ ] sibling\n')
   })
 
+  it('re-stamps Status Changed and writes a reason when the task editor moves the column', async () => {
+    await seed('a.md', seeded)
+    await setTaskTextAndNotes(
+      'a.md',
+      0,
+      '- [ ] task',
+      '- [w] task',
+      ['  - Notes: original'],
+      undefined,
+      {
+        reasonLine: '  - Reason for Waiting: parts 📅 2026-09-01',
+        statusChangedLine: '  - Status Changed: 8/19/2026'
+      }
+    )
+    expect(await read('a.md')).toBe(
+      '- [w] task\n  - Reason for Waiting: parts 📅 2026-09-01\n  - Status Changed: 8/19/2026\n  - Date Entered: 7/1/2026\n  - Notes: original\n- [ ] sibling\n'
+    )
+  })
+
+  it('drops the reason line when the same save moves the task out of that column', async () => {
+    await seed(
+      'a.md',
+      '- [w] task\n  - Reason for Waiting: parts 📅 2026-09-01\n  - Status Changed: 7/14/2026\n  - Notes: original\n'
+    )
+    await setTaskTextAndNotes(
+      'a.md',
+      0,
+      '- [w] task',
+      '- [x] task',
+      ['  - Notes: original'],
+      undefined,
+      { reasonLine: null, statusChangedLine: '  - Status Changed: 8/19/2026' }
+    )
+    expect(await read('a.md')).toBe(
+      '- [x] task\n  - Status Changed: 8/19/2026\n  - Notes: original\n'
+    )
+  })
+
   it('adds a note block to a task that had none', async () => {
     await seed('a.md', '- [ ] bare\n- [ ] next\n')
     await setTaskTextAndNotes('a.md', 0, '- [ ] bare', '- [ ] bare', ['  - Notes: brand new'])

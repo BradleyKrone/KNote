@@ -86,8 +86,10 @@ export async function setTaskStatusMeta(
  * Verified rewrite of a task's line text plus its whole attached block, in one
  * atomic write — the disk half of the board's task editor. The task's own
  * auto-managed `Reason for` / `Status Changed` / `Date Entered` lines are
- * preserved by `planTaskMetaEdit`, not supplied by the caller. `expectedBlock`
- * widens the staleness check from the task line to the whole block — see
+ * preserved by `planTaskMetaEdit`, not supplied by the caller — except when
+ * `meta` explicitly rewrites them, which is how a status change made in the
+ * task editor lands in the same write. `expectedBlock` widens the staleness
+ * check from the task line to the whole block — see
  * `HostApi.setTaskTextAndNotes`.
  */
 export async function setTaskTextAndNotes(
@@ -96,7 +98,8 @@ export async function setTaskTextAndNotes(
   expectedText: string,
   newLineText: string,
   blockLines: string[],
-  expectedBlock?: string[]
+  expectedBlock?: string[],
+  meta?: { reasonLine?: string | null; statusChangedLine?: string }
 ): Promise<void> {
   const { eol, lines } = await readNoteLines(rel)
   const target = locateLine(lines, lineNo, expectedText)
@@ -111,7 +114,7 @@ export async function setTaskTextAndNotes(
   // Planned before the line is swapped: the plan's splice starts below the task
   // line, so the order of the two mutations doesn't matter, but planning first
   // keeps this identical to the live-buffer path in verifiedEdit.
-  const plan = planTaskMetaEdit(lines, target, { blockLines })
+  const plan = planTaskMetaEdit(lines, target, { ...meta, blockLines })
   lines[target] = newLineText
   lines.splice(plan.start, plan.deleteCount, ...plan.insert)
   await writeFileAtomic(rel, lines.join(eol))

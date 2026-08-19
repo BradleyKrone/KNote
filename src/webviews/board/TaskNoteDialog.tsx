@@ -2,14 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { Prec } from '@codemirror/state'
 import { EditorView, keymap, tooltips } from '@codemirror/view'
 import { withoutAnchor } from '@shared/blockAnchor'
-import { formatReasonLine } from '@shared/parser/patterns'
+import { formatReasonLine, reasonLineForTask } from '@shared/parser/patterns'
 import { noteBodyToText } from '@shared/parser/taskNoteBody'
 import { EditorContextMenu } from '../editor/EditorContextMenu'
 import { setNotePath } from '../editor/knoteConstructs'
 import { createEditor } from '../editor/setupEditor'
 import { TaskMetaToolbar } from '../shared/components/TaskMetaToolbar'
-import { confirm, promptReason } from '../shared/stores'
+import { confirm, promptReason, useConfigStore } from '../shared/stores'
 import { addCard, updateCardNote } from './boardActions'
+import { columnForChar } from './boardSelectors'
 import { createTaskTitleEditor, syncTaskTitleEditor } from './taskTitleField'
 import { useTaskNoteStore } from './taskNoteStore'
 
@@ -37,17 +38,26 @@ import { useTaskNoteStore } from './taskNoteStore'
  * written to disk until Save, which is what makes it safe to open the full
  * editor straight from the "Add card" button rather than a one-line inline
  * input first.
+ *
+ * The Status picker moves the card between columns without leaving the dialog —
+ * the alternative was closing it and dragging, which is a poor trade when the
+ * whole reason you opened the task was to decide what state it's in. Like every
+ * other field here it's pending until Save, and it goes to disk inside the
+ * *same* verified edit as the text and the block (`updateCardNote`), so a
+ * column change is one undo step with the rest and can't half-land.
  */
 export function TaskNoteDialog(): React.JSX.Element | null {
   const target = useTaskNoteStore((s) => s.target)
   const close = useTaskNoteStore((s) => s.close)
+  const columns = useConfigStore((s) => s.vaultConfig.columns)
+  const [columnChar, setColumnChar] = useState('')
   const [taskText, setTaskText] = useState('')
   const [bodyDirty, setBodyDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   // State, not just a ref: the context menu is a React component that needs the
   // view, so its first render has to wait for the editor to exist.
   const [view, setView] = useState<EditorView | null>(null)
-  const initial = useRef({ taskText: '' })
+  const initial = useRef({ taskText: '', columnChar: '' })
   const titleCmHost = useRef<HTMLDivElement>(null)
   const titleViewRef = useRef<EditorView | null>(null)
   const cmHost = useRef<HTMLDivElement>(null)
@@ -62,10 +72,24 @@ export function TaskNoteDialog(): React.JSX.Element | null {
     // away here would break every link pointing at this task. The save puts it
     // back. A brand-new card starts blank.
     const text = target.kind === 'edit' ? withoutAnchor(target.card.text) : ''
+    // The column the board is *showing* the card in, not its raw status char:
+    // an unconfigured char (or `X` for `x`) lands in column 0 there, and the
+    // picker has to agree with that or opening a card and saving it would
+    // silently rewrite a char nobody touched. `save` compares columns for the
+    // same reason.
+    // Read off the store rather than the `columns` binding: a config change
+    // must not land in this effect's deps, or editing the board's columns
+    // would tear the open editor down mid-edit.
+    const cols = useConfigStore.getState().vaultConfig.columns
+    const char =
+      target.kind === 'edit'
+        ? (cols[columnForChar(cols, target.card.statusChar)]?.char ?? target.card.statusChar)
+        : target.column.char
     setTaskText(text)
+    setColumnChar(char)
     setBodyDirty(false)
     setSaving(false)
-    initial.current = { taskText: text }
+    initial.current = { taskText: text, columnChar: char }
     const titleView = createTaskTitleEditor({
       parent: titleCmHost.current,
       doc: text,
@@ -134,7 +158,9 @@ export function TaskNoteDialog(): React.JSX.Element | null {
 
   if (!target) return null
 
-  const dirty = taskText !== initial.current.taskText || bodyDirty
+  const dirty =
+    taskText !== initial.current.taskText || columnChar !== initial.current.columnChar || bodyDirty
+  const selectedColumn = columns.find((c) => c.char === columnChar) ?? columns[0]
 
   const requestClose = (): void => {
     if (!dirty) return close()
@@ -146,16 +172,47 @@ export function TaskNoteDialog(): React.JSX.Element | null {
   const save = (): void => {
     if (saving) return
     if (target.kind === 'edit') {
-      setSaving(true)
-      void updateCardNote(target.card, taskText, view?.state.doc.toString() ?? '').then(
-        (ok) => {
-          // A stale refusal wrote nothing, so the dialog stays put holding the
-          // user's text rather than throwing it away.
-          if (ok) close()
-          else setSaving(false)
-        },
-        () => setSaving(false)
-      )
+      const card = target.card
+      const bodyText = view?.state.doc.toString() ?? ''
+      // Columns, not chars: a card whose char isn't configured (or is `X` for a
+      // `x` column) already shows in column 0, and reopening it must not be
+      // what rewrites the char.
+      const moved =
+        columnForChar(columns, columnChar) !== columnForChar(columns, card.statusChar) &&
+        selectedColumn !== undefined
+      const commit = (status?: { char: string; reasonLine: string | null }): void => {
+        setSaving(true)
+        void updateCardNote(card, taskText, bodyText, status).then(
+          (ok) => {
+            // A stale refusal wrote nothing, so the dialog stays put holding
+            // the user's text rather than throwing it away.
+            if (ok) close()
+            else setSaving(false)
+          },
+          () => setSaving(false)
+        )
+      }
+      if (!moved) return commit()
+      // Same gate a drag into this column gets: a require-reason column asks
+      // for the reason and follow-up date, and cancelling that abandons the
+      // whole save rather than moving the card without one. Moving anywhere
+      // else clears the reason (`null`) so it can't outlive its column.
+      if (selectedColumn?.requireReason) {
+        void promptReason(selectedColumn.name).then((result) => {
+          if (!result) return
+          commit({
+            char: selectedColumn.char,
+            reasonLine: reasonLineForTask(
+              card.rawLine,
+              selectedColumn.name,
+              result.reason,
+              result.followUp
+            )
+          })
+        })
+        return
+      }
+      commit({ char: columnChar, reasonLine: null })
       return
     }
     // Create mode: nothing exists on disk yet, so an empty task text means
@@ -164,7 +221,10 @@ export function TaskNoteDialog(): React.JSX.Element | null {
     const text = taskText.trim()
     if (!text) return close()
     const bodyText = view?.state.doc.toString() ?? ''
-    const { scope, column } = target
+    const { scope } = target
+    // The picker, not the button that opened the dialog: "Add card" only
+    // seeded which column, and it's changeable here like everything else.
+    const column = selectedColumn ?? target.column
     const finish = (reasonLine?: string): void => {
       setSaving(true)
       void addCard(scope, column.char, text, bodyText, reasonLine).then(
@@ -209,8 +269,23 @@ export function TaskNoteDialog(): React.JSX.Element | null {
         onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
       >
-        <div className="task-note-title">
-          {target.kind === 'edit' ? 'Edit task' : `New task — ${target.column.name}`}
+        <div className="task-note-header">
+          <div className="task-note-title">{target.kind === 'edit' ? 'Edit task' : 'New task'}</div>
+          <label className="task-note-status">
+            Status
+            <select
+              className="board-tag-select"
+              value={columnChar}
+              onChange={(e) => setColumnChar(e.target.value)}
+              title="Which column this task sits in — applied when you save"
+            >
+              {columns.map((c) => (
+                <option key={c.char} value={c.char}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <TaskMetaToolbar
           value={taskText}
