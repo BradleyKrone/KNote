@@ -341,7 +341,12 @@ function autoOpenOnReveal(view: vscode.TreeView<unknown>, command: string): vsco
   })
 }
 
-export function registerQuickAccessTrees(context: vscode.ExtensionContext): void {
+/** Handle returned to `extension.ts` so it can re-sync the hidden-project sets once a vault is actually open. */
+export interface QuickAccessTrees {
+  reload: () => Promise<void>
+}
+
+export function registerQuickAccessTrees(context: vscode.ExtensionContext): QuickAccessTrees {
   const boards = new BoardsTreeProvider()
   const machines = new MachinesTreeProvider()
   const planner = new PlannerTreeProvider()
@@ -361,10 +366,6 @@ export function registerQuickAccessTrees(context: vscode.ExtensionContext): void
     // re-focus the row.
     manageCheckboxStateManually: true
   })
-  // The hidden sets live on disk; load them once the vault is up.
-  void planner.reload()
-  void boards.reload()
-
   context.subscriptions.push(
     plannerView.onDidChangeCheckboxState(async ({ items }) => {
       for (const [node, state] of items) {
@@ -396,4 +397,13 @@ export function registerQuickAccessTrees(context: vscode.ExtensionContext): void
       openBoardWithFilter(context, filter)
     )
   )
+
+  return {
+    // The hidden sets live on disk; the caller runs this once the vault is
+    // actually open (config reads before then would silently fall back to
+    // defaults and leave every project's checkbox looking ticked).
+    reload: async () => {
+      await Promise.all([planner.reload(), boards.reload()])
+    }
+  }
 }
