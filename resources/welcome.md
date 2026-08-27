@@ -534,6 +534,17 @@ Embed a draw.io diagram in a note and edit it without leaving VS Code:
   extension's editor runs fully offline once installed, same as everything
   else in KNote.
 
+## Exporting a note to PDF
+
+**KNote: Export Note to PDF** renders the active note (whichever editor it's
+open in) into a plain, styled document in a side panel — frontmatter
+stripped, `[[wiki links]]` and `#tags` shown the same way Reading mode shows
+them, images and draw.io diagrams inlined. Click **Print / Save as PDF…** in
+that panel to open your system's print dialog and choose "Save as PDF" (or a
+physical printer) — the same trick behind Obsidian's own PDF export, just
+using VS Code's own Chromium rather than a bundled headless browser. Nothing
+leaves your machine; there's no separate PDF/Word extension to install.
+
 ## Data rules (unchanged)
 
 - Your vault of `.md` files is the sole source of truth. The index is

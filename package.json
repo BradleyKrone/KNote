@@ -76,6 +76,10 @@
         "title": "KNote: Clean Up Orphaned Attachments"
       },
       {
+        "command": "knote.exportNoteToPdf",
+        "title": "KNote: Export Note to PDF"
+      },
+      {
         "command": "knote.files.newNote",
         "title": "KNote: New Note",
         "icon": "$(new-file)"
