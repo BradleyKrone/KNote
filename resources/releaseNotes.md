@@ -3,6 +3,20 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.10.0
+
+- **Export a note to PDF.** **KNote: Export Note to PDF** renders the active
+  note into a styled preview panel — frontmatter stripped, `[[wiki links]]`
+  and `#tags` shown the way Reading mode shows them, images and draw.io
+  diagrams inlined. Click **Print / Save as PDF…** to open your system's
+  print dialog and save it, same trick Obsidian's own PDF export uses, with
+  no headless-browser dependency and nothing leaving your machine.
+- **A project can be excluded from the Kanban board.** Expand **Filter by
+  Project** in the sidebar's **Boards** tree and untick a project to keep its
+  deliverables and joined tasks off the board entirely — parked, reference-
+  only, or just noisy right now. Independent of the Planner's own tick/untick
+  for the same project list.
+
 ## 2.9.0
 
 - **A card's column can be changed from inside the task editor.** The task

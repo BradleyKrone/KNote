@@ -42,6 +42,8 @@ export function BoardView({
 }): React.JSX.Element {
   const notes = useIndexStore((s) => s.notes)
   const columns = useConfigStore((s) => s.vaultConfig.columns)
+  const boardHiddenProjects = useConfigStore((s) => s.vaultConfig.boardHiddenProjects)
+  const hiddenProjects = useMemo(() => new Set(boardHiddenProjects), [boardHiddenProjects])
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [textFilter, setTextFilter] = useState('')
   const [groupByNote, setGroupByNote] = useState(false)
@@ -62,7 +64,8 @@ export function BoardView({
         dateEntered: dateEnteredFilter,
         due: dueFilter,
         ignoreDeliverableWindow: allDeliverables,
-        deliverableScope
+        deliverableScope,
+        hiddenProjects
       }),
     [
       notes,
@@ -73,7 +76,8 @@ export function BoardView({
       dateEnteredFilter,
       dueFilter,
       allDeliverables,
-      deliverableScope
+      deliverableScope,
+      hiddenProjects
     ]
   )
   const byColumn = useMemo(() => groupByColumn(cards, columns), [cards, columns])

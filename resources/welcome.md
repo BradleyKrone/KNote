@@ -254,6 +254,11 @@ task somewhere in your vault:
 
 - Columns map to checkbox status chars (`- [ ]`, `- [/]`, `- [x]`, …) —
   configure them in Vault Settings → Kanban board.
+- To keep a whole project's deliverables and tasks off the board — parked,
+  reference-only, or just noisy right now — expand **Filter by Project** in
+  the **Boards** Activity Bar tree and untick it. This is separate from the
+  Planner's own tick/untick, so a project can be excluded from the board
+  while still charted on the Planner, or vice versa.
 - **Dragging a card rewrites exactly one line** in the source note. If the
   note is open (even with unsaved edits) the change lands in your editor
   buffer; otherwise it's a verified disk write that refuses to clobber
@@ -330,7 +335,7 @@ the main thing, the rows under it jump straight to one item.
 | Icon | Section | Top row opens | Rows below |
 | --- | --- | --- | --- |
 | Calendar | **This Week** | **This Week's Note** — opens (creating if needed) the current ISO-week note; just clicking the icon opens it | Past weekly notes, newest first — click to open |
-| Kanban columns | **Boards** | **All Tasks** — the whole-vault board | **Filter by Project** — All / Unassigned / one row per project (expand for its deliverables); clicking any of them opens (or narrows) the whole-vault board |
+| Kanban columns | **Boards** | **All Tasks** — the whole-vault board | **Filter by Project** — All / Unassigned / one row per project (expand for its deliverables); clicking a project opens (or narrows) the whole-vault board. **Untick a project to exclude it from the board entirely** — its deliverables and joined tasks stop appearing as cards; the choice is saved in the vault, independently of the Planner's own show/hide |
 | Tractor | **Machines** | **Full Machine Log** | Registered machines (then any unregistered serial found in a note); expand for its 🚜 entries, newest first — click to jump to the line |
 | Timeline | **Projects** | **Open Planner** | One row per `type: project` note (deliverable count + span). **Tick a project to show it on the Planner chart, untick to hide it** — the choice is saved in the vault. Click the name to open its note |
 
@@ -533,6 +538,17 @@ Embed a draw.io diagram in a note and edit it without leaving VS Code:
   first time you try to edit a diagram if it isn't there yet. That
   extension's editor runs fully offline once installed, same as everything
   else in KNote.
+
+## Exporting a note to PDF
+
+**KNote: Export Note to PDF** renders the active note (whichever editor it's
+open in) into a plain, styled document in a side panel — frontmatter
+stripped, `[[wiki links]]` and `#tags` shown the same way Reading mode shows
+them, images and draw.io diagrams inlined. Click **Print / Save as PDF…** in
+that panel to open your system's print dialog and choose "Save as PDF" (or a
+physical printer) — the same trick behind Obsidian's own PDF export, just
+using VS Code's own Chromium rather than a bundled headless browser. Nothing
+leaves your machine; there's no separate PDF/Word extension to install.
 
 ## Data rules (unchanged)
 

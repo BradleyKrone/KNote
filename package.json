@@ -1,7 +1,7 @@
 {
   "name": "knote",
   "displayName": "KNote",
-  "version": "2.9.0",
+  "version": "2.10.0",
   "description": "KNote — a local-first Markdown vault with a checkbox-driven Kanban board, wiki links, and vault-wide search, as a VS Code extension",
   "publisher": "bradleykrone",
   "main": "./dist/extension.js",
@@ -74,6 +74,11 @@
       {
         "command": "knote.cleanupAttachments",
         "title": "KNote: Clean Up Orphaned Attachments"
+      },
+      {
+        "command": "knote.exportNoteToPdf",
+        "title": "KNote: Export Note to PDF",
+        "icon": "$(export)"
       },
       {
         "command": "knote.files.newNote",
@@ -313,6 +318,11 @@
           "command": "knote.openLivePreview",
           "when": "editorLangId == markdown && !activeCustomEditorId",
           "group": "navigation@1"
+        },
+        {
+          "command": "knote.exportNoteToPdf",
+          "when": "activeCustomEditorId == knote.liveEditor || (editorLangId == markdown && !activeCustomEditorId)",
+          "group": "navigation@2"
         }
       ],
       "view/title": [
