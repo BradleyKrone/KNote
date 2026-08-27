@@ -77,7 +77,8 @@
       },
       {
         "command": "knote.exportNoteToPdf",
-        "title": "KNote: Export Note to PDF"
+        "title": "KNote: Export Note to PDF",
+        "icon": "$(export)"
       },
       {
         "command": "knote.files.newNote",
@@ -317,6 +318,11 @@
           "command": "knote.openLivePreview",
           "when": "editorLangId == markdown && !activeCustomEditorId",
           "group": "navigation@1"
+        },
+        {
+          "command": "knote.exportNoteToPdf",
+          "when": "activeCustomEditorId == knote.liveEditor || (editorLangId == markdown && !activeCustomEditorId)",
+          "group": "navigation@2"
         }
       ],
       "view/title": [

@@ -1,13 +1,17 @@
 // "KNote: Export Note to PDF" — renders the active note through the same
 // markdown-it pipeline as embeds/hover previews (see shared/renderMarkdown.ts)
-// into a plain WebviewPanel, then lets the user trigger the OS print dialog
-// from inside it. VS Code's webviews run on the same Chromium as the rest of
-// the app, so `window.print()` there opens the native print dialog with a
-// "Save as PDF" destination — no headless-browser dependency, no network,
-// same trick Obsidian's own PDF export relies on.
+// into a plain WebviewPanel for preview. Printing happens outside that panel:
+// VS Code webviews run inside a sandboxed iframe with no `allow-modals`, so
+// `window.print()` called from inside one is silently ignored by Chromium —
+// no error, no dialog, nothing (microsoft/vscode#67109). The panel's button
+// instead asks the extension host to write the same rendered HTML to a temp
+// file and hand it to the OS default browser via `vscode.env.openExternal`,
+// where `window.print()` runs unsandboxed and opens the real "Save as PDF"
+// dialog. That's still fully local: a file:// URI, no network involved.
 
 import * as vscode from 'vscode'
 import { randomBytes } from 'crypto'
+import { promises as fs } from 'fs'
 import { createRenderer } from '@shared/renderMarkdown'
 import { isImage, resolveEmbedPath } from '@shared/pathUtils'
 import { resolveTarget, splitWikiTarget } from '@shared/wikiResolve'
@@ -42,7 +46,11 @@ function titleFor(rel: string): string {
  * Images resolve to webview URIs synchronously: unlike attachmentUriFor, this
  * is a one-shot render with no cache-busting or existence check to await.
  */
-function renderNoteHtml(source: string, noteRel: string, webview: vscode.Webview): string {
+function renderNoteHtml(
+  source: string,
+  noteRel: string,
+  imageUriFor: (absPath: string) => string
+): string {
   const folder = folderOf(noteRel)
   const notes = new Map(vaultIndex.getSnapshot().map((meta: NoteMeta) => [meta.path, meta]))
 
@@ -51,7 +59,7 @@ function renderNoteHtml(source: string, noteRel: string, webview: vscode.Webview
     const rel = resolveEmbedPath(folder, target)
     if (!rel || !isImage(rel)) return null
     try {
-      return webview.asWebviewUri(vscode.Uri.file(vault.toAbs(rel))).toString()
+      return imageUriFor(vault.toAbs(rel))
     } catch {
       return null
     }
@@ -84,23 +92,7 @@ function renderNoteHtml(source: string, noteRel: string, webview: vscode.Webview
   return md.render(source.replace(FRONTMATTER_RE, ''))
 }
 
-function buildExportHtml(webview: vscode.Webview, title: string, bodyHtml: string): string {
-  const nonce = randomBytes(16).toString('base64')
-  const csp = [
-    `default-src 'none'`,
-    `img-src ${webview.cspSource} data:`,
-    `style-src 'unsafe-inline'`,
-    `script-src 'nonce-${nonce}'`
-  ].join('; ')
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="${csp}">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${title}</title>
-<style>
+const EXPORT_STYLE = `
   :root { color-scheme: light; }
   body {
     background: #fff;
@@ -159,7 +151,55 @@ function buildExportHtml(webview: vscode.Webview, title: string, bodyHtml: strin
     .knote-export-bar { display: none; }
     body { max-width: none; padding: 0; }
   }
-</style>
+`
+
+// The preview panel: rendered inside VS Code's sandboxed webview iframe, so
+// its button can't call window.print() itself (see the top-of-file note) —
+// it posts a message asking the extension host to open the printable file
+// instead.
+function buildExportHtml(webview: vscode.Webview, title: string, bodyHtml: string): string {
+  const nonce = randomBytes(16).toString('base64')
+  const csp = [
+    `default-src 'none'`,
+    `img-src ${webview.cspSource} data:`,
+    `style-src 'unsafe-inline'`,
+    `script-src 'nonce-${nonce}'`
+  ].join('; ')
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="${csp}">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title}</title>
+<style>${EXPORT_STYLE}</style>
+</head>
+<body>
+<div class="knote-export-bar">
+  <button id="knote-export-print">Print / Save as PDF…</button>
+  <span class="knote-export-hint">Opens this note in your default browser, where the OS print dialog can save it as a PDF.</span>
+</div>
+<div class="knote-export-body">
+${bodyHtml}
+</div>
+<script nonce="${nonce}">
+  const vscode = acquireVsCodeApi()
+  document.getElementById('knote-export-print').addEventListener('click', () => vscode.postMessage({ command: 'print' }))
+</script>
+</body>
+</html>`
+}
+
+// The file handed to vscode.env.openExternal: a real, unsandboxed browser
+// tab, where window.print() actually opens the OS print/Save-as-PDF dialog.
+function buildPrintableHtml(title: string, bodyHtml: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${title}</title>
+<style>${EXPORT_STYLE}</style>
 </head>
 <body>
 <div class="knote-export-bar">
@@ -169,11 +209,30 @@ function buildExportHtml(webview: vscode.Webview, title: string, bodyHtml: strin
 <div class="knote-export-body">
 ${bodyHtml}
 </div>
-<script nonce="${nonce}">
+<script>
   document.getElementById('knote-export-print').addEventListener('click', () => window.print())
 </script>
 </body>
 </html>`
+}
+
+async function openPrintableExport(
+  context: vscode.ExtensionContext,
+  rel: string,
+  title: string,
+  source: string
+): Promise<void> {
+  const bodyHtml = renderNoteHtml(source, rel, (abs) => vscode.Uri.file(abs).toString())
+  const html = buildPrintableHtml(title, bodyHtml)
+
+  // context.globalStorageUri is a vscode-userdata: URI — real disk path via
+  // .fsPath, but openExternal needs an actual file: URI to hand the OS or it
+  // can't find an app that knows the vscode-userdata scheme.
+  const dir = context.globalStorageUri
+  await vscode.workspace.fs.createDirectory(dir)
+  const targetPath = vscode.Uri.joinPath(dir, 'pdf-export.html').fsPath
+  await fs.writeFile(targetPath, html, 'utf8')
+  await vscode.env.openExternal(vscode.Uri.file(targetPath))
 }
 
 async function exportActiveNoteToPdf(context: vscode.ExtensionContext): Promise<void> {
@@ -200,7 +259,16 @@ async function exportActiveNoteToPdf(context: vscode.ExtensionContext): Promise<
       localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoot())
     }
   )
-  const bodyHtml = renderNoteHtml(source, rel, panel.webview)
+  const msgSub = panel.webview.onDidReceiveMessage((message: unknown) => {
+    if ((message as { command?: string } | undefined)?.command !== 'print') return
+    void openPrintableExport(context, rel, title, source).then(undefined, (err) =>
+      vscode.window.showErrorMessage(`KNote: couldn't open the print preview — ${String(err)}`)
+    )
+  })
+  panel.onDidDispose(() => msgSub.dispose())
+  const bodyHtml = renderNoteHtml(source, rel, (abs) =>
+    panel.webview.asWebviewUri(vscode.Uri.file(abs)).toString()
+  )
   panel.webview.html = buildExportHtml(panel.webview, title, bodyHtml)
 }
 
