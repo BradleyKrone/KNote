@@ -3,6 +3,16 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.10.1
+
+- Fixed a project's **Filter by Project** checkbox in the Boards sidebar
+  showing ticked again after reopening a vault even when the project had
+  been unticked. The checkbox read the vault's config before the vault had
+  actually finished opening, so it silently fell back to "nothing hidden"
+  while the board itself kept correctly hiding the project's cards — ticking
+  and unticking it again worked, but only until the next reopen. The
+  checkbox now stays in sync with the board across restarts.
+
 ## 2.10.0
 
 - **Export a note to PDF.** **KNote: Export Note to PDF** renders the active

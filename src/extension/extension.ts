@@ -48,7 +48,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<KnoteA
   registerSidebarViews(context)
   registerFilesTree(context)
   registerTagsTree(context)
-  registerQuickAccessTrees(context)
+  const quickAccessTrees = registerQuickAccessTrees(context)
   registerWeeklyTree(context)
   registerRpcBroadcasts(context)
 
@@ -58,6 +58,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<KnoteA
       registerDocSync(context)
       registerAttachmentAutoCleanup(context)
       registerRenameLinks(context)
+      // The Boards/Planner trees' hidden-project checkboxes were populated
+      // before the vault (and so its config.json) existed; re-sync them now
+      // that reading the real config will actually succeed.
+      await quickAccessTrees.reload()
       // Providers above are registered before the engine starts, so a restored
       // editor or sidebar view can already have asked for the index and been
       // handed a partial one. Tell every attached webview it's safe to re-ask.
