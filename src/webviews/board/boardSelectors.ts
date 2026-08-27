@@ -201,6 +201,19 @@ export interface BoardFilters {
   ignoreDeliverableWindow?: boolean
   /** The Boards tree's project/deliverable/unassigned pick — orthogonal to `tag`, both apply together. */
   deliverableScope?: DeliverableScopeFilter
+  /** Project slugs unticked in the Boards tree (`VaultConfig.boardHiddenProjects`) — their deliverables and joined tasks never become cards. */
+  hiddenProjects?: ReadonlySet<string>
+}
+
+function belongsToHiddenProject(
+  card: Pick<BoardCard, 'deliverables'>,
+  hiddenProjects: ReadonlySet<string> | undefined
+): boolean {
+  if (!hiddenProjects || hiddenProjects.size === 0) return false
+  return card.deliverables.some((t) => {
+    const project = parseDeliverableTag(t)?.project
+    return project !== undefined && hiddenProjects.has(project)
+  })
 }
 
 function matchesDeliverableScope(
@@ -242,6 +255,7 @@ export function collectCards(
       )
         continue
       if (!matchesDeliverableScope(card, filters.deliverableScope ?? null)) continue
+      if (belongsToHiddenProject(card, filters.hiddenProjects)) continue
       if (filters.text && !card.text.toLowerCase().includes(filters.text.toLowerCase())) continue
       if (!matchesDateFilter(card.statusChanged, filters.statusChanged ?? ANY_DATE_FILTER)) continue
       if (!matchesDateFilter(card.dateEntered, filters.dateEntered ?? ANY_DATE_FILTER)) continue

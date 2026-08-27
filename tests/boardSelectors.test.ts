@@ -359,6 +359,62 @@ describe('collectCards deliverable windows', () => {
   })
 })
 
+describe('collectCards hiddenProjects (the Boards tree exclude checkbox)', () => {
+  const notes = new Map<string, NoteMeta>()
+  notes.set(
+    'Project.md',
+    parseNote(
+      'Project.md',
+      [
+        '---',
+        'type: project',
+        'project: p',
+        '---',
+        '- [ ] Design @deliverable(p/design)',
+        '- [ ] plain note task with no deliverable marker',
+        ''
+      ].join('\n')
+    )
+  )
+  notes.set(
+    'Work.md',
+    parseNote(
+      'Work.md',
+      ['- [ ] unrelated task', '- [ ] design task @deliverable(p/design)', ''].join('\n')
+    )
+  )
+  const baseFilters: BoardFilters = { tag: null, text: '', ignoreDeliverableWindow: true }
+  const labels = (hiddenProjects?: ReadonlySet<string>): string[] =>
+    collectCards(notes, { kind: 'global' }, { ...baseFilters, hiddenProjects }).map(
+      (c) => c.displayText
+    )
+
+  it('shows everything when no project is hidden', () => {
+    expect(labels()).toEqual([
+      'Design',
+      'plain note task with no deliverable marker',
+      'unrelated task',
+      'design task'
+    ])
+  })
+
+  it('drops the defining line and every joined task once the project is hidden', () => {
+    expect(labels(new Set(['p']))).toEqual([
+      'plain note task with no deliverable marker',
+      'unrelated task'
+    ])
+  })
+
+  it('leaves an unrelated plain checkbox in the project note visible', () => {
+    expect(labels(new Set(['p']))).toContain('plain note task with no deliverable marker')
+  })
+
+  it('an empty or unmatched hidden set changes nothing', () => {
+    expect(labels(new Set())).toEqual(labels())
+    expect(labels(new Set(['other']))).toEqual(labels())
+  })
+})
+
 describe('collectCards deliverable-defining card', () => {
   const notes = new Map<string, NoteMeta>()
   notes.set(

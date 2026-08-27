@@ -245,6 +245,13 @@ export interface VaultConfig {
    * someone remembers to tick it.
    */
   hiddenProjects: string[]
+  /**
+   * Project slugs unticked in the Boards sidebar's "Filter by Project" list,
+   * excluded from the Kanban board — their deliverables and joined tasks stop
+   * appearing as cards. Independent of `hiddenProjects`: a project can be
+   * excluded from the board while still charted on the Planner, or vice versa.
+   */
+  boardHiddenProjects: string[]
 }
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
@@ -264,5 +271,6 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   deprecatedTags: [],
   userDictionary: [],
   linkUpdate: 'always',
-  hiddenProjects: []
+  hiddenProjects: [],
+  boardHiddenProjects: []
 }

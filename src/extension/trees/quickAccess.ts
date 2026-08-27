@@ -56,9 +56,30 @@ type BoardTreeNode =
 class BoardsTreeProvider implements vscode.TreeDataProvider<BoardTreeNode> {
   private emitter = new vscode.EventEmitter<void>()
   readonly onDidChangeTreeData = this.emitter.event
+  /** Read synchronously by getTreeItem, so it's cached rather than awaited per row. */
+  private hidden = new Set<string>()
 
   refresh(): void {
     this.emitter.fire()
+  }
+
+  /** Re-read the board-hidden set, then redraw. */
+  async reload(): Promise<void> {
+    this.hidden = new Set((await getVaultConfig()).boardHiddenProjects)
+    this.refresh()
+  }
+
+  /** Tick/untick a project, persisting to the vault config. */
+  async setVisible(slug: string, visible: boolean): Promise<void> {
+    const config = await getVaultConfig()
+    const hidden = new Set(config.boardHiddenProjects)
+    if (visible) hidden.delete(slug)
+    else hidden.add(slug)
+    await setVaultConfig({ ...config, boardHiddenProjects: [...hidden].sort() })
+    this.hidden = hidden
+    // Tell the open board panel, which mirrors the config like every webview.
+    broadcast('configChanged', { ...config, boardHiddenProjects: [...hidden].sort() })
+    this.refresh()
   }
 
   getTreeItem(node: BoardTreeNode): vscode.TreeItem {
@@ -104,12 +125,15 @@ class BoardsTreeProvider implements vscode.TreeDataProvider<BoardTreeNode> {
       }
       case 'project': {
         const item = new vscode.TreeItem(node.title, vscode.TreeItemCollapsibleState.Collapsed)
+        item.checkboxState = this.hidden.has(node.slug)
+          ? vscode.TreeItemCheckboxState.Unchecked
+          : vscode.TreeItemCheckboxState.Checked
         item.iconPath = new vscode.ThemeIcon(
           node.complete ? 'pass-filled' : node.overdue ? 'warning' : 'project'
         )
         const count = `${node.deliverables} ${node.deliverables === 1 ? 'deliverable' : 'deliverables'}`
         item.description = count
-        item.tooltip = `Filter the board to ${node.title}'s deliverables`
+        item.tooltip = `Click to filter the board to ${node.title}'s deliverables — untick to exclude ${node.title} from the board entirely`
         item.command = {
           command: 'knote.filterBoard',
           title: 'Filter Board',
@@ -322,7 +346,12 @@ export function registerQuickAccessTrees(context: vscode.ExtensionContext): void
   const machines = new MachinesTreeProvider()
   const planner = new PlannerTreeProvider()
 
-  const boardsView = vscode.window.createTreeView('knote.boards', { treeDataProvider: boards })
+  const boardsView = vscode.window.createTreeView('knote.boards', {
+    treeDataProvider: boards,
+    // Ticking several projects in a row shouldn't need one click each to
+    // re-focus the row.
+    manageCheckboxStateManually: true
+  })
   const machinesView = vscode.window.createTreeView('knote.machines', {
     treeDataProvider: machines
   })
@@ -332,14 +361,21 @@ export function registerQuickAccessTrees(context: vscode.ExtensionContext): void
     // re-focus the row.
     manageCheckboxStateManually: true
   })
-  // The hidden set lives on disk; load it once the vault is up.
+  // The hidden sets live on disk; load them once the vault is up.
   void planner.reload()
+  void boards.reload()
 
   context.subscriptions.push(
     plannerView.onDidChangeCheckboxState(async ({ items }) => {
       for (const [node, state] of items) {
         if (node.kind !== 'project') continue
         await planner.setVisible(node.slug, state === vscode.TreeItemCheckboxState.Checked)
+      }
+    }),
+    boardsView.onDidChangeCheckboxState(async ({ items }) => {
+      for (const [node, state] of items) {
+        if (node.kind !== 'project') continue
+        await boards.setVisible(node.slug, state === vscode.TreeItemCheckboxState.Checked)
       }
     }),
     boardsView,
