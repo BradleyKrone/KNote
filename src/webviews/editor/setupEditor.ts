@@ -30,6 +30,7 @@ import { formatKeymap } from './markdownFormatting'
 import { taskFold } from './taskFold'
 import { foldPersistence } from './foldPersist'
 import { taskEnterKeymap } from './taskEnter'
+import { listContinueTightKeymap } from './listContinueTight'
 import { knoteAutocomplete } from './completions'
 import { linkHover } from './linkHover'
 import { mdLink } from './mdLink'
@@ -136,6 +137,9 @@ export function createEditor(opts: CreateEditorOptions): EditorView {
       // Enter-to-seed must beat the default Enter (newline), so give it the
       // highest keymap precedence rather than relying on array order.
       Prec.highest(keymap.of(taskEnterKeymap)),
+      // Must also beat markdown()'s own Enter binding (Prec.high, added by
+      // its default addKeymap:true) — see listContinueTight.ts for why.
+      Prec.highest(keymap.of(listContinueTightKeymap)),
       keymap.of([...formatKeymap, ...defaultKeymap, ...searchKeymap, indentWithTab]),
       search(),
       knoteTheme,
