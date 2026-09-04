@@ -37,8 +37,9 @@ deliberate design decision, not an oversight to "fix":
 A VS Code extension in four layers under `src/`:
 
 - **`src/core/`** — pure Node services, no `vscode` imports (so vitest can
-  run them directly): `vaultService.ts` (vault root + path safety + CRUD +
-  atomic writes; trash is injected by the host), `watcher.ts` (chokidar
+  run them directly): `vaultService.ts` (vault roots + path safety + CRUD +
+  atomic writes; trash is injected by the host), `mounts.ts` (which extra
+  workspace folders join the vault, and under what name), `watcher.ts` (chokidar
   with own-write echo suppression and byte-identical dedupe),
   `lineEdit.ts` (verified single-line rewrites — the disk half of board
   sync), `vaultConfig.ts` (`.knote/config.json`), `indexer/` (note index,
@@ -77,6 +78,19 @@ A VS Code extension in four layers under `src/`:
 Key invariants:
 - A **vault** is just a folder on disk. That's the entire data model — no
   database, beyond an ephemeral in-memory search index rebuilt from files.
+- A vault can span **several** folders. The workspace folder holding `.knote/`
+  is the *primary* root and owns the config, weekly notes and templates; every
+  other workspace folder is *mounted* as a virtual top-level folder named after
+  itself, so a note in a folder called `teamargos.org` is the ordinary VaultPath
+  `teamargos.org/docs/x.md`. That prefix namespaces the path, which is why
+  `VaultPath` is still a plain string and nothing above `vaultService` knows
+  mounts exist. `core/mounts.ts` decides the set (rejecting — never silently
+  renaming — a name that collides, since the name is written into `[[links]]`);
+  `toAbs` and its inverse `relForAbs` are the *only* two places that map between
+  a VaultPath and a real path, so every read, write, watch and trash is
+  mount-aware through them. Mount roots are refused by `deleteEntry`,
+  `plannedMoves` and the Files tree — the folder belongs to the workspace, not
+  to the vault.
 - Notes are plain UTF-8 `.md` files, fully readable/editable outside KNote.
 - Every write to a note goes through a **verified edit**: the expected line
   text must still match (or the whole write is refused with `KNOTE_STALE`)

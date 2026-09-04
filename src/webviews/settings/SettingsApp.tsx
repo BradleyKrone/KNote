@@ -155,7 +155,12 @@ export function SettingsApp(): React.JSX.Element {
 
   const field = (
     label: string,
-    key: keyof Omit<VaultConfig, 'columns' | 'machines' | 'deprecatedTags' | 'linkUpdate'>,
+    key: keyof Omit<
+      VaultConfig,
+      // Not free-text: which folders are mounted is driven by the workspace and
+      // edited through "KNote: Manage Mounted Folders".
+      'columns' | 'machines' | 'deprecatedTags' | 'linkUpdate' | 'excludedFolders' | 'mountNames'
+    >,
     hint?: string
   ): React.JSX.Element => (
     <div className="settings-field">

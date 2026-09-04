@@ -62,7 +62,11 @@ export function delay(ms: number): Promise<void> {
  */
 export async function waitFor<T>(
   predicate: () => T | Promise<T>,
-  { timeout = 5000, interval = 50, message = 'condition' }: {
+  {
+    timeout = 5000,
+    interval = 50,
+    message = 'condition'
+  }: {
     timeout?: number
     interval?: number
     message?: string

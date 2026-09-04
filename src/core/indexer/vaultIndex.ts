@@ -3,7 +3,7 @@ import pLimit from 'p-limit'
 import type { IndexDelta, NoteMeta, VaultPath } from '@shared/types'
 import { isInside, isMarkdown, joinRel, normalizeRel } from '@shared/pathUtils'
 import { parseNote } from '@shared/parser/parseNote'
-import { getVaultRoot, isIgnoredRel, toAbs } from '../vaultService'
+import { getMounts, isIgnoredRel, mountNameOf, toAbs } from '../vaultService'
 import * as searchIndex from './searchIndex'
 
 /**
@@ -22,8 +22,22 @@ export function onDelta(fn: (delta: IndexDelta) => void): void {
   deltaListener = fn
 }
 
+/**
+ * Every indexed note, notes in the vault's own root first and then each
+ * mounted folder's, alphabetically within each.
+ *
+ * The order matters: this is what every `notesMap()` is built from, and
+ * `resolveTarget` breaks a `[[README]]` title tie by taking the first match it
+ * iterates past. Left in index order that would be whichever file's read
+ * finished first — different run to run, and a coin flip once a repo full of
+ * `README.md` is mounted. Sorted, the answer is stable, and a note in the
+ * vault proper beats one in a mounted folder.
+ */
 export function getSnapshot(): NoteMeta[] {
-  return [...notes.values()]
+  const rank = (path: VaultPath): number => (mountNameOf(path) === null ? 0 : 1)
+  return [...notes.values()].sort(
+    (a, b) => rank(a.path) - rank(b.path) || a.path.localeCompare(b.path)
+  )
 }
 
 export function getNote(path: VaultPath): NoteMeta | undefined {
@@ -39,7 +53,7 @@ export function getAllContents(): ReadonlyMap<string, string> {
 }
 
 async function collectMarkdownFiles(relDir: string, out: string[]): Promise<void> {
-  const abs = relDir === '' ? getVaultRoot() : toAbs(relDir)
+  const abs = toAbs(relDir)
   let dirents
   try {
     dirents = await fs.readdir(abs, { withFileTypes: true })
@@ -60,6 +74,7 @@ export async function initIndex(): Promise<void> {
   searchIndex.reset()
   const files: string[] = []
   await collectMarkdownFiles('', files)
+  for (const mount of getMounts()) await collectMarkdownFiles(mount.name, files)
   const limit = pLimit(8)
   await Promise.all(files.map((rel) => limit(() => indexFile(rel, false))))
 }

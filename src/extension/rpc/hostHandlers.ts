@@ -78,10 +78,10 @@ export function createHostHandlers(): HostHandlers {
     readFile: (path: VaultPath) => vault.readFile(path),
     readEmbed: (rawTarget: string) => readEmbed(rawTarget),
 
-    saveImageAttachment: (mimeType: string, base64Data: string) =>
-      saveImageAttachment(mimeType, Buffer.from(base64Data, 'base64')),
+    saveImageAttachment: (mimeType: string, base64Data: string, notePath: VaultPath | null) =>
+      saveImageAttachment(mimeType, Buffer.from(base64Data, 'base64'), notePath),
 
-    createDrawioDiagram: () => createDrawioDiagram(),
+    createDrawioDiagram: (notePath: VaultPath | null) => createDrawioDiagram(notePath),
 
     replaceLine: verifiedEdit.replaceLine,
     setTaskStatusMeta: verifiedEdit.setTaskStatusMeta,

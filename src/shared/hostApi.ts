@@ -60,14 +60,18 @@ export interface HostApi {
    * DocumentPasteEditProvider never fires for paste events inside a custom
    * webview editor's own DOM.
    */
-  saveImageAttachment(mimeType: string, base64Data: string): Promise<VaultPath>
+  saveImageAttachment(
+    mimeType: string,
+    base64Data: string,
+    notePath: VaultPath | null
+  ): Promise<VaultPath>
 
   /**
    * Create a blank draw.io diagram in the vault's attachments folder and
    * return the vault-relative path it was saved at. Used by the live-preview
    * editor's "Insert ▸ Draw.io Diagram" right-click action.
    */
-  createDrawioDiagram(): Promise<VaultPath>
+  createDrawioDiagram(notePath: VaultPath | null): Promise<VaultPath>
 
   // Verified line edits — routed through the host's verifiedEdit (live
   // buffer when the doc is open, atomic disk write otherwise); all fail

@@ -60,15 +60,19 @@ export interface PlannedMove {
  *  - an entry already sitting in the target folder (a drag that went nowhere)
  *  - a folder dropped into itself or its own subtree (which would otherwise
  *    ask the filesystem to swallow its own tail)
+ *  - a mounted folder, which belongs to the workspace rather than to the vault:
+ *    moving one would drag the whole external folder in off its real path.
  */
 export function plannedMoves(
   sources: readonly FileEntry[],
-  targetFolder: VaultPath
+  targetFolder: VaultPath,
+  isMountRoot: (rel: VaultPath) => boolean = () => false
 ): PlannedMove[] {
   const folder = normalizeRel(targetFolder)
   const out: PlannedMove[] = []
   for (const source of sources) {
     const from = normalizeRel(source.path)
+    if (isMountRoot(from)) continue
     if (samePath(parentOf(from), folder)) continue
     if (source.kind === 'folder' && isDescendantOrSelf(folder, from)) continue
     out.push({ from, to: joinRel(folder, nameOf(from)) })
@@ -83,8 +87,14 @@ export function plannedMoves(
  * `plannedMoves` rather than re-derived, so a picker can never offer a
  * destination that would then do nothing.
  */
-export function moveTargets(source: FileEntry, folders: readonly VaultPath[]): VaultPath[] {
-  return folders.map(normalizeRel).filter((folder) => plannedMoves([source], folder).length > 0)
+export function moveTargets(
+  source: FileEntry,
+  folders: readonly VaultPath[],
+  isMountRoot: (rel: VaultPath) => boolean = () => false
+): VaultPath[] {
+  return folders
+    .map(normalizeRel)
+    .filter((folder) => plannedMoves([source], folder, isMountRoot).length > 0)
 }
 
 /**

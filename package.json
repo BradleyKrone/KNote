@@ -1,7 +1,7 @@
 {
   "name": "knote",
   "displayName": "KNote",
-  "version": "2.10.1",
+  "version": "2.11.0",
   "description": "KNote — a local-first Markdown vault with a checkbox-driven Kanban board, wiki links, and vault-wide search, as a VS Code extension",
   "publisher": "bradleykrone",
   "main": "./dist/extension.js",
@@ -28,6 +28,14 @@
       {
         "command": "knote.initializeVault",
         "title": "KNote: Initialize Vault in This Workspace"
+      },
+      {
+        "command": "knote.manageMountedFolders",
+        "title": "KNote: Manage Folders in This Vault"
+      },
+      {
+        "command": "knote.chooseVault",
+        "title": "KNote: Choose Primary Vault Folder"
       },
       {
         "command": "knote.openBoard",
@@ -350,22 +358,22 @@
       "view/item/context": [
         {
           "command": "knote.files.newNote",
-          "when": "view == knote.files && viewItem == knoteFolder",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|Mount)$/",
           "group": "1_new@1"
         },
         {
           "command": "knote.files.newFolder",
-          "when": "view == knote.files && viewItem == knoteFolder",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|Mount)$/",
           "group": "1_new@2"
         },
         {
           "command": "knote.files.copyPath",
-          "when": "view == knote.files && viewItem =~ /^knote(Folder|File)$/",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|File|Mount)$/",
           "group": "2_copy@1"
         },
         {
           "command": "knote.files.copyRelativePath",
-          "when": "view == knote.files && viewItem =~ /^knote(Folder|File)$/",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|File|Mount)$/",
           "group": "2_copy@2"
         },
         {

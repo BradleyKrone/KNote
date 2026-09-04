@@ -73,7 +73,10 @@ describe('reason line cleared when a task leaves Waiting', () => {
       message: 'disk to reflect the removed reason line'
     })
     const onDisk = await readNoteOnDisk(NOTE)
-    assert.ok(onDisk.includes('- [/] Waiting task\n  - Status Changed:'), `unexpected note:\n${onDisk}`)
+    assert.ok(
+      onDisk.includes('- [/] Waiting task\n  - Status Changed:'),
+      `unexpected note:\n${onDisk}`
+    )
     assert.ok(onDisk.includes('  - Notes: keep this line'), `unexpected note:\n${onDisk}`)
     assert.ok(!onDisk.includes(FOLLOW_UP), `follow-up date left on disk:\n${onDisk}`)
     assert.ok(!onDisk.includes('⏳'), `follow-up marker left on disk:\n${onDisk}`)

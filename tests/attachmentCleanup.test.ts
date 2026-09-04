@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { mkdtemp, rm } from 'fs/promises'
+import { existsSync } from 'fs'
+import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import * as vault from '../src/core/vaultService'
@@ -10,6 +11,9 @@ import {
   cleanupUnreferenced,
   imageRefsOf
 } from '../src/core/attachmentCleanup'
+import { allAttachmentFolders, attachmentsFolderFor } from '../src/core/attachments'
+import { setVaultConfig } from '../src/core/vaultConfig'
+import { DEFAULT_VAULT_CONFIG } from '../src/shared/types'
 
 const ATT = 'Knote Resources/Attachments'
 
@@ -202,5 +206,74 @@ describe('cleanupUnreferenced', () => {
     const result = await cleanupUnreferenced('Note.md', [], '\n')
     expect(trashed).toEqual([])
     expect(result.trashed).toEqual([])
+  })
+})
+
+describe('attachments in a vault that spans folders', () => {
+  it('keeps a mounted note’s attachments inside that mount', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'knote-att-mount-'))
+    const mount = await mkdtemp(join(tmpdir(), 'knote-att-repo-'))
+    try {
+      vault.setVault(dir)
+      vault.setMounts([{ name: 'repo', root: mount }])
+      // A note inside a git repo has to keep its image in the repo, or the
+      // committed markdown points at a file the repo has never heard of.
+      expect(await attachmentsFolderFor('repo/docs/Post.md')).toBe(
+        'repo/Knote Resources/Attachments'
+      )
+      expect(await attachmentsFolderFor('Weekly/2026-1-1.md')).toBe('Knote Resources/Attachments')
+      expect(await allAttachmentFolders()).toEqual([
+        'Knote Resources/Attachments',
+        'repo/Knote Resources/Attachments'
+      ])
+    } finally {
+      vault.setMounts([])
+      await rm(dir, { recursive: true, force: true })
+      await rm(mount, { recursive: true, force: true })
+    }
+  })
+
+  it('never trashes a file inside a mount that is not an attachment', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'knote-att-mount2-'))
+    const mount = await mkdtemp(join(tmpdir(), 'knote-att-repo2-'))
+    try {
+      vault.setVault(dir)
+      vault.setMounts([{ name: 'repo', root: mount }])
+      await mkdir(join(mount, 'assets'), { recursive: true })
+      await writeFile(join(mount, 'assets', 'logo.png'), 'x')
+
+      // The note dropped its reference, but the image lives in the repo's own
+      // assets folder — outside every attachments folder, so hands off.
+      const result = await cleanupUnreferenced(
+        'repo/Post.md',
+        ['repo/assets/logo.png'],
+        'no images now'
+      )
+
+      expect(result.trashed).toEqual([])
+      expect(existsSync(join(mount, 'assets', 'logo.png'))).toBe(true)
+    } finally {
+      vault.setMounts([])
+      await rm(dir, { recursive: true, force: true })
+      await rm(mount, { recursive: true, force: true })
+    }
+  })
+
+  it('refuses to sweep anything when the attachments folder is the vault root', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'knote-att-root-'))
+    try {
+      vault.setVault(dir)
+      // isInside(rel, '') is true for everything, so an empty attachments
+      // folder would otherwise make every dropped image ref a deletion.
+      await setVaultConfig({ ...DEFAULT_VAULT_CONFIG, attachmentsFolder: '' })
+      await writeFile(join(dir, 'anywhere.png'), 'x')
+
+      const result = await cleanupUnreferenced('Note.md', ['anywhere.png'], 'no images now')
+
+      expect(result.trashed).toEqual([])
+      expect(existsSync(join(dir, 'anywhere.png'))).toBe(true)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 })

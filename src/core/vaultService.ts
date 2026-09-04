@@ -6,7 +6,7 @@
 // vitest and bundles anywhere; host-specific behavior (trash) is injected.
 
 import { promises as fs } from 'fs'
-import { dirname, resolve, sep } from 'path'
+import { dirname, relative, resolve, sep } from 'path'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type {
   FileEntry,
@@ -17,9 +17,18 @@ import type {
 } from '@shared/types'
 import { isMarkdown, joinRel, nameOf, normalizeRel, parentOf } from '@shared/pathUtils'
 import { getVaultConfig } from './vaultConfig'
+import type { VaultMount } from './mounts'
 import { CONFLICT_ERROR } from '@shared/errors'
 
 let vaultRoot: string | null = null
+
+/**
+ * Extra folders grafted onto the vault as virtual top-level folders (see
+ * `core/mounts.ts`). A mount's name is the first segment of every VaultPath
+ * inside it, which is what lets the whole app above this module keep treating
+ * paths as plain root-relative strings.
+ */
+let mounts: readonly VaultMount[] = []
 
 /**
  * Called around every write KNote itself makes, so the watcher can tell
@@ -60,7 +69,45 @@ export function setTrashHandler(fn: (absPath: string) => Promise<void>): void {
 
 export function setVault(root: string): VaultInfo {
   vaultRoot = resolve(root)
+  mounts = []
   return currentVault()!
+}
+
+/**
+ * Register the mounted folders. Separate from `setVault` because planning them
+ * needs `getVaultConfig()`, which can only be read once the root is set.
+ */
+export function setMounts(next: readonly VaultMount[]): void {
+  mounts = next.map((m) => ({ name: m.name, root: resolve(m.root) }))
+}
+
+export function getMounts(): readonly VaultMount[] {
+  return mounts
+}
+
+/** Every folder the vault spans: the primary root first, then each mount. */
+export function getVaultRoots(): string[] {
+  if (!vaultRoot) return []
+  return [vaultRoot, ...mounts.map((m) => m.root)]
+}
+
+/** The mount a path lives in, or null when it's in the primary root. */
+function mountFor(norm: string): VaultMount | null {
+  const first = norm.split('/')[0]?.toLowerCase()
+  if (!first) return null
+  return mounts.find((m) => m.name.toLowerCase() === first) ?? null
+}
+
+/** The mount a vault path belongs to, or null when it lives in the primary root. */
+export function mountNameOf(rel: VaultPath): string | null {
+  return mountFor(normalizeRel(rel))?.name ?? null
+}
+
+/** True when `rel` is a mount's own top-level folder (never deletable/movable). */
+export function isMountRoot(rel: VaultPath): boolean {
+  const norm = normalizeRel(rel)
+  if (norm === '' || norm.includes('/')) return false
+  return mounts.some((m) => m.name.toLowerCase() === norm.toLowerCase())
 }
 
 function currentVault(): VaultInfo | null {
@@ -74,14 +121,44 @@ export function getVaultRoot(): string {
   return vaultRoot
 }
 
-/** Resolve a vault-relative path to absolute, refusing anything that escapes the vault. */
+/**
+ * Resolve a vault-relative path to absolute, refusing anything that escapes the
+ * vault. When the first segment names a mount the path resolves inside that
+ * mount's own root instead of the primary one — this single redirect is what
+ * makes every write path (atomic writes, mkdir, uniquify, trash) mount-aware,
+ * since they all funnel through here.
+ */
 export function toAbs(rel: VaultPath): string {
-  const root = getVaultRoot()
+  const primary = getVaultRoot()
   const norm = normalizeRel(rel)
   if (norm.split('/').includes('..')) throw new Error(`Invalid path: ${rel}`)
-  const abs = resolve(root, norm)
+  const mount = mountFor(norm)
+  const root = mount ? mount.root : primary
+  const within = mount ? norm.slice(mount.name.length + 1) : norm
+  const abs = resolve(root, within)
   if (abs !== root && !abs.startsWith(root + sep)) throw new Error(`Path escapes vault: ${rel}`)
   return abs
+}
+
+/**
+ * The inverse of `toAbs`: the vault path for an absolute path, or null when it
+ * lies outside every root. `''` is the primary root itself and a bare mount
+ * name is that mount's root — deliberately not `''`, so callers can tell the
+ * two apart. Never throws (the watcher calls it after the vault has closed).
+ */
+export function relForAbs(abs: string): VaultPath | null {
+  if (!vaultRoot) return null
+  const target = resolve(abs)
+  let best: string | null = null
+  for (const { name, root } of [{ name: '', root: vaultRoot }, ...mounts]) {
+    const rel = relative(root, target)
+    if (rel.startsWith('..') || rel.includes('..' + sep)) continue
+    const full = joinRel(name, normalizeRel(rel))
+    // Roots never nest (planMounts rejects overlaps), so at most one matches;
+    // the shortest is still the right answer if that ever changes.
+    if (best === null || full.length < best.length) best = full
+  }
+  return best
 }
 
 const IGNORED_DIRS = new Set(['.knote', '.git', '.obsidian', 'node_modules'])
@@ -125,12 +202,24 @@ export async function readDir(rel: VaultPath): Promise<FileEntry[]> {
     const path = joinRel(relDir, d.name)
     if (d.isDirectory()) {
       if (IGNORED_DIRS.has(d.name) || d.name.startsWith('.')) continue
+      // A real folder that has since been created under a mount's name would
+      // show twice and be unreachable anyway (toAbs routes past it to the
+      // mount), so the mount wins and the shadowed folder is hidden.
+      if (relDir === '' && mounts.some((m) => m.name.toLowerCase() === d.name.toLowerCase())) {
+        continue
+      }
       folders.push({ path, name: d.name, kind: 'folder' })
     } else if (d.isFile()) {
       if (d.name.startsWith('.') || !isVisibleFile(d.name)) continue
       files.push({ path, name: d.name, kind: 'file' })
     }
   }
+  // Mounted folders are part of the root listing, merged in before the sort so
+  // they land in alphabetical order like any other folder.
+  if (relDir === '') {
+    for (const m of mounts) folders.push({ path: m.name, name: m.name, kind: 'folder' })
+  }
+
   // numeric: true makes embedded numbers compare by value (so "9" sorts
   // before "12"), which is what keeps date-stamped file names like weekly
   // notes in chronological order instead of plain lexicographic order.
@@ -317,7 +406,22 @@ export async function createFolder(rel: VaultPath): Promise<VaultPath> {
   return target
 }
 
+/**
+ * A mounted folder belongs to the workspace, not to the vault — deleting or
+ * moving it would take the whole external folder with it. KNote refuses at
+ * every layer; the way to remove one is to take it out of the workspace.
+ */
+function refuseMountRoot(rel: VaultPath, verb: string): void {
+  if (isMountRoot(rel)) {
+    throw new Error(
+      `Cannot ${verb} "${rel}" — it is a folder mounted from outside the vault. ` +
+        `Remove it from the workspace instead.`
+    )
+  }
+}
+
 export async function deleteEntry(rel: VaultPath): Promise<void> {
+  refuseMountRoot(rel, 'delete')
   const abs = toAbs(rel)
   ownWriteMarker(abs)
   await trashHandler(abs)
@@ -330,6 +434,7 @@ export async function deleteEntry(rel: VaultPath): Promise<void> {
  * responsible for confirming with the user first, since this is unrecoverable.
  */
 export async function deleteEntryPermanently(rel: VaultPath): Promise<void> {
+  refuseMountRoot(rel, 'delete')
   const abs = toAbs(rel)
   ownWriteMarker(abs)
   await fs.rm(abs, { recursive: true, force: true })

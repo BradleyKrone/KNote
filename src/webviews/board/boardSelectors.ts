@@ -2,6 +2,7 @@ import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import type { BoardColumn, NoteMeta, VaultPath } from '@shared/types'
 import { isInside, samePath, titleOf } from '@shared/pathUtils'
+import { extractTags } from '@shared/parser/mdScaffold'
 import {
   ARCHIVED_CHAR,
   DUE_RE,
@@ -83,6 +84,13 @@ export function toCard(
   // rival deliverable card.
   const definesDeliverable = definingTags?.get(deliverableLineKey(meta.path, task.line)) ?? null
   const deliverables = deliverableMembershipOf(task.tags, task.text)
+  // A #tag typed into the waiting reason works like an ordinary tag on this
+  // card — shown as a pill and filterable — but only while the reason line
+  // exists: it's gone the moment the task leaves the column (the line itself
+  // is deleted then), so no separate cleanup is needed. Kept out of
+  // `deliverableMembershipOf` above, which reads `task.tags` alone, so a
+  // legacy `#deliverable/...` tag in a reason can't silently join a deliverable.
+  const reasonTags = task.waitingReason ? extractTags(task.waitingReason) : []
   return {
     path: meta.path,
     noteTitle: meta.title,
@@ -90,7 +98,7 @@ export function toCard(
     statusChar: task.statusChar,
     text: task.text,
     displayText: displayText || task.text,
-    tags: task.tags,
+    tags: reasonTags.length ? [...new Set([...task.tags, ...reasonTags])] : task.tags,
     deliverables,
     definesDeliverable,
     progress: definesDeliverable

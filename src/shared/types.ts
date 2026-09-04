@@ -252,6 +252,18 @@ export interface VaultConfig {
    * excluded from the board while still charted on the Planner, or vice versa.
    */
   boardHiddenProjects: string[]
+  /**
+   * Absolute paths of workspace folders deliberately NOT mounted into this
+   * vault. Stored as the *excluded* set (like `hiddenProjects`) so a folder
+   * added to the workspace later joins the vault on its own.
+   */
+  excludedFolders: string[]
+  /**
+   * Explicit mount name per absolute folder path, overriding that folder's own
+   * base name. Needed when two workspace folders share a base name, or when a
+   * folder's name collides with something already at the vault root.
+   */
+  mountNames: Record<string, string>
 }
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
@@ -272,5 +284,7 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   userDictionary: [],
   linkUpdate: 'always',
   hiddenProjects: [],
-  boardHiddenProjects: []
+  boardHiddenProjects: [],
+  excludedFolders: [],
+  mountNames: {}
 }

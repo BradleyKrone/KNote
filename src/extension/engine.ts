@@ -14,6 +14,8 @@ import {
   type CleanupResult
 } from '../core/attachmentCleanup'
 import { getVaultConfig, setVaultConfig } from '../core/vaultConfig'
+import { planMounts } from '../core/mounts'
+import type { VaultLayout } from './vault'
 import { markKnownContent, markOwnWrite, startWatching, stopWatching } from '../core/watcher'
 
 const deltaEmitter = new vscode.EventEmitter<IndexDelta>()
@@ -80,12 +82,21 @@ export function currentVaultRoot(): string | null {
   return vaultRoot
 }
 
+/**
+ * Every folder on disk the vault spans — the primary root plus each mounted
+ * folder. Webviews need all of them as `localResourceRoots` or images inside a
+ * mounted folder resolve to a URI the webview silently refuses to load.
+ */
+export function currentVaultRoots(): string[] {
+  return vault.getVaultRoots()
+}
+
 /** Fresh Map view of the index for the shared wikiResolve selectors. */
 export function notesMap(): Map<string, NoteMeta> {
   return new Map(vaultIndex.getSnapshot().map((m) => [m.path, m]))
 }
 
-export async function startEngine(root: string, log: vscode.OutputChannel): Promise<void> {
+export async function startEngine(layout: VaultLayout, log: vscode.OutputChannel): Promise<void> {
   logChannel = log
   indexBuilt = new Promise<void>((resolve) => {
     markIndexBuilt = resolve
@@ -102,11 +113,28 @@ export async function startEngine(root: string, log: vscode.OutputChannel): Prom
       )
     )
 
-    const info = vault.setVault(root)
+    const info = vault.setVault(layout.primary)
     vaultRoot = info.root
 
     // Seed a starter template into new vaults, mirroring the old openVault flow
     const config = await getVaultConfig()
+
+    // Mounts must be registered before the watcher and the index start, since
+    // both enumerate whatever roots the vault spans at that moment.
+    const topLevel = (await vault.readDir('')).map((e) => e.name)
+    const plan = planMounts(info.root, layout.candidates, topLevel, {
+      excluded: config.excludedFolders,
+      names: config.mountNames
+    })
+    vault.setMounts(plan.mounts)
+    for (const m of plan.mounts) log.appendLine(`Mounted ${m.root} as "${m.name}/"`)
+    for (const r of plan.rejected) log.appendLine(`Not mounted: ${r.path} — ${r.reason}`)
+    for (const v of layout.otherVaults) {
+      log.appendLine(
+        `Note: ${v} also has a .knote/ folder. Its notes are mounted, but its ` +
+          `config, weekly notes and templates are ignored — ${info.root} is the vault.`
+      )
+    }
     const seededTemplate = await vault.ensureDefaultTemplate(config.templatesFolder)
     if (seededTemplate && !config.weeklyTemplate) {
       config.weeklyTemplate = seededTemplate
@@ -116,7 +144,7 @@ export async function startEngine(root: string, log: vscode.OutputChannel): Prom
     vaultIndex.onDelta((delta) => deltaEmitter.fire(delta))
 
     const started = Date.now()
-    await startWatching(info.root, (change) => {
+    await startWatching(vault.getVaultRoots(), (change) => {
       void handleWatcherEvent(change.path, change.kind)
     })
     await vaultIndex.initIndex()
@@ -177,5 +205,6 @@ async function handleWatcherEvent(rel: VaultPath, kind: string): Promise<void> {
 
 export async function stopEngine(): Promise<void> {
   vaultRoot = null
+  vault.setMounts([])
   await stopWatching()
 }

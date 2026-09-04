@@ -24,8 +24,7 @@ describe('knote.insertDrawioDiagram', () => {
     const originalInputBox = vscode.window.showInputBox
     const originalWarning = vscode.window.showWarningMessage
     let warned: string | undefined
-    ;(vscode.window as unknown as Record<string, unknown>).showInputBox = async () =>
-      'Test Diagram'
+    ;(vscode.window as unknown as Record<string, unknown>).showInputBox = async () => 'Test Diagram'
     ;(vscode.window as unknown as Record<string, unknown>).showWarningMessage = async (
       message: string
     ) => {

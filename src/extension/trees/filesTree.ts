@@ -136,7 +136,13 @@ class FilesTreeProvider
     item.id = `${node.kind}:${node.path}`
     item.iconPath =
       node.kind === 'folder' ? new vscode.ThemeIcon(FOLDER_ICON) : vscode.ThemeIcon.File
-    item.contextValue = node.kind === 'folder' ? 'knoteFolder' : 'knoteFile'
+    // A mount gets its own contextValue so the menus can offer "New Note" in it
+    // while withholding rename/move/delete, which would hit the real folder.
+    item.contextValue = vault.isMountRoot(node.path)
+      ? 'knoteMount'
+      : node.kind === 'folder'
+        ? 'knoteFolder'
+        : 'knoteFile'
     item.tooltip = node.path
     item.command =
       node.kind === 'folder'
@@ -160,7 +166,9 @@ class FilesTreeProvider
   }
 
   handleDrag(sources: readonly FilesNode[], data: vscode.DataTransfer): void {
-    const paths = sources.filter((s) => s.kind !== 'path').map((s) => s.path)
+    const paths = sources
+      .filter((s) => s.kind !== 'path' && !vault.isMountRoot(s.path))
+      .map((s) => s.path)
     if (paths.length === 0) return
     data.set(KNOTE_FILES_MIME, new vscode.DataTransferItem(paths))
     // Also advertise the plain uri list, so a row can be dragged out into the
@@ -227,11 +235,27 @@ async function statEntry(path: VaultPath): Promise<FileEntry | null> {
 }
 
 /**
+ * A mounted folder is a workspace folder that happens to appear in the vault
+ * tree — renaming or deleting its row would move or trash the real folder,
+ * wherever it lives on disk. Refuse, and say what to do instead.
+ */
+function refuseMountRoot(path: VaultPath, verb: string): boolean {
+  if (!vault.isMountRoot(path)) return false
+  void vscode.window.showWarningMessage(
+    `"${path}" is a folder mounted from outside the vault and cannot be ${verb} here. ` +
+      `Remove it from the workspace instead.`
+  )
+  return true
+}
+
+/**
  * Move entries into a folder as a single WorkspaceEdit — one undo step
  * covering both the moves and the link rewrites renameLinks.ts contributes.
  */
 async function moveEntries(sources: readonly FileEntry[], folder: VaultPath): Promise<void> {
-  const moves = plannedMoves(sources, folder)
+  // Guarded here as well as in the menus: the command palette and the
+  // integration harness call these commands directly, bypassing `when` clauses.
+  const moves = plannedMoves(sources, folder, vault.isMountRoot)
   if (moves.length === 0) return
 
   const taken = new Set((await vault.readDir(folder)).map((e) => e.name.toLowerCase()))
@@ -489,7 +513,7 @@ export function registerFilesTree(context: vscode.ExtensionContext): void {
         let folder = explicitFolder === undefined ? undefined : normalizeRel(explicitFolder)
         if (folder === undefined) {
           const picked = await vscode.window.showQuickPick(
-            moveTargets(entry, await allFolders()).map((target) => ({
+            moveTargets(entry, await allFolders(), vault.isMountRoot).map((target) => ({
               label: target === '' ? vaultName() : target,
               description: target === '' ? 'vault root' : undefined,
               target
@@ -528,6 +552,7 @@ export function registerFilesTree(context: vscode.ExtensionContext): void {
       async (arg?: FilesNode | VaultPath, explicitName?: string) => {
         const path = argPath(arg)
         if (path === undefined || path === '') return
+        if (refuseMountRoot(path, 'renamed')) return
         const current = nameOf(path)
         const siblings = (await siblingNames(parentOf(path))).filter((s) => s !== current)
         // Pre-select just the base name, so typing replaces the title and
@@ -549,6 +574,7 @@ export function registerFilesTree(context: vscode.ExtensionContext): void {
       async (arg?: FilesNode | VaultPath, skipConfirm?: boolean) => {
         const path = argPath(arg)
         if (path === undefined || path === '') return
+        if (refuseMountRoot(path, 'deleted')) return
         if (skipConfirm !== true) {
           const choice = await vscode.window.showWarningMessage(
             `Move "${nameOf(path)}" to the trash?`,

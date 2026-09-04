@@ -22,6 +22,7 @@ import {
   setStartDate
 } from '../shared/taskMeta'
 import { host } from '../shared/rpc'
+import { getNotePath } from './knoteConstructs'
 import { buildMdLink, type MdLink } from './mdLinkLogic'
 
 // ---------- Pure line builders (unit-tested) ----------
@@ -136,7 +137,7 @@ export function insertMachineEntry(
  * host round-trip first — the webview has no filesystem access of its own.
  */
 export async function insertDrawioDiagram(view: EditorView): Promise<void> {
-  const saved = await host.createDrawioDiagram()
+  const saved = await host.createDrawioDiagram(getNotePath())
   insertBlock(view, `![[/${saved}]]`)
   void host.openWithDrawio(`/${saved}`)
 }

@@ -34,7 +34,7 @@ class ImagePasteProvider implements vscode.DocumentPasteEditProvider {
     if (!file || token.isCancellationRequested) return undefined
 
     const bytes = await file.data()
-    const saved = await saveImageAttachment(mime, Buffer.from(bytes))
+    const saved = await saveImageAttachment(mime, Buffer.from(bytes), vaultNoteRel(document))
 
     const pos = ranges[0].start
     const line = document.lineAt(pos.line)

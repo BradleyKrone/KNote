@@ -1,10 +1,9 @@
 import chokidar, { FSWatcher } from 'chokidar'
 import { createHash } from 'crypto'
 import { promises as fs } from 'fs'
-import { relative, resolve, sep } from 'path'
+import { resolve } from 'path'
 import type { ExternalChange, ExternalChangeKind } from '@shared/types'
-import { normalizeRel } from '@shared/pathUtils'
-import { isIgnoredRel } from './vaultService'
+import { isIgnoredRel, relForAbs } from './vaultService'
 
 /**
  * Watches the vault for filesystem changes and suppresses the echoes of
@@ -30,7 +29,6 @@ interface OwnWrite {
 }
 
 let watcher: FSWatcher | null = null
-let watchedRoot: string | null = null
 const recentOwnWrites = new Map<string, OwnWrite>()
 const lastKnownHash = new Map<string, string>()
 
@@ -97,25 +95,34 @@ export async function shouldReportChange(
   return true
 }
 
+/**
+ * Watch every root the vault spans — the primary folder plus each mounted one.
+ * Paths come back as ordinary vault paths (mount-prefixed where they belong to
+ * a mount), so nothing downstream can tell the roots apart.
+ */
 export async function startWatching(
-  vaultRoot: string,
+  roots: readonly string[],
   onChange: (change: ExternalChange) => void
 ): Promise<void> {
   await stopWatching()
-  watchedRoot = resolve(vaultRoot)
 
-  watcher = chokidar.watch(watchedRoot, {
-    ignoreInitial: true,
-    // Don't read files mid-write (editors and sync tools write in chunks)
-    awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },
-    ignored: (path: string) => {
-      const rel = toRelSafe(path)
-      if (rel === null) return false
-      if (rel === '') return false
-      if (rel.endsWith('.knote-tmp')) return true
-      return isIgnoredRel(rel)
+  watcher = chokidar.watch(
+    roots.map((r) => resolve(r)),
+    {
+      ignoreInitial: true,
+      // Don't read files mid-write (editors and sync tools write in chunks)
+      awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 50 },
+      ignored: (path: string) => {
+        const rel = toRelSafe(path)
+        if (rel === null) return false
+        // '' is the primary root and a bare mount name is a mount's own root:
+        // watching either must not be refused by its own ignore rules.
+        if (rel === '') return false
+        if (rel.endsWith('.knote-tmp')) return true
+        return isIgnoredRel(rel)
+      }
     }
-  })
+  )
 
   const emit =
     (kind: ExternalChangeKind) =>
@@ -141,18 +148,15 @@ export async function startWatching(
   })
 }
 
-function toRelSafe(absPath: string): string | null {
-  if (!watchedRoot) return null
-  const rel = relative(watchedRoot, resolve(absPath))
-  if (rel.startsWith('..') || rel.includes('..' + sep)) return null
-  return normalizeRel(rel)
+/** Vault path for a watcher event, or null when it falls outside every root. Exported for tests. */
+export function toRelSafe(absPath: string): string | null {
+  return relForAbs(absPath)
 }
 
 export async function stopWatching(): Promise<void> {
   if (watcher) {
     const w = watcher
     watcher = null
-    watchedRoot = null
     await w.close().catch(() => {})
   }
   recentOwnWrites.clear()

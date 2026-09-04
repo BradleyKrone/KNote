@@ -6,12 +6,17 @@
 import * as vscode from 'vscode'
 import type { DeliverableScopeFilter } from '@shared/deliverables'
 import { titleOf } from '@shared/pathUtils'
-import { currentVaultRoot } from '../engine'
+import { currentVaultRoot, currentVaultRoots } from '../engine'
 import { vaultNoteRel } from '../paths'
 import { attach, broadcast } from '../rpc/webviewRpc'
 import { createHostHandlers } from '../rpc/hostHandlers'
 import { attachmentUriFor, openWithDrawio } from './attachmentUri'
-import { webviewHtml, webviewResourceRoots } from './webviewHtml'
+import {
+  webviewHtml,
+  webviewResourceRoots,
+  trackResourceRoots,
+  untrackResourceRoots
+} from './webviewHtml'
 
 const VIEW_TYPE = 'knote.board'
 
@@ -35,6 +40,7 @@ function wirePanel(
 ): void {
   const key = scopeKey(scope)
   panels.set(key, panel)
+  trackResourceRoots(panel.webview, context.extensionUri)
   // Plus the two attachment handlers, which are per-panel everywhere because
   // they need a note to resolve against. A board has no single note — its cards
   // come from all over the vault — so the webview resolves references against
@@ -59,6 +65,7 @@ function wirePanel(
   )
   panel.onDidDispose(() => {
     rpc.dispose()
+    untrackResourceRoots(panel.webview)
     panels.delete(key)
   })
 }
@@ -84,7 +91,7 @@ function openBoard(context: vscode.ExtensionContext, scope: BoardScope): void {
     {
       enableScripts: true,
       retainContextWhenHidden: true,
-      localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoot())
+      localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoots())
     }
   )
   wirePanel(context, panel, scope)
@@ -119,7 +126,7 @@ export function openBoardWithFilter(
     {
       enableScripts: true,
       retainContextWhenHidden: true,
-      localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoot())
+      localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoots())
     }
   )
   wirePanel(context, panel, scope, filter)
@@ -147,7 +154,7 @@ export function registerBoardPanel(context: vscode.ExtensionContext): void {
         }
         panel.webview.options = {
           enableScripts: true,
-          localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoot())
+          localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoots())
         }
         wirePanel(context, panel, state?.scope ?? { kind: 'global' })
       }

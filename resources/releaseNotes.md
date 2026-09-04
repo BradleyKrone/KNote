@@ -3,6 +3,22 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.11.0
+
+- **A vault can span several folders.** Add another folder to the workspace
+  and KNote mounts it — its notes are indexed, searchable, linkable, and its
+  tasks appear on the Kanban board and Planner like any others, shown in the
+  Files view as a top-level folder named after itself. **KNote: Manage
+  Folders in This Vault** lets you leave one out; **KNote: Choose Primary
+  Vault Folder** picks which folder owns the vault when more than one holds
+  a `.knote/` folder.
+- A `#tag` typed into a Waiting card's reason now shows as a pill on the
+  card and is filterable, same as any other tag — it disappears again once
+  the card leaves Waiting, along with the reason line itself.
+- Fixed an extra blank line appearing when pressing Enter to add a plain
+  bullet under a checkbox task that had already grown its seeded
+  Status Changed/Date Entered/Notes block.
+
 ## 2.10.1
 
 - Fixed a project's **Filter by Project** checkbox in the Boards sidebar
