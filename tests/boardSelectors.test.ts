@@ -156,6 +156,35 @@ describe('followUpState', () => {
   })
 })
 
+describe('collectCards waiting-reason tags', () => {
+  it('merges a #tag from the reason line into card.tags, deduped against the task line', () => {
+    const notes = new Map<string, NoteMeta>()
+    notes.set(
+      'a.md',
+      parseNote(
+        'a.md',
+        '- [w] chase vendor #urgent\n  Reason for Waiting: blocked on #vendor #urgent pricing ⏳ 2026-07-15\n'
+      )
+    )
+    const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
+    expect(card.tags.sort()).toEqual(['urgent', 'vendor'])
+  })
+
+  it('leaves card.tags untouched when there is no waiting reason', () => {
+    const notes = new Map<string, NoteMeta>()
+    notes.set('a.md', parseNote('a.md', '- [ ] plain task #foo\n'))
+    const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
+    expect(card.tags).toEqual(['foo'])
+  })
+
+  it('drops the reason tag once the task leaves Waiting and the reason line is deleted', () => {
+    const notes = new Map<string, NoteMeta>()
+    notes.set('a.md', parseNote('a.md', '- [/] chase vendor\n  - Status Changed: 7/8/2026\n'))
+    const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
+    expect(card.tags).toEqual([])
+  })
+})
+
 describe('collectCards date filters', () => {
   const notes = new Map<string, NoteMeta>()
   const content = [
