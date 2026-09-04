@@ -16,7 +16,9 @@ function mkState(doc: string, cursor: number): EditorState {
   const state = EditorState.create({
     doc,
     selection: EditorSelection.cursor(cursor),
-    extensions: [markdown({ extensions: [Strikethrough, Table, Autolink, { remove: ['IndentedCode'] }] })]
+    extensions: [
+      markdown({ extensions: [Strikethrough, Table, Autolink, { remove: ['IndentedCode'] }] })
+    ]
   })
   ensureSyntaxTree(state, doc.length, 5000)
   return state

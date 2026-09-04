@@ -44,7 +44,12 @@ export function continueListTight(target: CommandTarget): boolean {
       const change = changes.length === 1 ? changes[0] : null
       if (change && change.insert.startsWith(`${state.lineBreak}${state.lineBreak}`)) {
         const insert = change.insert.slice(state.lineBreak.length)
-        collapsed = { from: change.from, to: change.to, insert, cursor: change.from + insert.length }
+        collapsed = {
+          from: change.from,
+          to: change.to,
+          insert,
+          cursor: change.from + insert.length
+        }
       }
       if (!collapsed) target.dispatch(tr)
     }
