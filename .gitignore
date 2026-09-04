@@ -4,6 +4,8 @@ dist/
 release/
 test-vault/
 test/.tmp-vault/
+test/tmp-mount/
+test/.tmp-mounted.code-workspace
 .vscode-test/
 *.log
 *.tsbuildinfo

@@ -3,10 +3,15 @@
 // reopen, so no retainContextWhenHidden.
 
 import * as vscode from 'vscode'
-import { currentVaultRoot } from '../engine'
+import { currentVaultRoot, currentVaultRoots } from '../engine'
 import { attach } from '../rpc/webviewRpc'
 import { createHostHandlers } from '../rpc/hostHandlers'
-import { webviewHtml, webviewResourceRoots } from './webviewHtml'
+import {
+  webviewHtml,
+  webviewResourceRoots,
+  trackResourceRoots,
+  untrackResourceRoots
+} from './webviewHtml'
 
 interface PanelDef {
   command: string
@@ -58,14 +63,16 @@ export function registerPanels(context: vscode.ExtensionContext): void {
           vscode.ViewColumn.Active,
           {
             enableScripts: true,
-            localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoot())
+            localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoots())
           }
         )
         open.set(def.viewType, panel)
+        trackResourceRoots(panel.webview, context.extensionUri)
         const rpc = attach(panel.webview, createHostHandlers())
         panel.webview.html = webviewHtml(panel.webview, context.extensionUri, def.view, def.title)
         panel.onDidDispose(() => {
           rpc.dispose()
+          untrackResourceRoots(panel.webview)
           open.delete(def.viewType)
         })
       })

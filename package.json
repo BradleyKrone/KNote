@@ -30,6 +30,14 @@
         "title": "KNote: Initialize Vault in This Workspace"
       },
       {
+        "command": "knote.manageMountedFolders",
+        "title": "KNote: Manage Folders in This Vault"
+      },
+      {
+        "command": "knote.chooseVault",
+        "title": "KNote: Choose Primary Vault Folder"
+      },
+      {
         "command": "knote.openBoard",
         "title": "KNote: Open Kanban Board"
       },
@@ -350,22 +358,22 @@
       "view/item/context": [
         {
           "command": "knote.files.newNote",
-          "when": "view == knote.files && viewItem == knoteFolder",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|Mount)$/",
           "group": "1_new@1"
         },
         {
           "command": "knote.files.newFolder",
-          "when": "view == knote.files && viewItem == knoteFolder",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|Mount)$/",
           "group": "1_new@2"
         },
         {
           "command": "knote.files.copyPath",
-          "when": "view == knote.files && viewItem =~ /^knote(Folder|File)$/",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|File|Mount)$/",
           "group": "2_copy@1"
         },
         {
           "command": "knote.files.copyRelativePath",
-          "when": "view == knote.files && viewItem =~ /^knote(Folder|File)$/",
+          "when": "view == knote.files && viewItem =~ /^knote(Folder|File|Mount)$/",
           "group": "2_copy@2"
         },
         {

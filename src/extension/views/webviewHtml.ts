@@ -45,12 +45,49 @@ export function webviewHtml(
 </html>`
 }
 
-/** localResourceRoots for KNote webviews: the bundled dist plus the vault (for note images). */
+/**
+ * localResourceRoots for KNote webviews: the bundled dist plus every folder the
+ * vault spans (for note images). Mounted folders must be in here — outside the
+ * list `asWebviewUri` hands back a URI the webview refuses to load, with no
+ * error, so their images would just silently fail to render.
+ */
 export function webviewResourceRoots(
   extensionUri: vscode.Uri,
-  vaultRoot: string | null
+  vaultRoots: readonly string[]
 ): vscode.Uri[] {
-  const roots = [vscode.Uri.joinPath(extensionUri, 'dist')]
-  if (vaultRoot) roots.push(vscode.Uri.file(vaultRoot))
-  return roots
+  return [
+    vscode.Uri.joinPath(extensionUri, 'dist'),
+    ...vaultRoots.map((root) => vscode.Uri.file(root))
+  ]
+}
+
+/**
+ * Webviews whose resource roots may need widening later. `localResourceRoots`
+ * is fixed when a webview is created, but the vault grows a folder whenever
+ * the workspace does — without re-setting them, images in a folder mounted
+ * after a tab was opened stay unloadable until it's reopened.
+ */
+const tracked = new Map<vscode.Webview, vscode.Uri>()
+
+export function trackResourceRoots(webview: vscode.Webview, extensionUri: vscode.Uri): void {
+  tracked.set(webview, extensionUri)
+}
+
+export function untrackResourceRoots(webview: vscode.Webview): void {
+  tracked.delete(webview)
+}
+
+/** Re-apply resource roots to every live webview after the vault's folders change. */
+export function refreshResourceRoots(vaultRoots: readonly string[]): void {
+  for (const [webview, extensionUri] of [...tracked]) {
+    try {
+      webview.options = {
+        ...webview.options,
+        localResourceRoots: webviewResourceRoots(extensionUri, vaultRoots)
+      }
+    } catch {
+      // The panel was disposed between the restart and this pass.
+      tracked.delete(webview)
+    }
+  }
 }

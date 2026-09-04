@@ -4,12 +4,7 @@
 // TextEditor, a real WorkspaceEdit + save, the real config-driven column order.
 
 import * as assert from 'assert'
-import {
-  activateExtension,
-  openNoteAtLine,
-  readNoteOnDisk,
-  waitFor
-} from './helpers'
+import { activateExtension, openNoteAtLine, readNoteOnDisk, waitFor } from './helpers'
 import * as vscode from 'vscode'
 
 describe('knote.cycleTaskStatus', () => {

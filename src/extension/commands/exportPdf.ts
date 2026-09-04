@@ -18,7 +18,7 @@ import { resolveTarget, splitWikiTarget } from '@shared/wikiResolve'
 import type { NoteMeta } from '@shared/types'
 import * as vault from '../../core/vaultService'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
-import { currentVaultRoot } from '../engine'
+import { currentVaultRoot, currentVaultRoots } from '../engine'
 import { openDocFor, tabNoteRel } from '../paths'
 import { webviewResourceRoots } from '../views/webviewHtml'
 
@@ -256,7 +256,7 @@ async function exportActiveNoteToPdf(context: vscode.ExtensionContext): Promise<
     vscode.ViewColumn.Beside,
     {
       enableScripts: true,
-      localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoot())
+      localResourceRoots: webviewResourceRoots(context.extensionUri, currentVaultRoots())
     }
   )
   const msgSub = panel.webview.onDidReceiveMessage((message: unknown) => {

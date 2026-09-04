@@ -258,3 +258,38 @@ describe('validateName', () => {
     expect(validateName('Notes.md', ['notes.md'])).not.toBeNull()
   })
 })
+
+describe('mounted folders are not movable', () => {
+  const isMountRoot = (rel: string): boolean => rel === 'repo'
+
+  it('drops a mount root from a planned move', () => {
+    // Moving the row would move the real folder off its own path on disk.
+    const moves = plannedMoves(
+      [
+        { path: 'repo', name: 'repo', kind: 'folder' },
+        { path: 'Notes/A.md', name: 'A.md', kind: 'file' }
+      ],
+      'Archive',
+      isMountRoot
+    )
+    expect(moves.map((m) => m.from)).toEqual(['Notes/A.md'])
+  })
+
+  it('offers no destination at all for a mount root', () => {
+    const targets = moveTargets(
+      { path: 'repo', name: 'repo', kind: 'folder' },
+      ['', 'Notes', 'Archive'],
+      isMountRoot
+    )
+    expect(targets).toEqual([])
+  })
+
+  it('still moves things from inside a mount', () => {
+    const moves = plannedMoves(
+      [{ path: 'repo/docs/A.md', name: 'A.md', kind: 'file' }],
+      'Notes',
+      isMountRoot
+    )
+    expect(moves).toEqual([{ from: 'repo/docs/A.md', to: 'Notes/A.md' }])
+  })
+})

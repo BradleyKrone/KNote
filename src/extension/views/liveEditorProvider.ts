@@ -23,8 +23,13 @@ import { relForUri } from '../paths'
 import { attachmentUriFor, openWithDrawio } from './attachmentUri'
 import { attach, currentActiveNoteRel, setActiveNote } from '../rpc/webviewRpc'
 import { createHostHandlers } from '../rpc/hostHandlers'
-import { currentVaultRoot } from '../engine'
-import { webviewHtml, webviewResourceRoots } from './webviewHtml'
+import { currentVaultRoots } from '../engine'
+import {
+  webviewHtml,
+  webviewResourceRoots,
+  trackResourceRoots,
+  untrackResourceRoots
+} from './webviewHtml'
 
 const LIVE_EDITOR_VIEW_TYPE = 'knote.liveEditor'
 
@@ -68,8 +73,11 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
     const webview = panel.webview
     webview.options = {
       enableScripts: true,
-      localResourceRoots: webviewResourceRoots(this.context.extensionUri, currentVaultRoot())
+      localResourceRoots: webviewResourceRoots(this.context.extensionUri, currentVaultRoots())
     }
+
+    trackResourceRoots(webview, this.context.extensionUri)
+    panel.onDidDispose(() => untrackResourceRoots(webview))
 
     const notePath = relForUri(document.uri)
 

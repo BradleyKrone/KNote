@@ -1,23 +1,24 @@
 // Uri ↔ vault-relative path translation for the extension host.
 
 import * as vscode from 'vscode'
-import { relative, sep } from 'path'
 import type { VaultPath } from '@shared/types'
-import { isMarkdown, normalizeRel } from '@shared/pathUtils'
-import { isIgnoredRel, toAbs } from '../core/vaultService'
-import { currentVaultRoot } from './engine'
+import { isMarkdown } from '@shared/pathUtils'
+import { isIgnoredRel, relForAbs, toAbs } from '../core/vaultService'
 
 export function uriForRel(rel: VaultPath): vscode.Uri {
   return vscode.Uri.file(toAbs(rel))
 }
 
-/** Vault-relative path for a Uri, or null when it's outside the open vault. */
+/**
+ * Vault-relative path for a Uri, or null when it's outside every folder the
+ * vault spans. A file in a mounted folder comes back prefixed with that
+ * mount's name, so callers can't tell it apart from a note in the vault proper.
+ * `null` for a root itself — a root is not a note or an entry within one.
+ */
 export function relForUri(uri: vscode.Uri): VaultPath | null {
-  const root = currentVaultRoot()
-  if (!root || uri.scheme !== 'file') return null
-  const rel = relative(root, uri.fsPath)
-  if (rel === '' || rel.startsWith('..') || rel.includes('..' + sep)) return null
-  return normalizeRel(rel)
+  if (uri.scheme !== 'file') return null
+  const rel = relForAbs(uri.fsPath)
+  return rel === null || rel === '' ? null : rel
 }
 
 /** Vault-relative path for a markdown document inside the vault, else null. */

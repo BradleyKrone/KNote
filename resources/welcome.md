@@ -22,6 +22,38 @@ everything native just works: the Explorer, tabs and split editors, `Ctrl+P`
 quick open, `Ctrl+Shift+F` full-text search, source control, and any other
 extension you run (Copilot, Vim, spell checkers, …).
 
+## A vault can span several folders
+
+Notes you want in one vault do not have to live under one path. Add any
+other folder to the workspace (**File → Add Folder to Workspace…**) and
+KNote *mounts* it: its notes are indexed, searchable, linkable, and its
+tasks appear on the Kanban board and Planner like any others.
+
+| | |
+|---|---|
+| **The vault** | The workspace folder holding `.knote/`. It owns the config, weekly notes and templates. |
+| **A mounted folder** | Every other workspace folder. It shows up in the Files view as a top-level folder named after itself. |
+| **Its notes’ paths** | Prefixed with that folder’s name — `teamargos.org/docs/Post.md` — so two folders can both hold a `README.md` without clashing. |
+| **Attachments** | Pasted into a mounted note, an image is saved inside that same folder, so a note and its image stay together (and commit together, if it is a repo). |
+
+Folders join and leave the vault as you add and remove them from the
+workspace — no reload needed. To leave one out, run **KNote: Manage Folders
+in This Vault** and untick it; with more than one `.knote/` folder open,
+**KNote: Choose Primary Vault Folder** picks which one is the vault.
+
+Three things to know:
+
+- A mounted folder cannot be renamed, moved or deleted from the Files view —
+  it lives outside the vault, and doing so would move the real folder. Remove
+  it from the workspace instead.
+- Its name is part of every path written down, so renaming the folder on disk
+  dangles links that spell it out. For that reason KNote refuses a mount whose
+  name is already taken rather than quietly renaming it; give it another name
+  under `mountNames` in `.knote/config.json` if that happens.
+- A `#tag`, `README.md` or `- [ ] task` inside a mounted folder is a real one:
+  it shows in the Tags pane, resolves as a link, and can be dragged on the
+  board — which rewrites the file in that folder.
+
 ## Live Preview editing
 
 Notes open in **Live Preview** by default — an Obsidian-style editor that

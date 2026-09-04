@@ -2,10 +2,15 @@
 // Each is a small React app served through the shared webview shell + RPC.
 
 import * as vscode from 'vscode'
-import { currentVaultRoot } from '../engine'
+import { currentVaultRoots } from '../engine'
 import { attach, broadcast, currentActiveNoteRel } from '../rpc/webviewRpc'
 import { createHostHandlers } from '../rpc/hostHandlers'
-import { webviewHtml, webviewResourceRoots } from './webviewHtml'
+import {
+  webviewHtml,
+  webviewResourceRoots,
+  trackResourceRoots,
+  untrackResourceRoots
+} from './webviewHtml'
 
 let lastSearchQuery = ''
 let searchViewInstance: vscode.WebviewView | undefined
@@ -22,8 +27,11 @@ class KnoteViewProvider implements vscode.WebviewViewProvider {
   resolveWebviewView(webviewView: vscode.WebviewView): void {
     webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: webviewResourceRoots(this.context.extensionUri, currentVaultRoot())
+      localResourceRoots: webviewResourceRoots(this.context.extensionUri, currentVaultRoots())
     }
+    trackResourceRoots(webviewView.webview, this.context.extensionUri)
+    webviewView.onDidDispose(() => untrackResourceRoots(webviewView.webview))
+
     const rpc = attach(webviewView.webview, createHostHandlers())
     webviewView.webview.html = webviewHtml(
       webviewView.webview,

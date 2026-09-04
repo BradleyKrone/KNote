@@ -9,7 +9,7 @@ import {
   samePath
 } from '@shared/pathUtils'
 import { parseNote } from '@shared/parser/parseNote'
-import { getVaultConfig } from './vaultConfig'
+import { allAttachmentFolders } from './attachments'
 import * as vaultIndex from './indexer/vaultIndex'
 import * as vault from './vaultService'
 
@@ -76,7 +76,7 @@ function pathKey(rel: string): string {
  * trash (the "Clean Up Attachments" command confirms with the user first).
  */
 export async function findOrphanedAttachments(): Promise<VaultPath[]> {
-  const config = await getVaultConfig()
+  const folders = await allAttachmentFolders()
 
   const referenced: string[] = []
   for (const [notePath, content] of vaultIndex.getAllContents()) {
@@ -97,7 +97,10 @@ export async function findOrphanedAttachments(): Promise<VaultPath[]> {
       else if (d.isFile() && isImage(d.name) && !includesPath(referenced, rel)) orphans.push(rel)
     }
   }
-  await walk(config.attachmentsFolder)
+  for (const folder of folders) {
+    if (normalizeRel(folder) === '') continue
+    await walk(folder)
+  }
   return orphans
 }
 
@@ -122,13 +125,19 @@ function refsFromOtherNotes(exceptNotePath: VaultPath): Set<string> {
  */
 async function trashOrphans(
   candidates: readonly string[],
-  attachmentsFolder: string,
+  attachmentFolders: readonly string[],
   exceptNotePath: VaultPath
 ): Promise<CleanupResult> {
+  // `isInside(rel, '')` is true for everything, so an attachments folder
+  // configured as the vault root would make every removed image ref a deletion
+  // candidate — across mounted folders too. Refuse rather than sweep a repo.
+  const folders = attachmentFolders.filter((f) => normalizeRel(f) !== '')
+  if (folders.length === 0) return EMPTY_RESULT
+
   const inFolder = new Map<string, VaultPath>()
   for (const rel of candidates) {
     const key = pathKey(rel)
-    if (!inFolder.has(key) && isInside(rel, attachmentsFolder)) {
+    if (!inFolder.has(key) && folders.some((f) => isInside(rel, f))) {
       inFolder.set(key, normalizeRel(rel))
     }
   }
@@ -162,8 +171,7 @@ export async function cleanupUnreferenced(
   const removed = candidateRefs.filter((r) => !includesPath(newRefs, r))
   if (removed.length === 0) return EMPTY_RESULT
 
-  const config = await getVaultConfig()
-  return trashOrphans(removed, config.attachmentsFolder, notePath)
+  return trashOrphans(removed, await allAttachmentFolders(), notePath)
 }
 
 /** Trash any attachment `notePath` stopped referencing between its old and new content. */
@@ -184,6 +192,5 @@ export async function cleanupAttachmentsForDeletedNote(
   const refs = imageRefsOf(content, notePath)
   if (refs.length === 0) return EMPTY_RESULT
 
-  const config = await getVaultConfig()
-  return trashOrphans(refs, config.attachmentsFolder, notePath)
+  return trashOrphans(refs, await allAttachmentFolders(), notePath)
 }

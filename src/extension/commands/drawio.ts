@@ -7,7 +7,7 @@ import * as vscode from 'vscode'
 import dayjs from 'dayjs'
 import { joinRel } from '@shared/pathUtils'
 import { wrapEmbedForInsertion } from '@shared/embedInsert'
-import { getVaultConfig } from '../../core/vaultConfig'
+import { attachmentsFolderFor } from '../../core/attachments'
 import * as vault from '../../core/vaultService'
 import { uriForRel, vaultNoteRel } from '../paths'
 import { openDrawioUri } from '../views/attachmentUri'
@@ -25,14 +25,11 @@ async function insertDrawioDiagram(): Promise<void> {
   })
   if (!name) return
 
-  const config = await getVaultConfig()
   // Empty, same as the Draw.io Integration extension's own "New Diagram"
   // command writes for a fresh .drawio file — its editor treats an empty
   // document as a blank canvas.
-  const saved = await vault.createBinaryFile(
-    joinRel(config.attachmentsFolder, `${name}.drawio.svg`),
-    Buffer.alloc(0)
-  )
+  const folder = await attachmentsFolderFor(vaultNoteRel(editor.document))
+  const saved = await vault.createBinaryFile(joinRel(folder, `${name}.drawio.svg`), Buffer.alloc(0))
 
   const pos = editor.selection.active
   const line = editor.document.lineAt(pos.line)

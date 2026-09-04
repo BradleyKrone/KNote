@@ -11,6 +11,7 @@
 import { EditorView } from '@codemirror/view'
 import { wrapEmbedForInsertion } from '@shared/embedInsert'
 import { host } from '../shared/rpc'
+import { getNotePath } from './knoteConstructs'
 
 function toBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf)
@@ -35,7 +36,7 @@ function findPastedImage(dataTransfer: DataTransfer): { file: File; mime: string
 
 async function insertPastedImage(view: EditorView, file: File, mime: string): Promise<void> {
   const bytes = await file.arrayBuffer()
-  const saved = await host.saveImageAttachment(mime, toBase64(bytes))
+  const saved = await host.saveImageAttachment(mime, toBase64(bytes), getNotePath())
   const embed = `![[/${saved}]]`
 
   const pos = view.state.selection.main.head

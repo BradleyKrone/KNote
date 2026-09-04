@@ -13,5 +13,5 @@
     "sourceMap": true,
     "types": ["node", "mocha", "vscode"]
   },
-  "include": ["integration/**/*.ts"]
+  "include": ["integration/**/*.ts", "mounts/**/*.ts"]
 }
