@@ -3,7 +3,7 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
-## 2.12.0
+## 3.0.0
 
 - **Tasks are now marked with `@task`, not by how far they're indented.**
   A checkbox becomes a Kanban card only when it carries `@task` right after
@@ -13,12 +13,15 @@ Extensions view.
   however flush-left it sits. Everything indented under a task belongs to it,
   up to the next `@task` line, which is a card in its own right.
 
-  **Run KNote: Convert Legacy Tasks to @task first.** Until you do, your
-  board and Planner will look empty: nothing in the vault carries the marker
-  yet. The command adds it to exactly the lines the old indentation rule
-  made cards, leaves indented sub-checkboxes (and anything inside a fenced
-  code block) alone, shows you the list before writing, and is safe to run
-  again.
+  **Convert your vault before you do anything else, or your board and
+  Planner will look empty** — nothing in an existing vault carries the
+  marker yet. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`),
+  run **KNote: Convert Legacy Tasks to @task**, and confirm the checklist
+  it shows you (every line it found is pre-ticked — untick any you'd rather
+  leave as a plain toggle, then press Enter). It adds `@task` to exactly the
+  lines the old indentation rule made cards, leaves indented sub-checkboxes
+  (and anything inside a fenced code block) alone, and is safe to run again
+  — a line that already carries the marker is skipped.
 
 - **A task can be indented as deeply as you like** — under a bullet, a
   heading, or plain prose, spaces or tabs. Four spaces outside a list is an
@@ -42,6 +45,10 @@ Extensions view.
   embeds, hover previews and the Markdown preview, so it never shows up as
   noise in a rendered note. It reappears as raw text only when your cursor
   is on the line, like `📅` and `^anchors`.
+- The Boards sidebar's **Filter by Folder** list lets you untick the vault
+  root or any mounted folder to exclude every note under it from the Kanban
+  board, independent of the existing per-project filter — its notes still
+  count toward search, backlinks and the Planner.
 
 ## 2.11.0
 

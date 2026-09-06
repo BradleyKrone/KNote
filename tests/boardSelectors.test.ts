@@ -449,6 +449,42 @@ describe('collectCards hiddenProjects (the Boards tree exclude checkbox)', () =>
   })
 })
 
+describe('collectCards hiddenRoots (the Boards tree "Filter by Folder" checkbox)', () => {
+  const notes = new Map<string, NoteMeta>()
+  notes.set('Home.md', parseNote('Home.md', ['- [ ] @task primary root task', ''].join('\n')))
+  notes.set(
+    'teamargos.org/docs/x.md',
+    parseNote('teamargos.org/docs/x.md', ['- [ ] @task mounted folder task', ''].join('\n'))
+  )
+  const baseFilters: BoardFilters = {
+    tag: null,
+    text: '',
+    ignoreDeliverableWindow: true,
+    mountNames: ['teamargos.org']
+  }
+  const labels = (hiddenRoots?: ReadonlySet<string>): string[] =>
+    collectCards(notes, { kind: 'global' }, { ...baseFilters, hiddenRoots }).map(
+      (c) => c.displayText
+    )
+
+  it('shows tasks from every root when nothing is hidden', () => {
+    expect(labels()).toEqual(['primary root task', 'mounted folder task'])
+  })
+
+  it('drops every task under a hidden mount', () => {
+    expect(labels(new Set(['teamargos.org']))).toEqual(['primary root task'])
+  })
+
+  it('drops every task in the primary root when it is hidden ("")', () => {
+    expect(labels(new Set(['']))).toEqual(['mounted folder task'])
+  })
+
+  it('an empty or unmatched hidden set changes nothing', () => {
+    expect(labels(new Set())).toEqual(labels())
+    expect(labels(new Set(['other-mount']))).toEqual(labels())
+  })
+})
+
 describe('collectCards deliverable-defining card', () => {
   const notes = new Map<string, NoteMeta>()
   notes.set(

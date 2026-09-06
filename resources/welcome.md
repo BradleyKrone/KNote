@@ -335,6 +335,10 @@ line somewhere in your vault:
   the **Boards** Activity Bar tree and untick it. This is separate from the
   Planner's own tick/untick, so a project can be excluded from the board
   while still charted on the Planner, or vice versa.
+- In a vault spanning several mounted folders, expand **Filter by Folder**
+  in the same tree and untick a root to keep its notes off the board
+  entirely — they still count toward search, backlinks and the Planner,
+  they just never become cards.
 - **Dragging a card rewrites exactly one line** in the source note. If the
   note is open (even with unsaved edits) the change lands in your editor
   buffer; otherwise it's a verified disk write that refuses to clobber
@@ -412,7 +416,7 @@ the main thing, the rows under it jump straight to one item.
 | Icon | Section | Top row opens | Rows below |
 | --- | --- | --- | --- |
 | Calendar | **This Week** | **This Week's Note** — opens (creating if needed) the current ISO-week note; just clicking the icon opens it | Past weekly notes, newest first — click to open |
-| Kanban columns | **Boards** | **All Tasks** — the whole-vault board | **Filter by Project** — All / Unassigned / one row per project (expand for its deliverables); clicking a project opens (or narrows) the whole-vault board. **Untick a project to exclude it from the board entirely** — its deliverables and joined tasks stop appearing as cards; the choice is saved in the vault, independently of the Planner's own show/hide |
+| Kanban columns | **Boards** | **All Tasks** — the whole-vault board | **Filter by Project** — All / Unassigned / one row per project (expand for its deliverables); clicking a project opens (or narrows) the whole-vault board. **Untick a project to exclude it from the board entirely** — its deliverables and joined tasks stop appearing as cards; the choice is saved in the vault, independently of the Planner's own show/hide. **Filter by Folder** — one row per vault root (the primary root plus each mounted folder); **untick a root to exclude every note under it from the board** — search, backlinks and the Planner are unaffected |
 | Tractor | **Machines** | **Full Machine Log** | Registered machines (then any unregistered serial found in a note); expand for its 🚜 entries, newest first — click to jump to the line |
 | Timeline | **Projects** | **Open Planner** | One row per `type: project` note (deliverable count + span). **Tick a project to show it on the Planner chart, untick to hide it** — the choice is saved in the vault. Click the name to open its note |
 

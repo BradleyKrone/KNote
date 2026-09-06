@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import type { BoardColumn, NoteMeta, VaultPath } from '@shared/types'
-import { isInside, samePath, titleOf } from '@shared/pathUtils'
+import { isInside, rootNameOf, samePath, titleOf } from '@shared/pathUtils'
 import { extractTags } from '@shared/parser/mdScaffold'
 import {
   ARCHIVED_CHAR,
@@ -211,6 +211,10 @@ export interface BoardFilters {
   deliverableScope?: DeliverableScopeFilter
   /** Project slugs unticked in the Boards tree (`VaultConfig.boardHiddenProjects`) — their deliverables and joined tasks never become cards. */
   hiddenProjects?: ReadonlySet<string>
+  /** Root names unticked in the Boards tree (`VaultConfig.boardHiddenRoots`) — '' is the primary vault root, otherwise a mount name. */
+  hiddenRoots?: ReadonlySet<string>
+  /** Every mount name, for deriving which root a note's path belongs to via `rootNameOf`. */
+  mountNames?: readonly string[]
 }
 
 function belongsToHiddenProject(
@@ -252,6 +256,7 @@ export function collectCards(
   for (const meta of notes.values()) {
     if (scope.kind === 'note' && !samePath(meta.path, scope.path)) continue
     if (scope.kind === 'folder' && !isInside(meta.path, scope.path)) continue
+    if (filters.hiddenRoots?.has(rootNameOf(meta.path, filters.mountNames ?? []))) continue
     for (const task of meta.tasks) {
       if (task.statusChar === ARCHIVED_CHAR) continue
       if (!task.isTask) continue

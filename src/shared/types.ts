@@ -258,6 +258,14 @@ export interface VaultConfig {
    */
   boardHiddenProjects: string[]
   /**
+   * Root names unticked in the Boards sidebar's "Filter by Folder" list,
+   * excluded from the Kanban board — '' means the primary vault root, any
+   * other value is a VaultMount.name. Independent of `boardHiddenProjects`:
+   * a folder can be excluded from the board while its notes still count
+   * toward search, backlinks and the Planner.
+   */
+  boardHiddenRoots: string[]
+  /**
    * Absolute paths of workspace folders deliberately NOT mounted into this
    * vault. Stored as the *excluded* set (like `hiddenProjects`) so a folder
    * added to the workspace later joins the vault on its own.
@@ -290,6 +298,7 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   linkUpdate: 'always',
   hiddenProjects: [],
   boardHiddenProjects: [],
+  boardHiddenRoots: [],
   excludedFolders: [],
   mountNames: {}
 }

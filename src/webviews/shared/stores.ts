@@ -31,6 +31,21 @@ export const useIndexStore = create<IndexState>((set, get) => ({
   }
 }))
 
+// ---------- Mounts ----------
+
+interface MountsState {
+  /** Names of every mounted folder (not the primary root) — see `rootNameOf`. */
+  mountNames: string[]
+  hydrate: () => Promise<void>
+}
+
+export const useMountsStore = create<MountsState>((set) => ({
+  mountNames: [],
+  hydrate: async () => {
+    set({ mountNames: await host.getMounts() })
+  }
+}))
+
 // ---------- Vault config ----------
 
 interface ConfigState {
@@ -149,9 +164,15 @@ export function defaultFollowUpDate(): string {
 export function initStores(): void {
   void useIndexStore.getState().hydrate()
   void useConfigStore.getState().load()
+  void useMountsStore.getState().hydrate()
   on('indexDelta', (delta) => useIndexStore.getState().applyDelta(delta))
   // A view that resolved while the vault was still being indexed hydrated from
   // a partial snapshot; re-hydrate once the host says the index is complete.
-  on('indexReady', () => void useIndexStore.getState().hydrate())
+  // A restart (workspace folder add/remove) fires the same event, and may
+  // also have changed the mount list, so re-hydrate that too.
+  on('indexReady', () => {
+    void useIndexStore.getState().hydrate()
+    void useMountsStore.getState().hydrate()
+  })
   on('configChanged', (config) => useConfigStore.setState({ vaultConfig: config }))
 }

@@ -77,6 +77,19 @@ export function samePath(a: string, b: string): boolean {
 }
 
 /**
+ * The root a vault path belongs to: a mount's name if the path's first
+ * segment names one of `mountNames`, else '' for the primary vault root.
+ * Same convention `vaultService.mountFor`/`relForAbs` use, reimplemented
+ * here (no `mounts` state to close over) so webviews — which only ever see
+ * plain VaultPath strings — can group cards by root too.
+ */
+export function rootNameOf(path: string, mountNames: readonly string[]): string {
+  const first = normalizeRel(path).split('/')[0]?.toLowerCase()
+  if (!first) return ''
+  return mountNames.find((m) => m.toLowerCase() === first) ?? ''
+}
+
+/**
  * Resolve a (possibly percent-encoded) markdown/wiki image target against the
  * folder of the note that references it. A leading "/" means vault-root-
  * relative regardless of that folder. Returns null if the target's "../"
