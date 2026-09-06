@@ -89,18 +89,24 @@ Add any of these inline on the task line:
   surrounded by spaces.
 
 ```markdown
-- [/] Ship the release notes #project/knote 📅 2026-07-15 !!
+- [/] @task Ship the release notes #project/knote 📅 2026-07-15 !!
 ```
 
-### Subtasks
+### Tasks vs. plain checkboxes
 
-Indent a checkbox under another checkbox to make it a subtask. Only the
-top-level task gets a board card — subtasks keep the parent uncluttered:
+A checkbox is a **task** — and gets a board card — only when it carries the
+`@task` marker right after the checkbox. Indentation has nothing to do with
+it: a `@task` line is a card at any depth, and a checkbox without one is a
+plain toggle at any depth.
+
+A task **owns** everything indented under it, up to the next `@task` line:
 
 ```markdown
-- [ ] Main task
-  - [ ] First step
+- [ ] @task Main task
+  - [ ] First step        <- owned by the task, a plain toggle
   - [ ] Second step
+  - [ ] @task Its own card <- ends the parent's block
+- [ ] milk, eggs, bread   <- flush left, unmarked: never a card
 ```
 
 ### Attached notes on a task
@@ -109,7 +115,7 @@ A plain (non-checkbox) indented line under a task is treated as that task's
 **attached note** and renders as a boxed note under the card in the editor:
 
 ```markdown
-- [ ] Call the vendor
+- [ ] @task Call the vendor
     Notes: they only answer mornings
     - a plain bullet works here too
 ```

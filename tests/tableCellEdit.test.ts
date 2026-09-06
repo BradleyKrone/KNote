@@ -147,7 +147,7 @@ describe('activeCellField', () => {
     const nested = TABLE.split('\n')
       .map((l) => `  ${l}`)
       .join('\n')
-    const doc = `- [ ] Restock the bins\n${nested}\n\nouter\n`
+    const doc = `- [ ] @task Restock the bins\n${nested}\n\nouter\n`
     const from = doc.indexOf('  | Name')
     let state = apply(mkState(doc), {
       effects: setActiveCell.of({ tableFrom: from, row: 0, col: 0, id: 7 })

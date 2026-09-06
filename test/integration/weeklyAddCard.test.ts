@@ -58,22 +58,22 @@ describe('board add-card: lands under a weekly note\'s "Tasks" heading', () => {
   it('inserts at the end of the Tasks section, not after a later section', async () => {
     await writeNoteOnDisk(
       NOTE,
-      ['## Tasks', '- [ ] Existing task', '', '## Notes', '### Monday', ''].join('\n')
+      ['## Tasks', '- [ ] @task Existing task', '', '## Notes', '### Monday', ''].join('\n')
     )
     await waitFor(() => tasksHeadingIndexed(), {
       timeout: 10000,
       message: 'the index to pick up the Tasks heading'
     })
 
-    await vscode.commands.executeCommand('knote.appendUnderTasksHeading', NOTE, '- [ ] New card')
+    await vscode.commands.executeCommand('knote.appendUnderTasksHeading', NOTE, '- [ ] @task New card')
 
     await waitFor(async () => (await readNoteOnDisk(NOTE)).includes('New card'), {
       message: 'the new card to land on disk'
     })
     assert.deepStrictEqual((await readNoteOnDisk(NOTE)).split(/\r?\n/), [
       '## Tasks',
-      '- [ ] Existing task',
-      '- [ ] New card',
+      '- [ ] @task Existing task',
+      '- [ ] @task New card',
       '',
       '## Notes',
       '### Monday',
@@ -87,13 +87,13 @@ describe('board add-card: lands under a weekly note\'s "Tasks" heading', () => {
     await vscode.commands.executeCommand(
       'knote.appendUnderTasksHeading',
       PLAIN_NOTE,
-      '- [ ] New card'
+      '- [ ] @task New card'
     )
 
     await waitFor(async () => (await readNoteOnDisk(PLAIN_NOTE)).includes('New card'), {
       message: 'the new card to land on disk'
     })
     const onDisk = await readNoteOnDisk(PLAIN_NOTE)
-    assert.ok(onDisk.trim().endsWith('- [ ] New card'), `expected append at EOF, got: ${onDisk}`)
+    assert.ok(onDisk.trim().endsWith('- [ ] @task New card'), `expected append at EOF, got: ${onDisk}`)
   })
 })

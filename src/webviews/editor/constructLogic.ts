@@ -3,7 +3,7 @@
 // knoteConstructs.ts.
 
 import type { BoardColumn } from '@shared/types'
-import { TASK_LINE_RE } from '@shared/parser/patterns'
+import { TASK_LINE_RE, taskMarkerRange } from '@shared/parser/patterns'
 
 /** Which column a status char maps to; unknown chars land in column 0 (mirrors boardSelectors). */
 export function columnForChar(columns: BoardColumn[], char: string): number {
@@ -19,17 +19,26 @@ export function nextColumn(columns: BoardColumn[], char: string): BoardColumn | 
 }
 
 /**
- * The `[c]` bracket span within a task line (offsets relative to line start),
- * its status char, and whether it's a sub-task (indented under something),
- * or null when the line isn't a task. Used to place the clickable checkbox
- * widget. Sub-tasks are plain checked/unchecked toggles rather than Kanban
- * status cyclers, so callers key off `isSubtask`.
+ * The span the checkbox widget replaces within a checkbox line (offsets
+ * relative to line start), its status char, and whether the line is a *task* —
+ * a Kanban card — or a plain checkbox. Null when the line isn't a checkbox.
+ *
+ * On a task the span runs past the `[c]` brackets to the end of the `@task`
+ * marker, so the one widget hides the marker too: the pill and the checkbox
+ * style already say "this is a card", and the raw marker would just be noise.
+ * Because the widget renders one checkbox glyph either way, the *rendered*
+ * prefix is identical for both kinds — which is what lets `hangingIndentEm`
+ * keep measuring it without a special case.
+ *
+ * A plain checkbox is a checked/unchecked toggle rather than a Kanban status
+ * cycler, so callers key off `isTask`.
  */
 export function checkboxRange(
   text: string
-): { from: number; to: number; statusChar: string; isSubtask: boolean } | null {
+): { from: number; to: number; statusChar: string; isTask: boolean } | null {
   const m = TASK_LINE_RE.exec(text)
   if (!m) return null
   const from = m[1].length + m[2].length + 1 // indent + bullet + the single space
-  return { from, to: from + 3, statusChar: m[3], isSubtask: m[1].length > 0 }
+  const marker = taskMarkerRange(text)
+  return { from, to: marker?.to ?? from + 3, statusChar: m[3], isTask: marker !== null }
 }

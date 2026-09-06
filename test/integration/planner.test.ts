@@ -21,7 +21,7 @@ import {
 
 const PROJECT_NOTE = 'PlannerProject.md'
 const DELIVERABLE =
-  '- [ ] Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/planner/design ⛓ #deliverable/planner/contracts ^design1'
+  '- [ ] @task Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/planner/design ⛓ #deliverable/planner/contracts ^design1'
 
 describe('planner', () => {
   before(async () => {
@@ -36,7 +36,7 @@ describe('planner', () => {
         '',
         '# Planner Project',
         '',
-        '- [ ] Contracts 🛫 2026-03-20 📅 2026-03-31 #deliverable/planner/contracts',
+        '- [ ] @task Contracts 🛫 2026-03-20 📅 2026-03-31 #deliverable/planner/contracts',
         DELIVERABLE,
         ''
       ].join('\n')
@@ -68,7 +68,7 @@ describe('planner', () => {
 
     await vscode.commands.executeCommand('knote.cycleTaskStatus')
 
-    await waitFor(() => editor.document.lineAt(8).text.startsWith('- [r] Design'), {
+    await waitFor(() => editor.document.lineAt(8).text.startsWith('- [r] @task Design'), {
       message: 'the deliverable status char to change'
     })
     const line = editor.document.lineAt(8).text
@@ -80,7 +80,7 @@ describe('planner', () => {
       'the dependency marker should survive'
     )
 
-    await waitFor(async () => (await readNoteOnDisk(PROJECT_NOTE)).includes('- [r] Design'), {
+    await waitFor(async () => (await readNoteOnDisk(PROJECT_NOTE)).includes('- [r] @task Design'), {
       message: 'disk to reflect the edit'
     })
     const onDisk = await readNoteOnDisk(PROJECT_NOTE)

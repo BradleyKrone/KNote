@@ -46,7 +46,7 @@ describe('a folder mounted from outside the vault', () => {
     })
   })
   it('accepts a verified edit, which lands on disk inside the mount', async () => {
-    await writeMountedOnDisk(NOTE, '# Mounted Note\n\n- [ ] a task in the mounted folder\n')
+    await writeMountedOnDisk(NOTE, '# Mounted Note\n\n- [ ] @task a task in the mounted folder\n')
     const doc = await vscode.workspace.openTextDocument(mountUri(NOTE))
     const editor = await vscode.window.showTextDocument(doc)
     editor.selection = new vscode.Selection(2, 0, 2, 0)
@@ -57,12 +57,12 @@ describe('a folder mounted from outside the vault', () => {
     const onDisk = await waitFor(
       async () => {
         const text = await readMountedOnDisk(NOTE)
-        return text.includes('- [ ] a task') ? null : text
+        return text.includes('- [ ] @task a task') ? null : text
       },
       { message: 'the task status to change on disk' }
     )
     assert.ok(
-      !onDisk!.includes('- [ ] a task in the mounted folder'),
+      !onDisk!.includes('- [ ] @task a task in the mounted folder'),
       `the task was not rewritten in the mounted folder:\n${onDisk}`
     )
   })

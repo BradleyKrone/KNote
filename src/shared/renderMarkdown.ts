@@ -151,6 +151,29 @@ function pushImage(
  */
 
 /**
+ * Core rule cutting the leading `@task` marker out of a checkbox list item.
+ *
+ * This renderer has no task-list plugin, so `- [ ] @task Ship it` comes out as
+ * the literal text "[ ] @task Ship it" in embeds, hover previews and VS Code's
+ * Markdown preview. The brackets at least look like a checkbox; the marker is
+ * pure structure and would just be noise, so it goes.
+ *
+ * Matched only at the very start of the item's first text token, which is where
+ * `isTaskLine` requires it — so prose mentioning `@task` is left alone.
+ */
+const TASK_ITEM_MARKER_RE = /^(\[.\][ \t]+)@task(?=\s|$)[ \t]*/
+
+function taskMarkerRule(state: { tokens: Array<{ type: string; children?: unknown }> }): void {
+  for (const block of state.tokens) {
+    if (block.type !== 'inline') continue
+    const children = block.children as Array<{ type: string; content: string }> | undefined
+    const first = children?.[0]
+    if (!first || first.type !== 'text') continue
+    first.content = first.content.replace(TASK_ITEM_MARKER_RE, '$1')
+  }
+}
+
+/**
  * Core rule turning `#tag` runs inside already-parsed text into pills. Done as
  * a post-parse token walk rather than an inline rule so it can't touch
  * `code_inline` or fenced-code tokens, which are separate token types by then.
@@ -203,13 +226,19 @@ function splitTags(token: { type: string; content: string; level?: number }): Ar
 }
 
 /**
- * Add KNote's `[[wiki link]]`, `![[embed]]` and `#tag` rules to an existing
+ * Add KNote's `[[wiki link]]`, `![[embed]]`, `@task` and `#tag` rules to an existing
  * markdown-it instance. Used both on KNote's own renderer and on the instance
  * VS Code hands to `extendMarkdownIt` for its Markdown preview, which is why
  * this takes an instance rather than making one.
  */
 export function applyKnoteRules(md: MarkdownIt, opts: KnoteRenderOptions = {}): MarkdownIt {
   md.inline.ruler.before('image', 'knote_wikilink', wikiLinkRule(opts))
+  // Before knote_tag, which splits text tokens apart — after that the marker is
+  // no longer guaranteed to sit at the head of the first one.
+  md.core.ruler.push(
+    'knote_task_marker',
+    taskMarkerRule as Parameters<typeof md.core.ruler.push>[1]
+  )
   md.core.ruler.push('knote_tag', tagRule as Parameters<typeof md.core.ruler.push>[1])
   return md
 }

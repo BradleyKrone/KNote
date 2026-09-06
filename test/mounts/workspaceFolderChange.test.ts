@@ -67,7 +67,7 @@ describe('adding a folder to the workspace', () => {
 
   it('applies each edit once — the restart did not double-register its listeners', async () => {
     const uri = vaultUri('DoubleWrite.md')
-    await vscode.workspace.fs.writeFile(uri, Buffer.from('- [ ] task\n', 'utf-8'))
+    await vscode.workspace.fs.writeFile(uri, Buffer.from('- [ ] @task task\n', 'utf-8'))
     const doc = await vscode.workspace.openTextDocument(uri)
     const editor = await vscode.window.showTextDocument(doc)
     editor.selection = new vscode.Selection(0, 0, 0, 0)

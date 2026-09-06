@@ -38,7 +38,7 @@ export interface BoardsModel {
 
 /** Tasks the Kanban board would show as cards — mirrors boardSelectors.collectCards. */
 function boardTasks(meta: NoteMeta): NoteMeta['tasks'] {
-  return meta.tasks.filter((t) => t.statusChar !== ARCHIVED_CHAR && !t.isSubtask)
+  return meta.tasks.filter((t) => t.statusChar !== ARCHIVED_CHAR && t.isTask)
 }
 
 function isDone(statusChar: string): boolean {

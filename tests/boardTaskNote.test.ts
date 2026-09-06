@@ -25,7 +25,7 @@ function card(content: string): BoardCard {
 }
 
 const seeded =
-  '- [ ] task\n  - Status Changed: 7/14/2026\n  - Date Entered: 7/1/2026\n  - Notes: original\n'
+  '- [ ] @task task\n  - Status Changed: 7/14/2026\n  - Date Entered: 7/1/2026\n  - Notes: original\n'
 
 describe('updateCardNote', () => {
   beforeEach(() => {
@@ -40,8 +40,8 @@ describe('updateCardNote', () => {
     expect(setTaskTextAndNotes).toHaveBeenCalledWith(
       'Note.md',
       0,
-      '- [ ] task',
-      '- [ ] task',
+      '- [ ] @task task',
+      '- [ ] @task task',
       ['  - Notes: rewritten', '  - second'],
       // The block the dialog was showing, so the host can refuse a save whose
       // subtree moved underneath it.
@@ -53,7 +53,7 @@ describe('updateCardNote', () => {
 
   it('edits sub-tasks along with the notes, and sends them back as one block', async () => {
     const c = card(
-      '- [ ] task\n  - Status Changed: 7/14/2026\n  - Notes: mine\n  - [ ] child\n    - Status Changed: 7/2/2026\n'
+      '- [ ] @task task\n  - Status Changed: 7/14/2026\n  - Notes: mine\n  - [ ] child\n    - Status Changed: 7/2/2026\n'
     )
     // What the dialog shows: the whole subtree, dedented — its own managed line
     // excluded, the child's kept.
@@ -76,7 +76,7 @@ describe('updateCardNote', () => {
     // empty; `noteBodyToText` hands those lines back verbatim, so the way in
     // must not fall back to the task's indent or the block gains two spaces on
     // every save. Round-tripping the text unchanged has to write it unchanged.
-    const c = card('- [ ] task\n- flush note\n  - deeper\n')
+    const c = card('- [ ] @task task\n- flush note\n  - deeper\n')
     expect(c.blockLines).toEqual(['- flush note', '  - deeper'])
 
     await updateCardNote(c, 'task!', '- flush note\n  - deeper')
@@ -84,31 +84,31 @@ describe('updateCardNote', () => {
   })
 
   it('keeps a tab-indented block on tabs', async () => {
-    const c = card('- [ ] task\n\t- Notes: original\n')
+    const c = card('- [ ] @task task\n\t- Notes: original\n')
     await updateCardNote(c, 'task', '- Notes: new')
 
     expect(setTaskTextAndNotes.mock.calls[0][4]).toEqual(['\t- Notes: new'])
   })
 
   it('falls back to the task’s indent + 2 for a task getting its first note', async () => {
-    const c = card('- [ ] bare\n')
+    const c = card('- [ ] @task bare\n')
     await updateCardNote(c, 'bare', '- Notes: brand new')
 
     expect(setTaskTextAndNotes.mock.calls[0][4]).toEqual(['  - Notes: brand new'])
   })
 
   it('rewrites the task line while preserving its ^anchor', async () => {
-    const c = card('- [ ] task ^abc123\n  - Notes: n\n')
+    const c = card('- [ ] @task task ^abc123\n  - Notes: n\n')
     await updateCardNote(c, 'renamed #tag', '- Notes: n')
 
-    expect(setTaskTextAndNotes.mock.calls[0][3]).toBe('- [ ] renamed #tag ^abc123')
+    expect(setTaskTextAndNotes.mock.calls[0][3]).toBe('- [ ] @task renamed #tag ^abc123')
   })
 
   it('sends the unchanged raw line when only the notes changed', async () => {
     const c = card(seeded)
     await updateCardNote(c, 'task', '- Notes: only the notes moved')
 
-    expect(setTaskTextAndNotes.mock.calls[0][3]).toBe('- [ ] task')
+    expect(setTaskTextAndNotes.mock.calls[0][3]).toBe('- [ ] @task task')
   })
 
   it('clears the body to an empty array when the editor is emptied', async () => {
@@ -125,11 +125,11 @@ describe('updateCardNote', () => {
   })
 
   it('swaps the status char in and stamps Status Changed when the column is moved', async () => {
-    const c = card('- [ ] task ^abc123\n  - Notes: n\n')
+    const c = card('- [ ] @task task ^abc123\n  - Notes: n\n')
     await updateCardNote(c, 'task', '- Notes: n', { char: 'w', reasonLine: '  - Reason for X' })
 
     const call = setTaskTextAndNotes.mock.calls[0]
-    expect(call[3]).toBe('- [w] task ^abc123')
+    expect(call[3]).toBe('- [w] @task task ^abc123')
     expect(call[6].reasonLine).toBe('  - Reason for X')
     expect(call[6].statusChangedLine).toMatch(/^ {2}- Status Changed: \d+\/\d+\/\d{4}$/)
   })
@@ -141,7 +141,7 @@ describe('updateCardNote', () => {
     ).resolves.toBe(true)
 
     const call = setTaskTextAndNotes.mock.calls[0]
-    expect(call[3]).toBe('- [x] task')
+    expect(call[3]).toBe('- [x] @task task')
     expect(call[4]).toEqual(['  - Notes: original'])
     expect(call[6].reasonLine).toBeNull()
   })
@@ -159,5 +159,31 @@ describe('updateCardNote', () => {
     const c = card(seeded)
 
     await expect(updateCardNote(c, 'task', '- Notes: rewritten')).rejects.toThrow('disk on fire')
+  })
+})
+
+describe('the @task marker survives a card rewrite', () => {
+  beforeEach(() => setTaskTextAndNotes.mockClear())
+
+  it('keeps the marker when the card text is edited', async () => {
+    // Regression: `card.text` is prose with the marker already stripped by the
+    // parser, and the task line is rebuilt from it. Dropping the marker here
+    // would demote the card to a plain checkbox and the next index pass would
+    // sweep it off the board, taking the edit with it.
+    const c = card('- [ ] @task old title\n')
+    await updateCardNote(c, 'new title', '')
+    expect(setTaskTextAndNotes.mock.calls[0][3]).toBe('- [ ] @task new title')
+  })
+
+  it('keeps the marker when only the status char changes', async () => {
+    const c = card('- [ ] @task ship it\n')
+    await updateCardNote(c, 'ship it', '', { char: 'x', reasonLine: null })
+    expect(setTaskTextAndNotes.mock.calls[0][3]).toBe('- [x] @task ship it')
+  })
+
+  it('keeps a block anchor last', async () => {
+    const c = card('- [ ] @task ship it ^ship-it\n')
+    await updateCardNote(c, 'ship it now', '')
+    expect(setTaskTextAndNotes.mock.calls[0][3]).toBe('- [ ] @task ship it now ^ship-it')
   })
 })

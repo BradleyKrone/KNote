@@ -4,8 +4,8 @@
 // its Status Changed / Date Entered / Notes template and any sub-tasks.
 //
 //  - taskFold folds that block away (Obsidian-style) so a note reads as a
-//    clean list of top-level tasks.
-//  - taskGroupBox draws a light card around each top-level task and its
+//    clean list of tasks and headings.
+//  - taskGroupBox draws a light card around each `@task` line and its
 //    indented block, so it's obvious at a glance what belongs to which task.
 //
 // Both work off indentation alone, so they cover sub-tasks, note bodies and
@@ -28,8 +28,8 @@ import {
   ViewPlugin,
   type ViewUpdate
 } from '@codemirror/view'
-import { TASK_LINE_RE } from '@shared/parser/patterns'
-import { isTopLevelTask } from './editorMode'
+import { isTaskLine } from '@shared/parser/patterns'
+import { isBoardTask } from './editorMode'
 
 /** Leading-whitespace width in columns (tabs expand to the next multiple of 2). */
 function indentColumns(text: string): number {
@@ -59,6 +59,33 @@ function lastChildLine(state: EditorState, parentNum: number): number {
     if (line.text.trim() === '') continue // provisional; only kept if a child follows
     if (indentColumns(line.text) > baseIndent) last = n
     else break
+  }
+  return last
+}
+
+/**
+ * Line number (1-based) of the last line a *task* owns: `lastChildLine`, but
+ * stopping before any nested `@task`, which is a card in its own right and
+ * owns everything under itself.
+ *
+ * This has to mirror `taskBlockEnd` in `shared/parser/patterns.ts` — the box
+ * the user sees is a promise about what the card contains, and the board's task
+ * editor makes good on it by rewriting exactly that block. Draw the box any
+ * wider and it would enclose a nested card that a save then wouldn't touch.
+ */
+function taskGroupLastLine(state: EditorState, parentNum: number): number {
+  const doc = state.doc
+  const parent = doc.line(parentNum)
+  if (parent.text.trim() === '') return parentNum
+  const baseIndent = indentColumns(parent.text)
+
+  let last = parentNum
+  for (let n = parentNum + 1; n <= doc.lines; n++) {
+    const line = doc.line(n)
+    if (line.text.trim() === '') continue // provisional; only kept if a child follows
+    if (indentColumns(line.text) <= baseIndent) break
+    if (isTaskLine(line.text)) break
+    last = n
   }
   return last
 }
@@ -97,7 +124,7 @@ const taskFolding = [
 // ---------------------------------------------------------------------------
 
 /**
- * The last line of the top-level task's group that encloses `lineNumber`, or
+ * The last line of the task group that encloses `lineNumber`, or
  * null when no task's indented block reaches that far. Shared with
  * tableRender.ts: a rendered table replaces its own lines with one block
  * widget, so unlike ordinary text it never gets `buildGroupBoxes`'s per-line
@@ -106,16 +133,22 @@ const taskFolding = [
  */
 export function enclosingGroupLastLine(state: EditorState, lineNumber: number): number | null {
   const doc = state.doc
+  // The shallowest indent seen on the way up. A task can only enclose
+  // `lineNumber` if it is shallower than everything between them — anything at
+  // or below that depth already broke the indented chain. Tracking a running
+  // minimum is what replaces the old "stop at the first flush-left non-task"
+  // test, which assumed every task sat at column 0.
+  let minIndent = Infinity
   for (let n = lineNumber - 1; n >= 1; n--) {
     const line = doc.line(n)
-    const m = TASK_LINE_RE.exec(line.text)
-    if (m && isTopLevelTask(state, m[1])) {
-      const last = lastChildLine(state, n)
+    if (line.text.trim() === '') continue
+    const indent = indentColumns(line.text)
+    if (indent < minIndent && isBoardTask(state, line.text)) {
+      const last = taskGroupLastLine(state, n)
       return lineNumber <= last ? last : null
     }
-    // Flush-left and not a task: the indented chain back to any task already
-    // broke here, so no task further up could reach `lineNumber` either.
-    if (line.text.trim() !== '' && indentColumns(line.text) === 0) return null
+    if (indent === 0) return null
+    minIndent = Math.min(minIndent, indent)
   }
   return null
 }
@@ -130,7 +163,7 @@ function foldedStarts(state: EditorState): Set<number> {
 }
 
 /**
- * A card around every top-level task line and the indented block beneath it.
+ * A card around every `@task` line and the block it owns.
  * A folded group collapses to a single line, so its one visible line gets both
  * the first and last edges to stay a closed box.
  */
@@ -142,15 +175,14 @@ function buildGroupBoxes(state: EditorState): DecorationSet {
   let n = 1
   while (n <= doc.lines) {
     const line = doc.line(n)
-    const m = TASK_LINE_RE.exec(line.text)
-    // Only top-level tasks anchor a card; nested sub-tasks are grouped visually
-    // by the enclosing card, not boxed again — and in a fragment, which is one
-    // task's interior, nothing is top-level, so no card is drawn at all.
-    if (!m || !isTopLevelTask(state, m[1])) {
+    // Every `@task` anchors a card, at any indent; a plain checkbox is grouped
+    // visually by the enclosing card, not boxed itself — and in a fragment,
+    // which is one task's interior, no card is drawn at all.
+    if (!isBoardTask(state, line.text)) {
       n++
       continue
     }
-    const last = lastChildLine(state, n)
+    const last = taskGroupLastLine(state, n)
     if (last === n) {
       n++
       continue // a lone task line with no detail — nothing to group
@@ -164,7 +196,10 @@ function buildGroupBoxes(state: EditorState): DecorationSet {
       if (k === endLine) cls += ' cm-knote-group-last'
       deco.push(Decoration.line({ class: cls }).range(doc.line(k).from))
     }
-    n = last + 1
+    // `n++`, not `last + 1`: a nested `@task` is its own card and needs its own
+    // box. `taskGroupLastLine` already ended this box before it, so the two are
+    // siblings rather than nested — no overlapping borders to style around.
+    n++
   }
   return Decoration.set(deco, true)
 }
@@ -186,5 +221,5 @@ const taskGroupBox = ViewPlugin.fromClass(
   { decorations: (plugin) => plugin.decorations }
 )
 
-/** Fold gutter/keymap plus the grouping card around each top-level task. */
+/** Fold gutter/keymap plus the grouping card around each `@task` line. */
 export const taskFold = [taskFolding, taskGroupBox]

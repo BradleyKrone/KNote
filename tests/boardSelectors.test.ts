@@ -94,7 +94,7 @@ describe('dueState', () => {
 
   it('reads the due date off a real parsed card', () => {
     const notes = new Map<string, NoteMeta>()
-    notes.set('a.md', parseNote('a.md', '- [ ] ship it 📅 2026-07-07'))
+    notes.set('a.md', parseNote('a.md', '- [ ] @task ship it 📅 2026-07-07'))
     const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
     expect(dueState(card, TODAY)).toBe('overdue')
   })
@@ -137,7 +137,10 @@ describe('followUpState', () => {
     const notes = new Map<string, NoteMeta>()
     notes.set(
       'a.md',
-      parseNote('a.md', '- [w] chase vendor\n  Reason for Waiting: parts on order ⏳ 2026-07-07\n')
+      parseNote(
+        'a.md',
+        '- [w] @task chase vendor\n  Reason for Waiting: parts on order ⏳ 2026-07-07\n'
+      )
     )
     const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
     expect(card.waitingFollowUp).toBe('2026-07-07')
@@ -148,7 +151,7 @@ describe('followUpState', () => {
     // The date lives on the reason line, so clearing the reason clears it too —
     // this is what stops a moved card keeping a stale follow-up chip.
     const notes = new Map<string, NoteMeta>()
-    notes.set('a.md', parseNote('a.md', '- [/] chase vendor\n  - Status Changed: 7/8/2026\n'))
+    notes.set('a.md', parseNote('a.md', '- [/] @task chase vendor\n  - Status Changed: 7/8/2026\n'))
     const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
     expect(card.waitingFollowUp).toBe(null)
     expect(card.waitingReason).toBe(null)
@@ -163,7 +166,7 @@ describe('collectCards waiting-reason tags', () => {
       'a.md',
       parseNote(
         'a.md',
-        '- [w] chase vendor #urgent\n  Reason for Waiting: blocked on #vendor #urgent pricing ⏳ 2026-07-15\n'
+        '- [w] @task chase vendor #urgent\n  Reason for Waiting: blocked on #vendor #urgent pricing ⏳ 2026-07-15\n'
       )
     )
     const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
@@ -172,14 +175,14 @@ describe('collectCards waiting-reason tags', () => {
 
   it('leaves card.tags untouched when there is no waiting reason', () => {
     const notes = new Map<string, NoteMeta>()
-    notes.set('a.md', parseNote('a.md', '- [ ] plain task #foo\n'))
+    notes.set('a.md', parseNote('a.md', '- [ ] @task plain task #foo\n'))
     const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
     expect(card.tags).toEqual(['foo'])
   })
 
   it('drops the reason tag once the task leaves Waiting and the reason line is deleted', () => {
     const notes = new Map<string, NoteMeta>()
-    notes.set('a.md', parseNote('a.md', '- [/] chase vendor\n  - Status Changed: 7/8/2026\n'))
+    notes.set('a.md', parseNote('a.md', '- [/] @task chase vendor\n  - Status Changed: 7/8/2026\n'))
     const [card] = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
     expect(card.tags).toEqual([])
   })
@@ -188,11 +191,11 @@ describe('collectCards waiting-reason tags', () => {
 describe('collectCards date filters', () => {
   const notes = new Map<string, NoteMeta>()
   const content = [
-    '- [ ] no meta task',
-    '- [/] in progress task 📅 2026-07-08',
+    '- [ ] @task no meta task',
+    '- [/] @task in progress task 📅 2026-07-08',
     '  - Status Changed: 7/8/2026',
     '  - Date Entered: 7/1/2026',
-    '- [x] done task 📅 2026-06-01',
+    '- [x] @task done task 📅 2026-06-01',
     '  - Status Changed: 6/1/2026',
     '  - Date Entered: 6/1/2026'
   ].join('\n')
@@ -226,7 +229,7 @@ describe('collectCards date filters', () => {
 
   it('strips a trailing ^block-id anchor from the card label', () => {
     const anchored = new Map<string, NoteMeta>()
-    anchored.set('b.md', parseNote('b.md', '- [ ] test ^z2v9nn'))
+    anchored.set('b.md', parseNote('b.md', '- [ ] @task test ^z2v9nn'))
     const cards = collectCards(anchored, { kind: 'global' }, baseFilters)
     expect(cards.map((c) => c.displayText)).toEqual(['test'])
   })
@@ -257,9 +260,9 @@ describe('collectCards deliverable windows', () => {
         'type: project',
         'project: p',
         '---',
-        '- [ ] Current 🛫 2026-07-01 📅 2026-07-31 #deliverable/p/current',
-        '- [ ] Future 🛫 2026-09-01 📅 2026-09-30 #deliverable/p/future',
-        '- [ ] Past 🛫 2026-06-01 📅 2026-06-30 #deliverable/p/past',
+        '- [ ] @task Current 🛫 2026-07-01 📅 2026-07-31 #deliverable/p/current',
+        '- [ ] @task Future 🛫 2026-09-01 📅 2026-09-30 #deliverable/p/future',
+        '- [ ] @task Past 🛫 2026-06-01 📅 2026-06-30 #deliverable/p/past',
         ''
       ].join('\n')
     )
@@ -269,12 +272,12 @@ describe('collectCards deliverable windows', () => {
     parseNote(
       'Work.md',
       [
-        '- [ ] plain task',
-        '- [ ] current work @deliverable(p/current)',
-        '- [ ] future work @deliverable(p/future)',
-        '- [ ] late work @deliverable(p/past)',
-        '- [x] finished work @deliverable(p/past)',
-        '- [ ] orphan work @deliverable(p/ghost)',
+        '- [ ] @task plain task',
+        '- [ ] @task current work @deliverable(p/current)',
+        '- [ ] @task future work @deliverable(p/future)',
+        '- [ ] @task late work @deliverable(p/past)',
+        '- [x] @task finished work @deliverable(p/past)',
+        '- [ ] @task orphan work @deliverable(p/ghost)',
         ''
       ].join('\n')
     )
@@ -399,8 +402,8 @@ describe('collectCards hiddenProjects (the Boards tree exclude checkbox)', () =>
         'type: project',
         'project: p',
         '---',
-        '- [ ] Design @deliverable(p/design)',
-        '- [ ] plain note task with no deliverable marker',
+        '- [ ] @task Design @deliverable(p/design)',
+        '- [ ] @task plain note task with no deliverable marker',
         ''
       ].join('\n')
     )
@@ -409,7 +412,9 @@ describe('collectCards hiddenProjects (the Boards tree exclude checkbox)', () =>
     'Work.md',
     parseNote(
       'Work.md',
-      ['- [ ] unrelated task', '- [ ] design task @deliverable(p/design)', ''].join('\n')
+      ['- [ ] @task unrelated task', '- [ ] @task design task @deliverable(p/design)', ''].join(
+        '\n'
+      )
     )
   )
   const baseFilters: BoardFilters = { tag: null, text: '', ignoreDeliverableWindow: true }
@@ -455,9 +460,9 @@ describe('collectCards deliverable-defining card', () => {
         'type: project',
         'project: p',
         '---',
-        '- [ ] Design 🛫 2026-07-01 📅 2026-07-31 @deliverable(p/design)',
-        '- [ ] Permits 🛫 2026-07-01 📅 2026-07-31 @deliverable(p/permits)',
-        '- [ ] task 1 @deliverable(p/design)',
+        '- [ ] @task Design 🛫 2026-07-01 📅 2026-07-31 @deliverable(p/design)',
+        '- [ ] @task Permits 🛫 2026-07-01 📅 2026-07-31 @deliverable(p/permits)',
+        '- [ ] @task task 1 @deliverable(p/design)',
         ''
       ].join('\n')
     )
@@ -467,8 +472,8 @@ describe('collectCards deliverable-defining card', () => {
     parseNote(
       'Work.md',
       [
-        '- [x] Sketch layout @deliverable(p/design)',
-        '- [ ] Pick materials @deliverable(p/design)',
+        '- [x] @task Sketch layout @deliverable(p/design)',
+        '- [ ] @task Pick materials @deliverable(p/design)',
         ''
       ].join('\n')
     )
@@ -529,10 +534,10 @@ describe('collectCards — a dated member task in the project note', () => {
         'type: project',
         'project: doze-assist',
         '---',
-        '- [ ] MTP & MG QSM planning meeting @deliverable(doze-assist/mtp-mg-qsm-planning-meeting) 🛫 2026-08-12 📅 2026-08-27',
-        '- [w] Doze Assist Video 📅 2026-08-14 #Doze_Assist @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)',
-        '- [ ] Planning Meeting Machine @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)',
-        '- [ ] Machine setup @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)',
+        '- [ ] @task MTP & MG QSM planning meeting @deliverable(doze-assist/mtp-mg-qsm-planning-meeting) 🛫 2026-08-12 📅 2026-08-27',
+        '- [w] @task Doze Assist Video 📅 2026-08-14 #Doze_Assist @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)',
+        '- [ ] @task Planning Meeting Machine @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)',
+        '- [ ] @task Machine setup @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)',
         ''
       ].join('\n')
     )
@@ -581,8 +586,8 @@ describe('collectCards deliverable overdue', () => {
         'type: project',
         'project: p',
         '---',
-        '- [ ] Design 🛫 2020-01-01 📅 2020-01-31 @deliverable(p/design)',
-        '- [ ] Landscaping 🛫 2020-01-01 📅 2099-01-01 @deliverable(p/landscaping)',
+        '- [ ] @task Design 🛫 2020-01-01 📅 2020-01-31 @deliverable(p/design)',
+        '- [ ] @task Landscaping 🛫 2020-01-01 📅 2099-01-01 @deliverable(p/landscaping)',
         ''
       ].join('\n')
     )
@@ -592,8 +597,8 @@ describe('collectCards deliverable overdue', () => {
     parseNote(
       'Work.md',
       [
-        '- [ ] design task, no due of its own @deliverable(p/design)',
-        '- [ ] landscaping task, no due of its own @deliverable(p/landscaping)',
+        '- [ ] @task design task, no due of its own @deliverable(p/design)',
+        '- [ ] @task landscaping task, no due of its own @deliverable(p/landscaping)',
         ''
       ].join('\n')
     )

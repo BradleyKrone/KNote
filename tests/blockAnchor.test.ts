@@ -13,47 +13,47 @@ import {
 
 describe('blockIdOf', () => {
   it('reads an existing trailing ^block-id', () => {
-    expect(blockIdOf('- [ ] Ship the thing ^a1b2c3')).toBe('a1b2c3')
+    expect(blockIdOf('- [ ] @task Ship the thing ^a1b2c3')).toBe('a1b2c3')
   })
   it('reads an id after a due date', () => {
-    expect(blockIdOf('- [/] Do it 📅 2026-07-17 ^xyz789')).toBe('xyz789')
+    expect(blockIdOf('- [/] @task Do it 📅 2026-07-17 ^xyz789')).toBe('xyz789')
   })
   it('returns null when there is no anchor', () => {
-    expect(blockIdOf('- [ ] Ship the thing')).toBeNull()
+    expect(blockIdOf('- [ ] @task Ship the thing')).toBeNull()
   })
   it('ignores a ^ that is not at end of line', () => {
-    expect(blockIdOf('- [ ] a^b in the middle')).toBeNull()
+    expect(blockIdOf('- [ ] @task a^b in the middle')).toBeNull()
   })
   // Notes written before preservingBlockId existed have the anchor buried
   // behind whatever marker was appended after it. Those links must still work.
   it('still finds an anchor a marker was appended after', () => {
-    expect(blockIdOf('- [ ] Do it ^xyz789 📅 2026-07-17')).toBe('xyz789')
-    expect(blockIdOf('- [x] Do it ^xyz789 ✅ 2026-07-17')).toBe('xyz789')
-    expect(blockIdOf('- [ ] Do it ^xyz789 !! #shop')).toBe('xyz789')
-    expect(blockIdOf('- [ ] Do it ^xyz789 📅 2026-07-17 !! #shop')).toBe('xyz789')
+    expect(blockIdOf('- [ ] @task Do it ^xyz789 📅 2026-07-17')).toBe('xyz789')
+    expect(blockIdOf('- [x] @task Do it ^xyz789 ✅ 2026-07-17')).toBe('xyz789')
+    expect(blockIdOf('- [ ] @task Do it ^xyz789 !! #shop')).toBe('xyz789')
+    expect(blockIdOf('- [ ] @task Do it ^xyz789 📅 2026-07-17 !! #shop')).toBe('xyz789')
   })
   it('does not mistake a caret in prose for an anchor', () => {
-    expect(blockIdOf('- [ ] Solve a^2 + b^2 = c^2 📅 2026-07-17')).toBeNull()
+    expect(blockIdOf('- [ ] @task Solve a^2 + b^2 = c^2 📅 2026-07-17')).toBeNull()
   })
 })
 
 describe('anchorText', () => {
   it('drops the checkbox prefix', () => {
-    expect(anchorText('- [ ] Rewire the pump controller')).toBe('Rewire the pump controller')
+    expect(anchorText('- [ ] @task Rewire the pump controller')).toBe('Rewire the pump controller')
   })
   it('drops the milestone marker', () => {
     expect(anchorText('🏁 Line 3 commissioned')).toBe('Line 3 commissioned')
   })
   it('strips tags, due dates, priority and an existing anchor', () => {
-    expect(anchorText('- [/] Rewire the pump !! #urgent 📅 2026-08-01 ^rewire-the-pump')).toBe(
-      'Rewire the pump'
-    )
+    expect(
+      anchorText('- [/] @task Rewire the pump !! #urgent 📅 2026-08-01 ^rewire-the-pump')
+    ).toBe('Rewire the pump')
   })
   it('leaves a plain paragraph alone apart from its anchor', () => {
     expect(anchorText('Some ordinary prose ^para-1')).toBe('Some ordinary prose')
   })
   it('tolerates a trailing CR from a CRLF file', () => {
-    expect(anchorText('- [ ] Rewire the pump\r')).toBe('Rewire the pump')
+    expect(anchorText('- [ ] @task Rewire the pump\r')).toBe('Rewire the pump')
   })
 })
 
@@ -80,26 +80,26 @@ describe('slugifyBlockId', () => {
 
 describe('makeBlockId', () => {
   it('derives a readable id from the task text', () => {
-    expect(makeBlockId('- [ ] Rewire the pump controller')).toBe('rewire-the-pump-controller')
+    expect(makeBlockId('- [ ] @task Rewire the pump controller')).toBe('rewire-the-pump-controller')
   })
   it('ignores markers and any anchor already on the line', () => {
-    expect(makeBlockId('- [/] Rewire the pump #urgent 📅 2026-08-01')).toBe('rewire-the-pump')
+    expect(makeBlockId('- [/] @task Rewire the pump #urgent 📅 2026-08-01')).toBe('rewire-the-pump')
   })
   it('suffixes -2, -3 … when the slug is already taken in the note', () => {
-    const line = '- [ ] Order parts'
+    const line = '- [ ] @task Order parts'
     expect(makeBlockId(line, ['order-parts'])).toBe('order-parts-2')
     expect(makeBlockId(line, ['order-parts', 'order-parts-2'])).toBe('order-parts-3')
   })
   it('treats taken ids case-insensitively, like sectionLine does', () => {
-    expect(makeBlockId('- [ ] Order parts', ['ORDER-PARTS'])).toBe('order-parts-2')
+    expect(makeBlockId('- [ ] @task Order parts', ['ORDER-PARTS'])).toBe('order-parts-2')
   })
   it('falls back to a random id when the text yields no slug', () => {
-    const id = makeBlockId('- [ ] 🚜🔧')
+    const id = makeBlockId('- [ ] @task 🚜🔧')
     expect(id).toMatch(/^[A-Za-z0-9_-]+$/)
     expect(id).not.toBe('')
   })
   it('always round-trips through blockIdOf once appended', () => {
-    for (const text of ['- [ ] Ship it', '🏁 Done', '- [ ] 🚜', 'plain prose']) {
+    for (const text of ['- [ ] @task Ship it', '🏁 Done', '- [ ] @task 🚜', 'plain prose']) {
       const id = makeBlockId(text)
       expect(blockIdOf(anchorLine(text, id))).toBe(id)
     }
@@ -108,48 +108,48 @@ describe('makeBlockId', () => {
 
 describe('anchorLine', () => {
   it('appends the anchor at end of line', () => {
-    expect(anchorLine('- [ ] Ship it', 'ship-it')).toBe('- [ ] Ship it ^ship-it')
+    expect(anchorLine('- [ ] @task Ship it', 'ship-it')).toBe('- [ ] @task Ship it ^ship-it')
   })
   it('trims trailing whitespace so the anchor really is last', () => {
-    expect(anchorLine('- [ ] Ship it   ', 'ship-it')).toBe('- [ ] Ship it ^ship-it')
+    expect(anchorLine('- [ ] @task Ship it   ', 'ship-it')).toBe('- [ ] @task Ship it ^ship-it')
   })
   it('trims a trailing CR from a CRLF file', () => {
-    expect(anchorLine('- [ ] Ship it\r', 'ship-it')).toBe('- [ ] Ship it ^ship-it')
+    expect(anchorLine('- [ ] @task Ship it\r', 'ship-it')).toBe('- [ ] @task Ship it ^ship-it')
   })
 })
 
 describe('withoutAnchor', () => {
   it('drops the anchor but keeps the rest of the line verbatim', () => {
-    expect(withoutAnchor('- [/] Rewire the pump #urgent 📅 2026-08-01 ^rewire-the-pump')).toBe(
-      '- [/] Rewire the pump #urgent 📅 2026-08-01'
-    )
+    expect(
+      withoutAnchor('- [/] @task Rewire the pump #urgent 📅 2026-08-01 ^rewire-the-pump')
+    ).toBe('- [/] @task Rewire the pump #urgent 📅 2026-08-01')
   })
   it('leaves an unanchored line alone', () => {
-    expect(withoutAnchor('- [ ] Ship it')).toBe('- [ ] Ship it')
+    expect(withoutAnchor('- [ ] @task Ship it')).toBe('- [ ] @task Ship it')
   })
   it('round-trips with anchorLine', () => {
-    const text = '- [ ] Ship it'
+    const text = '- [ ] @task Ship it'
     expect(withoutAnchor(anchorLine(text, 'ship-it'))).toBe(text)
   })
   it('keeps markers that had been appended after a buried anchor', () => {
-    expect(withoutAnchor('- [/] Rewire the pump ^rewire-the-pump 📅 2026-08-01')).toBe(
-      '- [/] Rewire the pump 📅 2026-08-01'
+    expect(withoutAnchor('- [/] @task Rewire the pump ^rewire-the-pump 📅 2026-08-01')).toBe(
+      '- [/] @task Rewire the pump 📅 2026-08-01'
     )
   })
 })
 
 describe('linkAlias', () => {
   it('is the task prose, markers stripped', () => {
-    expect(linkAlias('- [/] Rewire the pump !! #urgent 📅 2026-08-01 ^rewire-the-pump')).toBe(
+    expect(linkAlias('- [/] @task Rewire the pump !! #urgent 📅 2026-08-01 ^rewire-the-pump')).toBe(
       'Rewire the pump'
     )
   })
   it('removes the characters a wiki-link alias cannot hold', () => {
-    expect(linkAlias('- [ ] Fix [the] thing | now')).toBe('Fix the thing now')
+    expect(linkAlias('- [ ] @task Fix [the] thing | now')).toBe('Fix the thing now')
   })
   it('caps length at a word boundary', () => {
     const alias = linkAlias(
-      '- [ ] Replace the hydraulic manifold on the number four excavator before winter sets in'
+      '- [ ] @task Replace the hydraulic manifold on the number four excavator before winter sets in'
     )
     expect(alias.length).toBeLessThanOrEqual(60)
     expect(alias).toBe('Replace the hydraulic manifold on the number four excavator')
@@ -177,7 +177,7 @@ describe('generateBlockId', () => {
       expect(id).toMatch(/^[A-Za-z0-9_-]+$/)
       expect(id.length).toBeGreaterThan(0)
       // Round-trips through blockIdOf when appended to a line.
-      expect(blockIdOf(`- [ ] task ^${id}`)).toBe(id)
+      expect(blockIdOf(`- [ ] @task task ^${id}`)).toBe(id)
     }
   })
 })

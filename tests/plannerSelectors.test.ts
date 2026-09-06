@@ -23,11 +23,11 @@ const PROJECT = [
   'project: govalle',
   '---',
   '',
-  '- [ ] Contracts 🛫 2026-03-20 📅 2026-04-05 #deliverable/govalle/contracts',
+  '- [ ] @task Contracts 🛫 2026-03-20 📅 2026-04-05 #deliverable/govalle/contracts',
   '    - [x] Proposals @deliverable(govalle/contracts)',
   '    - [ ] Bid date @deliverable(govalle/contracts)',
-  '- [ ] Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design ⛓ #deliverable/govalle/contracts',
-  '- [ ] Procurement 🛫 2026-04-21 📅 2026-05-10 #deliverable/govalle/procurement ⛓ #deliverable/govalle/design',
+  '- [ ] @task Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design ⛓ #deliverable/govalle/contracts',
+  '- [ ] @task Procurement 🛫 2026-04-21 📅 2026-05-10 #deliverable/govalle/procurement ⛓ #deliverable/govalle/design',
   '🏁 Permits approved 📅 2026-04-12 @deliverable(govalle/design)',
   '🏁 Groundbreaking !! 📅 2026-05-01',
   ''
@@ -65,7 +65,7 @@ describe('buildPlannerModel', () => {
       'P.md',
       parseNote(
         'P.md',
-        '---\ntype: project\nproject: p\n---\n- [ ] One 📅 2026-06-01 #deliverable/p/one\n'
+        '---\ntype: project\nproject: p\n---\n- [ ] @task One 📅 2026-06-01 #deliverable/p/one\n'
       )
     )
     const d = buildPlannerModel(notes).byId.get('deliverable/p/one')!
@@ -75,7 +75,7 @@ describe('buildPlannerModel', () => {
 
   it('adopts tasks tagged from any other note in the vault', () => {
     const notes = vault({
-      'Field notes.md': '- [ ] Order rebar @deliverable(govalle/procurement) 📅 2026-04-25\n'
+      'Field notes.md': '- [ ] @task Order rebar @deliverable(govalle/procurement) 📅 2026-04-25\n'
     })
     const procurement = buildPlannerModel(notes).byId.get('deliverable/govalle/procurement')!
     expect(procurement.tasks).toHaveLength(1)
@@ -100,8 +100,8 @@ describe('buildPlannerModel', () => {
           'type: project',
           'project: p',
           '---',
-          '- [ ] Two segments 📅 2026-06-01 #deliverable/p',
-          '- [ ] Four segments 📅 2026-06-02 #deliverable/p/a/b',
+          '- [ ] @task Two segments 📅 2026-06-01 #deliverable/p',
+          '- [ ] @task Four segments 📅 2026-06-02 #deliverable/p/a/b',
           ''
         ].join('\n')
       )
@@ -113,7 +113,7 @@ describe('buildPlannerModel', () => {
     const notes = new Map<string, NoteMeta>()
     notes.set(
       'N.md',
-      parseNote('N.md', '- [ ] Fake 🛫 2026-01-01 📅 2026-02-01 #deliverable/x/y\n')
+      parseNote('N.md', '- [ ] @task Fake 🛫 2026-01-01 📅 2026-02-01 #deliverable/x/y\n')
     )
     expect(buildPlannerModel(notes).byId.size).toBe(0)
   })
@@ -155,8 +155,8 @@ describe('buildPlannerModel', () => {
           'type: project',
           'project: p',
           '---',
-          '- [ ] A 📅 2026-06-01 @deliverable(p/a)',
-          '- [ ] B 📅 2026-06-02 @deliverable(p/b) ⛓ @deliverable(p/a)',
+          '- [ ] @task A 📅 2026-06-01 @deliverable(p/a)',
+          '- [ ] @task B 📅 2026-06-02 @deliverable(p/b) ⛓ @deliverable(p/a)',
           ''
         ].join('\n')
       )
@@ -177,9 +177,9 @@ describe('buildPlannerModel', () => {
           'type: project',
           'project: p',
           '---',
-          '- [ ] A 📅 2026-06-01 #deliverable/p/a',
-          '- [ ] B 📅 2026-06-02 #deliverable/p/b',
-          '- [ ] C 📅 2026-06-03 #deliverable/p/c ⛓ #deliverable/p/a ⛓ #deliverable/p/b',
+          '- [ ] @task A 📅 2026-06-01 #deliverable/p/a',
+          '- [ ] @task B 📅 2026-06-02 #deliverable/p/b',
+          '- [ ] @task C 📅 2026-06-03 #deliverable/p/c ⛓ #deliverable/p/a ⛓ #deliverable/p/b',
           ''
         ].join('\n')
       )
@@ -220,10 +220,10 @@ describe('cascadeShift', () => {
           'type: project',
           'project: p',
           '---',
-          '- [ ] A 📅 2026-06-01 #deliverable/p/a',
-          '- [ ] B 📅 2026-06-02 #deliverable/p/b ⛓ #deliverable/p/a',
-          '- [ ] C 📅 2026-06-03 #deliverable/p/c ⛓ #deliverable/p/a',
-          '- [ ] D 📅 2026-06-04 #deliverable/p/d ⛓ #deliverable/p/b ⛓ #deliverable/p/c',
+          '- [ ] @task A 📅 2026-06-01 #deliverable/p/a',
+          '- [ ] @task B 📅 2026-06-02 #deliverable/p/b ⛓ #deliverable/p/a',
+          '- [ ] @task C 📅 2026-06-03 #deliverable/p/c ⛓ #deliverable/p/a',
+          '- [ ] @task D 📅 2026-06-04 #deliverable/p/d ⛓ #deliverable/p/b ⛓ #deliverable/p/c',
           ''
         ].join('\n')
       )
@@ -331,8 +331,8 @@ describe('planner and board agree on which line defines a deliverable', () => {
         'type: project',
         'project: doze-assist',
         '---',
-        '- [ ] MTP & MG QSM planning meeting @deliverable(doze-assist/mtp-mg-qsm-planning-meeting) 🛫 2026-08-12 📅 2026-08-27',
-        '- [w] Doze Assist Video 📅 2026-08-14 @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)',
+        '- [ ] @task MTP & MG QSM planning meeting @deliverable(doze-assist/mtp-mg-qsm-planning-meeting) 🛫 2026-08-12 📅 2026-08-27',
+        '- [w] @task Doze Assist Video 📅 2026-08-14 @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)',
         ''
       ].join('\n')
     )
@@ -373,8 +373,8 @@ describe('project status', () => {
     )
     return notes
   }
-  const OPEN = ['- [ ] A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a']
-  const DONE = ['- [x] A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a']
+  const OPEN = ['- [ ] @task A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a']
+  const DONE = ['- [x] @task A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a']
 
   const statusOf = (notes: Map<string, NoteMeta>, now: string): string =>
     buildPlannerModel(notes, now).projects[0].status
@@ -434,18 +434,18 @@ describe('deliverableBarStatus', () => {
     )
     return notes
   }
-  const OPEN = ['- [ ] A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a']
-  const DONE = ['- [x] A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a']
+  const OPEN = ['- [ ] @task A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a']
+  const DONE = ['- [x] @task A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a']
   const DELIVERABLE_DONE_TASK_OPEN = [
-    '- [x] A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a',
+    '- [x] @task A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a',
     '    - [ ] Sub @deliverable(p/a)'
   ]
   const TASK_DONE_DELIVERABLE_OPEN = [
-    '- [ ] A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a',
+    '- [ ] @task A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a',
     '    - [x] Sub @deliverable(p/a)'
   ]
   const BOTH_DONE = [
-    '- [x] A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a',
+    '- [x] @task A 🛫 2026-01-01 📅 2026-02-01 #deliverable/p/a',
     '    - [x] Sub @deliverable(p/a)'
   ]
 
@@ -487,14 +487,14 @@ describe('closedDeliverableTags', () => {
       'Old.md',
       parseNote(
         'Old.md',
-        '---\ntype: project\nproject: old\nstatus: completed\n---\n- [ ] A 📅 2026-02-01 #deliverable/old/a\n'
+        '---\ntype: project\nproject: old\nstatus: completed\n---\n- [ ] @task A 📅 2026-02-01 #deliverable/old/a\n'
       )
     )
     notes.set(
       'New.md',
       parseNote(
         'New.md',
-        '---\ntype: project\nproject: new\n---\n- [ ] B 📅 2026-02-01 #deliverable/new/b\n'
+        '---\ntype: project\nproject: new\n---\n- [ ] @task B 📅 2026-02-01 #deliverable/new/b\n'
       )
     )
     const closed = closedDeliverableTags(notes)

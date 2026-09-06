@@ -16,7 +16,7 @@ const DOC = [
   '# Section One', // 1
   'intro para', // 2
   '', // 3
-  '- [ ] task one', // 4
+  '- [ ] @task task one', // 4
   '  - Status Changed: n/a', // 5
   '  - Date Entered: 8/13/2026', // 6
   '', // 7
@@ -48,7 +48,7 @@ describe('foldPersist round trip', () => {
     folded = fold(folded, 4) // task detail
 
     const keys = foldedLineKeys(folded)
-    expect(keys).toEqual(['# Section One', '- [ ] task one'])
+    expect(keys).toEqual(['# Section One', '- [ ] @task task one'])
 
     const fresh = mkState()
     const restored = fresh.update({ effects: foldEffectsFor(fresh, keys) }).state
@@ -62,15 +62,15 @@ describe('foldPersist round trip', () => {
 
   it('matches a saved key against only as many identical-text lines as were folded', () => {
     const doc = [
-      '- [ ] dup', // 1
+      '- [ ] @task dup', // 1
       '  - a', // 2
-      '- [ ] dup', // 3
+      '- [ ] @task dup', // 3
       '  - b' // 4
     ].join('\n')
     const state = EditorState.create({ doc, extensions: [markdown(), taskFold] })
 
     // Only the first "dup" was folded.
-    const keys = ['- [ ] dup']
+    const keys = ['- [ ] @task dup']
     const restored = state.update({ effects: foldEffectsFor(state, keys) }).state
 
     expect(rangesOf(restored)).toEqual([[state.doc.line(1).to, state.doc.line(2).to]])

@@ -55,8 +55,8 @@ describe('[[Note#^ block-ref completion', () => {
       [
         '# Block refs',
         '',
-        '- [ ] Rewire the pump controller #urgent 📅 2026-08-01 ^rewire-the-pump-controller',
-        '- [ ] Order replacement seals ^k3f9d1',
+        '- [ ] @task Rewire the pump controller #urgent 📅 2026-08-01 ^rewire-the-pump-controller',
+        '- [ ] @task Order replacement seals ^k3f9d1',
         ''
       ].join('\n')
     )

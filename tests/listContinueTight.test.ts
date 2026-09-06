@@ -41,7 +41,7 @@ function run(state: EditorState): { handled: boolean; doc: string; cursor: numbe
 describe('continueListTight', () => {
   it('collapses the blank-line-before-next-item behavior under a seeded task', () => {
     const doc =
-      '- [ ] where is this\n  - Status Changed: n/a\n  - Date Entered: 9/3/2026\n  - Notes: \n- test'
+      '- [ ] @task where is this\n  - Status Changed: n/a\n  - Date Entered: 9/3/2026\n  - Notes: \n- test'
     const cursor = doc.length // end of "- test"
     const { handled, doc: after } = run(mkState(doc, cursor))
     expect(handled).toBe(true)

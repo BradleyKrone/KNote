@@ -1,7 +1,7 @@
 {
   "name": "knote",
   "displayName": "KNote",
-  "version": "2.11.0",
+  "version": "2.12.0",
   "description": "KNote — a local-first Markdown vault with a checkbox-driven Kanban board, wiki links, and vault-wide search, as a VS Code extension",
   "publisher": "bradleykrone",
   "main": "./dist/extension.js",
@@ -167,6 +167,14 @@
       {
         "command": "knote.insertCheckbox",
         "title": "KNote: Toggle Checkbox on Line"
+      },
+      {
+        "command": "knote.toggleTaskMarker",
+        "title": "KNote: Toggle Task (@task) on Line"
+      },
+      {
+        "command": "knote.migrateLegacyTasks",
+        "title": "KNote: Convert Legacy Tasks to @task"
       },
       {
         "command": "knote.insertTaskNote",
@@ -495,6 +503,11 @@
       {
         "command": "knote.insertCheckbox",
         "key": "ctrl+alt+x",
+        "when": "editorTextFocus && editorLangId == markdown"
+      },
+      {
+        "command": "knote.toggleTaskMarker",
+        "key": "ctrl+alt+t",
         "when": "editorTextFocus && editorLangId == markdown"
       },
       {

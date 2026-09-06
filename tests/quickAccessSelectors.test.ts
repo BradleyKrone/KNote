@@ -19,7 +19,10 @@ function vault(...files: Array<[string, string]>): Map<string, NoteMeta> {
 
 describe('collectBoards', () => {
   it('counts open vs total per note and totals the vault', () => {
-    const notes = vault(['a.md', '- [ ] one\n- [/] two\n- [x] three'], ['b.md', '- [ ] only open'])
+    const notes = vault(
+      ['a.md', '- [ ] @task one\n- [/] @task two\n- [x] @task three'],
+      ['b.md', '- [ ] @task only open']
+    )
     const model = collectBoards(notes)
     expect(model).toMatchObject({ open: 3, total: 4 })
     expect(model.notes).toEqual([
@@ -29,7 +32,7 @@ describe('collectBoards', () => {
   })
 
   it('excludes archived tasks and subtasks, matching the board', () => {
-    const notes = vault(['a.md', '- [ ] parent\n  - [ ] child subtask\n- [a] archived'])
+    const notes = vault(['a.md', '- [ ] @task parent\n  - [ ] child subtask\n- [a] @task archived'])
     const model = collectBoards(notes)
     // Only "parent" is a card: the subtask is nested, the archived one is [a].
     expect(model).toMatchObject({ open: 1, total: 1 })
@@ -37,21 +40,21 @@ describe('collectBoards', () => {
   })
 
   it('omits notes with no board cards entirely', () => {
-    const notes = vault(['a.md', '- [ ] task'], ['prose.md', 'just words, no checkboxes'])
+    const notes = vault(['a.md', '- [ ] @task task'], ['prose.md', 'just words, no checkboxes'])
     expect(collectBoards(notes).notes.map((n) => n.path)).toEqual(['a.md'])
   })
 
   it('treats [X] as done the same as [x]', () => {
-    const notes = vault(['a.md', '- [X] shouty done'])
+    const notes = vault(['a.md', '- [X] @task shouty done'])
     expect(collectBoards(notes)).toMatchObject({ open: 0, total: 1 })
   })
 
   it('sorts by open count desc, then title, so live boards float to the top', () => {
     const notes = vault(
-      ['quiet.md', '- [x] done'],
-      ['busy.md', '- [ ] a\n- [ ] b\n- [ ] c'],
-      ['zeta.md', '- [ ] one'],
-      ['alpha.md', '- [ ] one']
+      ['quiet.md', '- [x] @task done'],
+      ['busy.md', '- [ ] @task a\n- [ ] @task b\n- [ ] @task c'],
+      ['zeta.md', '- [ ] @task one'],
+      ['alpha.md', '- [ ] @task one']
     )
     expect(collectBoards(notes).notes.map((n) => n.title)).toEqual([
       'busy',
@@ -183,13 +186,13 @@ describe('collectProjectDeliverables', () => {
         'type: project',
         'project: p',
         '---',
-        '- [ ] Design 🛫 2026-07-01 📅 2026-07-31 #deliverable/p/design',
-        '- [x] Build 🛫 2026-08-01 📅 2026-08-31 #deliverable/p/build',
-        '- [ ] no span, not a deliverable #deliverable/p/notreally',
+        '- [ ] @task Design 🛫 2026-07-01 📅 2026-07-31 #deliverable/p/design',
+        '- [x] @task Build 🛫 2026-08-01 📅 2026-08-31 #deliverable/p/build',
+        '- [ ] @task no span, not a deliverable #deliverable/p/notreally',
         ''
       ].join('\n')
     ],
-    ['Work.md', '- [ ] member task #deliverable/p/design\n- [ ] unrelated task']
+    ['Work.md', '- [ ] @task member task #deliverable/p/design\n- [ ] @task unrelated task']
   )
 
   it('lists one row per defined deliverable, sorted by label', () => {
@@ -232,8 +235,8 @@ describe('collectProjectDeliverables', () => {
         'type: project',
         'project: doze-assist',
         '---',
-        '- [ ] Tech Demo 2026 🛫 2026-09-14 📅 2026-09-20 @deliverable(doze-assist/tech-demo-2026)',
-        '- [w] Doze Assist Video 📅 2026-08-14 @deliverable(doze-assist/tech-demo-2026)',
+        '- [ ] @task Tech Demo 2026 🛫 2026-09-14 📅 2026-09-20 @deliverable(doze-assist/tech-demo-2026)',
+        '- [w] @task Doze Assist Video 📅 2026-08-14 @deliverable(doze-assist/tech-demo-2026)',
         ''
       ].join('\n')
     ])
@@ -257,8 +260,8 @@ describe('collectProjectDeliverables', () => {
         'project: doze-assist',
         'end: 2026-09-30',
         '---',
-        '- [ ] Tech Demo 2026 🛫 2026-09-14 📅 2026-09-20 @deliverable(doze-assist/tech-demo-2026)',
-        '- [w] Doze Assist Video 📅 2026-12-31 @deliverable(doze-assist/tech-demo-2026)',
+        '- [ ] @task Tech Demo 2026 🛫 2026-09-14 📅 2026-09-20 @deliverable(doze-assist/tech-demo-2026)',
+        '- [w] @task Doze Assist Video 📅 2026-12-31 @deliverable(doze-assist/tech-demo-2026)',
         ''
       ].join('\n')
     ])

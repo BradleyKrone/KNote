@@ -37,6 +37,7 @@ import {
   CalendarDays,
   CalendarRange,
   CheckSquare,
+  SquareDashed,
   Clipboard,
   Code,
   Columns3,
@@ -95,7 +96,7 @@ import { host } from '../shared/rpc'
 import { toggleWrap } from './markdownFormatting'
 import { mdLinkAt, type MdLink } from './mdLinkLogic'
 import { setCheckboxStatus, setSubtaskChecked, getNotePath } from './knoteConstructs'
-import { isTopLevelTask } from './editorMode'
+import { isBoardTask } from './editorMode'
 import { copyTaskLink } from './taskLink'
 import { misspelledRangeAt, type WordSpan } from './spellcheck/spellCheck'
 import { suggestWords } from './spellcheck/dictionary'
@@ -107,6 +108,7 @@ import {
   addLineTag,
   editMachineOnLine,
   insertCheckbox,
+  insertTask,
   insertCodeBlock,
   insertDrawioDiagram,
   insertMachineEntry,
@@ -140,8 +142,10 @@ import type { Align } from './tableModel'
 interface LineCtx {
   line0: number
   text: string
+  /** The line is a checkbox of some kind — a task or a plain toggle. */
+  isCheckbox: boolean
+  /** The checkbox carries `@task`: a Kanban card, with a column menu and a link. */
   isTask: boolean
-  isSubtask: boolean
   isMilestone: boolean
   isMachine: boolean
   due: string | null
@@ -186,10 +190,11 @@ function readLineCtx(view: EditorView, pos: number): LineCtx {
     selection: view.state.sliceDoc(from, to),
     line0: line.number - 1,
     text: line.text,
-    isTask: task != null,
-    // A fragment is one task's interior, so even a flush-left checkbox there is
-    // a sub-task: a plain toggle, with no Kanban column menu and no task link.
-    isSubtask: task != null && !isTopLevelTask(view.state, task[1]),
+    isCheckbox: task != null,
+    // A card is a checkbox carrying `@task`, at any indent. A fragment is one
+    // task's interior and its line numbers mean nothing to the host, so nothing
+    // in there gets a Kanban column menu or a task link.
+    isTask: isBoardTask(view.state, line.text),
     isMilestone: MILESTONE_LINE_RE.test(line.text),
     isMachine: MACHINE_ENTRY_RE.test(line.text),
     due: lineDue(line.text),
@@ -210,7 +215,7 @@ function readLineCtx(view: EditorView, pos: number): LineCtx {
  * top-level line claiming a tag nobody else has taken still counts.
  */
 function ownDeliverableTag(ctx: LineCtx, notes: ReadonlyMap<VaultPath, NoteMeta>): string | null {
-  if (!ctx.isTask || ctx.isSubtask) return null
+  if (!ctx.isTask) return null
   const path = getNotePath()
   const meta = path ? notes.get(path) : undefined
   if (!meta) return null
@@ -221,7 +226,7 @@ function ownDeliverableTag(ctx: LineCtx, notes: ReadonlyMap<VaultPath, NoteMeta>
   const claim = claimableDeliverableTag(meta, {
     text: ctx.text,
     tags: extractTags(ctx.text),
-    isSubtask: false
+    isTask: true
   })
   if (!claim) return null
   return [...elected.values()].some((e) => e.tag === claim) ? null : claim
@@ -275,7 +280,7 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
   if (open.stage === 'menu') {
     let items: MenuEntry[]
     const main = (): MenuEntry[] => mainItems(view, ctx, open.table, notes, run, openSub)
-    if (open.onCheckbox && ctx.isSubtask) {
+    if (open.onCheckbox && !ctx.isTask) {
       items = subtaskCheckboxItems(ctx, (checked) => {
         close()
         void setSubtaskChecked(view, ctx.line0, ctx.text, checked)
@@ -638,8 +643,13 @@ function insertItems(
     { label: 'Link…', icon: <Link size={ICON} />, onClick: openSub('link') },
     { separator: true },
     {
-      label: 'Checkbox',
+      label: 'Task',
       icon: <CheckSquare size={ICON} />,
+      onClick: run(() => insertTask(view))
+    },
+    {
+      label: 'Checkbox',
+      icon: <SquareDashed size={ICON} />,
       onClick: run(() => insertCheckbox(view))
     },
     {
@@ -717,9 +727,9 @@ function taskItems(
       }
     )
   }
-  // Only top-level tasks and milestones are linkable — sub-tasks are plain
-  // toggles, not standalone items, so they get no anchor.
-  if (!ctx.isSubtask) {
+  // Only tasks and milestones are linkable — a plain checkbox is a toggle, not
+  // a standalone item, so it gets no anchor.
+  if (ctx.isTask || ctx.isMilestone) {
     items.push({
       label: ownTag
         ? 'Copy link to deliverable'
@@ -753,7 +763,7 @@ function mainItems(
     { label: 'Format', icon: <Type size={ICON} />, submenu: formatItems(view, run) },
     { label: 'Insert', icon: <Plus size={ICON} />, submenu: insertItems(view, run, openSub) }
   ]
-  if (ctx.isTask || ctx.isMilestone) {
+  if (ctx.isCheckbox || ctx.isMilestone) {
     items.push({
       label: ownTag ? 'Deliverable' : ctx.isMilestone ? 'Milestone' : 'Task',
       icon: ownTag ? (

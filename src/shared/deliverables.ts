@@ -4,20 +4,21 @@
  * deliverable's tasks while it isn't current). It lives in `shared/` precisely
  * so the board never has to import planner code to agree with it.
  *
- * A deliverable is a *top-level* checkbox task in a note whose frontmatter says
+ * A deliverable is a `@task` line (a checkbox carrying the `@task` marker — at
+ * any indent) in a note whose frontmatter says
  * `type: project`, carrying its own `@deliverable(<project>/<name>)` marker
  * plus a `🛫 start` / `📅 end` span. An ordinary task or milestone *joins* one
  * by carrying that same marker anywhere else in the vault — the same syntax
  * either way, deliberately not a `#tag`, so a deliverable never clutters the
  * Tags tree, `#` autocomplete, or a generic tag pill. What makes one line
- * *defining* rather than a member is structural (top-level, in the project's
- * own note, carrying a span), never the marker itself — see `deliverableTagsOf`
+ * *defining* rather than a member is structural (a `@task` line, in the
+ * project's own note, carrying a span), never the marker itself — see `deliverableTagsOf`
  * below. Notes written before this switch may still carry a defining line's
  * identity as a literal `#deliverable/…` tag instead; that legacy form still
  * reads (`deliverableTagsOf` recognizes both), but nothing writes it any more.
  *
  * Those structural tests don't single a line out on their own: a member task
- * that happens to live in the project note, sit at top level and carry a `📅`
+ * that happens to live in the project note, carry `@task` and carry a `📅`
  * of its own looks exactly like a definition. So exactly one line per tag is
  * *elected* — by `electedDeliverableLines`, reached through
  * `definingDeliverableTagInNote` (one line) or `deliverableDefinitions` (the
@@ -178,7 +179,7 @@ export function deliverableRefsOf(text: string): string[] {
  * This is the one function every lookup should call, whether it's asking
  * "does this line define a deliverable" or "does this line belong to one" —
  * the two questions differ only in the structural filters each caller already
- * applies (top-level task, project note, has a span), never in which marker
+ * applies (a `@task` line, project note, has a span), never in which marker
  * was used to say so.
  */
 export function deliverableTagsOf(tags: readonly string[], text = ''): string[] {
@@ -194,7 +195,7 @@ export function deliverableMembershipOf(tags: readonly string[], text = ''): str
 
 /**
  * The bare `deliverable/<project>/<name>` tag a line *could* be claiming: a
- * top-level task, in a `type: project` note, carrying a deliverable marker for
+ * `@task` line, in a `type: project` note, carrying a deliverable marker for
  * that note's own project. Legacy `#deliverable/…` counts too (it goes through
  * `deliverableTagsOf`), so notes written before the switch to `@deliverable(...)`
  * still define their deliverables.
@@ -210,9 +211,9 @@ export function deliverableMembershipOf(tags: readonly string[], text = ''): str
  */
 export function claimableDeliverableTag(
   meta: NoteMeta | undefined,
-  task: Pick<TaskItem, 'text' | 'tags' | 'isSubtask'>
+  task: Pick<TaskItem, 'text' | 'tags' | 'isTask'>
 ): string | null {
-  if (!meta || task.isSubtask || !isProjectNote(meta)) return null
+  if (!meta || !task.isTask || !isProjectNote(meta)) return null
   const slug = projectSlug(meta)
   return (
     deliverableTagsOf(task.tags, task.text).find((t) => parseDeliverableTag(t)?.project === slug) ??
@@ -395,7 +396,7 @@ export function deliverableProgress(
  * (`deliverable/govalle/design`) — straight off `deliverableDefinitions`, so
  * only a deliverable's *own elected* line sets its schedule. A tagged task
  * anywhere else is a member, never a definition, and that includes a dated
- * top-level task sitting in the project note itself: letting one of those set
+ * `@task` line sitting in the project note itself: letting one of those set
  * the window is precisely how a whole deliverable's worth of tasks used to
  * drop off the board. A deliverable with no `📅` end date has no window and is
  * skipped: it can't be scheduled yet.

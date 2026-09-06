@@ -26,12 +26,12 @@ describe('diffEdit', () => {
   })
 
   it('handles a sub-task toggle (append ✅ date to a line) without touching earlier lines', () => {
-    const before = '- [ ] parent\n  - [ ] sub\nmore notes below'
-    const after = '- [ ] parent\n  - [x] sub ✅ 2026-07-17\nmore notes below'
+    const before = '- [ ] @task parent\n  - [ ] sub\nmore notes below'
+    const after = '- [ ] @task parent\n  - [x] sub ✅ 2026-07-17\nmore notes below'
     const edit = diffEdit(before, after)
     // The change starts on the sub-task line — the parent line above is fixed.
     expect(edit.from).toBeGreaterThan(before.indexOf('parent'))
-    expect(before.slice(0, edit.from).startsWith('- [ ] parent\n')).toBe(true)
+    expect(before.slice(0, edit.from).startsWith('- [ ] @task parent\n')).toBe(true)
     expect(apply(before, edit)).toBe(after)
   })
 
@@ -61,21 +61,21 @@ describe('diffEdit', () => {
     const normalize = (text: string): string => text.replace(/\r\n/g, '\n')
 
     it('short-circuits when the host echoes back identical text', () => {
-      const cm = '- [ ] parent\n  - [ ] sub\nmore notes below'
-      const host = '- [ ] parent\r\n  - [ ] sub\r\nmore notes below'
+      const cm = '- [ ] @task parent\n  - [ ] sub\nmore notes below'
+      const host = '- [ ] @task parent\r\n  - [ ] sub\r\nmore notes below'
       expect(normalize(host)).toBe(cm)
     })
 
     it('localizes a sub-task toggle instead of replacing the tail', () => {
-      const cm = '- [ ] parent\n  - [ ] sub\nmore notes below'
-      const host = '- [ ] parent\r\n  - [x] sub ✅ 2026-07-17\r\nmore notes below'
+      const cm = '- [ ] @task parent\n  - [ ] sub\nmore notes below'
+      const host = '- [ ] @task parent\r\n  - [x] sub ✅ 2026-07-17\r\nmore notes below'
 
       const edit = diffEdit(cm, normalize(host))
 
       // Starts on the sub-task line and leaves the trailing line alone — the
       // scroll anchor is preserved. Un-normalized, `from` would land at the
       // end of line 1 and `to` at the end of the document.
-      expect(cm.slice(0, edit.from).startsWith('- [ ] parent\n')).toBe(true)
+      expect(cm.slice(0, edit.from).startsWith('- [ ] @task parent\n')).toBe(true)
       expect(edit.to).toBeLessThan(cm.indexOf('more notes below'))
       expect(apply(cm, edit)).toBe(normalize(host))
     })

@@ -35,7 +35,7 @@ describe('blockBaseIndent', () => {
 
 describe('taskChildIndent', () => {
   it('is the task’s own indent plus two, matching what the seeders write', () => {
-    expect(taskChildIndent('- [ ] top level')).toBe('  ')
+    expect(taskChildIndent('- [ ] @task top level')).toBe('  ')
     expect(taskChildIndent('  - [x] nested')).toBe('    ')
     expect(taskChildIndent('\t- [/] tabbed')).toBe('\t  ')
   })

@@ -68,7 +68,7 @@ describe('markdown editor defaults', () => {
   })
 
   it('still folds an indented block under a task (KNote taskFold)', () => {
-    const doc = '- [ ] task\n  - Notes: detail\n- [ ] other\n'
+    const doc = '- [ ] @task task\n  - Notes: detail\n- [ ] @task other\n'
     const state = mkState(doc)
     const line = state.doc.line(1)
     const range = foldable(state, line.from, line.to)

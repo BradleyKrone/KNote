@@ -85,14 +85,16 @@ describe('sliceEmbedSection', () => {
 
   it('slices a block-anchored task together with its indented detail', () => {
     const content = [
-      '- [ ] first task ^abc123',
+      '- [ ] @task first task ^abc123',
       '  - Status Changed: n/a',
       '  - Notes: some detail',
-      '- [ ] second task',
+      '- [ ] @task second task',
       '  - Notes: other'
     ].join('\n')
     const result = slice(content, '^abc123')
-    expect(result).toBe('- [ ] first task ^abc123\n  - Status Changed: n/a\n  - Notes: some detail')
+    expect(result).toBe(
+      '- [ ] @task first task ^abc123\n  - Status Changed: n/a\n  - Notes: some detail'
+    )
     expect(result).not.toContain('second task')
   })
 
@@ -102,8 +104,8 @@ describe('sliceEmbedSection', () => {
   })
 
   it('matches a block id case-insensitively and returns null for a missing one', () => {
-    const content = '- [ ] task ^AbC123\n'
-    expect(slice(content, '^abc123')).toBe('- [ ] task ^AbC123')
+    const content = '- [ ] @task task ^AbC123\n'
+    expect(slice(content, '^abc123')).toBe('- [ ] @task task ^AbC123')
     expect(slice(content, '^nope')).toBeNull()
   })
 })

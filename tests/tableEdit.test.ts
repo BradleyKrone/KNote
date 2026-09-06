@@ -255,7 +255,7 @@ describe('indented tables (nested under a task)', () => {
   const NESTED = TABLE.split('\n')
     .map((l) => `${INDENT}${l}`)
     .join('\n')
-  const NESTED_DOC = `- [ ] Restock the bins\n${NESTED}\n\nouter\n`
+  const NESTED_DOC = `- [ ] @task Restock the bins\n${NESTED}\n\nouter\n`
   /** The table block's first *line* start — before the indent, not after it. */
   const NESTED_FROM = NESTED_DOC.indexOf(`${INDENT}| Name`)
 

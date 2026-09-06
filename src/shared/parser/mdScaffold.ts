@@ -40,8 +40,25 @@ function maskRange(chars: string[], from: number, to: number): void {
 }
 
 /**
- * Parse markdown and blank out frontmatter and code (fenced and inline).
+ * A `code` node written as a **fence** (```` ``` ```` / `~~~`) rather than by
+ * indentation. Read off the source, because mdast gives both the same node type.
+ */
+function isFencedCode(content: string, from: number): boolean {
+  const eol = content.indexOf('\n', from)
+  const line = eol === -1 ? content.slice(from) : content.slice(from, eol)
+  return /^[ \t]*(`{3,}|~{3,})/.test(line)
+}
+
+/**
+ * Parse markdown and blank out frontmatter, fenced code and inline code.
  * Returns null when the content can't be parsed at all.
+ *
+ * **Indented code blocks are deliberately not masked.** In KNote indentation is
+ * structure — it is what says a line belongs to the task above it — so a note
+ * is free to indent a `- [ ] @task` line as deeply as it likes. CommonMark
+ * reads four spaces outside a list as a code block, which would blank the line
+ * out and make the task silently vanish from the board. Code in KNote is code
+ * because it is fenced, never because of where it sits.
  */
 export function maskSource(content: string): MaskedSource | null {
   let tree: Node
@@ -61,7 +78,9 @@ export function maskSource(content: string): MaskedSource | null {
     if (node.type === 'yaml') {
       if (typeof node.value === 'string') yaml = { from, to, value: node.value }
       maskRange(chars, from, to)
-    } else if (node.type === 'code' || node.type === 'inlineCode') {
+    } else if (node.type === 'inlineCode') {
+      maskRange(chars, from, to)
+    } else if (node.type === 'code' && isFencedCode(content, from)) {
       maskRange(chars, from, to)
     }
   })

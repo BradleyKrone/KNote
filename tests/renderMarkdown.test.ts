@@ -107,4 +107,15 @@ describe('renderKnoteMarkdown', () => {
     expect(html).toContain('<ul>')
     expect(html).toContain('a task')
   })
+
+  it('cuts the @task marker out of a task line, keeping the checkbox', () => {
+    const html = renderKnoteMarkdown('- [ ] @task ship it\n')
+    expect(html).toContain('[ ] ship it')
+    expect(html).not.toContain('@task')
+  })
+
+  it('leaves prose that merely mentions @task alone', () => {
+    const html = renderKnoteMarkdown('- [ ] the @task convention\n')
+    expect(html).toContain('the @task convention')
+  })
 })

@@ -7,10 +7,11 @@ import {
   DATE_ENTERED_RE,
   mergeTaskMetaLines,
   STATUS_CHANGED_UNSET,
+  stripTaskMarker,
   TASK_LINE_RE
 } from '@shared/parser/patterns'
 import { blockIdOf } from '@shared/blockAnchor'
-import { isTopLevelTask } from './editorMode'
+import { isBoardTask } from './editorMode'
 
 export interface TaskNoteSeed {
   /** Document offset to insert at (end of the task line or its last meta line). */
@@ -52,10 +53,13 @@ export function planTaskNoteSeed(
   if (line.text.slice(range.head - line.from).trim() !== '') return null
 
   const task = TASK_LINE_RE.exec(line.text)
-  // Top-level tasks only — and nothing in a fragment is, so Enter in the
-  // board's task editor is always just a newline, never a meta template.
-  if (!task || !isTopLevelTask(state, task[1])) return null
-  if ((task[4]?.trim() ?? '') === '') return null // don't seed an empty checkbox
+  // Tasks only — a plain checkbox gets ordinary list continuation, and nothing
+  // in a fragment is addressable, so Enter in the board's task editor is always
+  // just a newline, never a meta template.
+  if (!task || !isBoardTask(state, line.text)) return null
+  // Don't seed a task with no text yet — a bare `- [ ] @task` still has its
+  // prose to come, and the marker alone isn't something to hang a note off.
+  if (stripTaskMarker(task[4] ?? '').trim() === '') return null
 
   // Step over any Reason/Status lines already directly under the task, the
   // same way the insertTaskNote command anchors below them.

@@ -254,7 +254,7 @@ export function collectCards(
     if (scope.kind === 'folder' && !isInside(meta.path, scope.path)) continue
     for (const task of meta.tasks) {
       if (task.statusChar === ARCHIVED_CHAR) continue
-      if (task.isSubtask) continue
+      if (!task.isTask) continue
       if (windows && !visibleForDeliverable(task, windows, now)) continue
       const card = toCard(meta, task, progress, overdueTags, definingTags)
       if (

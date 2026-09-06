@@ -50,9 +50,48 @@ Three things to know:
   dangles links that spell it out. For that reason KNote refuses a mount whose
   name is already taken rather than quietly renaming it; give it another name
   under `mountNames` in `.knote/config.json` if that happens.
-- A `#tag`, `README.md` or `- [ ] task` inside a mounted folder is a real one:
+- A `#tag`, `README.md` or `- [ ] @task` line inside a mounted folder is a real one:
   it shows in the Tags pane, resolves as a link, and can be dragged on the
   board — which rewrites the file in that folder.
+
+## Tasks: the `@task` marker
+
+A **task** — something that gets a Kanban card — is a checkbox line carrying
+`@task` right after the checkbox. Everything indented under it belongs to it.
+
+```markdown
+- Site notes
+  - [ ] @task Rewire the pump controller !! 📅 2026-09-20
+    - Status Changed: n/a
+    - Date Entered: 9/5/2026
+    - [ ] pull the old harness        <- owned by the task, a plain toggle
+    - [x] order the relay ✅ 2026-09-03
+    - [ ] @task Order spare fuses     <- its own card
+      - [ ] call the supplier         <- owned by the inner task
+- [ ] milk, eggs, bread              <- just a checkbox, never a card
+```
+
+| | |
+|---|---|
+| **Where it goes** | Immediately after the checkbox, ahead of every other marker: `- [ ] @task Ship it 📅 2026-09-20` |
+| **Indentation** | Irrelevant. A `@task` line is a card at any depth; a checkbox without one is a plain toggle at any depth |
+| **Ownership** | A task owns every line indented deeper than it, stopping at the next `@task` line — that's what the group box in Live Preview draws, and what the board's task dialog edits |
+| **Adding one** | `Ctrl+Alt+T` toggles the marker on the cursor line, **Insert ▸ Task** inserts a fresh one, and typing a task on the board or planner writes it for you |
+| **In Live Preview** | The marker is hidden — the heavier, squarer checkbox and the column pill say "card" instead. It reappears as raw text when your cursor is on the line, like `📅` and `^anchors` |
+| **How deep?** | As deep as you like — under a bullet, a heading, or plain prose, spaces or tabs. The only thing that hides a checkbox from KNote is putting it inside a ```` ``` ```` fence |
+
+It's deliberately a plain-text marker rather than something structural, so the
+file still opens as ordinary Markdown anywhere else — the line stays a real
+task-list item, with `@task` reading as the first word of its text.
+
+**Converting an existing vault.** Notes written before this used indentation
+instead: a checkbox with no shallower checkbox above it was a card. Run
+**KNote: Convert Legacy Tasks to @task** once and it adds the marker to exactly
+those lines across the whole vault, leaving indented sub-checkboxes (and
+anything inside a fenced code block) alone. It shows you the list first, writes
+through the same verified-edit path everything else uses, and is safe to run
+again — a second run finds nothing. **Until you run it, your board and planner
+will look empty**, because nothing carries the marker yet.
 
 ## Live Preview editing
 
@@ -94,7 +133,7 @@ Markdown:
   drop your cursor in and edit the raw source, exactly like every other
   construct. An invalid diagram shows its error inline instead of breaking
   the editor.
-- **Enter seeds a task's note** — finish typing a top-level task line and
+- **Enter seeds a task's note** — finish typing a `@task` line and
   press **Enter** to auto-insert its indented `Status Changed` / `Date
   Entered` / `Notes` block, with the cursor left on the Notes line. This also
   stamps a hidden `^anchor` (named after the task) on the line so it's
@@ -108,13 +147,13 @@ Markdown:
   Kanban switcher (it stamps `Status Changed:` and prompts for a reason on
   Require-reason columns, exactly like dragging its card on the board), or use
   `Ctrl+L` to advance the status on the cursor line.
-- **Each task shows its state** — a top-level task carries a small pill right
+- **Each task shows its state** — a task carries a small pill right
   after its checkbox naming the Kanban column it currently maps to (To Do, In
   Progress, Done, …), so you can read a note's task states at a glance without
   opening the board. It updates the moment the status changes.
 - **Link straight to a task** — every task you create is automatically given a
   hidden `^anchor` named after the task itself
-  (`- [ ] Rewire the pump ^rewire-the-pump`), so it's linkable with no manual
+  (`- [ ] @task Rewire the pump ^rewire-the-pump`), so it's linkable with no manual
   step and still readable if you ever open the file elsewhere. Three ways to
   get a link, none of which require finding that anchor:
   - Right-click a task → **Task ▸ Copy link to task**.
@@ -126,10 +165,11 @@ Markdown:
   renders as just the task's text — paste it into your daily "what I did" note
   and click it to jump right back to that task. The `^anchor` stays out of
   sight in Live Preview and only shows when your cursor is on the line.
-- **Click a sub-task to check it off** — an *indented* checkbox is a plain
-  toggle, not a Kanban card: clicking its box flips checked/unchecked and
-  stamps the completion date (`✅ 2026-07-16`) on the line. Unchecking it
-  removes the date again.
+- **Click a plain checkbox to check it off** — a checkbox *without* `@task`
+  is a plain toggle, not a Kanban card: clicking its box flips
+  checked/unchecked and stamps the completion date (`✅ 2026-07-16`) on the
+  line. Unchecking it removes the date again. A task's box is drawn heavier
+  and squarer, so the two are told apart at a glance.
 - **`[[Wiki links]]`** render as clickable chips (click to open, creating
   the note if it doesn't exist), `#tags` as pills, and **`![[image]]`** /
   `![](image)` embeds show inline.
@@ -163,19 +203,19 @@ Markdown:
   reopens the list.
 - `Ctrl+B` / `Ctrl+I` / `Ctrl+Shift+X` / `` Ctrl+E `` toggle bold / italic /
   strikethrough / inline code on the selection.
-- **Tasks group into cards** — a top-level task with indented detail beneath
-  it (its `Status Changed` / `Date Entered` / `Notes` block and any sub-tasks)
-  is wrapped in a light box, so it's clear at a glance what belongs to which
+- **Tasks group into cards** — a `@task` line with indented detail beneath
+  it (its `Status Changed` / `Date Entered` / `Notes` block and any plain
+  sub-checkboxes) is wrapped in a light box, so it's clear at a glance what belongs to which
   task. A lone task with no detail isn't boxed. That box is exactly what
   double-clicking the board's card opens for editing — see **✏️ Edit a
   task** below.
 - **Fold task detail — or a whole heading section — out of the way** — any line
-  with indented content below it (a task's detail block and sub-tasks, nested
+  with indented content below it (a task's detail block and sub-checkboxes, nested
   lists, note bodies) gets a collapse arrow in the left gutter on hover, and so
   does any heading: folding a heading collapses everything under it, down to the
   next heading at the same or a higher level. Click the arrow to fold the block
   to a `…` (a task's card closes up around the single line), so a long note
-  reads as a clean list of top-level tasks or headings; click the `…` or the
+  reads as a clean list of tasks and headings; click the `…` or the
   arrow to expand. `Ctrl+Shift+[` / `Ctrl+Shift+]` fold / unfold the current
   line; `Ctrl+Alt+[` / `Ctrl+Alt+]` fold / unfold everything. Collapsed
   sections are remembered per note, so closing and reopening a note leaves
@@ -234,7 +274,9 @@ left, so you can pick one out at a glance instead of reading down the list:
 | **Format ▸** Bold / Italic / Strikethrough / Inline code | Toggle the marker on the selection |
 | **Insert ▸** Wiki link | Insert `[[]]` (wraps the selection if any) |
 | **Insert ▸** Link… | Enter link text + a URL → insert a `[text](url)` hyperlink (pre-fills from the selection) |
-| **Insert ▸** Checkbox | Insert a `- [ ]` task line |
+| **Insert ▸** Task | Insert a `- [ ] @task ` line — a Kanban card |
+| **Insert ▸** Checkbox | Insert a plain `- [ ]` checkbox — a toggle, not a card |
+| **Task ▸** Toggle task (`@task`) | Promote a checkbox to a card, or demote it back (`Ctrl+Alt+T`) |
 | **Insert ▸** Milestone | Insert a dated `🏁 Milestone 📅 …` line |
 | **Insert ▸** Table… | Pick a row/column count → insert an empty table |
 | **Insert ▸** Machine work… | Pick a serial + date → insert a `🚜` entry with the detail template |
@@ -262,6 +304,7 @@ All in Markdown editors only:
 | `Ctrl+L` | Cycle the task's status (column) on the cursor line |
 | `Ctrl+Alt+L` | Set task status from a list (includes Archive) |
 | `Ctrl+Alt+X` | Toggle a `- [ ]` checkbox on the current line |
+| `Ctrl+Alt+T` | Toggle the `@task` marker — promote a checkbox to a Kanban card, or demote it |
 | `Ctrl+Alt+Enter` | Seed/extend the task's attached note (Status Changed / Date Entered / Notes) |
 
 All hotkeys are ordinary VS Code keybindings — rebind them in **Keyboard
@@ -281,10 +324,11 @@ slot.
 
 **KNote: Open Kanban Board** (`Ctrl+Alt+K`), or the Kanban icon in the
 Activity Bar, opens the board; **KNote: Open
-Board for This Note** scopes it to one note. Everything on it is a checkbox
-task somewhere in your vault:
+Board for This Note** scopes it to one note. Everything on it is a `@task`
+line somewhere in your vault:
 
-- Columns map to checkbox status chars (`- [ ]`, `- [/]`, `- [x]`, …) —
+- Columns map to checkbox status chars (`- [ ] @task`, `- [/] @task`,
+  `- [x] @task`, …) —
   configure them in Vault Settings → Kanban board.
 - To keep a whole project's deliverables and tasks off the board — parked,
   reference-only, or just noisy right now — expand **Filter by Project** in
@@ -320,14 +364,15 @@ task somewhere in your vault:
   the ⏳ follow-up chip also shows the reason the task is parked.
 - **✏️ Edit a task** — double-clicking a card opens a dialog holding the task line
   (with the #tag / priority / 📅 due-date buttons) and, underneath it,
-  **everything nested under that task**: its notes, its sub-tasks, *their*
-  notes, nested bullets, tables and fenced code. Not a plain text box — it's the
+  **everything it owns**: its notes, its sub-checkboxes, *their*
+  notes, nested bullets, tables and fenced code — up to the next `@task` line,
+  which is a card in its own right and is edited from its own dialog. Not a plain text box — it's the
   same **Live Preview editor** notes use, so you get clickable checkboxes,
   `[[link]]` and `#tag` autocomplete, rendered tables, Mermaid, note embeds,
   hover previews, paste-an-image, spell check and `Ctrl+F` find, right there in
   the dialog.
 - **➕ Add card** opens that same dialog empty instead of a one-line input —
-  fill in the task text, tags, due date, column and any notes/sub-tasks up front.
+  fill in the task text, tags, due date, column and any notes/sub-checkboxes up front.
   Nothing is written until you save: **Create** appends the finished task (and
   its `Reason for <Column>` line, for a Require-reason column) in one go;
   **Cancel** discards it.
@@ -335,14 +380,14 @@ task somewhere in your vault:
   | In the dialog | What happens |
   | --- | --- |
   | **Status** (top right) | Moves the card to another column without closing the dialog — pending like everything else until Save. A Require-reason column (Waiting) asks for the reason and follow-up date on save, exactly as dragging there does; moving anywhere else clears the old reason line |
-  | Tick a sub-task | Changes it *in the dialog only* — nothing is written until Save, and `Ctrl+Z` undoes it |
+  | Tick a sub-checkbox | Changes it *in the dialog only* — nothing is written until Save, and `Ctrl+Z` undoes it |
   | Save | The task line **and the whole block** go back as one verified edit: one undo step, refused outright rather than half-written if anything in the block moved meanwhile. A column change rides along in that same edit, `Status Changed:` re-stamped with it |
   | Cancel / `Esc` | Throws the lot away (with a confirm if you've typed something) |
   | `Ctrl/Cmd+Enter` | Saves from anywhere in the dialog |
 
   This task's own `Reason for <Column>`, `Status Changed` and `Date Entered` are
   KNote's to write, so they show read-only in the row above the editor — and
-  typing one into the editor won't hijack the real thing. A **sub-task's** own
+  typing one into the editor won't hijack the real thing. A **sub-checkbox's** own
   stamps are different: they're part of the block, so they show in the editor
   and are kept exactly as they are. The notes stay in the note; the board is
   just another window onto them.
@@ -438,8 +483,8 @@ old Timeline panel. Everything it shows lives in plain Markdown:
 | Project | a note with `type: project` (and optionally `project: <slug>`) in its frontmatter |
 | Its deadline | `end: 2026-06-30` in the same frontmatter (`due:`/`deadline:` also read) |
 | Finishing it | `status: completed` — set it from the planner's right-click menu |
-| Deliverable | a top-level task in that note: `- [ ] Design 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/design)` |
-| Its tasks | any checkbox line **anywhere in the vault** carrying that same `@deliverable(govalle/design)` marker — deliberately *not* a `#tag`, so joining a deliverable never clutters the Tags sidebar or `#` autocomplete |
+| Deliverable | a `@task` line in that note: `- [ ] @task Design 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/design)` |
+| Its tasks | any checkbox line **anywhere in the vault** (marked or not) carrying that same `@deliverable(govalle/design)` marker — deliberately *not* a `#tag`, so joining a deliverable never clutters the Tags sidebar or `#` autocomplete |
 | Dependency | `⛓ @deliverable(govalle/contracts)` on the deliverable line — "starts after that one"; repeatable |
 | Milestone | a `🏁 Permits approved 📅 2026-04-12 @deliverable(govalle/design)` line — a diamond on the chart |
 

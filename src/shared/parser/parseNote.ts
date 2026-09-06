@@ -30,9 +30,11 @@ export { WIKI_LINK_RE } from './patterns'
 import {
   BLOCK_ID_RE,
   DATE_ENTERED_RE,
+  isTaskLine,
   MACHINE_ENTRY_RE,
   MILESTONE_LINE_RE,
   ownNoteBlockEnd,
+  stripTaskMarker,
   taskBlockLines,
   REASON_FOR_RE,
   STATUS_CHANGED_RE,
@@ -150,17 +152,15 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
   // anchor on $ and a trailing \r (CRLF files) would defeat that.
   const cleanLines = rawLines.map((l) => l.replace(/\r$/, ''))
 
-  // Open ancestor task indents, so a checkbox indented deeper than the
-  // nearest preceding task above it is treated as that task's subtask.
-  const taskIndentStack: number[] = []
   scanLines(maskedLines, rawLines, TASK_LINE_RE, (line, rawMatch, rawLine) => {
-    const text = (rawMatch[4] ?? '').trim()
+    // The `@task` marker is the whole test — indentation says nothing about
+    // whether a checkbox is a Kanban card. The marker itself is stripped here
+    // so `text` is pure prose: card labels, tree labels, search content, tag
+    // extraction, block-anchor slugs and the deliverable-name election all read
+    // this field and none of them should ever see the plumbing.
+    const isTask = isTaskLine(rawLine)
+    const text = stripTaskMarker((rawMatch[4] ?? '').trim())
     const indent = rawMatch[1].length
-    while (taskIndentStack.length && taskIndentStack[taskIndentStack.length - 1] >= indent) {
-      taskIndentStack.pop()
-    }
-    const isSubtask = taskIndentStack.length > 0
-    taskIndentStack.push(indent)
 
     // An immediately-following, more-indented `Reason for <Column>: ...` line
     // is this task's attached waiting reason + follow-up date (same nesting as
@@ -214,7 +214,7 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
       statusChar: rawMatch[3],
       text,
       indent,
-      isSubtask,
+      isTask,
       tags: extractTags(text),
       rawLine,
       waitingFollowUp,
@@ -223,7 +223,7 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
       dateEntered,
       // The *wide* block, and only for a task that can become a card — see
       // `TaskItem.blockLines`.
-      blockLines: isSubtask ? [] : taskBlockLines(cleanLines, line)
+      blockLines: isTask ? taskBlockLines(cleanLines, line) : []
     } as TaskItem)
   })
 }

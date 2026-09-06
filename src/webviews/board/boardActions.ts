@@ -7,9 +7,11 @@ import dayjs from 'dayjs'
 import { isStaleError } from '@shared/errors'
 import {
   ARCHIVED_CHAR,
+  isTaskLine,
   STATUS_CHANGED_UNSET,
   statusChangedLineForTask,
-  TASK_LINE_RE
+  TASK_LINE_RE,
+  TASK_MARKER
 } from '@shared/parser/patterns'
 import {
   anchorLine,
@@ -130,7 +132,14 @@ function rewrittenTaskLine(card: BoardCard, newText: string, statusChar?: string
   // indent + bullet + " [c]" — rebuilt rather than sliced, since the char may
   // be changing; TASK_LINE_RE fixes the single space before the bracket.
   const prefix = `${m[1]}${m[2]} [${char}]`
-  const rewritten = text ? `${prefix} ${text}` : prefix
+  // `card.text` is prose with the `@task` marker already stripped by the
+  // parser, so the marker has to be put back explicitly. Rebuilding the line
+  // without it would demote the card to a plain checkbox — and the very next
+  // index pass would drop it off the board, taking every edit made in this
+  // dialog with it.
+  const marker = isTaskLine(card.rawLine) ? TASK_MARKER : ''
+  const body = [marker, text].filter(Boolean).join(' ')
+  const rewritten = body ? `${prefix} ${body}` : prefix
   const id = blockIdOf(card.rawLine)
   return id ? anchorLine(rewritten, id) : rewritten
 }
@@ -214,7 +223,7 @@ export async function addCard(
   bodyText: string,
   reasonLine?: string
 ): Promise<void> {
-  const taskLine = `- [${statusChar}] ${text.trim()}`
+  const taskLine = `- [${statusChar}] ${TASK_MARKER} ${text.trim()}`
   const childIndent = taskChildIndent(taskLine)
   const lines = [taskLine]
   if (reasonLine !== undefined) lines.push(reasonLine)

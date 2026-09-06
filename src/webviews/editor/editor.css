@@ -285,6 +285,18 @@
   cursor: pointer;
 }
 
+/*
+ * A task — a Kanban card — versus a plain checkbox. The column pill already
+ * says so when the vault has columns configured, but a vault with none gets no
+ * pill, so the box itself has to carry the distinction: squarer and heavier,
+ * against the plain checkbox's lighter default.
+ */
+.cm-knote-check-task {
+  border-width: 2px;
+  border-radius: 2px;
+  border-color: var(--vscode-focusBorder, var(--vscode-foreground));
+}
+
 .cm-knote-archived {
   text-decoration: line-through;
   opacity: 0.55;

@@ -48,7 +48,9 @@ describe('editMachineLine', () => {
     expect(editMachineLine('🚜 Z6 📅 2026-07-01', 'Z6', null)).toBe('🚜 Z6')
   })
   it('leaves a non-machine line untouched', () => {
-    expect(editMachineLine('- [ ] not a machine', 'Z6', '2026-07-16')).toBe('- [ ] not a machine')
+    expect(editMachineLine('- [ ] @task not a machine', 'Z6', '2026-07-16')).toBe(
+      '- [ ] @task not a machine'
+    )
   })
 })
 
@@ -57,9 +59,9 @@ describe('lineDue', () => {
     expect(lineDue('🏁 Ship it 📅 2026-07-16')).toBe('2026-07-16')
   })
   it('reads an @due(...) date', () => {
-    expect(lineDue('- [ ] task @due(2026-07-16)')).toBe('2026-07-16')
+    expect(lineDue('- [ ] @task task @due(2026-07-16)')).toBe('2026-07-16')
   })
   it('returns null when there is no date', () => {
-    expect(lineDue('- [ ] no date here')).toBeNull()
+    expect(lineDue('- [ ] @task no date here')).toBeNull()
   })
 })

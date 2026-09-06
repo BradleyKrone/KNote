@@ -85,11 +85,15 @@ export interface TaskItem {
   line: number
   /** The char inside the brackets: ' ', 'x', '/', ... */
   statusChar: string
-  /** Task text after the checkbox */
+  /** Task text after the checkbox, with the leading `@task` marker stripped off */
   text: string
   indent: number
-  /** Nested under a less-indented task above it — a subtask, kept off the Kanban board */
-  isSubtask: boolean
+  /**
+   * Carries the `@task` marker — a Kanban card, which owns every line indented
+   * beneath it. Indentation says nothing about this: a `@task` line is a task
+   * at any depth, and an unmarked checkbox is a plain toggle at any depth.
+   */
+  isTask: boolean
   tags: string[]
   /** Exact full line text, used to verify targeted rewrites */
   rawLine: string
@@ -113,9 +117,10 @@ export interface TaskItem {
    * above instead. A descendant's managed lines stay in here: they belong to
    * the sub-task, not to this one. See `taskBlockLines`.
    *
-   * Always empty for a subtask. Only top-level tasks become board cards, and
-   * only a card gets the task editor — filling this in at every level would
-   * store the same text once per level of nesting in the index.
+   * The block stops at a nested `@task`, which owns its own subtree. Always
+   * empty for an unmarked checkbox: only a task becomes a board card, and only
+   * a card gets the task editor — filling this in at every level would store
+   * the same text once per level of nesting in the index.
    */
   blockLines: string[]
 }

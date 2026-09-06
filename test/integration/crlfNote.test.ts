@@ -29,7 +29,7 @@ const LINES = [
   '- Stable Bucket',
   '- Steer Assist',
   '',
-  '- [ ] First task',
+  '- [ ] @task First task',
   '',
   'Trailing prose that must not move.'
 ]
@@ -51,14 +51,14 @@ describe('notes with CRLF line endings', () => {
       vscode.EndOfLine.CRLF,
       'the fixture must load as a CRLF document for this test to mean anything'
     )
-    assert.strictEqual(editor.document.lineAt(8).text, '- [ ] First task')
+    assert.strictEqual(editor.document.lineAt(8).text, '- [ ] @task First task')
 
     await vscode.commands.executeCommand('knote.cycleTaskStatus')
 
-    await waitFor(() => editor.document.lineAt(8).text.startsWith('- [r] First task'), {
+    await waitFor(() => editor.document.lineAt(8).text.startsWith('- [r] @task First task'), {
       message: 'buffer status char to become "r"'
     })
-    await waitFor(async () => (await readNoteOnDisk(NOTE)).includes('- [r] First task'), {
+    await waitFor(async () => (await readNoteOnDisk(NOTE)).includes('- [r] @task First task'), {
       message: 'disk to reflect the "r" status'
     })
 
@@ -88,11 +88,11 @@ describe('notes with CRLF line endings', () => {
       cursor = found + 1
     }
     assert.ok(
-      after.some((l) => l.startsWith('- [r] First task')),
+      after.some((l) => l.startsWith('- [r] @task First task')),
       `the task line must be updated, got: ${JSON.stringify(after)}`
     )
     assert.ok(
-      !after.some((l) => l.startsWith('- [ ] First task')),
+      !after.some((l) => l.startsWith('- [ ] @task First task')),
       'the old task line should be gone'
     )
   })

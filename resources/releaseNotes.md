@@ -3,6 +3,46 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 2.12.0
+
+- **Tasks are now marked with `@task`, not by how far they're indented.**
+  A checkbox becomes a Kanban card only when it carries `@task` right after
+  the checkbox — `- [ ] @task Ship it 📅 2026-09-20` — and it does so at
+  **any** indentation, so a task can finally live under a bullet of prose or
+  inside a nested list. A checkbox *without* the marker is a plain toggle,
+  however flush-left it sits. Everything indented under a task belongs to it,
+  up to the next `@task` line, which is a card in its own right.
+
+  **Run KNote: Convert Legacy Tasks to @task first.** Until you do, your
+  board and Planner will look empty: nothing in the vault carries the marker
+  yet. The command adds it to exactly the lines the old indentation rule
+  made cards, leaves indented sub-checkboxes (and anything inside a fenced
+  code block) alone, shows you the list before writing, and is safe to run
+  again.
+
+- **A task can be indented as deeply as you like** — under a bullet, a
+  heading, or plain prose, spaces or tabs. Four spaces outside a list is an
+  indented code block as far as Markdown is concerned, and KNote used to blank
+  those lines out of its index, which quietly made a deeply indented task
+  disappear. KNote now treats code as code only when it is **fenced**, so
+  indentation is free to mean what it means everywhere else here: everything
+  indented more than a task belongs to that task. (One consequence: `#tags`
+  and `[[links]]` inside an *indented* code block are now indexed — put code
+  in a ```` ``` ```` fence to keep it out.)
+- `Ctrl+Alt+T` toggles the marker on the cursor line — promote a checkbox to
+  a card or demote it back. **Insert ▸ Task** inserts a fresh one, and the
+  right-click **Insert** menu now offers Task and Checkbox separately.
+- A task's checkbox is drawn heavier and squarer than a plain checkbox, so
+  the two are told apart at a glance even in a vault with no columns
+  configured.
+- `Ctrl+L` / **KNote: Set Task Status…** now decline to run on an unmarked
+  checkbox rather than stamping `Status Changed` under a line the board
+  never shows.
+- The `@task` marker is hidden in Live Preview and stripped from note
+  embeds, hover previews and the Markdown preview, so it never shows up as
+  noise in a rendered note. It reappears as raw text only when your cursor
+  is on the line, like `📅` and `^anchors`.
+
 ## 2.11.0
 
 - **A vault can span several folders.** Add another folder to the workspace

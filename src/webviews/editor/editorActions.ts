@@ -96,9 +96,14 @@ function insertBlock(view: EditorView, text: string, select?: { from: number; to
 
 // ---------- Menu actions ----------
 
-/** Insert a fresh `- [ ] ` checkbox line at the caret. */
+/** Insert a fresh plain `- [ ] ` checkbox line at the caret — a toggle, not a card. */
 export function insertCheckbox(view: EditorView): void {
   insertBlock(view, '- [ ] ')
+}
+
+/** Insert a fresh `- [ ] @task ` line at the caret — a Kanban card that owns what follows it. */
+export function insertTask(view: EditorView): void {
+  insertBlock(view, '- [ ] @task ')
 }
 
 /** Insert an empty fenced code block, caret placed on the language token. */
