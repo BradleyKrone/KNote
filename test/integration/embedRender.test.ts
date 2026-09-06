@@ -34,7 +34,7 @@ const TARGET_CONTENT = [
   '',
   'section one body',
   '',
-  '- [ ] a task ^task1',
+  '- [ ] @task a task ^task1',
   '  - Notes: task detail',
   '',
   '## Section Two',

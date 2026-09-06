@@ -136,6 +136,32 @@ export async function replaceLine(
   await applyAndMaybeSave(doc, edit)
 }
 
+/**
+ * Several verified single-line rewrites in one edit — the bulk counterpart to
+ * `replaceLine`, and the same open-buffer / on-disk split.
+ *
+ * All-or-nothing: every expectation is located before anything is applied. On
+ * an open buffer that also makes it a single `WorkspaceEdit`, so a vault-wide
+ * rewrite is one undo step per note rather than one per line.
+ */
+export async function replaceLines(
+  rel: VaultPath,
+  edits: Array<{ line: number; expected: string; next: string }>
+): Promise<void> {
+  if (edits.length === 0) return
+  const doc = openDocFor(rel)
+  if (!doc) {
+    await lineEdit.replaceLines(rel, edits)
+    void vaultIndex.indexFile(rel)
+    return
+  }
+  const targets = edits.map((e) => locateLine(doc, e.line, e.expected))
+  if (targets.some((t) => t === -1)) throw stale(rel)
+  const edit = new vscode.WorkspaceEdit()
+  targets.forEach((t, i) => edit.replace(doc.uri, doc.lineAt(t).range, edits[i].next))
+  await applyAndMaybeSave(doc, edit)
+}
+
 export async function setTaskStatusMeta(
   rel: VaultPath,
   lineNo: number,

@@ -13,25 +13,25 @@ describe('knote.cycleTaskStatus', () => {
   })
 
   it('advances a To Do task to the next column char and persists it', async () => {
-    // Sample.md line 8 (0-based) is "- [ ] First task".
+    // Sample.md line 8 (0-based) is "- [ ] @task First task".
     const editor = await openNoteAtLine('Sample.md', 8)
-    assert.strictEqual(editor.document.lineAt(8).text, '- [ ] First task')
+    assert.strictEqual(editor.document.lineAt(8).text, '- [ ] @task First task')
 
     await vscode.commands.executeCommand('knote.cycleTaskStatus')
 
     // To Do (' ') -> Ready to Work ('r') per the fixture's column config.
-    await waitFor(() => editor.document.lineAt(8).text.startsWith('- [r] First task'), {
+    await waitFor(() => editor.document.lineAt(8).text.startsWith('- [r] @task First task'), {
       message: 'buffer status char to become "r"'
     })
 
     // The doc was clean, so the verified edit auto-saves — disk must agree.
-    await waitFor(async () => (await readNoteOnDisk('Sample.md')).includes('- [r] First task'), {
+    await waitFor(async () => (await readNoteOnDisk('Sample.md')).includes('- [r] @task First task'), {
       message: 'disk to reflect the "r" status'
     })
     const onDisk = await readNoteOnDisk('Sample.md')
     assert.ok(
-      !onDisk.includes('- [ ] First task'),
-      'the old "- [ ] First task" line should be gone from disk'
+      !onDisk.includes('- [ ] @task First task'),
+      'the old "- [ ] @task First task" line should be gone from disk'
     )
   })
 

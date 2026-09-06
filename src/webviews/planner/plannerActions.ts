@@ -9,6 +9,8 @@ import {
   deliverableRefMarker,
   slugify
 } from '@shared/deliverables'
+import { TASK_MARKER } from '@shared/parser/patterns'
+import { taskChildIndent } from '@shared/parser/taskNoteBody'
 import { host } from '../shared/rpc'
 import { showToast } from '../shared/stores'
 import { addDependency, removeDependency, setDeliverableDates } from '../shared/taskMeta'
@@ -212,7 +214,13 @@ export function deliverableLine(
   end: string
 ): { line: string; tag: string } {
   const tag = `deliverable/${projectSlugValue}/${slugify(name)}`
-  return { line: `- [ ] ${name} 🛫 ${start} 📅 ${end} ${deliverableRefMarker(tag)}`, tag }
+  // `@task`, because only a task line can *define* a deliverable — see
+  // `claimableDeliverableTag`. Without the marker the new deliverable would
+  // never be elected and the bar would never appear on the chart.
+  return {
+    line: `- [ ] ${TASK_MARKER} ${name} 🛫 ${start} 📅 ${end} ${deliverableRefMarker(tag)}`,
+    tag
+  }
 }
 
 export async function addDeliverable(
@@ -229,12 +237,18 @@ export async function addDeliverable(
 /**
  * Add a task under its deliverable. Anchored on the deliverable's own line —
  * whose exact text we hold — so it's one verified call with no read-then-write
- * race, and the task lands indented as a subtask of the deliverable.
+ * race, and the task lands inside the deliverable's own block.
+ *
+ * Deliberately a plain checkbox, with no `@task`: this is a *member* of the
+ * deliverable (it counts toward progress and shows on the chart), not a Kanban
+ * card of its own. It used to be hard-indented four spaces to force that,
+ * back when indentation was what decided; now the marker decides, so the
+ * indent is free to follow the deliverable's own nesting instead.
  */
 export async function addTask(d: PlannerDeliverable, text: string): Promise<void> {
+  const line = `${taskChildIndent(d.rawLine)}- [ ] ${text} ${deliverableRefMarker(d.id)}`
   await guarded(
-    () =>
-      host.insertLine(d.path, d.line, d.rawLine, `    - [ ] ${text} ${deliverableRefMarker(d.id)}`),
+    () => host.insertLine(d.path, d.line, d.rawLine, line),
     'Deliverable changed on disk — planner refreshed'
   )
 }

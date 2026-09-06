@@ -20,7 +20,7 @@ const NOTE = 'WaitingReason.md'
 const FOLLOW_UP = '2026-08-04'
 const SEED =
   '# Waiting\n\n' +
-  '- [w] Waiting task\n' +
+  '- [w] @task Waiting task\n' +
   `  Reason for Waiting: vendor quoted 2 weeks ⏳ ${FOLLOW_UP}\n` +
   '  - Status Changed: 7/1/2026\n' +
   '  - Notes: keep this line\n'
@@ -36,15 +36,15 @@ describe('reason line cleared when a task leaves Waiting', () => {
   })
 
   it('drops the Reason line in the buffer and on disk, keeping the rest of the note', async () => {
-    // Line 2 (0-based) is "- [w] Waiting task".
+    // Line 2 (0-based) is "- [w] @task Waiting task".
     const editor = await openNoteAtLine(NOTE, 2)
-    assert.strictEqual(editor.document.lineAt(2).text, '- [w] Waiting task')
+    assert.strictEqual(editor.document.lineAt(2).text, '- [w] @task Waiting task')
 
     // Waiting -> In Progress per the fixture column order. Cycling *out* of a
     // require-reason column never prompts, so no showInputBox blocks the test.
     await vscode.commands.executeCommand('knote.cycleTaskStatus')
 
-    await waitFor(() => editor.document.lineAt(2).text === '- [/] Waiting task', {
+    await waitFor(() => editor.document.lineAt(2).text === '- [/] @task Waiting task', {
       message: 'buffer status char to become "/"'
     })
     await waitFor(() => !editor.document.getText().includes('Reason for Waiting:'), {
@@ -74,7 +74,7 @@ describe('reason line cleared when a task leaves Waiting', () => {
     })
     const onDisk = await readNoteOnDisk(NOTE)
     assert.ok(
-      onDisk.includes('- [/] Waiting task\n  - Status Changed:'),
+      onDisk.includes('- [/] @task Waiting task\n  - Status Changed:'),
       `unexpected note:\n${onDisk}`
     )
     assert.ok(onDisk.includes('  - Notes: keep this line'), `unexpected note:\n${onDisk}`)

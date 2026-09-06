@@ -21,8 +21,8 @@ function vault(aEnd: string, dep = true): Map<string, NoteMeta> {
     'project: p',
     '---',
     '',
-    `- [ ] A 🛫 2026-01-01 📅 ${aEnd} @deliverable(p/a)`,
-    `- [ ] B 🛫 2026-01-10 📅 2026-01-20 @deliverable(p/b)${dep ? ' ⛓ @deliverable(p/a)' : ''}`,
+    `- [ ] @task A 🛫 2026-01-01 📅 ${aEnd} @deliverable(p/a)`,
+    `- [ ] @task B 🛫 2026-01-10 📅 2026-01-20 @deliverable(p/b)${dep ? ' ⛓ @deliverable(p/a)' : ''}`,
     ''
   ].join('\n')
   return new Map([['Project.md', parseNote('Project.md', content)]])

@@ -28,7 +28,7 @@ describe('addCard', () => {
 
     const [, line] = appendToNote.mock.calls[0] as [string, string]
     const rows = line.split('\n')
-    expect(rows[0]).toBe('- [ ] task text')
+    expect(rows[0]).toBe('- [ ] @task task text')
     expect(rows[1]).toBe('  - Status Changed: n/a')
     expect(rows[2]).toMatch(/^ {2}- Date Entered: \d{1,2}\/\d{1,2}\/\d{4}$/)
     expect(rows).toHaveLength(3)
@@ -39,7 +39,7 @@ describe('addCard', () => {
 
     const [, line] = appendToNote.mock.calls[0] as [string, string]
     const rows = line.split('\n')
-    expect(rows.slice(0, 1)).toEqual(['- [ ] task'])
+    expect(rows.slice(0, 1)).toEqual(['- [ ] @task task'])
     expect(rows.slice(3)).toEqual(['  - first', '  - second'])
   })
 
@@ -54,7 +54,7 @@ describe('addCard', () => {
 
     const [, line] = appendToNote.mock.calls[0] as [string, string]
     const rows = line.split('\n')
-    expect(rows[0]).toBe('- [w] task')
+    expect(rows[0]).toBe('- [w] @task task')
     expect(rows[1]).toBe('  Reason for Waiting: blocked ⏳ 2026-08-18')
     expect(rows[2]).toBe('  - Status Changed: n/a')
     expect(rows[4]).toBe('  - note')
@@ -65,7 +65,7 @@ describe('addCard', () => {
 
     expect(appendToWeeklyNote).toHaveBeenCalled()
     const [line] = appendToWeeklyNote.mock.calls[0] as [string]
-    expect(line.split('\n')[0]).toBe('- [ ] task')
+    expect(line.split('\n')[0]).toBe('- [ ] @task task')
     expect(appendToNote).not.toHaveBeenCalled()
   })
 })

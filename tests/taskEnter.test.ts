@@ -16,21 +16,21 @@ function apply(doc: string, plan: { at: number; insert: string }): string {
 
 describe('planTaskNoteSeed', () => {
   it('seeds the template when Enter is pressed at the end of a top-level task', () => {
-    const doc = '- [ ] test'
+    const doc = '- [ ] @task test'
     const plan = planTaskNoteSeed(stateAt(doc), TODAY)
     expect(plan).not.toBeNull()
     expect(apply(doc, plan!)).toBe(
-      '- [ ] test\n  - Status Changed: n/a\n  - Date Entered: 7/16/2026\n  - Notes: '
+      '- [ ] @task test\n  - Status Changed: n/a\n  - Date Entered: 7/16/2026\n  - Notes: '
     )
   })
 
   it('works when the task is not the last line in the document', () => {
-    const doc = '- [ ] test\n## Notes'
-    const caret = '- [ ] test'.length
+    const doc = '- [ ] @task test\n## Notes'
+    const caret = '- [ ] @task test'.length
     const plan = planTaskNoteSeed(stateAt(doc, caret), TODAY)
     expect(plan).not.toBeNull()
     expect(apply(doc, plan!)).toBe(
-      '- [ ] test\n  - Status Changed: n/a\n  - Date Entered: 7/16/2026\n  - Notes: \n## Notes'
+      '- [ ] @task test\n  - Status Changed: n/a\n  - Date Entered: 7/16/2026\n  - Notes: \n## Notes'
     )
   })
 
@@ -39,7 +39,7 @@ describe('planTaskNoteSeed', () => {
   })
 
   it('ignores an empty checkbox', () => {
-    expect(planTaskNoteSeed(stateAt('- [ ] '), TODAY)).toBeNull()
+    expect(planTaskNoteSeed(stateAt('- [ ] @task '), TODAY)).toBeNull()
   })
 
   it('ignores a nested (indented) task', () => {
@@ -47,46 +47,47 @@ describe('planTaskNoteSeed', () => {
   })
 
   it('does not re-seed a task that already has a Date Entered line', () => {
-    const doc = '- [ ] test\n  - Status Changed: n/a\n  - Date Entered: 7/13/2026\n  - Notes: '
-    const caret = '- [ ] test'.length
+    const doc =
+      '- [ ] @task test\n  - Status Changed: n/a\n  - Date Entered: 7/13/2026\n  - Notes: '
+    const caret = '- [ ] @task test'.length
     expect(planTaskNoteSeed(stateAt(doc, caret), TODAY)).toBeNull()
   })
 
   it('anchors below an existing Status Changed line, without a second one', () => {
-    const doc = '- [ ] test\n  - Status Changed: 7/13/2026'
-    const caret = '- [ ] test'.length
+    const doc = '- [ ] @task test\n  - Status Changed: 7/13/2026'
+    const caret = '- [ ] @task test'.length
     const plan = planTaskNoteSeed(stateAt(doc, caret), TODAY)
     expect(plan).not.toBeNull()
     expect(apply(doc, plan!)).toBe(
-      '- [ ] test\n  - Status Changed: 7/13/2026\n  - Date Entered: 7/16/2026\n  - Notes: '
+      '- [ ] @task test\n  - Status Changed: 7/13/2026\n  - Date Entered: 7/16/2026\n  - Notes: '
     )
   })
 
   it('does not fire when the caret is mid-line', () => {
-    expect(planTaskNoteSeed(stateAt('- [ ] test', 3), TODAY)).toBeNull()
+    expect(planTaskNoteSeed(stateAt('- [ ] @task test', 3), TODAY)).toBeNull()
   })
 
   it('still seeds when only whitespace follows the caret', () => {
-    const doc = '- [ ] test  '
-    const caret = '- [ ] test'.length // caret before the two trailing spaces
+    const doc = '- [ ] @task test  '
+    const caret = '- [ ] @task test'.length // caret before the two trailing spaces
     expect(planTaskNoteSeed(stateAt(doc, caret), TODAY)).not.toBeNull()
   })
 
   it('marks the task line end for a ^block-id anchor on a fresh task', () => {
-    const doc = '- [ ] test'
+    const doc = '- [ ] @task test'
     const plan = planTaskNoteSeed(stateAt(doc), TODAY)
     expect(plan!.anchorAt).toBe(doc.length) // end of the task line
   })
 
   it('does not re-anchor a task that already has a ^block-id', () => {
-    const doc = '- [ ] test ^abc123'
+    const doc = '- [ ] @task test ^abc123'
     const plan = planTaskNoteSeed(stateAt(doc), TODAY)
     expect(plan).not.toBeNull() // still seeds the note block
     expect(plan!.anchorAt).toBeNull()
   })
 
   it('builds the template with the given line break (CRLF)', () => {
-    const doc = '- [ ] test'
+    const doc = '- [ ] @task test'
     const plan = planTaskNoteSeed(stateAt(doc), TODAY, '\r\n')
     expect(plan!.insert).toBe(
       '\r\n  - Status Changed: n/a\r\n  - Date Entered: 7/16/2026\r\n  - Notes: '

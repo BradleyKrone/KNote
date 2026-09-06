@@ -65,7 +65,7 @@ recommendations.
 | **Link** | A `[[wiki-link]]`-style reference from one note to another. |
 | **Tag** | A `#tag` written anywhere in a note's content or frontmatter. |
 | **Frontmatter** | YAML metadata block at the top of a note (`--- ... ---`). |
-| **Task** | A Markdown checkbox line (`- [ ] text` or `- [x] text`) inside any note. |
+| **Task** | A Markdown checkbox line carrying the `@task` marker (`- [ ] @task text`) inside any note, at any indent. A checkbox without the marker is a plain toggle, not a task. |
 | **Board** | A Kanban board, either a single implicit global board or a note-scoped board (see §6). |
 
 ## 5. Feature Requirements — Core Note-Taking (Obsidian Parity)
@@ -155,10 +155,16 @@ recommendations.
 This is KNote's signature addition beyond Obsidian.
 
 ### 6.1 Task Discovery
-- KNote scans the vault for Markdown checkbox lines: `- [ ] ...` and
-  `- [x] ...` (also nested/indented checkboxes), in **every** note.
-- Each discovered checkbox line becomes a **task item**, carrying:
-  - task text (the content after `[ ]`/`[x]`)
+- KNote scans the vault for Markdown checkbox lines carrying the `@task`
+  marker directly after the checkbox — `- [ ] @task ...`, `- [x] @task ...` —
+  in **every** note, at **any** indentation.
+- A checkbox *without* the marker is not a task: it's a plain toggle, and it
+  belongs to whichever `@task` line it is indented under. Indentation decides
+  ownership; the marker decides task-ness. (Vaults written before this rule
+  used indentation for both, so a checkbox with no shallower checkbox above it
+  was a task — **KNote: Convert Legacy Tasks to @task** migrates them.)
+- Each discovered task line becomes a **task item**, carrying:
+  - task text (the content after the `@task` marker, which is stripped out)
   - completion state (checked/unchecked)
   - source note path and line number (so the task can be located and
     updated in the original file)
@@ -263,7 +269,8 @@ This is KNote's signature addition beyond Obsidian.
       against a multi-note test vault.
 - [ ] Tags and frontmatter are parsed and browsable.
 - [ ] Full-text search returns correct, ranked results with operators.
-- [ ] Any checkbox line in any note appears as a card on the Kanban board.
+- [ ] Any `@task` line in any note, at any indent, appears as a card on the
+      Kanban board; an unmarked checkbox never does.
 - [ ] Dragging a card to a different column updates the correct line in
       the correct source file, and only that line.
 - [ ] Toggling a checkbox in the editor updates the board without a manual

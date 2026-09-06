@@ -111,8 +111,8 @@ describe('liveDeliverables', () => {
           'type: project',
           'project: govalle',
           '---',
-          '- [ ] Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design',
-          '- [ ] no span, not scheduled #deliverable/govalle/notreally',
+          '- [ ] @task Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design',
+          '- [ ] @task no span, not scheduled #deliverable/govalle/notreally',
           ''
         ].join('\n')
       )
@@ -121,7 +121,7 @@ describe('liveDeliverables', () => {
       'Old.md',
       parseNote(
         'Old.md',
-        '---\ntype: project\nproject: old\nstatus: completed\n---\n- [ ] A 📅 2026-02-01 #deliverable/old/a\n'
+        '---\ntype: project\nproject: old\nstatus: completed\n---\n- [ ] @task A 📅 2026-02-01 #deliverable/old/a\n'
       )
     )
     return notes
@@ -160,8 +160,8 @@ describe('liveDeliverables', () => {
           'type: project',
           'project: govalle',
           '---',
-          '- [x] Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design',
-          '- [ ] Build 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/build',
+          '- [x] @task Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/design',
+          '- [ ] @task Build 🛫 2026-04-01 📅 2026-04-20 #deliverable/govalle/build',
           ''
         ].join('\n')
       )
@@ -182,7 +182,7 @@ describe('liveDeliverables', () => {
           'type: project',
           'project: newstyle',
           '---',
-          '- [ ] Build 🛫 2026-05-01 📅 2026-05-20 @deliverable(newstyle/build)',
+          '- [ ] @task Build 🛫 2026-05-01 📅 2026-05-20 @deliverable(newstyle/build)',
           ''
         ].join('\n')
       )
@@ -212,8 +212,8 @@ describe('liveDeliverables', () => {
           'type: project',
           'project: pre-season-2026',
           '---',
-          '- [ ] fun stuff 🛫 2026-07-24 📅 2026-08-14 @deliverable(pre-season-2026/fun-stuff)',
-          '- [ ] do stuff @deliverable(pre-season-2026/fun-stuff)',
+          '- [ ] @task fun stuff 🛫 2026-07-24 📅 2026-08-14 @deliverable(pre-season-2026/fun-stuff)',
+          '- [ ] @task do stuff @deliverable(pre-season-2026/fun-stuff)',
           ''
         ].join('\n')
       )
@@ -241,9 +241,9 @@ describe('deliverableProgress', () => {
           'type: project',
           'project: govalle',
           '---',
-          '- [ ] Design 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/design)',
-          '- [ ] Permits 📅 2026-05-01 @deliverable(govalle/permits)',
-          '- [ ] task 1 @deliverable(govalle/design)',
+          '- [ ] @task Design 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/design)',
+          '- [ ] @task Permits 📅 2026-05-01 @deliverable(govalle/permits)',
+          '- [ ] @task task 1 @deliverable(govalle/design)',
           ''
         ].join('\n')
       )
@@ -253,8 +253,8 @@ describe('deliverableProgress', () => {
       parseNote(
         'Elsewhere.md',
         [
-          '- [x] Sketch layout @deliverable(govalle/design)',
-          '- [ ] Pick materials @deliverable(govalle/design)',
+          '- [x] @task Sketch layout @deliverable(govalle/design)',
+          '- [ ] @task Pick materials @deliverable(govalle/design)',
           '  - [x] Subtask, still counts @deliverable(govalle/design)',
           ''
         ].join('\n')
@@ -297,15 +297,15 @@ describe('overdueDeliverables', () => {
         'project: govalle',
         '---',
         // Past due, unfinished members — overdue.
-        '- [ ] Design 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/design)',
+        '- [ ] @task Design 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/design)',
         // Past due, every member done — not overdue.
-        '- [ ] Permits 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/permits)',
+        '- [ ] @task Permits 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/permits)',
         // Past due, no members, own checkbox unchecked — overdue.
-        '- [ ] Signage 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/signage)',
+        '- [ ] @task Signage 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/signage)',
         // Past due, no members, own checkbox checked — not overdue.
-        '- [x] Survey 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/survey)',
+        '- [x] @task Survey 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/survey)',
         // Not yet due — not overdue regardless of completion.
-        '- [ ] Landscaping 🛫 2026-04-01 📅 2099-01-01 @deliverable(govalle/landscaping)',
+        '- [ ] @task Landscaping 🛫 2026-04-01 📅 2099-01-01 @deliverable(govalle/landscaping)',
         ''
       ].join('\n')
     )
@@ -315,8 +315,8 @@ describe('overdueDeliverables', () => {
     parseNote(
       'Work.md',
       [
-        '- [ ] design task @deliverable(govalle/design)',
-        '- [x] permits task @deliverable(govalle/permits)',
+        '- [ ] @task design task @deliverable(govalle/design)',
+        '- [x] @task permits task @deliverable(govalle/permits)',
         ''
       ].join('\n')
     )
@@ -356,11 +356,11 @@ describe('deliverableDefinitions — electing the defining line', () => {
   }
 
   const DEFINITION =
-    '- [ ] MTP & MG QSM planning meeting @deliverable(doze-assist/mtp-mg-qsm-planning-meeting) 🛫 2026-08-12 📅 2026-08-27'
+    '- [ ] @task MTP & MG QSM planning meeting @deliverable(doze-assist/mtp-mg-qsm-planning-meeting) 🛫 2026-08-12 📅 2026-08-27'
   // A member task that happens to be top-level, in the project note, and dated —
   // structurally indistinguishable from a definition until one is elected.
   const MEMBER =
-    '- [w] Doze Assist Video 📅 2026-08-14 #Doze_Assist @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)'
+    '- [w] @task Doze Assist Video 📅 2026-08-14 #Doze_Assist @deliverable(doze-assist/mtp-mg-qsm-planning-meeting)'
   const TAG = 'deliverable/doze-assist/mtp-mg-qsm-planning-meeting'
 
   it('does not let a dated member task in the project note redefine the window', () => {
@@ -405,8 +405,8 @@ describe('deliverableDefinitions — electing the defining line', () => {
     // still matches a line reading "Brandon Reed Demo".
     const windows = deliverableWindows(
       project(
-        '- [x] Brandon Reed Demo #deliverable/doze-assist/Brandon_Reed_Demo 🛫 2026-08-03 📅 2026-08-10',
-        '- [x] Move Doze Assist Machine RDC09991 📅 2026-08-20 #deliverable/doze-assist/Brandon_Reed_Demo'
+        '- [x] @task Brandon Reed Demo #deliverable/doze-assist/Brandon_Reed_Demo 🛫 2026-08-03 📅 2026-08-10',
+        '- [x] @task Move Doze Assist Machine RDC09991 📅 2026-08-20 #deliverable/doze-assist/Brandon_Reed_Demo'
       )
     )
     expect(windows.get('deliverable/doze-assist/Brandon_Reed_Demo')).toEqual({
@@ -422,8 +422,8 @@ describe('deliverableDefinitions — electing the defining line', () => {
     // than the deliverable losing its bar.
     const windows = deliverableWindows(
       project(
-        '- [ ] Renamed since 🛫 2026-08-12 📅 2026-08-27 @deliverable(doze-assist/tech-demo-2026)',
-        '- [ ] a member 📅 2026-08-14 @deliverable(doze-assist/tech-demo-2026)'
+        '- [ ] @task Renamed since 🛫 2026-08-12 📅 2026-08-27 @deliverable(doze-assist/tech-demo-2026)',
+        '- [ ] @task a member 📅 2026-08-14 @deliverable(doze-assist/tech-demo-2026)'
       )
     )
     expect(windows.get('deliverable/doze-assist/tech-demo-2026')).toEqual({
@@ -437,7 +437,7 @@ describe('deliverableDefinitions — electing the defining line', () => {
     // Nobody else claims the tag, so this line is the definition — a deliverable
     // is never dropped just because its line does not look canonical.
     const windows = deliverableWindows(
-      project('- [ ] Some work 📅 2026-08-14 @deliverable(doze-assist/orphan)')
+      project('- [ ] @task Some work 📅 2026-08-14 @deliverable(doze-assist/orphan)')
     )
     expect(windows.get('deliverable/doze-assist/orphan')).toEqual({
       start: '2026-08-14',
@@ -450,16 +450,29 @@ describe('deliverableDefinitions — electing the defining line', () => {
     // A dated top-level task in doze-assist's note joining govalle/design must
     // not define govalle's schedule from here.
     const windows = deliverableWindows(
-      project('- [ ] borrowed 📅 2026-08-14 @deliverable(govalle/design)')
+      project('- [ ] @task borrowed 📅 2026-08-14 @deliverable(govalle/design)')
     )
     expect(windows.has('deliverable/govalle/design')).toBe(false)
   })
 
-  it('never elects a subtask, however well it matches', () => {
+  it('never elects an unmarked checkbox, however well it matches', () => {
     const windows = deliverableWindows(
-      project('- [ ] Parent', '  - [ ] Design 📅 2026-08-14 @deliverable(doze-assist/design)')
+      project('- [ ] @task Parent', '  - [ ] Design 📅 2026-08-14 @deliverable(doze-assist/design)')
     )
     expect(windows.has('deliverable/doze-assist/design')).toBe(false)
+  })
+
+  it('elects an indented @task line — a deliverable no longer has to be flush left', () => {
+    const windows = deliverableWindows(
+      project(
+        '- Phase one',
+        '  - [ ] @task Design 🛫 2026-08-01 📅 2026-08-14 @deliverable(doze-assist/design)'
+      )
+    )
+    expect(windows.get('deliverable/doze-assist/design')).toMatchObject({
+      start: '2026-08-01',
+      end: '2026-08-14'
+    })
   })
 })
 
@@ -474,8 +487,8 @@ describe('definingDeliverableLines', () => {
         'type: project',
         'project: doze-assist',
         '---',
-        '- [ ] Tech Demo 2026 🛫 2026-09-14 📅 2026-09-20 @deliverable(doze-assist/tech-demo-2026)',
-        '- [ ] Doze Assist Video 📅 2026-08-14 @deliverable(doze-assist/tech-demo-2026)',
+        '- [ ] @task Tech Demo 2026 🛫 2026-09-14 📅 2026-09-20 @deliverable(doze-assist/tech-demo-2026)',
+        '- [ ] @task Doze Assist Video 📅 2026-08-14 @deliverable(doze-assist/tech-demo-2026)',
         ''
       ].join('\n')
     )
@@ -492,7 +505,9 @@ describe('definingDeliverableLines', () => {
   })
 
   it('is empty for a note that is not a project', () => {
-    expect(definingDeliverableLines(parseNote('Plain.md', '- [ ] x 📅 2026-08-14\n')).size).toBe(0)
+    expect(
+      definingDeliverableLines(parseNote('Plain.md', '- [ ] @task x 📅 2026-08-14\n')).size
+    ).toBe(0)
   })
 
   it('is empty for no note at all', () => {

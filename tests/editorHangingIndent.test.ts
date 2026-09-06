@@ -44,13 +44,13 @@ describe('hangingIndentEm', () => {
   })
 
   it('accounts for the checkbox widget on a task line', () => {
-    const task = hangingIndentEm('- [ ] do the thing') as number
+    const task = hangingIndentEm('- [ ] @task do the thing') as number
     expect(task).toBeCloseTo(DASH + SPACE + CHECKBOX + SPACE, 3)
     // A task keeps its literal `-`, so it is not the bullet width.
     expect(task).toBeGreaterThan(hangingIndentEm('- do the thing') as number)
     // Every status char, and a deeper subtask, are the same shape.
-    expect(hangingIndentEm('- [x] done')).toEqual(task)
-    expect(hangingIndentEm('- [a] archived')).toEqual(task)
+    expect(hangingIndentEm('- [x] @task done')).toEqual(task)
+    expect(hangingIndentEm('- [a] @task archived')).toEqual(task)
     expect((hangingIndentEm('  - [ ] subtask') as number) - task).toBeCloseTo(2 * SPACE, 3)
   })
 

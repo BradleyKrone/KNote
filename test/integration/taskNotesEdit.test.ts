@@ -18,22 +18,22 @@ import * as vscode from 'vscode'
 
 const SEED =
   '# Notes\n\n' +
-  '- [ ] First task\n' +
+  '- [ ] @task First task\n' +
   '  - Status Changed: 7/14/2026\n' +
   '  - Date Entered: 7/1/2026\n' +
   '  - Notes: original text\n' +
-  '- [ ] Second task\n'
+  '- [ ] @task Second task\n'
 
 /** A task whose block holds two sub-tasks with stamps of their own. */
 const SUBTASKS =
   '# Sub\n\n' +
-  '- [ ] Parent\n' +
+  '- [ ] @task Parent\n' +
   '  - Status Changed: 7/14/2026\n' +
   '  - Notes: parent note\n' +
   '  - [ ] Order seals\n' +
   '    - Status Changed: 7/2/2026\n' +
   '  - [ ] Press bearings\n' +
-  '- [ ] Sibling\n'
+  '- [ ] @task Sibling\n'
 
 /** Drive the board's save through the uncontributed command the harness can reach. */
 async function save(
@@ -70,9 +70,9 @@ describe('board task editor: task text + note block in one verified edit', () =>
     const NOTE = 'TaskNotesBuffer.md'
     await writeNoteOnDisk(NOTE, SEED)
     const editor = await openNoteAtLine(NOTE, 2)
-    assert.strictEqual(editor.document.lineAt(2).text, '- [ ] First task')
+    assert.strictEqual(editor.document.lineAt(2).text, '- [ ] @task First task')
 
-    await save(NOTE, 2, '- [ ] First task', '- [ ] First task', ['  - Notes: rewritten'])
+    await save(NOTE, 2, '- [ ] @task First task', '- [ ] @task First task', ['  - Notes: rewritten'])
 
     await waitFor(() => editor.document.lineAt(5).text === '  - Notes: rewritten', {
       message: 'the note body to be rewritten in the buffer'
@@ -80,7 +80,7 @@ describe('board task editor: task text + note block in one verified edit', () =>
     const text = editor.document.getText()
     assert.ok(text.includes('  - Status Changed: 7/14/2026'), 'Status Changed must survive')
     assert.ok(text.includes('  - Date Entered: 7/1/2026'), 'Date Entered must survive')
-    assert.ok(text.includes('- [ ] Second task'), 'the sibling task must be untouched')
+    assert.ok(text.includes('- [ ] @task Second task'), 'the sibling task must be untouched')
     assert.ok(!text.includes('original text'), 'the old body must be gone')
 
     await waitFor(async () => (await readNoteOnDisk(NOTE)).includes('- Notes: rewritten'), {
@@ -96,9 +96,9 @@ describe('board task editor: task text + note block in one verified edit', () =>
     const editor = await openNoteAtLine(NOTE, 2)
     const before = editor.document.getText()
 
-    await save(NOTE, 2, '- [ ] First task', '- [ ] Renamed task #tag', ['  - Notes: also changed'])
+    await save(NOTE, 2, '- [ ] @task First task', '- [ ] @task Renamed task #tag', ['  - Notes: also changed'])
 
-    await waitFor(() => editor.document.lineAt(2).text === '- [ ] Renamed task #tag', {
+    await waitFor(() => editor.document.lineAt(2).text === '- [ ] @task Renamed task #tag', {
       message: 'the task line to be rewritten'
     })
     assert.strictEqual(editor.document.lineAt(5).text, '  - Notes: also changed')
@@ -121,8 +121,8 @@ describe('board task editor: task text + note block in one verified edit', () =>
     await save(
       NOTE,
       2,
-      '- [ ] First task',
-      '- [w] First task',
+      '- [ ] @task First task',
+      '- [w] @task First task',
       ['  - Notes: original text'],
       undefined,
       {
@@ -131,7 +131,7 @@ describe('board task editor: task text + note block in one verified edit', () =>
       }
     )
 
-    await waitFor(() => editor.document.lineAt(2).text === '- [w] First task', {
+    await waitFor(() => editor.document.lineAt(2).text === '- [w] @task First task', {
       message: 'the status char to change in the buffer'
     })
     assert.strictEqual(
@@ -155,22 +155,22 @@ describe('board task editor: task text + note block in one verified edit', () =>
     const NOTE = 'TaskNotesStatusOut.md'
     await writeNoteOnDisk(
       NOTE,
-      '# Out\n\n- [w] Parked\n  - Reason for Waiting: parts 📅 2026-09-01\n' +
-        '  - Status Changed: 7/14/2026\n  - Notes: keep me\n- [ ] Next\n'
+      '# Out\n\n- [w] @task Parked\n  - Reason for Waiting: parts 📅 2026-09-01\n' +
+        '  - Status Changed: 7/14/2026\n  - Notes: keep me\n- [ ] @task Next\n'
     )
     const editor = await openNoteAtLine(NOTE, 2)
 
-    await save(NOTE, 2, '- [w] Parked', '- [x] Parked', ['  - Notes: keep me'], undefined, {
+    await save(NOTE, 2, '- [w] @task Parked', '- [x] @task Parked', ['  - Notes: keep me'], undefined, {
       reasonLine: null,
       statusChangedLine: '  - Status Changed: 8/19/2026'
     })
 
-    await waitFor(() => editor.document.lineAt(2).text === '- [x] Parked', {
+    await waitFor(() => editor.document.lineAt(2).text === '- [x] @task Parked', {
       message: 'the status char to change in the buffer'
     })
     assert.strictEqual(editor.document.lineAt(3).text, '  - Status Changed: 8/19/2026')
     assert.strictEqual(editor.document.lineAt(4).text, '  - Notes: keep me')
-    assert.strictEqual(editor.document.lineAt(5).text, '- [ ] Next')
+    assert.strictEqual(editor.document.lineAt(5).text, '- [ ] @task Next')
     assert.ok(
       !editor.document.getText().includes('Reason for Waiting'),
       'the reason must not outlive the column it belongs to'
@@ -179,25 +179,25 @@ describe('board task editor: task text + note block in one verified edit', () =>
 
   it('adds a note block to a task that had none', async () => {
     const NOTE = 'TaskNotesFresh.md'
-    await writeNoteOnDisk(NOTE, '# Fresh\n\n- [ ] Bare task\n- [ ] Next\n')
+    await writeNoteOnDisk(NOTE, '# Fresh\n\n- [ ] @task Bare task\n- [ ] @task Next\n')
     const editor = await openNoteAtLine(NOTE, 2)
 
-    await save(NOTE, 2, '- [ ] Bare task', '- [ ] Bare task', ['  - Notes: brand new'])
+    await save(NOTE, 2, '- [ ] @task Bare task', '- [ ] @task Bare task', ['  - Notes: brand new'])
 
     await waitFor(() => editor.document.lineAt(3).text === '  - Notes: brand new', {
       message: 'the new note block to appear'
     })
-    assert.strictEqual(editor.document.lineAt(4).text, '- [ ] Next')
+    assert.strictEqual(editor.document.lineAt(4).text, '- [ ] @task Next')
   })
 
   it('clears a note block without stranding a blank line', async () => {
     const NOTE = 'TaskNotesCleared.md'
-    await writeNoteOnDisk(NOTE, '# Clear\n\n- [ ] Task\n  - Notes: goes away\n- [ ] Next\n')
+    await writeNoteOnDisk(NOTE, '# Clear\n\n- [ ] @task Task\n  - Notes: goes away\n- [ ] @task Next\n')
     const editor = await openNoteAtLine(NOTE, 2)
 
-    await save(NOTE, 2, '- [ ] Task', '- [ ] Task', [])
+    await save(NOTE, 2, '- [ ] @task Task', '- [ ] @task Task', [])
 
-    await waitFor(() => editor.document.lineAt(3).text === '- [ ] Next', {
+    await waitFor(() => editor.document.lineAt(3).text === '- [ ] @task Next', {
       message: 'the note block to be removed with no blank line left behind'
     })
     assert.ok(!editor.document.getText().includes('goes away'))
@@ -205,12 +205,12 @@ describe('board task editor: task text + note block in one verified edit', () =>
 
   it('handles a task on the last line of the file', async () => {
     const NOTE = 'TaskNotesEof.md'
-    await writeNoteOnDisk(NOTE, '# Eof\n\n- [ ] Last task\n')
+    await writeNoteOnDisk(NOTE, '# Eof\n\n- [ ] @task Last task\n')
     const editor = await openNoteAtLine(NOTE, 2)
 
-    await save(NOTE, 2, '- [ ] Last task', '- [ ] Last task!', ['  - Notes: at the end'])
+    await save(NOTE, 2, '- [ ] @task Last task', '- [ ] @task Last task!', ['  - Notes: at the end'])
 
-    await waitFor(() => editor.document.lineAt(2).text === '- [ ] Last task!', {
+    await waitFor(() => editor.document.lineAt(2).text === '- [ ] @task Last task!', {
       message: 'the trailing task line to be rewritten'
     })
     assert.strictEqual(editor.document.lineAt(3).text, '  - Notes: at the end')
@@ -220,21 +220,21 @@ describe('board task editor: task text + note block in one verified edit', () =>
     const NOTE = 'TaskNotesClosed.md'
     await writeNoteOnDisk(NOTE, SEED)
     // Never opened, so verifiedEdit takes the core/lineEdit path.
-    await save(NOTE, 2, '- [ ] First task', '- [ ] First task', ['  - Notes: written to disk'])
+    await save(NOTE, 2, '- [ ] @task First task', '- [ ] @task First task', ['  - Notes: written to disk'])
 
     await waitFor(async () => (await readNoteOnDisk(NOTE)).includes('- Notes: written to disk'), {
       message: 'the disk write to land'
     })
     const onDisk = await readNoteOnDisk(NOTE)
     assert.ok(onDisk.includes('  - Status Changed: 7/14/2026'))
-    assert.ok(onDisk.includes('- [ ] Second task'))
+    assert.ok(onDisk.includes('- [ ] @task Second task'))
   })
 
   it('keeps a CRLF note on CRLF', async () => {
     const NOTE = 'TaskNotesCrlf.md'
-    await writeNoteOnDisk(NOTE, '# CRLF\r\n\r\n- [ ] Task\r\n  - Notes: old\r\n- [ ] Next\r\n')
+    await writeNoteOnDisk(NOTE, '# CRLF\r\n\r\n- [ ] @task Task\r\n  - Notes: old\r\n- [ ] @task Next\r\n')
 
-    await save(NOTE, 2, '- [ ] Task', '- [ ] Task', ['  - Notes: new'])
+    await save(NOTE, 2, '- [ ] @task Task', '- [ ] @task Task', ['  - Notes: new'])
 
     await waitFor(async () => (await readNoteOnDisk(NOTE)).includes('- Notes: new'), {
       message: 'the CRLF disk write to land'
@@ -253,7 +253,7 @@ describe('board task editor: task text + note block in one verified edit', () =>
     const before = editor.document.getText()
 
     await assert.rejects(
-      () => save(NOTE, 2, '- [ ] A task that is not there', '- [ ] x', ['  - Notes: nope']),
+      () => save(NOTE, 2, '- [ ] @task A task that is not there', '- [ ] @task x', ['  - Notes: nope']),
       /KNOTE_STALE/
     )
     assert.strictEqual(editor.document.getText(), before)
@@ -275,7 +275,7 @@ describe('board task editor: task text + note block in one verified edit', () =>
 
     const rewritten = [...SUB_BLOCK]
     rewritten[1] = '  - [x] Order seals ✅ 2026-08-11'
-    await save(NOTE, 2, '- [ ] Parent', '- [ ] Parent', rewritten, SUB_BLOCK)
+    await save(NOTE, 2, '- [ ] @task Parent', '- [ ] @task Parent', rewritten, SUB_BLOCK)
 
     await waitFor(() => editor.document.lineAt(5).text === '  - [x] Order seals ✅ 2026-08-11', {
       message: 'the sub-task to be ticked in the buffer'
@@ -284,7 +284,7 @@ describe('board task editor: task text + note block in one verified edit', () =>
     assert.ok(text.includes('    - Status Changed: 7/2/2026'), 'the sub-task’s own stamp survives')
     assert.ok(text.includes('  - Status Changed: 7/14/2026'), 'the parent’s own stamp survives')
     assert.ok(text.includes('  - [ ] Press bearings'), 'the other sub-task survives')
-    assert.ok(text.includes('- [ ] Sibling'), 'the sibling task is untouched')
+    assert.ok(text.includes('- [ ] @task Sibling'), 'the sibling task is untouched')
 
     await waitFor(async () => (await readNoteOnDisk(NOTE)).includes('[x] Order seals'), {
       message: 'the subtree rewrite to reach disk'
@@ -300,12 +300,12 @@ describe('board task editor: task text + note block in one verified edit', () =>
     await save(
       NOTE,
       2,
-      '- [ ] Parent',
-      '- [ ] Parent rebuilt',
+      '- [ ] @task Parent',
+      '- [ ] @task Parent rebuilt',
       ['  - Notes: all new', '  - [x] Order seals', '    - Status Changed: 7/2/2026'],
       SUB_BLOCK
     )
-    await waitFor(() => editor.document.lineAt(2).text === '- [ ] Parent rebuilt', {
+    await waitFor(() => editor.document.lineAt(2).text === '- [ ] @task Parent rebuilt', {
       message: 'the subtree rewrite to land'
     })
 
@@ -320,9 +320,9 @@ describe('board task editor: task text + note block in one verified edit', () =>
     await writeNoteOnDisk(NOTE, SUBTASKS)
     const editor = await openNoteAtLine(NOTE, 2)
 
-    await save(NOTE, 2, '- [ ] Parent', '- [ ] Parent', ['  - Notes: parent note'], SUB_BLOCK)
+    await save(NOTE, 2, '- [ ] @task Parent', '- [ ] @task Parent', ['  - Notes: parent note'], SUB_BLOCK)
 
-    await waitFor(() => editor.document.lineAt(5).text === '- [ ] Sibling', {
+    await waitFor(() => editor.document.lineAt(5).text === '- [ ] @task Sibling', {
       message: 'the sub-tasks to be removed with no blank line left behind'
     })
     const text = editor.document.getText()
@@ -343,7 +343,7 @@ describe('board task editor: task text + note block in one verified edit', () =>
     const outOfDate = [...SUB_BLOCK]
     outOfDate[3] = '  - [ ] Press bearings — but this is not what is on disk'
     await assert.rejects(
-      () => save(NOTE, 2, '- [ ] Parent', '- [ ] Parent', ['  - Notes: nope'], outOfDate),
+      () => save(NOTE, 2, '- [ ] @task Parent', '- [ ] @task Parent', ['  - Notes: nope'], outOfDate),
       /KNOTE_STALE/
     )
     assert.strictEqual(editor.document.getText(), before)
@@ -351,14 +351,14 @@ describe('board task editor: task text + note block in one verified edit', () =>
 
   it('handles a subtree that runs to the end of the file', async () => {
     const NOTE = 'TaskNotesSubtreeEof.md'
-    await writeNoteOnDisk(NOTE, '# Eof\n\n- [ ] Parent\n  - [ ] Child\n    - deep note\n')
+    await writeNoteOnDisk(NOTE, '# Eof\n\n- [ ] @task Parent\n  - [ ] Child\n    - deep note\n')
     const editor = await openNoteAtLine(NOTE, 2)
 
     await save(
       NOTE,
       2,
-      '- [ ] Parent',
-      '- [ ] Parent!',
+      '- [ ] @task Parent',
+      '- [ ] @task Parent!',
       ['  - [x] Child', '    - deep note'],
       ['  - [ ] Child', '    - deep note']
     )
@@ -366,24 +366,24 @@ describe('board task editor: task text + note block in one verified edit', () =>
     await waitFor(() => editor.document.lineAt(3).text === '  - [x] Child', {
       message: 'the trailing subtree to be rewritten'
     })
-    assert.strictEqual(editor.document.lineAt(2).text, '- [ ] Parent!')
+    assert.strictEqual(editor.document.lineAt(2).text, '- [ ] @task Parent!')
     assert.strictEqual(editor.document.lineAt(4).text, '    - deep note')
   })
 
   it('round-trips a fenced code block inside the note', async () => {
     const NOTE = 'TaskNotesFence.md'
     const block = ['  - Notes: run this', '  ```sh', '  - [ ] not a task', '  echo hi', '  ```']
-    await writeNoteOnDisk(NOTE, `# Fence\n\n- [ ] Task\n${block.join('\n')}\n- [ ] Next\n`)
+    await writeNoteOnDisk(NOTE, `# Fence\n\n- [ ] @task Task\n${block.join('\n')}\n- [ ] @task Next\n`)
     const editor = await openNoteAtLine(NOTE, 2)
 
-    await save(NOTE, 2, '- [ ] Task', '- [ ] Task edited', block, block)
+    await save(NOTE, 2, '- [ ] @task Task', '- [ ] @task Task edited', block, block)
 
-    await waitFor(() => editor.document.lineAt(2).text === '- [ ] Task edited', {
+    await waitFor(() => editor.document.lineAt(2).text === '- [ ] @task Task edited', {
       message: 'the task line to be rewritten'
     })
     const text = editor.document.getText()
     assert.ok(text.includes('  - [ ] not a task'), 'the fenced fake checkbox survives verbatim')
-    assert.ok(text.includes('- [ ] Next'), 'the sibling task is untouched')
+    assert.ok(text.includes('- [ ] @task Next'), 'the sibling task is untouched')
     assert.strictEqual(text.match(/```/g)?.length, 2, 'the fence is not duplicated')
   })
 
@@ -394,8 +394,8 @@ describe('board task editor: task text + note block in one verified edit', () =>
     await save(
       NOTE,
       2,
-      '- [ ] Parent',
-      '- [ ] Parent',
+      '- [ ] @task Parent',
+      '- [ ] @task Parent',
       ['  - Notes: parent note', '  - [x] Order seals', '    - Status Changed: 7/2/2026'],
       SUB_BLOCK
     )
@@ -417,8 +417,8 @@ describe('board task editor: task text + note block in one verified edit', () =>
     await save(
       NOTE,
       2,
-      '- [ ] Parent',
-      '- [ ] Parent',
+      '- [ ] @task Parent',
+      '- [ ] @task Parent',
       ['  - Notes: parent note', '  - [ ] Order seals', '    - Status Changed: 7/2/2026'],
       SUB_BLOCK
     )
@@ -428,6 +428,6 @@ describe('board task editor: task text + note block in one verified edit', () =>
     })
     const onDisk = await readNoteOnDisk(NOTE)
     assert.ok(onDisk.includes('    - Status Changed: 7/2/2026'), 'the sub-task’s stamp survives')
-    assert.ok(onDisk.includes('- [ ] Sibling'), 'the sibling task is untouched')
+    assert.ok(onDisk.includes('- [ ] @task Sibling'), 'the sibling task is untouched')
   })
 })

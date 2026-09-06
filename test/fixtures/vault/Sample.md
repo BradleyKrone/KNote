@@ -6,9 +6,9 @@ title: Sample
 
 Some intro prose that links to [[Other Note]].
 
-- [ ] First task
-- [r] A task already marked ready
-- [x] A finished task
+- [ ] @task First task
+- [r] @task A task already marked ready
+- [x] @task A finished task
 
 ## Notes
 

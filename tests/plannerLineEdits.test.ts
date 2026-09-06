@@ -12,7 +12,7 @@ import { stripInlineMarkers } from '@shared/parser/patterns'
 // Every one of them has to survive a trailing ^block-id anchor, because an
 // anchor that isn't last stops being an anchor (see BLOCK_ID_RE).
 
-const LINE = '- [ ] Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/p/design'
+const LINE = '- [ ] @task Design 🛫 2026-04-01 📅 2026-04-20 #deliverable/p/design'
 
 describe('setStartDate', () => {
   it('adds, replaces and clears the 🛫 marker without duplicating it', () => {
@@ -30,7 +30,7 @@ describe('setStartDate', () => {
 describe('setDeliverableDates', () => {
   it('rewrites both dates in one pass, in canonical order', () => {
     expect(setDeliverableDates(LINE, '2026-04-06', '2026-04-25')).toBe(
-      '- [ ] Design #deliverable/p/design 🛫 2026-04-06 📅 2026-04-25'
+      '- [ ] @task Design #deliverable/p/design 🛫 2026-04-06 📅 2026-04-25'
     )
   })
 

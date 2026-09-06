@@ -40,6 +40,7 @@ import {
   setTaskDone,
   STATUS_CHANGED_RE,
   statusChangedLineForTask,
+  stripTaskMarker,
   TAG_RE,
   TASK_LINE_RE,
   WIKI_LINK_RE
@@ -47,7 +48,7 @@ import {
 import { host, on } from '../shared/rpc'
 import { promptReason, showToast, useConfigStore, useIndexStore } from '../shared/stores'
 import { checkboxRange } from './constructLogic'
-import { editorKind, isTopLevelTask } from './editorMode'
+import { editorKind, isBoardTask } from './editorMode'
 import { isNoteEmbedLine } from './embedLogic'
 import { hangingIndentEm } from './hangingIndent'
 import { isCollapsedMermaidFence } from './mermaidRender'
@@ -168,7 +169,7 @@ export async function setSubtaskChecked(
 class CheckboxWidget extends WidgetType {
   constructor(
     private readonly statusChar: string,
-    private readonly subtask: boolean,
+    private readonly isTask: boolean,
     private readonly line0: number,
     private readonly rawLine: string
   ) {
@@ -177,7 +178,7 @@ class CheckboxWidget extends WidgetType {
   eq(other: CheckboxWidget): boolean {
     return (
       other.statusChar === this.statusChar &&
-      other.subtask === this.subtask &&
+      other.isTask === this.isTask &&
       other.line0 === this.line0 &&
       other.rawLine === this.rawLine
     )
@@ -188,10 +189,15 @@ class CheckboxWidget extends WidgetType {
     box.dataset.status = this.statusChar
     const done = this.statusChar === 'x' || this.statusChar === 'X'
     box.textContent = done ? '✓' : this.statusChar.trim() === '' ? '' : this.statusChar
-    if (this.subtask) {
-      // Sub-tasks are plain toggles: a click flips checked/unchecked directly
-      // (no caret placement, no Kanban status). preventDefault on mousedown
-      // keeps the editor from stealing focus / moving the caret first.
+    if (this.isTask) {
+      // A card. Styled apart from a plain checkbox so it reads as one even in a
+      // note with no configured columns, where no state pill is drawn.
+      box.classList.add('cm-knote-check-task')
+      box.title = 'Right-click to change status'
+    } else {
+      // Plain checkboxes are plain toggles: a click flips checked/unchecked
+      // directly (no caret placement, no Kanban status). preventDefault on
+      // mousedown keeps the editor from stealing focus / moving the caret first.
       box.classList.add('cm-knote-check-subtask')
       box.title = 'Click to toggle'
       box.addEventListener('mousedown', (e) => e.preventDefault())
@@ -199,22 +205,20 @@ class CheckboxWidget extends WidgetType {
         e.preventDefault()
         void toggleSubtask(view, this.line0, this.rawLine)
       })
-    } else {
-      box.title = 'Right-click to change status'
     }
     return box
   }
-  // For a top-level task, let the editor handle clicks like any other
-  // character: a click places the caret and reveals the task line so it's
-  // directly editable. Status changes go through the right-click menu (or the
-  // board). A sub-task's box handles its own click (toggle) instead, so it
-  // swallows editor mouse events by returning true.
+  // For a task, let the editor handle clicks like any other character: a click
+  // places the caret and reveals the task line so it's directly editable.
+  // Status changes go through the right-click menu (or the board). A plain
+  // checkbox's box handles its own click (toggle) instead, so it swallows
+  // editor mouse events by returning true.
   ignoreEvent(): boolean {
-    return this.subtask
+    return !this.isTask
   }
 }
 
-/** The Kanban column a top-level task's status char maps to, or null if unknown. */
+/** The Kanban column a task's status char maps to, or null if unknown. */
 function taskStateLabel(statusChar: string, columns: BoardColumn[]): string | null {
   if (statusChar === ARCHIVED_CHAR) return 'Archived'
   const norm = statusChar === 'X' ? 'x' : statusChar
@@ -538,21 +542,27 @@ function decorateLine(
     }
   }
 
-  // Task checkbox: replace the `[c]` bracket with a clickable widget.
-  // `checkboxRange` calls anything indented a sub-task; in a fragment even a
-  // flush-left checkbox is one, since the whole document is nested inside the
-  // task it belongs to.
+  // Checkbox: replace the `[c]` bracket (and a task's `@task` marker) with a
+  // clickable widget. A card is a checkbox carrying `@task`, at any indent; in
+  // a fragment nothing is addressable as one, since the whole document is
+  // nested inside the task it belongs to.
   const box = checkboxRange(text)
   const taskMatch = TASK_LINE_RE.exec(text)
-  const topLevel = box !== null && isTopLevelTask(view.state, taskMatch?.[1] ?? '')
+  const isTask = box !== null && isBoardTask(view.state, text)
   // Which line defines a deliverable is settled across the whole note (several
   // lines can carry the same marker), so it comes from the index rather than
   // from this line alone — but the index trails the buffer by a debounce, so
   // only trust it while the line still reads the way the index last saw it.
   // Mismatched means "not yet", never "highlight the wrong line".
-  const defining = topLevel ? definingLines.get(line.number - 1) : undefined
+  //
+  // Both sides must be marker-free: `TaskItem.text` is stripped by the parser,
+  // so comparing it against the raw buffer group 4 would never match on a
+  // `@task` line and the highlight would silently never appear.
+  const defining = isTask ? definingLines.get(line.number - 1) : undefined
   const definingTag =
-    defining && defining.task.text === (taskMatch?.[4] ?? '').trim() ? defining.tag : null
+    defining && defining.task.text === stripTaskMarker((taskMatch?.[4] ?? '').trim())
+      ? defining.tag
+      : null
 
   // Whole-line styling (always applied, never hidden).
   if (REASON_FOR_RE.test(text) || STATUS_CHANGED_RE.test(text) || DATE_ENTERED_RE.test(text)) {
@@ -569,9 +579,9 @@ function decorateLine(
     if (box.statusChar === ARCHIVED_CHAR) {
       out.push(Decoration.line({ class: 'cm-knote-archived' }).range(line.from))
     }
-    // Top-level tasks get a pill naming their current Kanban column, placed
-    // right after the checkbox.
-    if (topLevel) {
+    // Tasks get a pill naming their current Kanban column, placed right after
+    // the checkbox (and past the hidden `@task` marker).
+    if (isTask) {
       const label = taskStateLabel(box.statusChar, columns)
       if (label) {
         out.push(
@@ -586,7 +596,7 @@ function decorateLine(
       const from = line.from + box.from
       out.push(
         Decoration.replace({
-          widget: new CheckboxWidget(box.statusChar, !topLevel, line.number - 1, text)
+          widget: new CheckboxWidget(box.statusChar, isTask, line.number - 1, text)
         }).range(from, line.from + box.to)
       )
     }

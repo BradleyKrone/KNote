@@ -73,6 +73,7 @@ export function createHostHandlers(): HostHandlers {
       await setVaultConfig(config)
       broadcast('configChanged', config)
     },
+    getMounts: async () => vault.getMounts().map((m) => m.name),
     searchVault: (query: string) => searchIndex.search(query),
     findMentions: (strings: string[], excludePath: VaultPath) => findMentions(strings, excludePath),
     readFile: (path: VaultPath) => vault.readFile(path),

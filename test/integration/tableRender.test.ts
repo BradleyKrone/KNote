@@ -86,7 +86,7 @@ const NESTED_NOTE = 'Table Test Nested.md'
 const NESTED_CONTENT = [
   '# Nested Table Test',
   '',
-  '- [ ] Restock the bins',
+  '- [ ] @task Restock the bins',
   '      | Name | Qty |',
   '      | ---- | --: |',
   '      | Bolt | 12  |',

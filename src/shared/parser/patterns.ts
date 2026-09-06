@@ -52,8 +52,99 @@ export function preservingBlockId(text: string, fn: (text: string) => string): s
 /** #tag — must follow start-of-line/whitespace/bracket; purely numeric tags excluded by callers */
 export const TAG_RE = /(^|[\s([{])#([A-Za-z0-9_][A-Za-z0-9_/-]*)/g
 
-/** - [x] task line (any single status char inside the brackets) */
+/**
+ * A checkbox line — `- [x] ...` with any single status char inside the
+ * brackets. Group 1 = indent, 2 = bullet, 3 = status char, 4 = the text after
+ * the checkbox.
+ *
+ * This says only *"is this a checkbox"*, which is what the block boundaries,
+ * the verified-edit staleness gates, `anchorText` and the live-preview render
+ * split all mean. Whether the line is a **task** — a Kanban card that owns the
+ * block beneath it — is `isTaskLine` below, and is decided by the `@task`
+ * marker alone, never by indentation.
+ */
 export const TASK_LINE_RE = /^(\s*)([-*+]|\d+[.)])\s\[(.)\](?:\s(.*))?$/
+
+/**
+ * The `@task` marker at the head of a checkbox line's text. Group 1 = the
+ * prose after it.
+ *
+ * Anchored at both ends on purpose, so the marker counts only when it is the
+ * first thing after the checkbox and is followed by whitespace or nothing:
+ * `- [ ] see @taskmaster`, `- [ ] the @task convention` and `- [ ] @task: go`
+ * are all ordinary checkboxes, not tasks.
+ */
+const TASK_MARKER_RE = /^@task(?:\s+(.*))?$/
+
+/** The marker text itself, so writers and the live-preview widget agree on its width. */
+export const TASK_MARKER = '@task'
+
+/**
+ * Is this checkbox line a **task** — a Kanban card, which owns every line
+ * indented beneath it?
+ *
+ * Indentation is irrelevant: a `@task` line is a task at any depth, anywhere
+ * in any note, and an unmarked checkbox is never a card however flush-left it
+ * sits. That replaces the old rule, where the only thing separating a card
+ * from a sub-checkbox was how far it had been tabbed in — invisible at a
+ * glance, and impossible to satisfy for a task that wants to live under a
+ * bullet of prose.
+ */
+export function isTaskLine(lineText: string): boolean {
+  const m = TASK_LINE_RE.exec(lineText.replace(/\r$/, ''))
+  return m !== null && TASK_MARKER_RE.test((m[4] ?? '').trim())
+}
+
+/**
+ * A task line's prose: its text with the leading `@task` marker removed. Text
+ * that doesn't carry one passes through untouched, so this is safe to run over
+ * any checkbox's text.
+ */
+export function stripTaskMarker(text: string): string {
+  const m = TASK_MARKER_RE.exec(text.trim())
+  return m ? (m[1] ?? '').trim() : text
+}
+
+/**
+ * Offsets of the `@task` marker within a task line, relative to the line
+ * start, or null when the line isn't a task. What live preview replaces to
+ * hide the marker.
+ *
+ * Located rather than computed, because `TASK_LINE_RE` consumes exactly one
+ * space after the checkbox and any extra sits at the head of group 4 — so
+ * `- [ ]  @task x`, which is still a task, would be off by one.
+ */
+export function taskMarkerRange(lineText: string): { from: number; to: number } | null {
+  const m = TASK_LINE_RE.exec(lineText.replace(/\r$/, ''))
+  if (!m || !TASK_MARKER_RE.test((m[4] ?? '').trim())) return null
+  const textFrom = m[1].length + m[2].length + 5 // indent + bullet + ' ' + '[c]' + ' '
+  const lead = /^[ \t]*/.exec(m[4] ?? '')?.[0].length ?? 0
+  const from = textFrom + lead
+  return { from, to: from + TASK_MARKER.length }
+}
+
+/**
+ * Add or remove the `@task` marker on a checkbox line — how a plain checkbox
+ * is promoted to a board card and back. Returns the new line text, null when
+ * `rawLine` isn't a checkbox, and `rawLine` unchanged when it is already in
+ * the requested state.
+ *
+ * The marker goes at the head of the text, ahead of every other inline marker,
+ * so a trailing `^block-id` is untouched — but the write still goes through
+ * `preservingBlockId`, which repairs a line whose anchor was already buried.
+ */
+export function setTaskMarker(rawLine: string, on: boolean): string | null {
+  const m = TASK_LINE_RE.exec(rawLine)
+  if (!m) return null
+  const [, indent, marker, statusChar] = m
+  const text = preservingBlockId(m[4] ?? '', (t) => {
+    const prose = stripTaskMarker(t)
+    if (!on) return prose
+    return prose ? `${TASK_MARKER} ${prose}` : TASK_MARKER
+  })
+  const body = text ? ` ${text}` : ''
+  return `${indent}${marker} [${statusChar}]${body}`
+}
 
 /** @due(2026-07-10) or 📅 2026-07-10 */
 export const DUE_RE = /(?:@due\((\d{4}-\d{2}-\d{2})\)|📅\s*(\d{4}-\d{2}-\d{2}))/
@@ -293,6 +384,11 @@ const FENCE_RE = /^\s*(`{3,}|~{3,})(.*)$/
  * matter: a sibling `- [ ] next` passes `LIST_ITEM_RE`, so without the
  * checkbox test the block would run to the end of the file.
  *
+ * It also ends at a *deeper* line carrying `@task`, which is a task in its own
+ * right and owns what follows it — see `isTaskLine`. An indented plain
+ * checkbox is a sub-task and stays in the block; an indented `@task` is a
+ * separate card, and the two blocks must not overlap.
+ *
  * Fenced code is consumed verbatim, with the indent and checkbox rules
  * suspended, so a sample containing `- [ ] fake` stays in the block rather
  * than truncating it. The fence tracking is hand-rolled rather than borrowed
@@ -335,6 +431,12 @@ export function taskBlockEnd(lines: string[], taskIdx: number, taskIndentLen: nu
     if (blank) continue
     if (indent < taskIndentLen) break
     if (indent === taskIndentLen && (TASK_LINE_RE.test(text) || !LIST_ITEM_RE.test(text))) break
+    // A *nested* `@task` opens its own block rather than joining this one. Only
+    // reachable at a deeper indent, the shallower and equal cases having broken
+    // above. Blocks must not overlap: the board's task editor rewrites a whole
+    // block as one verified edit, so a line sitting in two blocks would be
+    // saved twice and deleted once.
+    if (isTaskLine(text)) break
     const open = FENCE_RE.exec(text)
     if (open) {
       beforeFence = lastNonBlank
@@ -515,6 +617,10 @@ export const PRIORITY_RE = /(?:^|\s)(!{1,3})(?=\s|$)/
 export function stripInlineMarkers(text: string): string {
   return (
     text
+      // The leading `@task` marker. `TaskItem.text` already has it stripped, but
+      // `anchorText` reads straight off the raw line, so a block anchor minted
+      // for a task would otherwise slugify to `^task-rewire-the-pump`.
+      .replace(/^\s*@task(?=\s|$)/, '')
       // Dependencies first: the generic tag strip below would otherwise eat the
       // tag and leave a bare `⛓` behind in the label.
       .replace(DEPENDS_RE, '')

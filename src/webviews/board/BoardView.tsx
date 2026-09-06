@@ -16,7 +16,13 @@ import {
 import type { DeliverableScopeFilter } from '@shared/deliverables'
 import { reasonLineForTask } from '@shared/parser/patterns'
 import { on } from '../shared/rpc'
-import { promptReason, showToast, useConfigStore, useIndexStore } from '../shared/stores'
+import {
+  promptReason,
+  showToast,
+  useConfigStore,
+  useIndexStore,
+  useMountsStore
+} from '../shared/stores'
 import {
   ANY_DATE_FILTER,
   boardTags,
@@ -44,6 +50,9 @@ export function BoardView({
   const columns = useConfigStore((s) => s.vaultConfig.columns)
   const boardHiddenProjects = useConfigStore((s) => s.vaultConfig.boardHiddenProjects)
   const hiddenProjects = useMemo(() => new Set(boardHiddenProjects), [boardHiddenProjects])
+  const boardHiddenRoots = useConfigStore((s) => s.vaultConfig.boardHiddenRoots)
+  const hiddenRoots = useMemo(() => new Set(boardHiddenRoots), [boardHiddenRoots])
+  const mountNames = useMountsStore((s) => s.mountNames)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [textFilter, setTextFilter] = useState('')
   const [groupByNote, setGroupByNote] = useState(false)
@@ -65,7 +74,9 @@ export function BoardView({
         due: dueFilter,
         ignoreDeliverableWindow: allDeliverables,
         deliverableScope,
-        hiddenProjects
+        hiddenProjects,
+        hiddenRoots,
+        mountNames
       }),
     [
       notes,
@@ -77,7 +88,9 @@ export function BoardView({
       dueFilter,
       allDeliverables,
       deliverableScope,
-      hiddenProjects
+      hiddenProjects,
+      hiddenRoots,
+      mountNames
     ]
   )
   const byColumn = useMemo(() => groupByColumn(cards, columns), [cards, columns])

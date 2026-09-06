@@ -36,9 +36,9 @@ notes.set(
       'type: project',
       'project: p',
       '---',
-      '- [ ] A 🛫 2026-04-01 📅 2026-04-10 #deliverable/p/a',
+      '- [ ] @task A 🛫 2026-04-01 📅 2026-04-10 #deliverable/p/a',
       '    - [ ] a task #deliverable/p/a',
-      '- [ ] B 🛫 2026-04-11 📅 2026-04-30 #deliverable/p/b ⛓ #deliverable/p/a',
+      '- [ ] @task B 🛫 2026-04-11 📅 2026-04-30 #deliverable/p/b ⛓ #deliverable/p/a',
       '🏁 Kickoff 📅 2026-04-02 #deliverable/p/a',
       ''
     ].join('\n')
@@ -189,14 +189,14 @@ describe('flattenRows project visibility', () => {
     'A.md',
     parseNote(
       'A.md',
-      '---\ntype: project\nproject: a\n---\n- [ ] A1 📅 2026-06-01 #deliverable/a/one\n'
+      '---\ntype: project\nproject: a\n---\n- [ ] @task A1 📅 2026-06-01 #deliverable/a/one\n'
     )
   )
   twoProjects.set(
     'B.md',
     parseNote(
       'B.md',
-      '---\ntype: project\nproject: b\n---\n- [ ] B1 📅 2026-06-01 #deliverable/b/one\n'
+      '---\ntype: project\nproject: b\n---\n- [ ] @task B1 📅 2026-06-01 #deliverable/b/one\n'
     )
   )
   const both = buildPlannerModel(twoProjects)
@@ -230,14 +230,14 @@ describe('rowTops / rowsHeight', () => {
     'A.md',
     parseNote(
       'A.md',
-      '---\ntype: project\nproject: a\n---\n- [ ] A1 📅 2026-06-01 #deliverable/a/one\n'
+      '---\ntype: project\nproject: a\n---\n- [ ] @task A1 📅 2026-06-01 #deliverable/a/one\n'
     )
   )
   twoProjects.set(
     'B.md',
     parseNote(
       'B.md',
-      '---\ntype: project\nproject: b\n---\n- [ ] B1 📅 2026-06-01 #deliverable/b/one\n'
+      '---\ntype: project\nproject: b\n---\n- [ ] @task B1 📅 2026-06-01 #deliverable/b/one\n'
     )
   )
   const rows = flattenRows(buildPlannerModel(twoProjects), new Set())

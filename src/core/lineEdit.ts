@@ -54,6 +54,34 @@ export async function replaceLine(
 }
 
 /**
+ * Several verified single-line rewrites in one atomic write.
+ *
+ * Every expectation is checked against the freshly-read file *before* anything
+ * is applied, so a batch is refused whole rather than half-landed. No edit
+ * changes the line count, so none can shift another's line number — which is
+ * what makes locating them all up front safe.
+ *
+ * The bulk counterpart to `replaceLine`: a vault-wide rewrite that touched a
+ * note ten times would otherwise be ten reads, ten writes, ten watcher events
+ * and ten undo steps.
+ */
+export async function replaceLines(
+  rel: VaultPath,
+  edits: Array<{ line: number; expected: string; next: string }>
+): Promise<void> {
+  if (edits.length === 0) return
+  const { eol, lines } = await readNoteLines(rel)
+  const targets = edits.map((e) => locateLine(lines, e.line, e.expected))
+  if (targets.some((t) => t === -1)) {
+    throw new Error(`${STALE_ERROR}: line changed on disk in ${rel}`)
+  }
+  targets.forEach((t, i) => {
+    lines[t] = edits[i].next
+  })
+  await writeFileAtomic(rel, lines.join(eol))
+}
+
+/**
  * Verified status-char rewrite that also attaches the `Reason for <Column>:
  * ...` and/or `Status Changed: ...` lines under the task — updating an
  * existing line anywhere in the task's own-note block in place (never

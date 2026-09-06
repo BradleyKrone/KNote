@@ -21,6 +21,8 @@ export interface HostApi {
   getIndexSnapshot(): Promise<NoteMeta[]>
   getVaultConfig(): Promise<VaultConfig>
   setVaultConfig(config: VaultConfig): Promise<void>
+  /** Names of every mounted folder (not the primary root) — lets a webview tell which root a VaultPath belongs to via `rootNameOf`. */
+  getMounts(): Promise<string[]>
   /** Vault-wide search with Obsidian-style operators. */
   searchVault(query: string): Promise<SearchResult[]>
   /** Plain-text occurrences of the strings across the vault (unlinked mentions). */

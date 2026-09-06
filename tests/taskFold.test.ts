@@ -18,7 +18,7 @@ function mkState(doc: string): EditorState {
 }
 
 const NOTE = [
-  '- [ ] create new task', // 1
+  '- [ ] @task create new task', // 1
   '  - Status Changed: n/a', // 2
   '  - Date Entered: 8/12/2026', // 3
   '  - things to do', // 4
@@ -28,7 +28,7 @@ const NOTE = [
   '  |  |  |  |', // 8
   '  |  |  |  |', // 9
   '', // 10
-  '- [ ] a later task', // 11
+  '- [ ] @task a later task', // 11
   '  - Status Changed: n/a' // 12
 ].join('\n')
 
@@ -46,7 +46,7 @@ describe('enclosingGroupLastLine', () => {
 
   it('spans a blank line between the metadata bullets and the table', () => {
     const doc = [
-      '- [ ] task', // 1
+      '- [ ] @task task', // 1
       '  - Status Changed: n/a', // 2
       '', // 3 blank, from insertTableAt padding
       '  | A | B |', // 4
@@ -60,10 +60,10 @@ describe('enclosingGroupLastLine', () => {
   it('does not attribute a table to an earlier, unrelated task', () => {
     // The table (line 12) sits under the SECOND task, not the first.
     const doc = [
-      '- [ ] first task', // 1
+      '- [ ] @task first task', // 1
       '  - Status Changed: n/a', // 2
       '', // 3
-      '- [ ] second task', // 4
+      '- [ ] @task second task', // 4
       '  - Status Changed: n/a', // 5
       '  | A | B |', // 6
       '  | - | - |', // 7
@@ -75,7 +75,7 @@ describe('enclosingGroupLastLine', () => {
 
   it('breaks the chain at a flush-left line that is not a task', () => {
     const doc = [
-      '- [ ] task', // 1
+      '- [ ] @task task', // 1
       '  notes', // 2
       'a flush-left paragraph', // 3
       '  | A | B |', // 4
@@ -87,7 +87,7 @@ describe('enclosingGroupLastLine', () => {
 
   it('is not the last line when more indented content follows the table', () => {
     const doc = [
-      '- [ ] task', // 1
+      '- [ ] @task task', // 1
       '  | A | B |', // 2
       '  | - | - |', // 3
       '  | 1 | 2 |', // 4
@@ -109,5 +109,51 @@ describe('enclosingGroupLastLine', () => {
 
   it('returns null for a line before any content', () => {
     expect(enclosingGroupLastLine(mkState(NOTE), 1)).toBeNull()
+  })
+})
+
+describe('enclosingGroupLastLine and the @task marker', () => {
+  it('ends a task group before a nested @task, which owns its own block', () => {
+    const doc = [
+      '- [ ] @task outer', // 1
+      '  - a note of outer', // 2
+      '  - [ ] @task inner', // 3
+      '    - a note of inner' // 4
+    ].join('\n')
+    expect(enclosingGroupLastLine(mkState(doc), 2)).toBe(2)
+    expect(enclosingGroupLastLine(mkState(doc), 4)).toBe(4)
+  })
+
+  it('keeps a plain nested checkbox inside its task group', () => {
+    const doc = ['- [ ] @task outer', '  - [ ] a step', '    - detail'].join('\n')
+    expect(enclosingGroupLastLine(mkState(doc), 2)).toBe(3)
+    expect(enclosingGroupLastLine(mkState(doc), 3)).toBe(3)
+  })
+
+  it('groups an indented task, which the old flush-left rule could not reach', () => {
+    const doc = ['- project notes', '  - [ ] @task indented task', '    - its detail'].join('\n')
+    expect(enclosingGroupLastLine(mkState(doc), 3)).toBe(3)
+  })
+
+  it('does not group under a flush-left checkbox that carries no marker', () => {
+    const doc = ['- [ ] not a card', '  - some detail'].join('\n')
+    expect(enclosingGroupLastLine(mkState(doc), 2)).toBeNull()
+  })
+})
+
+describe('a task group at any indent', () => {
+  it('boxes a deeply indented task under prose', () => {
+    const doc = [
+      'Some prose', // 1
+      '', // 2
+      '        - [ ] @task Deep task', // 3
+      '          - its detail' // 4
+    ].join('\n')
+    expect(enclosingGroupLastLine(mkState(doc), 4)).toBe(4)
+  })
+
+  it('does not reach past a flush-left line that broke the chain', () => {
+    const doc = ['  - [ ] @task A', '    - x', 'flush left', '  - y'].join('\n')
+    expect(enclosingGroupLastLine(mkState(doc), 4)).toBeNull()
   })
 })

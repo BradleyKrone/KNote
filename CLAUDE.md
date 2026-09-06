@@ -78,6 +78,25 @@ A VS Code extension in four layers under `src/`:
 Key invariants:
 - A **vault** is just a folder on disk. That's the entire data model — no
   database, beyond an ephemeral in-memory search index rebuilt from files.
+- A **task** — a Kanban card — is a checkbox line carrying the `@task` marker
+  right after the checkbox: `- [ ] @task Ship it 📅 2026-09-20`. Indentation
+  has nothing to do with it: a `@task` line is a task at any depth, and an
+  unmarked checkbox is a plain toggle at any depth. A task **owns** every line
+  indented deeper than it, up to the next `@task` line — blocks never overlap,
+  because the board's task editor rewrites a whole block as one verified edit.
+  `isTaskLine` / `TaskItem.isTask` is the single test; `parseNote` strips the
+  marker out of `TaskItem.text`, so labels, search, slugs and deliverable
+  election never see it. Vaults written before this rule are converted by
+  **KNote: Convert Legacy Tasks to @task**, whose `shared/parser/legacyTasks.ts`
+  is the only place the old indentation rule still lives.
+- **Code is code because it is fenced, never because it is indented.**
+  `mdScaffold.maskSource` masks frontmatter, fenced code and inline code, but
+  deliberately *not* indented code blocks: CommonMark reads four spaces outside
+  a list as code, which would blank a deeply indented `- [ ] @task` line out of
+  the index and make the task vanish. Since indentation is what expresses
+  ownership, it can't also mean "this isn't content". The cost is that `#tags`
+  and `[[links]]` inside an indented code block do get indexed — write code in
+  a fence.
 - A vault can span **several** folders. The workspace folder holding `.knote/`
   is the *primary* root and owns the config, weekly notes and templates; every
   other workspace folder is *mounted* as a virtual top-level folder named after
@@ -114,17 +133,17 @@ the board and the planner agree without importing each other:
 - A **project** is a note whose frontmatter says `type: project`. Its slug
   is `project:` frontmatter, else its kebab-cased title. `status: completed`
   closes it (no new deliverables/tasks; its tags drop out of completion).
-- A **deliverable** is a *top-level* checkbox task in that note carrying
+- A **deliverable** is a `@task` line in that note carrying
   `@deliverable(<project>/<name>)` — exactly two segments inside the parens,
   enforced by `DELIVERABLE_TAG_RE`/`DELIVERABLE_REF_RE`. What makes a line
-  the *defining* one rather than a member is structural (top-level, in the
-  project's own note, carrying a span) — never the marker itself, so the same
+  the *defining* one rather than a member is structural (a `@task` line, in
+  the project's own note, carrying a span) — never the marker itself, so the same
   marker also doubles as the join syntax below. Notes written before this
   switch may still carry a defining line's identity as a literal
   `#deliverable/…` tag; that legacy form still reads, but nothing writes it
   any more.
 - Those structural tests don't single a line out on their own — a *member*
-  task that happens to sit at top level in the project note with a `📅` of
+  task that happens to carry `@task` in the project note with a `📅` of
   its own looks identical — so exactly one line per tag is **elected**, by
   `electedDeliverableLines` in `shared/deliverables.ts`: the line whose text
   slugifies back to the deliverable's name, else the first in document order.
@@ -147,10 +166,14 @@ the board and the planner agree without importing each other:
   `@deliverable(<project>/<name>)` marker anywhere in the vault — deliberately
   not a `#tag`, so joining never clutters the Tags sidebar or `#`
   autocomplete with structural plumbing.
-- Any new inline marker must be added to `AFTER_ANCHOR` in
+- Any new *trailing* inline marker must be added to `AFTER_ANCHOR` in
   `parser/patterns.ts` (so it can't be pushed past a `^block-id`) *and* to
   `stripInlineMarkers` — strip dependencies before the generic tag strip or
-  a bare `⛓` is left in the label.
+  a bare `⛓` is left in the label. A *leading* marker like `@task` is
+  deliberately **not** in `AFTER_ANCHOR`: it is never appended, so it can't
+  displace an anchor — and listing it would let `BLOCK_ID_RE` read
+  `… ^id @task` as a buried anchor and shuffle the marker into the middle of
+  the line, silently demoting the card.
 - Which projects are charted is stored in `VaultConfig.hiddenProjects` —
   the *hidden* set, so a newly created project shows up on its own.
 - Dragging a bar rewrites the task line through the ordinary verified-edit

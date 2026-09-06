@@ -9,11 +9,15 @@ import type { BoardColumn, VaultPath } from '@shared/types'
 import {
   ARCHIVED_CHAR,
   DATE_ENTERED_RE,
+  isTaskLine,
   mergeTaskMetaLines,
   reasonLineForTask,
+  setTaskMarker,
   statusChangedLineForTask,
   STATUS_CHANGED_UNSET,
-  TASK_LINE_RE
+  stripTaskMarker,
+  TASK_LINE_RE,
+  TASK_MARKER
 } from '@shared/parser/patterns'
 import { getVaultConfig } from '../../core/vaultConfig'
 import * as verifiedEdit from '../verifiedEdit'
@@ -85,8 +89,13 @@ async function applyStatus(
   const lineNo = editor.selection.active.line
   const text = editor.document.lineAt(lineNo).text
   const m = TASK_LINE_RE.exec(text)
-  if (!m) {
-    void vscode.window.showWarningMessage('KNote: the cursor is not on a task line.')
+  if (!m || !isTaskLine(text)) {
+    // Kanban columns belong to tasks. A plain checkbox has no column to be in,
+    // and stamping `Status Changed` under one would leave orphaned metadata
+    // beneath a line the board never shows.
+    void vscode.window.showWarningMessage(
+      'KNote: put the cursor on a task line (`- [ ] @task …`) first.'
+    )
     return
   }
   if (column.char === m[3]) return
@@ -112,8 +121,10 @@ async function cycleTaskStatus(): Promise<void> {
   if (!ctx) return
   const text = ctx.editor.document.lineAt(ctx.editor.selection.active.line).text
   const m = TASK_LINE_RE.exec(text)
-  if (!m) {
-    void vscode.window.showWarningMessage('KNote: the cursor is not on a task line.')
+  if (!m || !isTaskLine(text)) {
+    void vscode.window.showWarningMessage(
+      'KNote: put the cursor on a task line (`- [ ] @task …`) first.'
+    )
     return
   }
   const columns = (await getVaultConfig()).columns
@@ -141,8 +152,17 @@ async function setTaskStatus(): Promise<void> {
   await applyStatus(ctx.editor, ctx.rel, picked.column)
 }
 
+/** Replace the cursor line and park the caret at its end. */
+async function rewriteCursorLine(editor: vscode.TextEditor, next: string): Promise<void> {
+  const line = editor.document.lineAt(editor.selection.active.line)
+  if (next === line.text) return
+  await editor.edit((b) => b.replace(line.range, next))
+  const end = new vscode.Position(line.lineNumber, next.length)
+  editor.selection = new vscode.Selection(end, end)
+}
+
 /**
- * Toggle the current line into/out of a `- [ ]` checkbox. Already-a-task
+ * Toggle the current line into/out of a `- [ ]` checkbox. Already-a-checkbox
  * lines are stripped back to a plain bullet; plain list lines get brackets
  * inserted after their marker; anything else is prefixed with `- [ ] `.
  */
@@ -150,14 +170,15 @@ async function insertCheckbox(): Promise<void> {
   const ctx = activeVaultEditor()
   if (!ctx) return
   const { editor } = ctx
-  const line = editor.document.lineAt(editor.selection.active.line)
-  const text = line.text
+  const text = editor.document.lineAt(editor.selection.active.line).text
   let next: string
   const task = TASK_LINE_RE.exec(text)
   const list = LIST_MARKER_RE.exec(text)
   if (task) {
     const [, indent, marker, , rest] = task
-    next = `${indent}${marker} ${rest ?? ''}`.trimEnd()
+    // The `@task` marker goes with the checkbox: without stripping it, undoing
+    // a task would leave a bullet reading `- @task Ship it`.
+    next = `${indent}${marker} ${stripTaskMarker(rest ?? '')}`.trimEnd()
   } else if (list) {
     const [, indent, marker, rest] = list
     next = `${indent}${marker} [ ] ${rest}`
@@ -165,14 +186,33 @@ async function insertCheckbox(): Promise<void> {
     const trimmed = text.trim()
     next = trimmed ? `- [ ] ${trimmed}` : '- [ ] '
   }
-  if (next === text) return
-  await editor.edit((b) => b.replace(line.range, next))
-  const end = new vscode.Position(line.lineNumber, next.length)
-  editor.selection = new vscode.Selection(end, end)
+  await rewriteCursorLine(editor, next)
 }
 
 /**
- * Seed (or extend) the indented note under the top-level task at the cursor:
+ * Toggle the cursor line's `@task` marker — promote a plain checkbox to a
+ * Kanban card, or demote a card back to a plain checkbox. A non-checkbox line
+ * becomes a fresh `- [ ] @task ` first, so this doubles as "insert a task".
+ */
+async function toggleTaskMarker(): Promise<void> {
+  const ctx = activeVaultEditor()
+  if (!ctx) return
+  const { editor } = ctx
+  const text = editor.document.lineAt(editor.selection.active.line).text
+  const marked = setTaskMarker(text, !isTaskLine(text))
+  if (marked !== null) {
+    await rewriteCursorLine(editor, marked)
+    return
+  }
+  const trimmed = text.trim()
+  await rewriteCursorLine(
+    editor,
+    trimmed ? `- [ ] ${TASK_MARKER} ${trimmed}` : `- [ ] ${TASK_MARKER} `
+  )
+}
+
+/**
+ * Seed (or extend) the indented note under the `@task` line at the cursor:
  * on a fresh task, a `- Status Changed: n/a` + `- Date Entered: <today>` +
  * `- Notes: ` template; on an already-seeded task, one more plain note line.
  * (The Electron app ran this on Enter; here it's an explicit command.)
@@ -185,8 +225,10 @@ async function insertTaskNote(): Promise<void> {
   const lineNo = editor.selection.active.line
   const line = doc.lineAt(lineNo)
   const task = TASK_LINE_RE.exec(line.text)
-  if (!task || task[1].length > 0) {
-    void vscode.window.showWarningMessage('KNote: put the cursor on a top-level task line first.')
+  if (!task || !isTaskLine(line.text)) {
+    void vscode.window.showWarningMessage(
+      'KNote: put the cursor on a task line (`- [ ] @task …`) first.'
+    )
     return
   }
   const childIndent = task[1] + '  '
@@ -238,6 +280,7 @@ export function registerTaskCommands(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('knote.cycleTaskStatus', cycleTaskStatus),
     vscode.commands.registerCommand('knote.setTaskStatus', setTaskStatus),
     vscode.commands.registerCommand('knote.insertCheckbox', insertCheckbox),
+    vscode.commands.registerCommand('knote.toggleTaskMarker', toggleTaskMarker),
     vscode.commands.registerCommand('knote.insertTaskNote', insertTaskNote),
     vscode.commands.registerCommand('knote.insertMilestone', () => insertMilestone(false)),
     vscode.commands.registerCommand('knote.insertMilestoneImportant', () => insertMilestone(true)),

@@ -6,10 +6,12 @@
 // All counting/grouping/ordering lives in quickAccessSelectors (pure, tested).
 
 import * as vscode from 'vscode'
+import { basename } from 'node:path'
 import dayjs from 'dayjs'
 import type { DeliverableScopeFilter } from '@shared/deliverables'
 import type { VaultPath } from '@shared/types'
 import { getVaultConfig, setVaultConfig } from '../../core/vaultConfig'
+import { getMounts } from '../../core/vaultService'
 import { currentVaultRoot, notesMap, onIndexDelta } from '../engine'
 import { broadcast } from '../rpc/webviewRpc'
 import { uriForRel } from '../paths'
@@ -52,20 +54,25 @@ type BoardTreeNode =
   | { kind: 'filterUnassigned' }
   | ProjectNode
   | ProjectDeliverableNode
+  | { kind: 'folderFilterRoot' }
+  | { kind: 'folder'; name: string; label: string }
 
 class BoardsTreeProvider implements vscode.TreeDataProvider<BoardTreeNode> {
   private emitter = new vscode.EventEmitter<void>()
   readonly onDidChangeTreeData = this.emitter.event
-  /** Read synchronously by getTreeItem, so it's cached rather than awaited per row. */
-  private hidden = new Set<string>()
+  /** Read synchronously by getTreeItem, so they're cached rather than awaited per row. */
+  private hiddenProjects = new Set<string>()
+  private hiddenRoots = new Set<string>()
 
   refresh(): void {
     this.emitter.fire()
   }
 
-  /** Re-read the board-hidden set, then redraw. */
+  /** Re-read the board-hidden sets, then redraw. */
   async reload(): Promise<void> {
-    this.hidden = new Set((await getVaultConfig()).boardHiddenProjects)
+    const config = await getVaultConfig()
+    this.hiddenProjects = new Set(config.boardHiddenProjects)
+    this.hiddenRoots = new Set(config.boardHiddenRoots)
     this.refresh()
   }
 
@@ -76,9 +83,21 @@ class BoardsTreeProvider implements vscode.TreeDataProvider<BoardTreeNode> {
     if (visible) hidden.delete(slug)
     else hidden.add(slug)
     await setVaultConfig({ ...config, boardHiddenProjects: [...hidden].sort() })
-    this.hidden = hidden
+    this.hiddenProjects = hidden
     // Tell the open board panel, which mirrors the config like every webview.
     broadcast('configChanged', { ...config, boardHiddenProjects: [...hidden].sort() })
+    this.refresh()
+  }
+
+  /** Tick/untick a root folder, persisting to the vault config. */
+  async setRootVisible(name: string, visible: boolean): Promise<void> {
+    const config = await getVaultConfig()
+    const hidden = new Set(config.boardHiddenRoots)
+    if (visible) hidden.delete(name)
+    else hidden.add(name)
+    await setVaultConfig({ ...config, boardHiddenRoots: [...hidden].sort() })
+    this.hiddenRoots = hidden
+    broadcast('configChanged', { ...config, boardHiddenRoots: [...hidden].sort() })
     this.refresh()
   }
 
@@ -125,7 +144,7 @@ class BoardsTreeProvider implements vscode.TreeDataProvider<BoardTreeNode> {
       }
       case 'project': {
         const item = new vscode.TreeItem(node.title, vscode.TreeItemCollapsibleState.Collapsed)
-        item.checkboxState = this.hidden.has(node.slug)
+        item.checkboxState = this.hiddenProjects.has(node.slug)
           ? vscode.TreeItemCheckboxState.Unchecked
           : vscode.TreeItemCheckboxState.Checked
         item.iconPath = new vscode.ThemeIcon(
@@ -160,6 +179,24 @@ class BoardsTreeProvider implements vscode.TreeDataProvider<BoardTreeNode> {
         }
         return item
       }
+      case 'folderFilterRoot': {
+        const item = new vscode.TreeItem(
+          'Filter by Folder',
+          vscode.TreeItemCollapsibleState.Collapsed
+        )
+        item.iconPath = new vscode.ThemeIcon('filter')
+        item.tooltip = 'Untick a folder to exclude every note under it from the Kanban board'
+        return item
+      }
+      case 'folder': {
+        const item = new vscode.TreeItem(node.label)
+        item.checkboxState = this.hiddenRoots.has(node.name)
+          ? vscode.TreeItemCheckboxState.Unchecked
+          : vscode.TreeItemCheckboxState.Checked
+        item.iconPath = new vscode.ThemeIcon(node.name === '' ? 'root-folder' : 'folder')
+        item.tooltip = 'Untick to exclude every note under this folder from the board'
+        return item
+      }
     }
   }
 
@@ -167,13 +204,29 @@ class BoardsTreeProvider implements vscode.TreeDataProvider<BoardTreeNode> {
     if (!currentVaultRoot()) return []
     if (!node) {
       const model = collectBoards(notesMap())
-      return [{ kind: 'global', open: model.open, total: model.total }, { kind: 'filterRoot' }]
+      return [
+        { kind: 'global', open: model.open, total: model.total },
+        { kind: 'filterRoot' },
+        { kind: 'folderFilterRoot' }
+      ]
     }
     if (node.kind === 'filterRoot') {
       return [
         { kind: 'filterAll' },
         { kind: 'filterUnassigned' },
         ...collectProjects(notesMap(), today())
+      ]
+    }
+    if (node.kind === 'folderFilterRoot') {
+      const root = currentVaultRoot()
+      const primary: BoardTreeNode = {
+        kind: 'folder',
+        name: '',
+        label: root ? basename(root) : '(Vault Root)'
+      }
+      return [
+        primary,
+        ...getMounts().map((m): BoardTreeNode => ({ kind: 'folder', name: m.name, label: m.name }))
       ]
     }
     if (node.kind === 'project') {
@@ -375,8 +428,9 @@ export function registerQuickAccessTrees(context: vscode.ExtensionContext): Quic
     }),
     boardsView.onDidChangeCheckboxState(async ({ items }) => {
       for (const [node, state] of items) {
-        if (node.kind !== 'project') continue
-        await boards.setVisible(node.slug, state === vscode.TreeItemCheckboxState.Checked)
+        const checked = state === vscode.TreeItemCheckboxState.Checked
+        if (node.kind === 'project') await boards.setVisible(node.slug, checked)
+        else if (node.kind === 'folder') await boards.setRootVisible(node.name, checked)
       }
     }),
     boardsView,

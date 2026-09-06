@@ -34,27 +34,44 @@ describe('nextColumn', () => {
 })
 
 describe('checkboxRange', () => {
-  it('locates the [c] bracket and status char for a plain task', () => {
-    // "- [ ] hi" → bracket at offsets 2..5
-    expect(checkboxRange('- [ ] hi')).toEqual({ from: 2, to: 5, statusChar: ' ', isSubtask: false })
+  it('spans the brackets and the @task marker on a task', () => {
+    // "- [ ] @task hi" → the widget swallows "[ ] @task", offsets 2..11
+    expect(checkboxRange('- [ ] @task hi')).toEqual({
+      from: 2,
+      to: 11,
+      statusChar: ' ',
+      isTask: true
+    })
+  })
+  it('spans only the brackets on a plain checkbox', () => {
+    expect(checkboxRange('- [ ] hi')).toEqual({ from: 2, to: 5, statusChar: ' ', isTask: false })
   })
   it('accounts for indentation and different bullets', () => {
     expect(checkboxRange('    * [x] done')).toEqual({
       from: 6,
       to: 9,
       statusChar: 'x',
-      isSubtask: true
+      isTask: false
     })
-    expect(checkboxRange('1. [/] numbered')).toEqual({
+    expect(checkboxRange('1. [/] @task numbered')).toEqual({
       from: 3,
-      to: 6,
+      to: 12,
       statusChar: '/',
-      isSubtask: false
+      isTask: true
     })
   })
-  it('flags indented tasks as sub-tasks', () => {
-    expect(checkboxRange('  - [ ] nested')?.isSubtask).toBe(true)
-    expect(checkboxRange('- [ ] top level')?.isSubtask).toBe(false)
+  it('keys off the @task marker, not indentation', () => {
+    expect(checkboxRange('  - [ ] nested')?.isTask).toBe(false)
+    expect(checkboxRange('      - [ ] @task deeply indented')?.isTask).toBe(true)
+    expect(checkboxRange('- [ ] flush left, unmarked')?.isTask).toBe(false)
+  })
+  it('tolerates extra space between the checkbox and the marker', () => {
+    expect(checkboxRange('- [ ]  @task hi')).toEqual({
+      from: 2,
+      to: 12,
+      statusChar: ' ',
+      isTask: true
+    })
   })
   it('returns null for non-task lines', () => {
     expect(checkboxRange('just text')).toBeNull()
