@@ -229,3 +229,11 @@ the extension itself, not stored in any vault, so it always reflects the
 current feature set regardless of which vault is open. Match its existing
 terse, table/bullet style. Do this as part of the same change, not as a
 follow-up.
+
+If the feature changes or adds Markdown syntax a user would write by hand
+(a new inline marker, frontmatter field, etc.), also update
+`resources/aiInstructions.md` — `syncAiInstructions` (`src/extension/vault.ts`)
+keeps every vault's `Knote Resources/AI Instructions.md` in sync with it on
+each open (overwriting a stale copy, unlike everything else scaffolded into
+a vault), so this is the one place that needs editing for the change to
+reach an AI assistant working in a user's vault.
