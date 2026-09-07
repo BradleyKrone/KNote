@@ -22,6 +22,18 @@ everything native just works: the Explorer, tabs and split editors, `Ctrl+P`
 quick open, `Ctrl+Shift+F` full-text search, source control, and any other
 extension you run (Copilot, Vim, spell checkers, …).
 
+### AI assistants already know KNote's syntax
+
+KNote keeps a living guide at `Knote Resources/AI Instructions.md`,
+teaching Claude Code / GitHub Copilot / any assistant the exact Markdown
+conventions below (the `@task` marker, wiki-links, Kanban status
+characters, deliverables, …) — KNote regenerates it whenever a feature adds
+new syntax, so don't hand-edit it. Point your own vault-root `CLAUDE.md` at
+it with `@Knote Resources/AI Instructions.md` (Claude Code resolves that as
+an import), or copy it into `.github/copilot-instructions.md` for Copilot,
+which doesn't support imports. It's an ordinary note otherwise, so
+`[[AI Instructions]]` links to it like anything else.
+
 ## A vault can span several folders
 
 Notes you want in one vault do not have to live under one path. Add any

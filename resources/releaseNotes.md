@@ -3,6 +3,18 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 3.1.0
+
+- **AI assistants now know KNote's own syntax.** Opening a vault scaffolds
+  `Knote Resources/AI Instructions.md`, a living guide to the `@task`
+  marker, wiki-links, Kanban status characters, deliverables, and the rest
+  of KNote's Markdown conventions — kept in sync with KNote's bundled guide
+  every time you open the vault, so it never goes stale. Point your own
+  `CLAUDE.md` at it with `@Knote Resources/AI Instructions.md` (Claude Code
+  resolves that as an import), or copy it into
+  `.github/copilot-instructions.md` for Copilot, which doesn't support
+  imports.
+
 ## 3.0.0
 
 - **Tasks are now marked with `@task`, not by how far they're indented.**

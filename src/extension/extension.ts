@@ -1,5 +1,11 @@
 import * as vscode from 'vscode'
-import { findVaultLayout, initializeVault, maybeSuggestInitialize, type VaultLayout } from './vault'
+import {
+  findVaultLayout,
+  initializeVault,
+  maybeSuggestInitialize,
+  syncAiInstructions,
+  type VaultLayout
+} from './vault'
 import { chooseVault, manageMountedFolders } from './vaultFolders'
 import { currentVaultRoots, startEngine, stopEngine } from './engine'
 import { refreshResourceRoots } from './views/webviewHtml'
@@ -95,6 +101,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<KnoteA
   const openVault = async (): Promise<boolean> => {
     const layout = await findVaultLayout(preferredPrimary())
     if (!layout) return false
+    if (await syncAiInstructions(context.extensionUri, layout.primary)) {
+      void vscode.window.showInformationMessage(
+        'KNote added Knote Resources/AI Instructions.md — reference it from your own ' +
+          'CLAUDE.md or .github/copilot-instructions.md if you use an AI assistant here.'
+      )
+    }
     await start(layout)
     return true
   }

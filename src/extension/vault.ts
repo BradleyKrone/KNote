@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode'
 import { promises as fs } from 'fs'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { DEFAULT_VAULT_CONFIG } from '@shared/types'
 
 /** How the open workspace maps onto one vault. */
@@ -100,6 +100,59 @@ export async function initializeVault(): Promise<string | null> {
     await fs.writeFile(configPath, JSON.stringify(DEFAULT_VAULT_CONFIG, null, 2), 'utf-8')
   }
   return root
+}
+
+/**
+ * Vault-relative path of the living AI-instructions note KNote keeps in sync,
+ * and the bundled resource it's sourced from. It lives under `Knote
+ * Resources/` alongside Templates/Attachments — an app-managed area, not
+ * user notes — because unlike everything else this file scaffolds
+ * (`.knote/config.json`), it's meant to be overwritten whenever KNote's
+ * bundled guide changes, not owned by the user. The user references it from
+ * their own `CLAUDE.md` / `.github/copilot-instructions.md` (or a `[[wiki
+ * link]]`) however suits their setup, instead of KNote guessing at and
+ * clobbering files the user might already have of their own.
+ */
+const AI_INSTRUCTIONS_TARGET = join('Knote Resources', 'AI Instructions.md')
+const AI_INSTRUCTIONS_RESOURCE = 'aiInstructions.md'
+
+/**
+ * Keep `Knote Resources/AI Instructions.md` in sync with KNote's bundled
+ * guide to its own markdown conventions, so it always reflects the current
+ * feature set — every new feature that adds user-facing syntax updates
+ * `resources/aiInstructions.md`, and that change reaches every vault the
+ * next time it's opened. A no-op when the file already matches (the common
+ * case), so this doesn't touch disk — or the file watcher — on every
+ * activation. Returns `true` only the first time the file is created, for a
+ * one-time "here's what I added" notice; a later content refresh is silent.
+ */
+export async function syncAiInstructions(extensionUri: vscode.Uri, root: string): Promise<boolean> {
+  let content: string
+  try {
+    content = await fs.readFile(
+      vscode.Uri.joinPath(extensionUri, 'resources', AI_INSTRUCTIONS_RESOURCE).fsPath,
+      'utf-8'
+    )
+  } catch {
+    return false // best-effort: a missing bundled resource must never block the vault opening
+  }
+
+  const targetPath = join(root, AI_INSTRUCTIONS_TARGET)
+  let existing: string | null = null
+  try {
+    existing = await fs.readFile(targetPath, 'utf-8')
+  } catch {
+    // doesn't exist yet
+  }
+  if (existing === content) return false
+
+  try {
+    await fs.mkdir(dirname(targetPath), { recursive: true })
+    await fs.writeFile(targetPath, content, 'utf-8')
+  } catch {
+    return false // unwritable — same best-effort rule
+  }
+  return existing === null
 }
 
 /** Offer to initialize once per workspace when it looks like a note collection. */
