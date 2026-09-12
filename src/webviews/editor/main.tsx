@@ -10,7 +10,7 @@ import { createRoot } from 'react-dom/client'
 import { bootstrap, on } from '../shared/rpc'
 import { initStores } from '../shared/stores'
 import { refreshEmbedCards } from './embedRender'
-import { createEditor } from './setupEditor'
+import { createEditor, setTabSize } from './setupEditor'
 import { wireInboundSync, revealLine } from './sync'
 import { setNotePath } from './knoteConstructs'
 import { applyFoldedLineKeys } from './foldPersist'
@@ -21,16 +21,18 @@ interface EditorBootstrap {
   text: string
   line?: number
   foldedKeys?: string[]
+  tabSize?: number
 }
 
-const { path = null, text = '', line, foldedKeys } = bootstrap<EditorBootstrap>()
+const { path = null, text = '', line, foldedKeys, tabSize } = bootstrap<EditorBootstrap>()
 
 setNotePath(path)
 initStores() // hydrates the vault config (Kanban columns) + index for the editor
 
 const view = createEditor({
   parent: document.getElementById('root')!,
-  doc: text
+  doc: text,
+  tabSize
 })
 wireInboundSync(view)
 
@@ -48,6 +50,10 @@ if (typeof line === 'number') revealLine(view, line)
 on('indexDelta', (delta) => {
   if (delta.path !== path) refreshEmbedCards(view)
 })
+
+// A Vault Settings change reaches an already-open note immediately, rather
+// than only taking effect for the next one opened.
+on('configChanged', (config) => setTabSize(view, config.tabSize))
 
 const dialogHost = document.createElement('div')
 document.body.appendChild(dialogHost)

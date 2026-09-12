@@ -14,7 +14,7 @@
 
 import dayjs from 'dayjs'
 import { syntaxTree } from '@codemirror/language'
-import type { Range } from '@codemirror/state'
+import { EditorState, type Range } from '@codemirror/state'
 import {
   Decoration,
   type DecorationSet,
@@ -531,7 +531,7 @@ function decorateLine(
   // never shifts it sideways. Skipped inside code and tables, which have their
   // own monospace block layout.
   if (!inCode(view, line.from) && !inTable(view, line.from)) {
-    const hang = hangingIndentEm(text)
+    const hang = hangingIndentEm(text, view.state.facet(EditorState.tabSize))
     if (hang !== null) {
       out.push(
         Decoration.line({
@@ -702,7 +702,15 @@ export const knoteConstructs = ViewPlugin.fromClass(
       this.decorations = buildDecorations(view)
     }
     update(update: ViewUpdate): void {
-      if (update.docChanged || update.viewportChanged || update.selectionSet) {
+      // Also on a tabSize reconfigure (Vault Settings): hanging-indent widths
+      // are computed from it, and neither the doc, viewport nor selection
+      // changes when a Settings panel edit reaches an already-open editor.
+      if (
+        update.docChanged ||
+        update.viewportChanged ||
+        update.selectionSet ||
+        update.startState.facet(EditorState.tabSize) !== update.state.facet(EditorState.tabSize)
+      ) {
         this.decorations = buildDecorations(update.view)
       }
     }

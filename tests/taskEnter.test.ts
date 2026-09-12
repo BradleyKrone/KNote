@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { EditorSelection, EditorState } from '@codemirror/state'
+import { EditorSelection, EditorState, type Extension } from '@codemirror/state'
+import { indentUnit } from '@codemirror/language'
 import { planTaskNoteSeed } from '@/editor/taskNoteSeed'
 
 const TODAY = '7/16/2026'
 
 /** Build a state with the caret at `caret` (defaults to end of doc). */
-function stateAt(doc: string, caret = doc.length): EditorState {
-  return EditorState.create({ doc, selection: EditorSelection.cursor(caret) })
+function stateAt(doc: string, caret = doc.length, extensions: Extension[] = []): EditorState {
+  return EditorState.create({ doc, selection: EditorSelection.cursor(caret), extensions })
 }
 
 /** Apply a seed plan to a doc string, returning the resulting text. */
@@ -91,6 +92,18 @@ describe('planTaskNoteSeed', () => {
     const plan = planTaskNoteSeed(stateAt(doc), TODAY, '\r\n')
     expect(plan!.insert).toBe(
       '\r\n  - Status Changed: n/a\r\n  - Date Entered: 7/16/2026\r\n  - Notes: '
+    )
+  })
+
+  it("indents the seeded block by the editor's configured indentUnit, not a hardcoded 2 spaces", () => {
+    const doc = '- [ ] @task test'
+    const plan = planTaskNoteSeed(
+      stateAt(doc, doc.length, [indentUnit.of('        ')]), // VaultConfig.tabSize: 8
+      TODAY
+    )
+    expect(plan).not.toBeNull()
+    expect(apply(doc, plan!)).toBe(
+      '- [ ] @task test\n        - Status Changed: n/a\n        - Date Entered: 7/16/2026\n        - Notes: '
     )
   })
 })

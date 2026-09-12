@@ -68,14 +68,44 @@ export function logCleanup(rel: VaultPath, result: CleanupResult): void {
 // Providers, the custom editor and the sidebar views are all registered before
 // the engine starts, so a restored editor can ask for the index while it's
 // still being built and would otherwise be handed an empty vault. Callers that
-// need the whole index await this instead. Starts resolved: with no vault open
-// there is nothing to wait for.
-let indexBuilt: Promise<void> = Promise.resolve()
+// need the whole index await this instead.
+let indexBuilt: Promise<void>
 let markIndexBuilt: () => void = () => {}
+// Whether `indexBuilt` has ever settled — false only before the very first
+// startEngine() call ever runs. `activate()` calls registerLiveEditor et al
+// (synchronously) before it awaits its way down to startEngine(); VS Code is
+// free to resolve a restored editor/board tab in that gap, and it needs
+// `indexBuilt` to genuinely still be pending then — starting it as an
+// already-resolved Promise.resolve() (as this used to) let that race slip
+// straight through, reading an unset vault root and a default-Config
+// fallback. See liveEditorProvider.ts / hostHandlers.getVaultConfig.
+let hasStartedOnce = false
+
+function beginIndexBuild(): void {
+  indexBuilt = new Promise<void>((resolve) => {
+    markIndexBuilt = resolve
+  })
+}
+beginIndexBuild()
 
 /** Resolves once the vault-wide index has finished building (immediately when no vault is open). */
 export function whenIndexBuilt(): Promise<void> {
   return indexBuilt
+}
+
+/**
+ * Call once activation has determined there is no vault to open at all (no
+ * `.knote/` folder found). Releases anything already awaiting whenIndexBuilt()
+ * with nothing to build — without this, a webview that hit the pre-startEngine
+ * race above would wait forever in a workspace with no vault, since nothing
+ * else ever resolves it. A no-op once a vault has actually started (later
+ * startEngine() calls re-arm the wait themselves); harmless if called more
+ * than once (e.g. every failed restart).
+ */
+export function noVaultToOpen(): void {
+  if (hasStartedOnce) return
+  hasStartedOnce = true
+  markIndexBuilt()
 }
 
 export function currentVaultRoot(): string | null {
@@ -98,9 +128,13 @@ export function notesMap(): Map<string, NoteMeta> {
 
 export async function startEngine(layout: VaultLayout, log: vscode.OutputChannel): Promise<void> {
   logChannel = log
-  indexBuilt = new Promise<void>((resolve) => {
-    markIndexBuilt = resolve
-  })
+  // The very first call reuses the pending promise set up at module load —
+  // recreating it here unconditionally would strand anything that started
+  // awaiting that one during the gap before this function was ever reached.
+  // A restart (workspace folder change) re-enters this after a previous
+  // successful/failed run already settled it, and does need a fresh pending
+  // promise so a webview resolving mid-restart waits for *this* cycle.
+  if (hasStartedOnce) beginIndexBuild()
   // Whatever happens below, `indexBuilt` must settle: anything awaiting it
   // (getIndexSnapshot, and so every webview's hydrate) would hang forever on a
   // failed start otherwise — a worse failure than the empty index it guards.
@@ -163,6 +197,7 @@ export async function startEngine(layout: VaultLayout, log: vscode.OutputChannel
       )
     }
   } finally {
+    hasStartedOnce = true
     markIndexBuilt()
   }
 }

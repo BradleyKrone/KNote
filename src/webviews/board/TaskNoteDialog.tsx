@@ -6,7 +6,7 @@ import { formatReasonLine, reasonLineForTask } from '@shared/parser/patterns'
 import { noteBodyToText } from '@shared/parser/taskNoteBody'
 import { EditorContextMenu } from '../editor/EditorContextMenu'
 import { setNotePath } from '../editor/knoteConstructs'
-import { createEditor } from '../editor/setupEditor'
+import { createEditor, setTabSize } from '../editor/setupEditor'
 import { TaskMetaToolbar } from '../shared/components/TaskMetaToolbar'
 import { confirm, promptReason, useConfigStore } from '../shared/stores'
 import { addCard, updateCardNote } from './boardActions'
@@ -50,6 +50,7 @@ export function TaskNoteDialog(): React.JSX.Element | null {
   const target = useTaskNoteStore((s) => s.target)
   const close = useTaskNoteStore((s) => s.close)
   const columns = useConfigStore((s) => s.vaultConfig.columns)
+  const tabSize = useConfigStore((s) => s.vaultConfig.tabSize)
   const [columnChar, setColumnChar] = useState('')
   const [taskText, setTaskText] = useState('')
   const [bodyDirty, setBodyDirty] = useState(false)
@@ -112,6 +113,7 @@ export function TaskNoteDialog(): React.JSX.Element | null {
       parent: cmHost.current,
       doc: target.kind === 'edit' ? noteBodyToText(target.card.blockLines) : '',
       kind: 'fragment',
+      tabSize: useConfigStore.getState().vaultConfig.tabSize,
       extensions: [
         // Completion popups and hover previews hang off document.body rather
         // than the editor: `.task-note-cm` clips its overflow so a wide table
@@ -155,6 +157,12 @@ export function TaskNoteDialog(): React.JSX.Element | null {
       setNotePath(null)
     }
   }, [target])
+
+  // A Vault Settings change reaches the block editor while it's open, rather
+  // than only taking effect for the next card opened.
+  useEffect(() => {
+    if (view) setTabSize(view, tabSize)
+  }, [view, tabSize])
 
   if (!target) return null
 

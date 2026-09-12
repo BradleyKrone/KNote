@@ -68,7 +68,16 @@ export function createHostHandlers(): HostHandlers {
       await whenIndexBuilt()
       return vaultIndex.getSnapshot()
     },
-    getVaultConfig: () => getVaultConfig(),
+    // Same early-activation hazard as getIndexSnapshot above: a webview that
+    // resolves before the engine starts (a restored board/settings/sidebar
+    // tab) would otherwise read DEFAULT_VAULT_CONFIG — getVaultConfig() falls
+    // back to it on any read failure, and the vault root it needs isn't set
+    // until startEngine runs — silently wrong until something else broadcasts
+    // a configChanged.
+    getVaultConfig: async () => {
+      await whenIndexBuilt()
+      return getVaultConfig()
+    },
     setVaultConfig: async (config: VaultConfig) => {
       await setVaultConfig(config)
       broadcast('configChanged', config)

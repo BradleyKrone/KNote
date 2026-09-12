@@ -3,6 +3,7 @@
 // and free of side effects; the keymap wrapper lives in taskEnter.ts.
 
 import type { EditorState } from '@codemirror/state'
+import { indentUnit } from '@codemirror/language'
 import {
   DATE_ENTERED_RE,
   mergeTaskMetaLines,
@@ -73,7 +74,7 @@ export function planTaskNoteSeed(
   const seededNum = line.number + metaLen + 1
   if (seededNum <= doc.lines && DATE_ENTERED_RE.test(doc.line(seededNum).text)) return null
 
-  const childIndent = task[1] + '  '
+  const childIndent = task[1] + state.facet(indentUnit)
   const statusSeed =
     metaLen === 0 ? `${childIndent}- Status Changed: ${STATUS_CHANGED_UNSET}${nl}` : ''
   const insert = `${nl}${statusSeed}${childIndent}- Date Entered: ${today}${nl}${childIndent}- Notes: `

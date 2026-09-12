@@ -23,7 +23,8 @@ import { relForUri } from '../paths'
 import { attachmentUriFor, openWithDrawio } from './attachmentUri'
 import { attach, currentActiveNoteRel, setActiveNote } from '../rpc/webviewRpc'
 import { createHostHandlers } from '../rpc/hostHandlers'
-import { currentVaultRoots } from '../engine'
+import { currentVaultRoots, whenIndexBuilt } from '../engine'
+import { getVaultConfig } from '../../core/vaultConfig'
 import {
   webviewHtml,
   webviewResourceRoots,
@@ -69,7 +70,10 @@ export async function openNoteInLiveEditor(uri: vscode.Uri, line?: number): Prom
 class LiveEditorProvider implements vscode.CustomTextEditorProvider {
   constructor(private readonly context: vscode.ExtensionContext) {}
 
-  resolveCustomTextEditor(document: vscode.TextDocument, panel: vscode.WebviewPanel): void {
+  async resolveCustomTextEditor(
+    document: vscode.TextDocument,
+    panel: vscode.WebviewPanel
+  ): Promise<void> {
     const webview = panel.webview
     webview.options = {
       enableScripts: true,
@@ -163,6 +167,14 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
     const revealLine = pendingReveal.get(key)
     pendingReveal.delete(key)
 
+    // A restored Live Preview tab can resolve before the engine has finished
+    // starting (providers are registered before it starts, precisely so an
+    // early-restored view has something to await instead of reading an empty
+    // vault) — getVaultConfig() needs the vault root startEngine sets, and
+    // without this wait it silently falls back to DEFAULT_VAULT_CONFIG on any
+    // read failure, handing every such tab tabSize: 4 no matter what's saved.
+    await whenIndexBuilt()
+    const { tabSize } = await getVaultConfig()
     webview.html = webviewHtml(webview, this.context.extensionUri, 'editor', 'KNote', {
       path: notePath,
       // Raw text, EOL and all — CodeMirror normalizes it to LF on the way in.
@@ -170,6 +182,7 @@ class LiveEditorProvider implements vscode.CustomTextEditorProvider {
       foldedKeys: notePath
         ? this.context.workspaceState.get<string[]>(foldStateKey(notePath), [])
         : [],
+      tabSize,
       ...(revealLine !== undefined ? { line: revealLine } : {})
     })
 

@@ -10,9 +10,10 @@
 
 import { describe, expect, it } from 'vitest'
 import { EditorState } from '@codemirror/state'
+import { indentMore } from '@codemirror/commands'
 import { insertNewlineContinueMarkup, markdown } from '@codemirror/lang-markdown'
 import { Autolink, Strikethrough, Table } from '@lezer/markdown'
-import { ensureSyntaxTree, foldable } from '@codemirror/language'
+import { ensureSyntaxTree, foldable, indentUnit } from '@codemirror/language'
 import { taskFold } from '../src/webviews/editor/taskFold'
 import { taskEnterKeymap } from '../src/webviews/editor/taskEnter'
 
@@ -95,6 +96,13 @@ describe('markdown editor defaults', () => {
     )
     expect(handled).toBe(true)
     expect(after).toBe('1. first\n2. ')
+  })
+
+  it("Tab (indentMore) inserts VaultConfig.tabSize spaces, not a fixed 2 — setupEditor.ts's indentUnit compartment is what makes the Vault Settings tab-size field do anything visible", () => {
+    const doc = 'line one'
+    const state = EditorState.create({ doc, extensions: [indentUnit.of(' '.repeat(8))] })
+    const { doc: after } = runCommand(indentMore, state)
+    expect(after).toBe(`${' '.repeat(8)}line one`)
   })
 
   it("KNote's Enter-to-seed binding falls through on a non-task line", () => {

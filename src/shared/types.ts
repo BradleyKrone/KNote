@@ -277,6 +277,8 @@ export interface VaultConfig {
    * folder's name collides with something already at the vault root.
    */
   mountNames: Record<string, string>
+  /** Display width of a Tab character in the Live Preview editor and the board's task editor. */
+  tabSize: number
 }
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
@@ -300,5 +302,6 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   boardHiddenProjects: [],
   boardHiddenRoots: [],
   excludedFolders: [],
-  mountNames: {}
+  mountNames: {},
+  tabSize: 4
 }
