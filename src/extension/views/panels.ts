@@ -54,8 +54,16 @@ export function registerPanels(context: vscode.ExtensionContext): void {
         }
         const existing = open.get(def.viewType)
         if (existing) {
-          existing.reveal()
-          return
+          try {
+            existing.reveal()
+            return
+          } catch {
+            // Stale reference to an already-disposed panel — its onDidDispose
+            // cleanup either hasn't run yet or, for whatever closed it, never
+            // will. Drop it and fall through to open a fresh one rather than
+            // surfacing "Webview is disposed" to the user.
+            open.delete(def.viewType)
+          }
         }
         const panel = vscode.window.createWebviewPanel(
           def.viewType,

@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import {
+  AlignLeft,
   ArrowDown,
   ArrowUp,
   Calendar,
@@ -25,17 +26,21 @@ import { host } from '../shared/rpc'
 import { confirm, showToast, useConfigStore, useIndexStore } from '../shared/stores'
 
 type SettingsCategory =
-  'weekly' | 'templates' | 'attachments' | 'kanban' | 'machines' | 'tags' | 'links'
+  'weekly' | 'templates' | 'attachments' | 'editor' | 'kanban' | 'machines' | 'tags' | 'links'
 
 const CATEGORIES: { id: SettingsCategory; label: string; icon: typeof Calendar }[] = [
   { id: 'weekly', label: 'Weekly notes', icon: Calendar },
   { id: 'templates', label: 'Templates', icon: FileText },
   { id: 'attachments', label: 'Attachments', icon: Image },
+  { id: 'editor', label: 'Editor', icon: AlignLeft },
   { id: 'kanban', label: 'Kanban board', icon: Kanban },
   { id: 'machines', label: 'Machines', icon: HardDrive },
   { id: 'tags', label: 'Tags', icon: Hash },
   { id: 'links', label: 'Links', icon: Link2 }
 ]
+
+const MIN_TAB_SIZE = 1
+const MAX_TAB_SIZE = 16
 
 const VALID_TAG = /^[A-Za-z0-9_][A-Za-z0-9_/-]*$/
 
@@ -88,6 +93,7 @@ export function SettingsApp(): React.JSX.Element {
   const save = async (): Promise<void> => {
     const cleaned: VaultConfig = {
       ...draft,
+      tabSize: Math.min(MAX_TAB_SIZE, Math.max(MIN_TAB_SIZE, Math.round(draft.tabSize) || 4)),
       columns: draft.columns.filter((c) => c.name.trim() !== '' && c.char.length === 1),
       machines: draft.machines
         .map((m, i) => ({
@@ -158,8 +164,15 @@ export function SettingsApp(): React.JSX.Element {
     key: keyof Omit<
       VaultConfig,
       // Not free-text: which folders are mounted is driven by the workspace and
-      // edited through "KNote: Manage Mounted Folders".
-      'columns' | 'machines' | 'deprecatedTags' | 'linkUpdate' | 'excludedFolders' | 'mountNames'
+      // edited through "KNote: Manage Mounted Folders". tabSize is a number,
+      // edited through its own numeric input in the Editor category.
+      | 'columns'
+      | 'machines'
+      | 'deprecatedTags'
+      | 'linkUpdate'
+      | 'excludedFolders'
+      | 'mountNames'
+      | 'tabSize'
     >,
     hint?: string
   ): React.JSX.Element => (
@@ -227,6 +240,26 @@ export function SettingsApp(): React.JSX.Element {
               'attachmentsFolder',
               'where pasted images are saved; can be a nested path'
             )}
+
+          {category === 'editor' && (
+            <div className="settings-field">
+              <label>
+                <span className="settings-label">Tab size</span>
+                <span className="settings-hint">
+                  spaces a Tab character displays as, in the Live Preview editor and the board's
+                  task editor
+                </span>
+              </label>
+              <input
+                className="panel-input small"
+                type="number"
+                min={MIN_TAB_SIZE}
+                max={MAX_TAB_SIZE}
+                value={draft.tabSize}
+                onChange={(e) => edit({ ...draft, tabSize: Number(e.target.value) })}
+              />
+            </div>
+          )}
 
           {category === 'links' && (
             <div className="settings-field">

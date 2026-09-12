@@ -7,7 +7,7 @@ import {
   type VaultLayout
 } from './vault'
 import { chooseVault, manageMountedFolders } from './vaultFolders'
-import { currentVaultRoots, startEngine, stopEngine } from './engine'
+import { currentVaultRoots, noVaultToOpen, startEngine, stopEngine } from './engine'
 import { refreshResourceRoots } from './views/webviewHtml'
 import { registerDocSync } from './docSync'
 import { registerAttachmentAutoCleanup } from './attachmentAutoCleanup'
@@ -79,6 +79,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<KnoteA
       // before the vault (and so its config.json) existed; re-sync them now
       // that reading the real config will actually succeed.
       await quickAccessTrees.reload()
+      // A KNote activity-bar container restored as already-active raced this
+      // same startup: its auto-open check ran before the vault was open and
+      // silently no-opped. Give it one more chance now that it is.
+      quickAccessTrees.retryAutoOpen()
       // A restart may have added folders to the vault; webviews created before
       // it can't load resources from them until their roots are widened.
       refreshResourceRoots(currentVaultRoots())
@@ -100,7 +104,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<KnoteA
 
   const openVault = async (): Promise<boolean> => {
     const layout = await findVaultLayout(preferredPrimary())
-    if (!layout) return false
+    if (!layout) {
+      // Releases anything that hit the pre-startEngine race and is still
+      // awaiting whenIndexBuilt() — with no vault, nothing will ever start
+      // to resolve it otherwise.
+      noVaultToOpen()
+      return false
+    }
     if (await syncAiInstructions(context.extensionUri, layout.primary)) {
       void vscode.window.showInformationMessage(
         'KNote added Knote Resources/AI Instructions.md — reference it from your own ' +

@@ -3,6 +3,23 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 3.2.0
+
+- **Configurable tab size.** Settings ▸ Editor now has a Tab size field (1–16,
+  default 4) controlling how wide a Tab displays and how far Tab/Shift-Tab
+  indent, in both the Live Preview editor and the board's task editor. A
+  change applies immediately to already-open notes and cards, not just ones
+  opened afterward.
+- Fixed a race on window restore where a Live Preview tab, board, planner, or
+  settings panel reopened from a previous session could briefly (or
+  permanently, until something else refreshed it) load with default settings
+  — e.g. tab size reset to 4 — instead of the vault's actual configuration.
+- Fixed the Boards, Machines and Planner activity-bar views not auto-opening
+  their panel on window restore when their container was already the active
+  one at startup.
+- Fixed an occasional "Webview is disposed" error when reopening a board,
+  planner, or machine log panel after it had already closed.
+
 ## 3.1.0
 
 - **AI assistants now know KNote's own syntax.** Opening a vault scaffolds

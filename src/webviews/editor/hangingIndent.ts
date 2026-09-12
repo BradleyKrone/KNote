@@ -37,15 +37,15 @@ const CHECKBOX_EM = 0.85 * (1.05 + 0.25)
 
 /**
  * Visual width of leading whitespace, in space-widths. A tab advances to the
- * next multiple of 4 to match CSS `tab-size`, which CodeMirror sets from
- * `EditorState.tabSize` — deliberately NOT taskFold's `indentColumns`, which
- * counts a tab as 2 because it measures structural nesting depth, not pixels.
+ * next multiple of `tabSize` to match CSS `tab-size`, which CodeMirror sets
+ * from `EditorState.tabSize` (`VaultConfig.tabSize`, default 4) —
+ * deliberately NOT taskFold's `indentColumns`, which counts a tab as 2 because
+ * it measures structural nesting depth, not pixels.
  */
-const TAB_SIZE = 4
-export function leadingColumns(indent: string): number {
+export function leadingColumns(indent: string, tabSize = 4): number {
   let col = 0
   for (const ch of indent) {
-    if (ch === '\t') col += TAB_SIZE - (col % TAB_SIZE)
+    if (ch === '\t') col += tabSize - (col % tabSize)
     else col += 1
   }
   return col
@@ -68,13 +68,13 @@ const round = (em: number): number => Math.round(em * 1000) / 1000
  * visible text, and the leading whitespace is always live text, so measuring
  * the rendered prefix is enough.
  */
-export function hangingIndentEm(text: string): number | null {
+export function hangingIndentEm(text: string, tabSize = 4): number | null {
   // Task: indent, marker, space, [checkbox widget], space, text. The marker is
   // NOT swapped for a `•` on a task line (see knoteConstructs.decorateLine).
   const task = TASK_LINE_RE.exec(text)
   if (task) {
     return round(
-      leadingColumns(task[1]) * SPACE_EM +
+      leadingColumns(task[1], tabSize) * SPACE_EM +
         markerEm(task[2], false) +
         SPACE_EM +
         CHECKBOX_EM +
@@ -84,10 +84,10 @@ export function hangingIndentEm(text: string): number | null {
   // List: `-`/`*`/`+` render as a `•`; ordered markers stay as typed.
   const item = LIST_ITEM_RE.exec(text)
   if (item) {
-    return round(leadingColumns(item[1]) * SPACE_EM + markerEm(item[2], true) + SPACE_EM)
+    return round(leadingColumns(item[1], tabSize) * SPACE_EM + markerEm(item[2], true) + SPACE_EM)
   }
   // Any other indented line — a task's note lines, free text under a bullet.
   const indent = /^[ \t]+/.exec(text)
-  if (indent && text.trim() !== '') return round(leadingColumns(indent[0]) * SPACE_EM)
+  if (indent && text.trim() !== '') return round(leadingColumns(indent[0], tabSize) * SPACE_EM)
   return null
 }

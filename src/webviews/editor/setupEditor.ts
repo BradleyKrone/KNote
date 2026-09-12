@@ -6,10 +6,10 @@
 // rendering (livePreview.ts) and KNote widgets (knoteConstructs.ts) are added
 // on top in later phases.
 
-import { EditorState, Prec, type Extension, type Text } from '@codemirror/state'
+import { Compartment, EditorState, Prec, type Extension, type Text } from '@codemirror/state'
 import { EditorView, keymap, drawSelection, highlightActiveLine } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { syntaxHighlighting } from '@codemirror/language'
+import { indentUnit, syntaxHighlighting } from '@codemirror/language'
 import { markdown } from '@codemirror/lang-markdown'
 import { Strikethrough, Table, Autolink } from '@lezer/markdown'
 import { codeLanguageFor } from './codeLanguages'
@@ -78,8 +78,45 @@ export interface CreateEditorOptions {
    * `history()` instead.
    */
   kind?: EditorKind
+  /**
+   * `VaultConfig.tabSize` — default 4. Drives both the display width of a
+   * literal Tab character already in the document, and how many spaces
+   * Tab/Shift-Tab (indentMore/indentLess) add or remove from a line, since
+   * KNote-authored indentation is spaces, not literal tabs.
+   */
+  tabSize?: number
   /** Appended last — what the embedding view adds for itself (the task dialog's Mod-Enter save). */
   extensions?: Extension[]
+}
+
+/**
+ * Wraps both facets `VaultConfig.tabSize` drives, so a config-panel change can
+ * be pushed into an already-open view (setTabSize) instead of only taking
+ * effect for editors created after the change:
+ *  - `EditorState.tabSize` — the display width of a literal `\t` already in
+ *    the document (rare; KNote-authored indentation is always spaces).
+ *  - `indentUnit` — what Tab/Shift-Tab (bound to indentMore/indentLess via
+ *    `indentWithTab` below) actually insert or remove a line's leading
+ *    whitespace by. This is the one that makes the setting visible day to
+ *    day, since typed indentation is spaces, not tabs.
+ */
+const tabSizeCompartment = new Compartment()
+
+function tabSizeExtensions(tabSize: number): Extension {
+  return [EditorState.tabSize.of(tabSize), indentUnit.of(' '.repeat(tabSize))]
+}
+
+function tabSizeEffect(tabSize: number) {
+  return tabSizeCompartment.reconfigure(tabSizeExtensions(tabSize))
+}
+
+export function setTabSize(view: EditorView, tabSize: number): void {
+  view.dispatch({ effects: tabSizeEffect(tabSize) })
+}
+
+/** Same reconfigure `setTabSize` dispatches into a view, applied to a bare state — lets a test exercise it without a DOM. */
+export function withTabSize(state: EditorState, tabSize: number): EditorState {
+  return state.update({ effects: tabSizeEffect(tabSize) }).state
 }
 
 /**
@@ -92,11 +129,24 @@ export interface CreateEditorOptions {
  * an edit is written to the TextDocument.
  */
 export function createEditor(opts: CreateEditorOptions): EditorView {
+  return new EditorView({ state: createEditorState(opts), parent: opts.parent })
+}
+
+/**
+ * Split out from `createEditor` so a test can build the exact same extension
+ * stack `createEditor` uses and run CodeMirror commands against it directly —
+ * no DOM/EditorView needed for that, and it's the only way to catch a facet
+ * (like `indentUnit`) getting silently overridden by some other extension in
+ * this list once they're all combined, which testing `indentUnit` in
+ * isolation can't.
+ */
+export function createEditorState(opts: Omit<CreateEditorOptions, 'parent'>): EditorState {
   const kind = opts.kind ?? 'note'
-  const state = EditorState.create({
+  return EditorState.create({
     doc: opts.doc,
     extensions: [
       editorKind.of(kind),
+      tabSizeCompartment.of(tabSizeExtensions(opts.tabSize ?? 4)),
       EditorState.allowMultipleSelections.of(true),
       highlightActiveLine(),
       drawSelection(),
@@ -150,5 +200,4 @@ export function createEditor(opts: CreateEditorOptions): EditorView {
       ...(opts.extensions ?? [])
     ]
   })
-  return new EditorView({ state, parent: opts.parent })
 }

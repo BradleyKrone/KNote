@@ -15,7 +15,7 @@
 // user can't see.
 
 import { syntaxTree } from '@codemirror/language'
-import { type EditorState, type Range, StateField } from '@codemirror/state'
+import { EditorState, type Range, StateField } from '@codemirror/state'
 import { Decoration, type DecorationSet, EditorView, WidgetType } from '@codemirror/view'
 import {
   activateCell,
@@ -45,9 +45,9 @@ const BR = /<br\s*\/?>/i
  * spaces are just glyphs that push the line right on their own, nothing here
  * paints them for us.
  */
-export function leadingIndentEm(raw: string): number {
+export function leadingIndentEm(raw: string, tabSize = 4): number {
   const indent = /^[ \t]*/.exec(raw)?.[0] ?? ''
-  return indent ? leadingColumns(indent) * SPACE_EM : 0
+  return indent ? leadingColumns(indent, tabSize) * SPACE_EM : 0
 }
 
 function sameCell(a: ActiveCell | null, b: ActiveCell | null): boolean {
@@ -69,7 +69,12 @@ class TableWidget extends WidgetType {
   constructor(
     private readonly raw: string,
     private readonly active: ActiveCell | null,
-    private readonly group: TableGroupInfo | null
+    private readonly group: TableGroupInfo | null,
+    // Captured at build time, not read from `view.state` in toDOM: eq() has to
+    // know a tabSize change (Vault Settings, reaching an already-open editor)
+    // makes two otherwise-identical widgets unequal, or CodeMirror reuses the
+    // stale DOM and toDOM never runs again to repaint the indent.
+    private readonly tabSize: number
   ) {
     super()
   }
@@ -78,6 +83,7 @@ class TableWidget extends WidgetType {
     return (
       sameCell(other.active, this.active) &&
       sameGroup(other.group, this.group) &&
+      other.tabSize === this.tabSize &&
       maskActiveCell(other.raw, other.active) === maskActiveCell(this.raw, this.active)
     )
   }
@@ -90,7 +96,7 @@ class TableWidget extends WidgetType {
     // decorations (there's no `.cm-line` left for them to attach to) — apply
     // the same classes here so a table nested under a task still reads as
     // part of that task's card instead of dropping out of it.
-    let indentEm = leadingIndentEm(this.raw)
+    let indentEm = leadingIndentEm(this.raw, this.tabSize)
     if (this.group) {
       wrap.classList.add('cm-knote-group-line')
       if (this.group.isLast) wrap.classList.add('cm-knote-group-last')
@@ -254,7 +260,7 @@ function buildDecorations(state: EditorState): TableDecorations {
             : null
         decorations.push(
           Decoration.replace({
-            widget: new TableWidget(raw, cell, group),
+            widget: new TableWidget(raw, cell, group, state.facet(EditorState.tabSize)),
             block: true
           }).range(first.from, last.to)
         )
@@ -273,7 +279,12 @@ export const tableRender = StateField.define<TableDecorations>({
     if (
       tr.docChanged ||
       tr.selection ||
-      tr.effects.some((e) => e.is(setActiveCell) || e.is(setTableSource))
+      tr.effects.some((e) => e.is(setActiveCell) || e.is(setTableSource)) ||
+      // A tabSize reconfigure (Vault Settings) needs every indented table's
+      // widget rebuilt: its leading padding is baked in at build time, and
+      // WidgetType.eq() (keyed on raw/active/group, not tabSize) would
+      // otherwise tell CodeMirror to keep reusing the stale DOM.
+      tr.startState.facet(EditorState.tabSize) !== tr.state.facet(EditorState.tabSize)
     ) {
       return buildDecorations(tr.state)
     }

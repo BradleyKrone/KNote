@@ -378,25 +378,55 @@ class PlannerTreeProvider implements vscode.TreeDataProvider<PlannerTreeNode> {
 /**
  * Clicking a KNote activity-bar icon reveals the tree, whose top row is really
  * just a launcher for the full panel. Skip that extra click: when the view
- * first becomes visible, open its panel automatically. We fire only on the
- * hidden→visible transition (the panel commands dedupe/reveal, so revisiting
- * an already-open panel is harmless) and only once a vault is open.
+ * becomes visible, open its panel automatically. We fire once per
+ * hidden→visible span (the panel commands dedupe/reveal, so firing again
+ * would be harmless — this just avoids a redundant `executeCommand` while the
+ * view stays continuously visible) and only once a vault is open. Switching
+ * away to another KNote icon and back is its own hidden→visible span, so it
+ * re-fires — that's the whole point: it re-opens/reveals the panel exactly
+ * like clicking it the first time did.
+ *
+ * Registration happens before the vault finishes opening (activate() creates
+ * these trees, then awaits openVault()), so a window restored with a KNote
+ * container already active can find `view.visible` true before there's a
+ * vault. That check would then silently no-op, and — because the view was
+ * already visible at construction — never see a hidden→visible transition to
+ * retry on its own. `retry()` gives the caller a second chance to fire once
+ * the vault is actually open, as long as the view is still in that same
+ * initial visible span (hasn't fired yet).
  */
-function autoOpenOnReveal(view: vscode.TreeView<unknown>, command: string): vscode.Disposable {
+function autoOpenOnReveal(
+  view: vscode.TreeView<unknown>,
+  command: string
+): { disposable: vscode.Disposable; retry: () => void } {
   let wasVisible = view.visible
+  let firedThisSpan = false
   const maybeOpen = (): void => {
-    if (currentVaultRoot()) void vscode.commands.executeCommand(command)
+    if (firedThisSpan) return
+    if (currentVaultRoot()) {
+      firedThisSpan = true
+      void vscode.commands.executeCommand(command)
+    }
   }
   if (wasVisible) maybeOpen()
-  return view.onDidChangeVisibility((e) => {
+  const disposable = view.onDidChangeVisibility((e) => {
     if (e.visible && !wasVisible) maybeOpen()
+    if (!e.visible) firedThisSpan = false
     wasVisible = e.visible
   })
+  return {
+    disposable,
+    retry: () => {
+      if (wasVisible) maybeOpen()
+    }
+  }
 }
 
 /** Handle returned to `extension.ts` so it can re-sync the hidden-project sets once a vault is actually open. */
 export interface QuickAccessTrees {
   reload: () => Promise<void>
+  /** Retry any auto-open that raced the vault opening — see `autoOpenOnReveal`. */
+  retryAutoOpen: () => void
 }
 
 export function registerQuickAccessTrees(context: vscode.ExtensionContext): QuickAccessTrees {
@@ -419,6 +449,16 @@ export function registerQuickAccessTrees(context: vscode.ExtensionContext): Quic
     // re-focus the row.
     manageCheckboxStateManually: true
   })
+  const boardsAutoOpen = autoOpenOnReveal(boardsView as vscode.TreeView<unknown>, 'knote.openBoard')
+  const machinesAutoOpen = autoOpenOnReveal(
+    machinesView as vscode.TreeView<unknown>,
+    'knote.openMachineLog'
+  )
+  const plannerAutoOpen = autoOpenOnReveal(
+    plannerView as vscode.TreeView<unknown>,
+    'knote.openPlanner'
+  )
+
   context.subscriptions.push(
     plannerView.onDidChangeCheckboxState(async ({ items }) => {
       for (const [node, state] of items) {
@@ -436,9 +476,9 @@ export function registerQuickAccessTrees(context: vscode.ExtensionContext): Quic
     boardsView,
     machinesView,
     plannerView,
-    autoOpenOnReveal(boardsView as vscode.TreeView<unknown>, 'knote.openBoard'),
-    autoOpenOnReveal(machinesView as vscode.TreeView<unknown>, 'knote.openMachineLog'),
-    autoOpenOnReveal(plannerView as vscode.TreeView<unknown>, 'knote.openPlanner'),
+    boardsAutoOpen.disposable,
+    machinesAutoOpen.disposable,
+    plannerAutoOpen.disposable,
     debouncedRefresh(() => {
       boards.refresh()
       machines.refresh()
@@ -458,6 +498,11 @@ export function registerQuickAccessTrees(context: vscode.ExtensionContext): Quic
     // defaults and leave every project's checkbox looking ticked).
     reload: async () => {
       await Promise.all([planner.reload(), boards.reload()])
+    },
+    retryAutoOpen: () => {
+      boardsAutoOpen.retry()
+      machinesAutoOpen.retry()
+      plannerAutoOpen.retry()
     }
   }
 }
