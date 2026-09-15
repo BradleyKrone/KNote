@@ -70,6 +70,10 @@
         "title": "KNote: Open Welcome & Feature Guide"
       },
       {
+        "command": "knote.openReleaseNotes",
+        "title": "KNote: Open Release Notes"
+      },
+      {
         "command": "knote.openLivePreview",
         "title": "KNote: Open in Live Preview",
         "icon": "$(book)"

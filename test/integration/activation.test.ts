@@ -34,7 +34,9 @@ describe('activation', () => {
       'knote.openWeeklyNote',
       'knote.quickCapture',
       'knote.searchVault',
-      'knote.renameTag'
+      'knote.renameTag',
+      'knote.openWelcome',
+      'knote.openReleaseNotes'
     ]
     const missing = expected.filter((cmd) => !registered.has(cmd))
     assert.deepStrictEqual(missing, [], `unregistered commands: ${missing.join(', ')}`)

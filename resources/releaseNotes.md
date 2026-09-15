@@ -15,6 +15,10 @@ Extensions view.
   higher: Tab/Shift-Tab on a list or task line now caps how far it
   indents at 5 spaces per level, however high Tab size is set, since a wider
   step stops parsing as nesting at all.
+- **"What's new" notice on update.** Updating KNote to a new version now
+  shows a one-time notice with a button straight to the full release notes.
+  Reopen them any time with **KNote: Open Release Notes** from the Command
+  Palette.
 
 ## 3.2.0
 
