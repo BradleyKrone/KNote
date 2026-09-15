@@ -44,6 +44,9 @@ describe('anchorText', () => {
   it('drops the milestone marker', () => {
     expect(anchorText('🏁 Line 3 commissioned')).toBe('Line 3 commissioned')
   })
+  it('drops the milestone marker with a bullet prefix', () => {
+    expect(anchorText('- 🏁 Line 3 commissioned')).toBe('Line 3 commissioned')
+  })
   it('strips tags, due dates, priority and an existing anchor', () => {
     expect(
       anchorText('- [/] @task Rewire the pump !! #urgent 📅 2026-08-01 ^rewire-the-pump')

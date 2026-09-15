@@ -338,6 +338,38 @@ describe('parseNote', () => {
     expect(meta.machineLog).toHaveLength(0)
   })
 
+  it('ignores a bullet-prefixed 🚜 line inside code fences', () => {
+    const meta = parseNote('a.md', '```\n- 🚜 Z6A00101 fake 📅 2026-07-03\n```\n')
+    expect(meta.machineLog).toHaveLength(0)
+  })
+
+  it('finds a 🚜 machine entry with a bullet prefix', () => {
+    const meta = parseNote('a.md', '- 🚜 Z6A00101 Replaced final drive #maintenance 📅 2026-07-03\n')
+    expect(meta.machineLog).toHaveLength(1)
+    expect(meta.machineLog[0]).toMatchObject({
+      serial: 'Z6A00101',
+      text: 'Replaced final drive #maintenance 📅 2026-07-03',
+      tags: ['maintenance'],
+      rawLine: '- 🚜 Z6A00101 Replaced final drive #maintenance 📅 2026-07-03'
+    })
+  })
+
+  it('finds a 🚜 machine entry with an indent+bullet prefix', () => {
+    const meta = parseNote('a.md', '  - 🚜 Z6A00101 greased fittings\n')
+    expect(meta.machineLog).toHaveLength(1)
+    expect(meta.machineLog[0]).toMatchObject({
+      serial: 'Z6A00101',
+      text: 'greased fittings',
+      rawLine: '  - 🚜 Z6A00101 greased fittings'
+    })
+  })
+
+  it('finds a 🚜 machine entry with an arbitrary label prefix', () => {
+    const meta = parseNote('a.md', 'Machine: 🚜 Z6A00101 did work 📅 2026-07-03\n')
+    expect(meta.machineLog).toHaveLength(1)
+    expect(meta.machineLog[0]).toMatchObject({ serial: 'Z6A00101', text: 'did work 📅 2026-07-03' })
+  })
+
   it('extracts 🏁 milestones with tags, excluded from tasks', () => {
     const meta = parseNote('a.md', '🏁 Ship v1 #release\n- [ ] @task real task\n')
     expect(meta.milestones).toHaveLength(1)
@@ -348,6 +380,22 @@ describe('parseNote', () => {
       rawLine: '🏁 Ship v1 #release'
     })
     expect(meta.tasks).toHaveLength(1)
+  })
+
+  it('finds a 🏁 milestone with a bullet prefix', () => {
+    const meta = parseNote('a.md', '- 🏁 Ship v1 #release\n')
+    expect(meta.milestones).toHaveLength(1)
+    expect(meta.milestones[0]).toMatchObject({
+      text: 'Ship v1 #release',
+      tags: ['release'],
+      rawLine: '- 🏁 Ship v1 #release'
+    })
+  })
+
+  it('finds a 🏁 milestone with an arbitrary label prefix', () => {
+    const meta = parseNote('a.md', 'TODO: 🏁 Ship it\n')
+    expect(meta.milestones).toHaveLength(1)
+    expect(meta.milestones[0]).toMatchObject({ text: 'Ship it' })
   })
 
   it('attaches an indented Reason line to the task above it', () => {

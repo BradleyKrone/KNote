@@ -62,11 +62,22 @@ jobs:
         shell: bash
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
+      - name: Extract release notes for this version
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          awk -v ver="${{ steps.pkg.outputs.version }}" '
+            /^## / { if (found) exit; found = ($0 == "## " ver); next }
+            found { print }
+          ' resources/releaseNotes.md > RELEASE_BODY.md
+          cat RELEASE_BODY.md
+
       - name: Create GitHub Release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.pkg.outputs.version }}-${{ github.run_number }}
           name: KNote v${{ steps.pkg.outputs.version }} (build ${{ github.run_number }})
+          body_path: RELEASE_BODY.md
           files: '*.vsix'
           generate_release_notes: true

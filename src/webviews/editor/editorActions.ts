@@ -37,8 +37,8 @@ export function buildMachineEntryLine(serial: string, date: string, tags: string
 export function editMachineLine(rawLine: string, serial: string, date: string | null): string {
   const m = MACHINE_ENTRY_RE.exec(rawLine)
   if (!m) return rawLine
-  const rest = setDueDate(m[2], date)
-  return rest ? `🚜 ${serial} ${rest}` : `🚜 ${serial}`
+  const rest = setDueDate(m[3], date)
+  return rest ? `${m[1]}🚜 ${serial} ${rest}` : `${m[1]}🚜 ${serial}`
 }
 
 /** The current 📅 / @due date on a line, or null. */

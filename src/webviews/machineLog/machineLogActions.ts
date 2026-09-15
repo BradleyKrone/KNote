@@ -11,7 +11,7 @@ export async function setMachineEntryFields(
 ): Promise<void> {
   const m = MACHINE_ENTRY_RE.exec(entry.rawLine)
   if (!m) return
-  const rest = setDueDate(m[2], date)
-  const newLine = rest ? `🚜 ${serial} ${rest}` : `🚜 ${serial}`
+  const rest = setDueDate(m[3], date)
+  const newLine = rest ? `${m[1]}🚜 ${serial} ${rest}` : `${m[1]}🚜 ${serial}`
   await rewriteLine({ path: entry.path, line: entry.line, rawLine: entry.rawLine }, newLine)
 }
