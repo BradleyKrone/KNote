@@ -15,7 +15,7 @@ import {
 } from '@dnd-kit/core'
 import type { DeliverableScopeFilter } from '@shared/deliverables'
 import { reasonLineForTask } from '@shared/parser/patterns'
-import { on } from '../shared/rpc'
+import { host, on } from '../shared/rpc'
 import {
   promptReason,
   showToast,
@@ -52,6 +52,7 @@ export function BoardView({
   const hiddenProjects = useMemo(() => new Set(boardHiddenProjects), [boardHiddenProjects])
   const boardHiddenRoots = useConfigStore((s) => s.vaultConfig.boardHiddenRoots)
   const hiddenRoots = useMemo(() => new Set(boardHiddenRoots), [boardHiddenRoots])
+  const boardSortByPriority = useConfigStore((s) => s.vaultConfig.boardSortByPriority)
   const mountNames = useMountsStore((s) => s.mountNames)
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [textFilter, setTextFilter] = useState('')
@@ -76,7 +77,8 @@ export function BoardView({
         deliverableScope,
         hiddenProjects,
         hiddenRoots,
-        mountNames
+        mountNames,
+        sortByPriority: boardSortByPriority
       }),
     [
       notes,
@@ -90,7 +92,8 @@ export function BoardView({
       deliverableScope,
       hiddenProjects,
       hiddenRoots,
-      mountNames
+      mountNames,
+      boardSortByPriority
     ]
   )
   const byColumn = useMemo(() => groupByColumn(cards, columns), [cards, columns])
@@ -230,7 +233,11 @@ export function BoardView({
     if (!sameColumn) {
       attemptColumnChange(card, overCard.statusChar)
     } else if (card.path === overCard.path && card.line !== overCard.line) {
-      void reorderCard(card, overCard)
+      if (boardSortByPriority) {
+        showToast('Turn off "Sort by priority" to manually reorder cards')
+      } else {
+        void reorderCard(card, overCard)
+      }
       clearPreview()
     } else {
       if (card.path !== overCard.path) {
@@ -306,6 +313,19 @@ export function BoardView({
               onChange={(e) => setGroupByNote(e.target.checked)}
             />
             Group by note
+          </label>
+          <label className="board-group-toggle" title="Highest-priority tasks first in each column">
+            <input
+              type="checkbox"
+              checked={boardSortByPriority}
+              onChange={(e) => {
+                const config = useConfigStore.getState().vaultConfig
+                const updated = { ...config, boardSortByPriority: e.target.checked }
+                useConfigStore.setState({ vaultConfig: updated })
+                void host.setVaultConfig(updated)
+              }}
+            />
+            Sort by priority
           </label>
         </div>
       </div>

@@ -266,6 +266,13 @@ export interface VaultConfig {
    */
   boardHiddenRoots: string[]
   /**
+   * When true, cards within each Kanban column are ordered highest-priority
+   * first (ties broken by note path/line, same as the default order). Off by
+   * default so the board's file-order behavior doesn't change until the user
+   * opts in.
+   */
+  boardSortByPriority: boolean
+  /**
    * Absolute paths of workspace folders deliberately NOT mounted into this
    * vault. Stored as the *excluded* set (like `hiddenProjects`) so a folder
    * added to the workspace later joins the vault on its own.
@@ -277,7 +284,15 @@ export interface VaultConfig {
    * folder's name collides with something already at the vault root.
    */
   mountNames: Record<string, string>
-  /** Display width of a Tab character in the Live Preview editor and the board's task editor. */
+  /**
+   * Display width of a Tab character, and how many spaces Tab/Shift-Tab add
+   * or remove per press, in the Live Preview editor and the board's task
+   * editor. Capped at `listIndentTight.LIST_INDENT_SAFE_MAX` (5) when the
+   * line being indented is a list/task item, however much higher this is
+   * set — @lezer/markdown's list-nesting parser has its own hardcoded
+   * column threshold, and a wider step per level stops parsing as nesting
+   * at all past that cap.
+   */
   tabSize: number
 }
 
@@ -301,6 +316,7 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   hiddenProjects: [],
   boardHiddenProjects: [],
   boardHiddenRoots: [],
+  boardSortByPriority: false,
   excludedFolders: [],
   mountNames: {},
   tabSize: 4

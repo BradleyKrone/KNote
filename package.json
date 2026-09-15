@@ -1,7 +1,7 @@
 {
   "name": "knote",
   "displayName": "KNote",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "KNote — a local-first Markdown vault with a checkbox-driven Kanban board, wiki links, and vault-wide search, as a VS Code extension",
   "publisher": "bradleykrone",
   "main": "./dist/extension.js",
@@ -68,6 +68,10 @@
       {
         "command": "knote.openWelcome",
         "title": "KNote: Open Welcome & Feature Guide"
+      },
+      {
+        "command": "knote.openReleaseNotes",
+        "title": "KNote: Open Release Notes"
       },
       {
         "command": "knote.openLivePreview",

@@ -34,6 +34,12 @@ an import), or copy it into `.github/copilot-instructions.md` for Copilot,
 which doesn't support imports. It's an ordinary note otherwise, so
 `[[AI Instructions]]` links to it like anything else.
 
+## Release notes
+
+Updating KNote to a new version shows a one-time "What's new" notice with a
+button straight to the full notes. Reopen them any time with **KNote: Open
+Release Notes** from the Command Palette.
+
 ## A vault can span several folders
 
 Notes you want in one vault do not have to live under one path. Add any
@@ -366,6 +372,12 @@ line somewhere in your vault:
   to. Every column change stamps/refreshes a `Status Changed:` line.
 - Filter by text, tag, and three date filters: **Status Changed**,
   **Date Entered**, and **Due** (any / today / this week / date / range).
+- **Sort by priority** toggles each column to show its highest-priority
+  cards (`!!!`/`!!`/`!`) first, ties falling back to file order. Off by
+  default; the setting is remembered across restarts. While it's on,
+  dragging a card to reorder it within a column is disabled (dragging it to
+  a different column still works) — turn the toggle off to reorder by hand
+  again.
 - **Due dates and Waiting follow-up dates colour themselves** on one shared
   scale, so what's urgent stands out at a glance:
 

@@ -31,6 +31,7 @@ import { taskFold } from './taskFold'
 import { foldPersistence } from './foldPersist'
 import { taskEnterKeymap } from './taskEnter'
 import { listContinueTightKeymap } from './listContinueTight'
+import { listIndentTightKeymap } from './listIndentTight'
 import { knoteAutocomplete } from './completions'
 import { linkHover } from './linkHover'
 import { mdLink } from './mdLink'
@@ -190,6 +191,9 @@ export function createEditorState(opts: Omit<CreateEditorOptions, 'parent'>): Ed
       // Must also beat markdown()'s own Enter binding (Prec.high, added by
       // its default addKeymap:true) — see listContinueTight.ts for why.
       Prec.highest(keymap.of(listContinueTightKeymap)),
+      // Must beat indentWithTab below — see listIndentTight.ts for why a
+      // large tabSize can't be allowed to indent a list line by its full width.
+      Prec.highest(keymap.of(listIndentTightKeymap)),
       keymap.of([...formatKeymap, ...defaultKeymap, ...searchKeymap, indentWithTab]),
       search(),
       knoteTheme,

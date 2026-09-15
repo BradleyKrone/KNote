@@ -28,6 +28,7 @@ import { registerFilesTree } from './trees/filesTree'
 import { registerTagsTree } from './trees/tagsTree'
 import { registerQuickAccessTrees } from './trees/quickAccess'
 import { registerWeeklyTree } from './trees/weeklyTree'
+import { shouldShowUpdateNotice } from '@shared/updateNotice'
 
 /**
  * What `activate` hands back to VS Code. `extendMarkdownIt` is picked up by the
@@ -41,6 +42,19 @@ export interface KnoteApi {
 export async function activate(context: vscode.ExtensionContext): Promise<KnoteApi> {
   const log = vscode.window.createOutputChannel('KNote')
   context.subscriptions.push(log)
+
+  // Extension-level fact (not vault-level), so it runs before any vault is
+  // found rather than inside openVault()/start().
+  const currentVersion = context.extension.packageJSON.version as string
+  const previousVersion = context.globalState.get<string>('knote.lastSeenVersion')
+  if (shouldShowUpdateNotice(previousVersion, currentVersion)) {
+    void vscode.window
+      .showInformationMessage(`KNote updated to ${currentVersion}.`, "What's new")
+      .then((pick) => {
+        if (pick) void vscode.commands.executeCommand('knote.openReleaseNotes')
+      })
+  }
+  void context.globalState.update('knote.lastSeenVersion', currentVersion)
 
   // Providers and commands are registered unconditionally (package.json
   // declares them); each one no-ops or warns when no vault is open.

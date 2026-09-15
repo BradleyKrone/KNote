@@ -608,6 +608,45 @@ describe('collectCards — a dated member task in the project note', () => {
   })
 })
 
+describe('collectCards sortByPriority', () => {
+  const notes = new Map<string, NoteMeta>()
+  notes.set(
+    'a.md',
+    parseNote(
+      'a.md',
+      ['- [ ] @task no priority', '- [ ] @task low !', '- [ ] @task high !!!'].join('\n')
+    )
+  )
+
+  it('leaves file order untouched by default', () => {
+    const cards = collectCards(notes, { kind: 'global' }, { tag: null, text: '' })
+    expect(cards.map((c) => c.displayText)).toEqual(['no priority', 'low', 'high'])
+  })
+
+  it('orders highest-priority first when sortByPriority is on', () => {
+    const cards = collectCards(
+      notes,
+      { kind: 'global' },
+      { tag: null, text: '', sortByPriority: true }
+    )
+    expect(cards.map((c) => c.displayText)).toEqual(['high', 'low', 'no priority'])
+  })
+
+  it('falls back to path/line order for ties', () => {
+    const tied = new Map<string, NoteMeta>()
+    tied.set(
+      'b.md',
+      parseNote('b.md', ['- [ ] @task second !!', '- [ ] @task first !!'].join('\n'))
+    )
+    const cards = collectCards(
+      tied,
+      { kind: 'global' },
+      { tag: null, text: '', sortByPriority: true }
+    )
+    expect(cards.map((c) => c.displayText)).toEqual(['second', 'first'])
+  })
+})
+
 describe('collectCards deliverable overdue', () => {
   // Windows fixed safely in the past (design) and safely in the future
   // (landscaping) so these assertions hold regardless of the real clock —

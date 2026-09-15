@@ -17,6 +17,11 @@ async function openWelcome(context: vscode.ExtensionContext): Promise<void> {
   await vscode.commands.executeCommand('markdown.showPreview', uri)
 }
 
+async function openReleaseNotes(context: vscode.ExtensionContext): Promise<void> {
+  const uri = vscode.Uri.joinPath(context.extensionUri, 'resources', 'releaseNotes.md')
+  await vscode.commands.executeCommand('markdown.showPreview', uri)
+}
+
 async function cleanupAttachments(): Promise<void> {
   if (!currentVaultRoot()) {
     void vscode.window.showWarningMessage('KNote: no vault is open in this workspace.')
@@ -154,6 +159,7 @@ async function migrateLegacyTasks(options?: { confirm?: boolean }): Promise<void
 export function registerMaintenanceCommands(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('knote.openWelcome', () => openWelcome(context)),
+    vscode.commands.registerCommand('knote.openReleaseNotes', () => openReleaseNotes(context)),
     vscode.commands.registerCommand('knote.cleanupAttachments', cleanupAttachments),
     vscode.commands.registerCommand('knote.migrateLegacyTasks', (options?: { confirm?: boolean }) =>
       migrateLegacyTasks(options)
