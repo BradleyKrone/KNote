@@ -33,7 +33,7 @@ export function blockIdOf(lineText: string): string | null {
  */
 export function anchorText(lineText: string): string {
   const clean = lineText.replace(/\r$/, '')
-  const body = TASK_LINE_RE.exec(clean)?.[4] ?? MILESTONE_LINE_RE.exec(clean)?.[1] ?? clean
+  const body = TASK_LINE_RE.exec(clean)?.[4] ?? MILESTONE_LINE_RE.exec(clean)?.[2] ?? clean
   return stripInlineMarkers(body)
 }
 

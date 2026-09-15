@@ -199,7 +199,7 @@ function readLineCtx(view: EditorView, pos: number): LineCtx {
     isMachine: MACHINE_ENTRY_RE.test(line.text),
     due: lineDue(line.text),
     start: lineStart(line.text),
-    serial: MACHINE_ENTRY_RE.exec(line.text)?.[1] ?? ''
+    serial: MACHINE_ENTRY_RE.exec(line.text)?.[2] ?? ''
   }
 }
 

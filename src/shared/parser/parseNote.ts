@@ -231,7 +231,7 @@ function collectTasks(meta: NoteMeta, maskedLines: string[], rawLines: string[])
 /** 🏁 lines — deliberately no checkbox brackets, so they never surface on the Kanban board. */
 function collectMilestones(meta: NoteMeta, maskedLines: string[], rawLines: string[]): void {
   scanLines(maskedLines, rawLines, MILESTONE_LINE_RE, (line, rawMatch, rawLine) => {
-    const text = rawMatch[1].trim()
+    const text = rawMatch[2].trim()
     meta.milestones.push({ line, text, tags: extractTags(text), rawLine } as MilestoneItem)
   })
 }
@@ -246,10 +246,10 @@ function collectBlockIds(meta: NoteMeta, maskedLines: string[], rawLines: string
 /** 🚜 <serial> <activity…> lines — like milestones, never Kanban cards. */
 function collectMachineLog(meta: NoteMeta, maskedLines: string[], rawLines: string[]): void {
   scanLines(maskedLines, rawLines, MACHINE_ENTRY_RE, (line, rawMatch, rawLine) => {
-    const text = (rawMatch[2] ?? '').trim()
+    const text = (rawMatch[3] ?? '').trim()
     meta.machineLog.push({
       line,
-      serial: rawMatch[1],
+      serial: rawMatch[2],
       text,
       tags: extractTags(text),
       rawLine

@@ -3,6 +3,18 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 3.3.1
+
+- GitHub Releases published for each build now include that version's
+  release notes in the release description, instead of just the auto-generated
+  commit list.
+- Fixed `🏁` milestones and `🚜` machine-log entries not being recognized
+  unless the marker sat flush at the start of the line — under a bullet, an
+  indent, or any other label prefix (`- 🏁 …`, `TODO: 🏁 …`), the line was
+  silently skipped. Both now match with the same marker-anywhere-on-the-line
+  rule `@task` already uses, and rewriting one (setting its date, editing its
+  serial) preserves whatever came before the marker.
+
 ## 3.3.0
 
 - **Sort Kanban columns by priority.** A new "Sort by priority" toggle on the

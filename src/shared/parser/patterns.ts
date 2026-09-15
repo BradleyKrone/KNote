@@ -636,16 +636,24 @@ export function stripInlineMarkers(text: string): string {
   )
 }
 
-/** 🏁 milestone line — a standalone dated timeline entry, deliberately not a checkbox so it never becomes a Kanban card */
-export const MILESTONE_LINE_RE = /^\s*🏁\s+(.*)$/
+/**
+ * 🏁 milestone line — a standalone dated timeline entry, deliberately not a
+ * checkbox so it never becomes a Kanban card. Group 1 is everything before the
+ * marker (indentation, a bullet, a label — verbatim, possibly empty; a lazy
+ * prefix so it lands on the first 🏁 on the line, not the last). Group 2 is
+ * the milestone text.
+ */
+export const MILESTONE_LINE_RE = /^(.*?)🏁\s+(.*)$/
 
 /**
- * 🚜 machine work-log entry: `🚜 <serial> <activity…>`. Group 1 is the serial
- * (first whitespace-delimited token); group 2 is the activity text, which may
- * carry #tags and a 📅 date. Like milestones, deliberately not a checkbox so it
+ * 🚜 machine work-log entry: `<anything> 🚜 <serial> <activity…>`. Group 1 is
+ * everything before the marker (verbatim, possibly empty — same lazy-prefix
+ * reasoning as MILESTONE_LINE_RE); group 2 is the serial (first
+ * whitespace-delimited token); group 3 is the activity text, which may carry
+ * #tags and a 📅 date. Like milestones, deliberately not a checkbox so it
  * never becomes a Kanban card.
  */
-export const MACHINE_ENTRY_RE = /^\s*🚜\s+(\S+)\s*(.*)$/
+export const MACHINE_ENTRY_RE = /^(.*?)🚜\s+(\S+)\s*(.*)$/
 
 /**
  * Reserved checkbox status char for archived tasks — `- [a] ...`. Archived

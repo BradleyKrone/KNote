@@ -52,6 +52,15 @@ describe('editMachineLine', () => {
       '- [ ] @task not a machine'
     )
   })
+  it('preserves a bullet prefix when rewriting', () => {
+    const before = '- 🚜 OLD swapped the pump #D6 📅 2026-07-01'
+    expect(editMachineLine(before, 'NEW', '2026-07-16')).toBe(
+      '- 🚜 NEW swapped the pump #D6 📅 2026-07-16'
+    )
+  })
+  it('preserves a label prefix when rewriting', () => {
+    expect(editMachineLine('Log: 🚜 Z6 note 📅 2026-07-01', 'Z6', null)).toBe('Log: 🚜 Z6 note')
+  })
 })
 
 describe('lineDue', () => {
