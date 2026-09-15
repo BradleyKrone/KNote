@@ -344,7 +344,10 @@ describe('parseNote', () => {
   })
 
   it('finds a 🚜 machine entry with a bullet prefix', () => {
-    const meta = parseNote('a.md', '- 🚜 Z6A00101 Replaced final drive #maintenance 📅 2026-07-03\n')
+    const meta = parseNote(
+      'a.md',
+      '- 🚜 Z6A00101 Replaced final drive #maintenance 📅 2026-07-03\n'
+    )
     expect(meta.machineLog).toHaveLength(1)
     expect(meta.machineLog[0]).toMatchObject({
       serial: 'Z6A00101',
