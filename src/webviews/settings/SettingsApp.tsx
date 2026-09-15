@@ -166,6 +166,7 @@ export function SettingsApp(): React.JSX.Element {
       // Not free-text: which folders are mounted is driven by the workspace and
       // edited through "KNote: Manage Mounted Folders". tabSize is a number,
       // edited through its own numeric input in the Editor category.
+      // boardSortByPriority is a checkbox, toggled from the board toolbar itself.
       | 'columns'
       | 'machines'
       | 'deprecatedTags'
@@ -173,6 +174,7 @@ export function SettingsApp(): React.JSX.Element {
       | 'excludedFolders'
       | 'mountNames'
       | 'tabSize'
+      | 'boardSortByPriority'
     >,
     hint?: string
   ): React.JSX.Element => (
@@ -247,7 +249,8 @@ export function SettingsApp(): React.JSX.Element {
                 <span className="settings-label">Tab size</span>
                 <span className="settings-hint">
                   spaces a Tab character displays as, in the Live Preview editor and the board's
-                  task editor
+                  task editor; list/task nesting caps at 5 spaces per level past this even if set
+                  higher, to stay valid Markdown
                 </span>
               </label>
               <input

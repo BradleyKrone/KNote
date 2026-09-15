@@ -366,6 +366,12 @@ line somewhere in your vault:
   to. Every column change stamps/refreshes a `Status Changed:` line.
 - Filter by text, tag, and three date filters: **Status Changed**,
   **Date Entered**, and **Due** (any / today / this week / date / range).
+- **Sort by priority** toggles each column to show its highest-priority
+  cards (`!!!`/`!!`/`!`) first, ties falling back to file order. Off by
+  default; the setting is remembered across restarts. While it's on,
+  dragging a card to reorder it within a column is disabled (dragging it to
+  a different column still works) — turn the toggle off to reorder by hand
+  again.
 - **Due dates and Waiting follow-up dates colour themselves** on one shared
   scale, so what's urgent stands out at a glance:
 

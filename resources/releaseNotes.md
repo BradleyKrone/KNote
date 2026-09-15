@@ -3,6 +3,19 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 3.3.0
+
+- **Sort Kanban columns by priority.** A new "Sort by priority" toggle on the
+  board puts each column's highest-priority cards (`!!!`/`!!`/`!`) first,
+  ties falling back to the usual file order. Off by default, and remembered
+  across restarts. While it's on, dragging a card to reorder it within its
+  column is disabled (dragging it to a different column still works) — turn
+  the toggle off to reorder by hand again.
+- Fixed list/task nesting silently breaking when Tab size was set to 6 or
+  higher: Tab/Shift-Tab on a list or task line now caps how far it
+  indents at 5 spaces per level, however high Tab size is set, since a wider
+  step stops parsing as nesting at all.
+
 ## 3.2.0
 
 - **Configurable tab size.** Settings ▸ Editor now has a Tab size field (1–16,

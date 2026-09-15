@@ -215,6 +215,8 @@ export interface BoardFilters {
   hiddenRoots?: ReadonlySet<string>
   /** Every mount name, for deriving which root a note's path belongs to via `rootNameOf`. */
   mountNames?: readonly string[]
+  /** `VaultConfig.boardSortByPriority` — highest-priority cards first within each column. */
+  sortByPriority?: boolean
 }
 
 function belongsToHiddenProject(
@@ -276,8 +278,15 @@ export function collectCards(
       cards.push(card)
     }
   }
-  // Stable, markdown-derivable order: by note path, then line number
-  cards.sort((a, b) => a.path.localeCompare(b.path) || a.line - b.line)
+  // Stable, markdown-derivable order: by note path, then line number — unless
+  // sortByPriority is on, in which case that order is only the tiebreak.
+  cards.sort((a, b) => {
+    if (filters.sortByPriority) {
+      const byPriority = b.priority - a.priority
+      if (byPriority !== 0) return byPriority
+    }
+    return a.path.localeCompare(b.path) || a.line - b.line
+  })
   return cards
 }
 
