@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   definingDeliverableLines,
+  deliverableChildren,
   deliverableDefinitions,
   deliverableMembershipOf,
   deliverableProgress,
@@ -8,6 +9,7 @@ import {
   deliverableRefsOf,
   deliverableTagsOf,
   deliverableWindows,
+  isDescendantOf,
   liveDeliverables,
   overdueDeliverables,
   visibleForDeliverable
@@ -512,5 +514,134 @@ describe('definingDeliverableLines', () => {
 
   it('is empty for no note at all', () => {
     expect(definingDeliverableLines(undefined).size).toBe(0)
+  })
+})
+
+describe('work packages — @parent(name) nesting', () => {
+  const project = (...lines: string[]): Map<string, NoteMeta> => {
+    const notes = new Map<string, NoteMeta>()
+    notes.set(
+      'Software.md',
+      parseNote(
+        'Software.md',
+        ['---', 'type: project', 'project: software', '---', ...lines, ''].join('\n')
+      )
+    )
+    return notes
+  }
+
+  const RELEASE =
+    '- [ ] @task Release 1 🛫 2026-01-01 📅 2026-03-01 @deliverable(software/release-1)'
+  const FIX_BUGS =
+    '- [ ] @task Fix product bugs 🛫 2026-01-15 📅 2026-02-01 @deliverable(software/fix-bugs) @parent(release-1)'
+
+  it('resolves @parent(name) to the same-project deliverable tag', () => {
+    const definitions = deliverableDefinitions(project(RELEASE, FIX_BUGS))
+    expect(definitions.get('deliverable/software/fix-bugs')?.parentTag).toBe(
+      'deliverable/software/release-1'
+    )
+    expect(definitions.get('deliverable/software/release-1')?.parentTag).toBeNull()
+  })
+
+  it('ignores @parent(name) naming a deliverable in a different project', () => {
+    const notes = new Map<string, NoteMeta>()
+    notes.set(
+      'Software.md',
+      parseNote(
+        'Software.md',
+        [
+          '---',
+          'type: project',
+          'project: software',
+          '---',
+          '- [ ] @task Orphan 📅 2026-02-01 @deliverable(software/orphan) @parent(release-1)',
+          ''
+        ].join('\n')
+      )
+    )
+    notes.set(
+      'Other.md',
+      parseNote(
+        'Other.md',
+        [
+          '---',
+          'type: project',
+          'project: other',
+          '---',
+          '- [ ] @task Release 1 🛫 2026-01-01 📅 2026-03-01 @deliverable(other/release-1)',
+          ''
+        ].join('\n')
+      )
+    )
+    expect(deliverableDefinitions(notes).get('deliverable/software/orphan')?.parentTag).toBeNull()
+  })
+
+  it('ignores @parent(name) naming an unknown deliverable', () => {
+    const definitions = deliverableDefinitions(project(FIX_BUGS))
+    expect(definitions.get('deliverable/software/fix-bugs')?.parentTag).toBeNull()
+  })
+
+  it('breaks a two-node cycle rather than looping forever', () => {
+    const A = '- [ ] @task A 📅 2026-02-01 @deliverable(software/a) @parent(b)'
+    const B = '- [ ] @task B 📅 2026-02-01 @deliverable(software/b) @parent(a)'
+    const definitions = deliverableDefinitions(project(A, B))
+    const a = definitions.get('deliverable/software/a')!
+    const b = definitions.get('deliverable/software/b')!
+    // Both edges pointing at each other can't survive — that would be the
+    // cycle itself — but the one that does survive is left intact rather than
+    // wiping the whole relationship.
+    expect(a.parentTag === b.tag && b.parentTag === a.tag).toBe(false)
+    expect([a.parentTag, b.parentTag].filter((t) => t !== null)).toHaveLength(1)
+  })
+
+  it('deliverableChildren maps a parent to its work package only', () => {
+    const definitions = deliverableDefinitions(project(RELEASE, FIX_BUGS))
+    const children = deliverableChildren(definitions)
+    expect(children.get('deliverable/software/release-1')).toEqual([
+      'deliverable/software/fix-bugs'
+    ])
+    expect(children.get('deliverable/software/fix-bugs')).toBeUndefined()
+  })
+
+  it('isDescendantOf finds a direct work package, and rejects an unrelated tag', () => {
+    const definitions = deliverableDefinitions(project(RELEASE, FIX_BUGS))
+    expect(
+      isDescendantOf(definitions, 'deliverable/software/fix-bugs', 'deliverable/software/release-1')
+    ).toBe(true)
+    expect(
+      isDescendantOf(definitions, 'deliverable/software/release-1', 'deliverable/software/fix-bugs')
+    ).toBe(false)
+  })
+
+  it('caps nesting at one level: @parent naming a work package (not a root) is ignored', () => {
+    // fix-bugs is itself a work package of release-1, so login-crash naming
+    // fix-bugs as its own parent would be a second level of nesting — refused,
+    // and login-crash reads as its own root deliverable instead.
+    const LOGIN =
+      '- [ ] @task Fix login crash 📅 2026-01-20 @deliverable(software/login-crash) @parent(fix-bugs)'
+    const definitions = deliverableDefinitions(project(RELEASE, FIX_BUGS, LOGIN))
+    expect(definitions.get('deliverable/software/login-crash')?.parentTag).toBeNull()
+    expect(
+      isDescendantOf(
+        definitions,
+        'deliverable/software/login-crash',
+        'deliverable/software/release-1'
+      )
+    ).toBe(false)
+  })
+
+  it('rolls a work package’s member-task completion up into its parent’s progress', () => {
+    const notes = project(
+      RELEASE,
+      FIX_BUGS,
+      '- [ ] @task a plain release task @deliverable(software/release-1)',
+      '- [x] @task fix bug one @deliverable(software/fix-bugs)',
+      '- [ ] @task fix bug two @deliverable(software/fix-bugs)'
+    )
+    const progress = deliverableProgress(notes)
+    // fix-bugs: 1 done of 2 of its own.
+    expect(progress.get('deliverable/software/fix-bugs')).toEqual({ done: 1, total: 2 })
+    // release-1: its own 1 member, plus fix-bugs's whole 1/2 rolled up = 1/3.
+    expect(progress.get('deliverable/software/release-1')).toEqual({ done: 1, total: 3 })
   })
 })

@@ -43,6 +43,16 @@ function rowIcon(row: PlannerRow): React.JSX.Element | null {
   }
 }
 
+/**
+ * Left padding for a row's label, by nesting depth — unbounded now that a
+ * deliverable can nest inside another, so this is computed rather than one
+ * fixed CSS rule per depth (`depth-1`/`depth-2` used to cover the only two
+ * non-project depths that existed).
+ */
+function indentFor(depth: number): number {
+  return depth === 0 ? 0 : 8 + (depth - 1) * 12
+}
+
 export function TreePane({
   rows,
   tops,
@@ -66,7 +76,8 @@ export function TreePane({
             key={row.key}
             className={[
               'planner-tree-row',
-              `depth-${row.depth}`,
+              row.depth === 0 ? 'depth-0' : '',
+              (row.kind === 'task' || row.kind === 'milestone') && row.depth > 1 ? 'leaf' : '',
               row.kind === 'task' && row.task.done ? 'done' : '',
               row.kind === 'project' && row.project.complete ? 'project-complete' : '',
               // A rule above every project but the first, so one project's
@@ -92,7 +103,11 @@ export function TreePane({
               <span className="planner-twisty-spacer" />
             )}
             <span className="planner-row-icon">{rowIcon(row)}</span>
-            <span className="planner-row-label" title={rowLabel(row)}>
+            <span
+              className="planner-row-label"
+              title={rowLabel(row)}
+              style={{ paddingLeft: indentFor(row.depth) }}
+            >
               {rowLabel(row)}
             </span>
             {row.kind === 'task' && row.task.foreign && (

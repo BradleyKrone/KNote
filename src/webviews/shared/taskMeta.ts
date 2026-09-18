@@ -2,6 +2,7 @@ import {
   DEPENDS_RE,
   DUE_RE,
   dependsTag,
+  PARENT_RE,
   preservingBlockId,
   PRIORITY_RE,
   START_RE,
@@ -40,6 +41,23 @@ export function insertDeliverableRef(text: string, tag: string): string {
     if (deliverableRefsOf(t).includes(tag)) return t
     return `${normalize(t)} ${deliverableRefMarker(tag)}`.trim()
   })
+}
+
+/**
+ * Replace the task's `@parent(name)` marker — the one that turns it into a
+ * work package of another deliverable. A work package has at most one parent,
+ * so unlike `insertDeliverableRef` this replaces rather than appends.
+ */
+export function setParentDeliverableRef(text: string, name: string): string {
+  return preservingBlockId(text, (t) => {
+    const stripped = normalize(t.replace(PARENT_RE, ''))
+    return `${stripped} @parent(${name})`.trim()
+  })
+}
+
+/** Remove the task's `@parent(...)` marker, if any. */
+export function clearParentDeliverableRef(text: string): string {
+  return preservingBlockId(text, (t) => normalize(t.replace(PARENT_RE, '')))
 }
 
 /** Replace the task's priority marker (0 = none, 1-3 = !/!!/!!!). */

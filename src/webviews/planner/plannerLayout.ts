@@ -158,7 +158,7 @@ export type PlannerRow =
   | {
       kind: 'deliverable'
       key: string
-      depth: 1
+      depth: number
       number: string
       project: PlannerProject
       deliverable: PlannerDeliverable
@@ -166,7 +166,7 @@ export type PlannerRow =
   | {
       kind: 'task'
       key: string
-      depth: 2
+      depth: number
       number: string
       deliverable: PlannerDeliverable
       task: PlannerDeliverable['tasks'][number]
@@ -174,7 +174,7 @@ export type PlannerRow =
   | {
       kind: 'milestone'
       key: string
-      depth: 1 | 2
+      depth: number
       number: string
       milestone: PlannerMilestone
       deliverable?: PlannerDeliverable
@@ -185,6 +185,12 @@ export type PlannerRow =
  * which projects/deliverables are collapsed. Row order *is* the vertical
  * layout: a row's y is its index × ROW_HEIGHT in both panes, which is what lets
  * one scroll container drive them together.
+ *
+ * A deliverable's own `workPackages` are pushed before its tasks/milestones,
+ * so a work package's own work always sits directly under it rather than
+ * after every sibling work package's. Nesting is capped at one level (see
+ * `deliverableDefinitions`), but `pushDeliverable` recurses generically
+ * rather than assuming that.
  */
 export function flattenRows(
   model: PlannerModel,
@@ -194,6 +200,51 @@ export function flattenRows(
   hidden: ReadonlySet<string> = new Set()
 ): PlannerRow[] {
   const rows: PlannerRow[] = []
+
+  const pushDeliverable = (
+    project: PlannerProject,
+    deliverable: PlannerDeliverable,
+    depth: number,
+    number: string
+  ): void => {
+    rows.push({
+      kind: 'deliverable',
+      key: `d:${deliverable.id}`,
+      depth,
+      number,
+      project,
+      deliverable
+    })
+    if (collapsed.has(`d:${deliverable.id}`)) return
+    let c = 0
+    for (const pkg of deliverable.workPackages) {
+      c++
+      pushDeliverable(project, pkg, depth + 1, `${number}.${c}`)
+    }
+    for (const task of deliverable.tasks) {
+      c++
+      rows.push({
+        kind: 'task',
+        key: `t:${task.path}:${task.line}`,
+        depth: depth + 1,
+        number: `${number}.${c}`,
+        deliverable,
+        task
+      })
+    }
+    for (const milestone of deliverable.milestones) {
+      c++
+      rows.push({
+        kind: 'milestone',
+        key: `m:${milestone.path}:${milestone.line}`,
+        depth: depth + 1,
+        number: `${number}.${c}`,
+        milestone,
+        deliverable
+      })
+    }
+  }
+
   let n = 0
   for (const project of model.projects) {
     if (hidden.has(project.slug)) continue
@@ -204,39 +255,7 @@ export function flattenRows(
     let d = 0
     for (const deliverable of project.deliverables) {
       d++
-      const number = `${n}.${d}`
-      rows.push({
-        kind: 'deliverable',
-        key: `d:${deliverable.id}`,
-        depth: 1,
-        number,
-        project,
-        deliverable
-      })
-      if (collapsed.has(`d:${deliverable.id}`)) continue
-      let t = 0
-      for (const task of deliverable.tasks) {
-        t++
-        rows.push({
-          kind: 'task',
-          key: `t:${task.path}:${task.line}`,
-          depth: 2,
-          number: `${number}.${t}`,
-          deliverable,
-          task
-        })
-      }
-      for (const milestone of deliverable.milestones) {
-        t++
-        rows.push({
-          kind: 'milestone',
-          key: `m:${milestone.path}:${milestone.line}`,
-          depth: 2,
-          number: `${number}.${t}`,
-          milestone,
-          deliverable
-        })
-      }
+      pushDeliverable(project, deliverable, 1, `${n}.${d}`)
     }
     for (const milestone of project.milestones) {
       d++

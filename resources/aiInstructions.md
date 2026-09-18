@@ -203,6 +203,17 @@ end: 2026-06-30
   depend on ("start after") that other deliverable; repeatable.
 - A `🏁 Permits approved 📅 2026-04-12 @deliverable(govalle/design)` line is
   a milestone tied to that deliverable, shown as a diamond on the chart.
+- `@parent(<name>)` on a deliverable's own line turns it into a **work
+  package** of another deliverable **in the same project**, naming that
+  deliverable by its bare name segment only (never `project/name` — the
+  project is always this line's own). This is for timeboxing a chunk of work
+  inside a bigger one. Nesting is capped at one level: `<name>` must name a
+  top-level deliverable, not another work package.
+
+  ```markdown
+  - [ ] @task Release 1 🛫 2026-01-01 📅 2026-03-01 @deliverable(govalle/release-1)
+  - [ ] @task Fix bugs 🛫 2026-01-15 📅 2026-02-01 @deliverable(govalle/fix-bugs) @parent(release-1)
+  ```
 
 ## Timeline entries
 
@@ -260,6 +271,9 @@ When the user asks you to…
 - **Add a project milestone / deadline marker** → use a `🏁 … 📅 date` line.
 - **Add a project deliverable** → a `@task` line with
   `@deliverable(<project>/<name>)` in the project's own note.
+- **Turn a deliverable into a work package (timeboxing)** → add
+  `@parent(<name>)` to its own `@task` line, naming the top-level deliverable
+  it belongs to by its bare name segment, same project only.
 - **Tag a note** → add `#tag` inline or a `tags:` list in frontmatter.
 - **Make a new note** → plain `.md` with optional frontmatter; put tasks,
   links, and headings in the body.

@@ -19,6 +19,8 @@
 //     leaving the menu closes it; clicking a leaf acts and closes everything
 //   - a task line adds Task ▸ (Milestone ▸ on a 🏁 line); a sub-task's Task ▸
 //     has no "Copy link to task"
+//   - a deliverable's own line shows Deliverable ▸; one that also carries
+//     @parent(...) shows Work Package ▸ instead, everywhere the label appears
 //   - a table cell adds Table ▸; a 🚜 line keeps Edit machine entry… flat
 //   - a misspelled word and a hyperlink keep their items flat at the top
 //   - right-click near the window's right edge / bottom: the flyout flips to
@@ -42,6 +44,7 @@ import {
   Code,
   Columns3,
   Copy,
+  CornerDownRight,
   ExternalLink,
   Eye,
   Flag,
@@ -78,7 +81,8 @@ import {
 import {
   claimableDeliverableTag,
   definingDeliverableLines,
-  liveDeliverables
+  liveDeliverables,
+  parentNameOf
 } from '@shared/deliverables'
 import { extractTags } from '@shared/parser/mdScaffold'
 import { Popover } from '../shared/components/Popover'
@@ -694,11 +698,12 @@ function dependencyItems(
   }))
 }
 
-/** The Task/Milestone/Deliverable submenu: everything that edits the clicked line's metadata. */
+/** The Task/Milestone/Deliverable/Work Package submenu: everything that edits the clicked line's metadata. */
 function taskItems(
   view: EditorView,
   ctx: LineCtx,
   ownTag: string | null,
+  isWorkPackage: boolean,
   notes: ReadonlyMap<VaultPath, NoteMeta>,
   run: (fn: () => void) => () => void,
   openSub: (sub: SubKind) => () => void
@@ -732,7 +737,7 @@ function taskItems(
   if (ctx.isTask || ctx.isMilestone) {
     items.push({
       label: ownTag
-        ? 'Copy link to deliverable'
+        ? `Copy link to ${isWorkPackage ? 'work package' : 'deliverable'}`
         : ctx.isMilestone
           ? 'Copy link to milestone'
           : 'Copy link to task',
@@ -758,6 +763,12 @@ function mainItems(
   openSub: (sub: SubKind) => () => void
 ): MenuEntry[] {
   const ownTag = ownDeliverableTag(ctx, notes)
+  // A deliverable-defining line that also carries `@parent(...)` is a work
+  // package of another deliverable, not a plain one — checked straight off
+  // the line's own text (not the elected definition), so an undated claim
+  // that hasn't been scheduled yet still reads as a work package once it
+  // carries the marker.
+  const isWorkPackage = ownTag !== null && parentNameOf(ctx.text) !== null
   const items: MenuEntry[] = [
     ...clipboardItems(view, ctx.selection.length > 0, run),
     { label: 'Format', icon: <Type size={ICON} />, submenu: formatItems(view, run) },
@@ -765,15 +776,23 @@ function mainItems(
   ]
   if (ctx.isCheckbox || ctx.isMilestone) {
     items.push({
-      label: ownTag ? 'Deliverable' : ctx.isMilestone ? 'Milestone' : 'Task',
-      icon: ownTag ? (
+      label: isWorkPackage
+        ? 'Work Package'
+        : ownTag
+          ? 'Deliverable'
+          : ctx.isMilestone
+            ? 'Milestone'
+            : 'Task',
+      icon: isWorkPackage ? (
+        <CornerDownRight size={ICON} />
+      ) : ownTag ? (
         <Package size={ICON} />
       ) : ctx.isMilestone ? (
         <Milestone size={ICON} />
       ) : (
         <CheckSquare size={ICON} />
       ),
-      submenu: taskItems(view, ctx, ownTag, notes, run, openSub)
+      submenu: taskItems(view, ctx, ownTag, isWorkPackage, notes, run, openSub)
     })
   }
   if (table) {

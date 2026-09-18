@@ -191,6 +191,88 @@ describe('buildPlannerModel', () => {
   })
 })
 
+describe('buildPlannerModel — work packages', () => {
+  const nested = new Map<string, NoteMeta>()
+  nested.set(
+    'Software.md',
+    parseNote(
+      'Software.md',
+      [
+        '---',
+        'type: project',
+        'project: software',
+        '---',
+        '- [ ] @task Release 1 🛫 2026-01-01 📅 2026-03-01 @deliverable(software/release-1)',
+        '- [ ] @task Fix product bugs 🛫 2026-01-15 📅 2026-02-01 @deliverable(software/fix-bugs) @parent(release-1)',
+        '- [x] @task fix bug one @deliverable(software/fix-bugs)',
+        '- [ ] @task fix bug two @deliverable(software/fix-bugs)',
+        ''
+      ].join('\n')
+    )
+  )
+  const model = buildPlannerModel(nested)
+
+  it('only lists root deliverables in project.deliverables', () => {
+    expect(model.projects[0].deliverables.map((d) => d.id)).toEqual([
+      'deliverable/software/release-1'
+    ])
+  })
+
+  it('nests a work package under its parent, with parentId set', () => {
+    const release1 = model.byId.get('deliverable/software/release-1')!
+    const fixBugs = model.byId.get('deliverable/software/fix-bugs')!
+    expect(fixBugs.parentId).toBe('deliverable/software/release-1')
+    expect(release1.parentId).toBeNull()
+    expect(release1.workPackages.map((d) => d.id)).toEqual(['deliverable/software/fix-bugs'])
+  })
+
+  it('still indexes every deliverable, root or work package, in byId', () => {
+    expect([...model.byId.keys()]).toEqual([
+      'deliverable/software/release-1',
+      'deliverable/software/fix-bugs'
+    ])
+  })
+
+  it('rolls a work package’s member-task percent up into its parent’s', () => {
+    const fixBugs = model.byId.get('deliverable/software/fix-bugs')!
+    const release1 = model.byId.get('deliverable/software/release-1')!
+    expect(fixBugs.percent).toBe(50) // 1 of 2
+    expect(release1.percent).toBe(50) // no direct members of its own, all from fix-bugs
+  })
+
+  it('caps nesting at one level: a @parent naming a work package is ignored', () => {
+    const notes = new Map<string, NoteMeta>()
+    notes.set(
+      'Deep.md',
+      parseNote(
+        'Deep.md',
+        [
+          '---',
+          'type: project',
+          'project: deep',
+          '---',
+          '- [ ] @task Release 1 🛫 2026-01-01 📅 2026-03-01 @deliverable(deep/release-1)',
+          '- [ ] @task Fix bugs 🛫 2026-01-15 📅 2026-02-01 @deliverable(deep/fix-bugs) @parent(release-1)',
+          '- [ ] @task Fix login crash 📅 2026-01-20 @deliverable(deep/login-crash) @parent(fix-bugs)',
+          ''
+        ].join('\n')
+      )
+    )
+    const deep = buildPlannerModel(notes)
+    // login-crash's @parent(fix-bugs) is ignored — fix-bugs is itself a work
+    // package, not a root — so login-crash becomes its own root deliverable.
+    expect(deep.projects[0].deliverables.map((d) => d.id)).toEqual([
+      'deliverable/deep/release-1',
+      'deliverable/deep/login-crash'
+    ])
+    expect(deep.byId.get('deliverable/deep/login-crash')!.parentId).toBeNull()
+    expect(deep.byId.get('deliverable/deep/release-1')!.workPackages.map((d) => d.id)).toEqual([
+      'deliverable/deep/fix-bugs'
+    ])
+    expect(deep.byId.get('deliverable/deep/fix-bugs')!.workPackages).toEqual([])
+  })
+})
+
 describe('cascadeShift', () => {
   it('moves the dragged deliverable and everything transitively downstream', () => {
     const model = buildPlannerModel(vault())

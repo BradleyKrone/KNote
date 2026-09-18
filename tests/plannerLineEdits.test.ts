@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   addDependency,
+  clearParentDeliverableRef,
   dependencies,
   removeDependency,
   setDeliverableDates,
+  setParentDeliverableRef,
   setStartDate
 } from '@/shared/taskMeta'
-import { stripInlineMarkers } from '@shared/parser/patterns'
+import { parentNameOf } from '@shared/deliverables'
+import { PARENT_RE, stripInlineMarkers } from '@shared/parser/patterns'
 
 // The planner's writes are all single-line rewrites of a deliverable line.
 // Every one of them has to survive a trailing ^block-id anchor, because an
@@ -96,5 +99,53 @@ describe('stripInlineMarkers', () => {
 
   it('strips a @deliverable(...) join marker, leaving no orphaned text', () => {
     expect(stripInlineMarkers('Draft wireframes @deliverable(p/design)')).toBe('Draft wireframes')
+  })
+
+  it('strips a @parent(...) work-package marker', () => {
+    expect(stripInlineMarkers('Fix product bugs @parent(release-1)')).toBe('Fix product bugs')
+  })
+})
+
+describe('PARENT_RE / parentNameOf', () => {
+  it('reads the name out of an @parent(name) marker', () => {
+    expect(parentNameOf('Fix product bugs @parent(release-1)')).toBe('release-1')
+  })
+
+  it('is null when there is no marker', () => {
+    expect(parentNameOf('Fix product bugs')).toBeNull()
+  })
+
+  it('matches only the bare name shape, no project segment', () => {
+    expect(PARENT_RE.test('@parent(release-1)')).toBe(true)
+    expect(PARENT_RE.test('@parent(software/release-1)')).toBe(false)
+  })
+})
+
+describe('setParentDeliverableRef / clearParentDeliverableRef', () => {
+  it('appends the marker when there is none yet', () => {
+    expect(setParentDeliverableRef('Fix product bugs', 'release-1')).toBe(
+      'Fix product bugs @parent(release-1)'
+    )
+  })
+
+  it('replaces an existing marker rather than appending a second one', () => {
+    const once = setParentDeliverableRef('Fix product bugs', 'release-1')
+    expect(setParentDeliverableRef(once, 'release-2')).toBe('Fix product bugs @parent(release-2)')
+  })
+
+  it('clears the marker, leaving no orphaned text', () => {
+    const withParent = setParentDeliverableRef('Fix product bugs', 'release-1')
+    expect(clearParentDeliverableRef(withParent)).toBe('Fix product bugs')
+  })
+
+  it('clearing when there is no marker is a no-op', () => {
+    expect(clearParentDeliverableRef('Fix product bugs')).toBe('Fix product bugs')
+  })
+
+  it('keeps a trailing ^block-id last', () => {
+    const anchored = 'Fix product bugs ^fix-bugs'
+    const withParent = setParentDeliverableRef(anchored, 'release-1')
+    expect(withParent).toBe('Fix product bugs @parent(release-1) ^fix-bugs')
+    expect(clearParentDeliverableRef(withParent)).toBe(anchored)
   })
 })

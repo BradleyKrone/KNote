@@ -18,6 +18,7 @@ import type { DeliverableDefinition } from '@shared/deliverables'
 import {
   deliverableDefinitions,
   deliverableMembershipOf,
+  deliverableProgress,
   endDateOf,
   isProjectComplete,
   isProjectNote,
@@ -60,7 +61,15 @@ export interface PlannerDeliverable extends LineRef {
   dependsOn: string[]
   tasks: PlannerTask[]
   milestones: PlannerMilestone[]
-  /** 0–100, from its tasks' done ratio (or its own checkbox when it has none). */
+  /** Bare tag of the deliverable this is a work package of, or null at the top level. */
+  parentId: string | null
+  /** This deliverable's own work packages — none of which can have one of their own, since nesting is capped at one level. */
+  workPackages: PlannerDeliverable[]
+  /**
+   * 0–100, from `deliverableProgress` — its own member tasks' done ratio
+   * rolled up with every work package's (or its own checkbox when there's
+   * neither).
+   */
   percent: number
 }
 
@@ -152,15 +161,28 @@ export function buildPlannerModel(
         dependsOn: dependenciesOf(definition.text),
         tasks: [],
         milestones: [],
+        parentId: definition.parentTag,
+        workPackages: [],
         percent: 0
       }
-      project.deliverables.push(deliverable)
+      // Attached to `project.deliverables` (roots) vs. a parent's
+      // `workPackages` once every deliverable exists — see below.
       byId.set(definition.tag, deliverable)
     }
     projects.push(project)
   }
 
   const projectBySlug = new Map(projects.map((p) => [p.slug, p]))
+
+  // Slot every deliverable under its parent's `workPackages`, or as a root of
+  // its own project when it has none (or its declared parent belongs to a
+  // different project — `deliverableDefinitions` never resolves one of
+  // those, but the fallback keeps this pass total regardless).
+  for (const deliverable of byId.values()) {
+    const parent = deliverable.parentId ? byId.get(deliverable.parentId) : undefined
+    if (parent) parent.workPackages.push(deliverable)
+    else projectBySlug.get(deliverable.project)?.deliverables.push(deliverable)
+  }
 
   // Pass 2 — members, from anywhere in the vault.
   for (const meta of notes.values()) {
@@ -210,14 +232,20 @@ export function buildPlannerModel(
     }
   }
 
-  // Pass 3 — rollups and ordering.
+  // Pass 3 — rollups and ordering. Percent comes from `deliverableProgress`,
+  // which already rolls a deliverable's work packages into its own ratio —
+  // every deliverable, root or work package, is visited here via `byId` so
+  // none of them keep a stale 0%.
+  const progress = deliverableProgress(notes)
+  for (const d of byId.values()) {
+    d.tasks.sort((a, b) => Number(a.done) - Number(b.done) || a.text.localeCompare(b.text))
+    d.milestones.sort((a, b) => a.date.localeCompare(b.date))
+    d.workPackages.sort((a, b) => a.start.localeCompare(b.start) || a.line - b.line)
+    const p = progress.get(d.id)
+    d.percent = p && p.total > 0 ? Math.round((p.done / p.total) * 100) : isTaskDone(d) ? 100 : 0
+  }
   for (const project of projects) {
     project.deliverables.sort((a, b) => a.start.localeCompare(b.start) || a.line - b.line)
-    for (const d of project.deliverables) {
-      d.tasks.sort((a, b) => Number(a.done) - Number(b.done) || a.text.localeCompare(b.text))
-      d.milestones.sort((a, b) => a.date.localeCompare(b.date))
-      d.percent = percentComplete(d)
-    }
     const starts = project.deliverables.map((d) => d.start)
     const ends = project.deliverables.map((d) => d.end)
     project.start = starts.length ? starts.reduce((a, b) => (a < b ? a : b)) : null
@@ -303,17 +331,6 @@ export function notesInFolder(paths: Iterable<string>, folder: string): string[]
     if (rest && !rest.includes('/')) notes.push(rest)
   }
   return notes.sort((a, b) => a.localeCompare(b))
-}
-
-/**
- * A deliverable's completion: the share of its member tasks that are done, or
- * — when it has no tasks at all — its own checkbox, so an unbroken-down
- * deliverable still reads as 0% or 100% rather than a permanently empty bar.
- */
-export function percentComplete(deliverable: PlannerDeliverable): number {
-  const { tasks } = deliverable
-  if (tasks.length === 0) return isTaskDone(deliverable) ? 100 : 0
-  return Math.round((tasks.filter((t) => t.done).length / tasks.length) * 100)
 }
 
 /**

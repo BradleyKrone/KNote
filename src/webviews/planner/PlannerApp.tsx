@@ -10,6 +10,7 @@ import {
   CalendarPlus,
   CalendarRange,
   CheckCircle2,
+  CornerDownRight,
   Flag,
   Link2,
   ListPlus,
@@ -61,6 +62,7 @@ import {
   addDeliverable,
   addMilestone,
   addTask,
+  addWorkPackage,
   createProject,
   linkDependency,
   moveDeliverable,
@@ -271,11 +273,9 @@ export function PlannerApp(): React.JSX.Element {
     collapsedOnce.current = true
     setCollapsed((prev) => {
       const next = new Set(prev)
-      for (const project of model.projects) {
-        for (const deliverable of project.deliverables) {
-          next.add(`d:${deliverable.id}`)
-        }
-      }
+      // `byId` covers every deliverable regardless of nesting — a
+      // project's `deliverables` array holds root deliverables only.
+      for (const deliverable of model.byId.values()) next.add(`d:${deliverable.id}`)
       return next
     })
   }, [model])
@@ -325,6 +325,19 @@ export function PlannerApp(): React.JSX.Element {
     })
   }
 
+  /** Only offered on a root deliverable's row — a work package can't itself have one (nesting is capped at one level). */
+  const askNewWorkPackage = (project: PlannerProject, parent: PlannerDeliverable): void => {
+    if (refuseIfClosed(project)) return
+    setCreate({
+      request: {
+        kind: 'workPackage',
+        contextLabel: parent.label,
+        dateBounds: { start: parent.start, end: parent.end }
+      },
+      run: (r) => addWorkPackage(parent, r.name, r.start, r.end)
+    })
+  }
+
   const askNewTask = (project: PlannerProject, d: PlannerDeliverable): void => {
     if (refuseIfClosed(project)) return
     setCreate({
@@ -352,10 +365,13 @@ export function PlannerApp(): React.JSX.Element {
    * already depends on it, in which case it stays so the link can be undone.
    */
   const dependencyEntries = (d: PlannerDeliverable): MenuEntry[] => {
-    const project = model.projects.find((p) => p.slug === d.project)
-    const candidates = (project?.deliverables ?? []).filter(
+    // Every deliverable of the project, not just its roots — `byId` is the
+    // one place nesting doesn't hide a work package from a candidate list.
+    const candidates = [...model.byId.values()].filter(
       (c) =>
-        c.id !== d.id && (d.dependsOn.includes(c.id) || deliverableBarStatus(c, today) !== 'done')
+        c.project === d.project &&
+        c.id !== d.id &&
+        (d.dependsOn.includes(c.id) || deliverableBarStatus(c, today) !== 'done')
     )
     if (candidates.length === 0)
       return [{ label: 'No other deliverables yet', disabled: true, onClick: () => {} }]
@@ -462,6 +478,22 @@ export function PlannerApp(): React.JSX.Element {
             askNewMilestone(row.project, d)
           }
         },
+        // A work package can't itself have one — nesting is capped at one
+        // level — so this only ever shows up on a root deliverable's row.
+        ...(d.parentId
+          ? []
+          : [
+              {
+                label: 'Add work package…',
+                icon: <CornerDownRight size={14} />,
+                disabled: closed,
+                detail: closedNote,
+                onClick: () => {
+                  setMenu(null)
+                  askNewWorkPackage(row.project, d)
+                }
+              }
+            ]),
         {
           label: 'Add deliverable…',
           icon: <CalendarPlus size={14} />,
@@ -689,21 +721,26 @@ export function PlannerApp(): React.JSX.Element {
           <ContextMenuList items={menuItems(menu.row)} />
         </Popover>
       )}
-      {spanEditor && (
-        <Popover anchorPoint={spanEditor.point} onClose={() => setSpanEditor(null)}>
-          <SpanPicker
-            // Re-read from the live model: an index delta may have landed while
-            // the picker was open, and editing from stale dates would write a
-            // span the user never saw.
-            deliverable={model.byId.get(spanEditor.deliverable.id) ?? spanEditor.deliverable}
-            onApply={(start, end) => {
-              const d = model.byId.get(spanEditor.deliverable.id) ?? spanEditor.deliverable
-              setSpanEditor(null)
-              void resizeDeliverable(model, d, start, end)
-            }}
-          />
-        </Popover>
-      )}
+      {spanEditor &&
+        (() => {
+          // Re-read from the live model: an index delta may have landed while
+          // the picker was open, and editing from stale dates would write a
+          // span the user never saw.
+          const d = model.byId.get(spanEditor.deliverable.id) ?? spanEditor.deliverable
+          const parent = d.parentId ? model.byId.get(d.parentId) : undefined
+          return (
+            <Popover anchorPoint={spanEditor.point} onClose={() => setSpanEditor(null)}>
+              <SpanPicker
+                deliverable={d}
+                parentWindow={parent && { start: parent.start, end: parent.end }}
+                onApply={(start, end) => {
+                  setSpanEditor(null)
+                  void resizeDeliverable(model, d, start, end)
+                }}
+              />
+            </Popover>
+          )
+        })()}
       {projectDate && (
         <Popover anchorPoint={projectDate.point} onClose={() => setProjectDate(null)}>
           <DatePickerContent

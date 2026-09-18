@@ -1690,12 +1690,7 @@ button {
   font-weight: 600;
 }
 
-.planner-tree-row.depth-1 .planner-row-label {
-  padding-left: 8px;
-}
-
-.planner-tree-row.depth-2 .planner-row-label {
-  padding-left: 20px;
+.planner-tree-row.leaf .planner-row-label {
   color: var(--vscode-descriptionForeground);
 }
 
