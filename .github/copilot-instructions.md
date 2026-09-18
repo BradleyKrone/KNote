@@ -166,6 +166,32 @@ the board and the planner agree without importing each other:
   `@deliverable(<project>/<name>)` marker anywhere in the vault — deliberately
   not a `#tag`, so joining never clutters the Tags sidebar or `#`
   autocomplete with structural plumbing.
+- A **work package** is a deliverable nested one level inside another
+  deliverable of the *same* project — timeboxing a chunk of work inside a
+  bigger one — via `@parent(<name>)` (`PARENT_RE`) on the work package's own
+  line, naming the parent by its bare name segment only. This is deliberately
+  a second, orthogonal marker rather than a deeper `@deliverable(...)` path:
+  `DELIVERABLE_TAG_RE` stays exactly two segments on purpose (see above), so
+  nothing keyed on a bare tag has to change. Resolution — same project only,
+  cycles broken by dropping the offending link, nesting capped at this one
+  extra level by ignoring a `@parent(...)` that names another work package
+  rather than a root — happens once, in `deliverableDefinitions`
+  (`DeliverableDefinition.parentTag`), which is also where
+  `deliverableChildren`/`isDescendantOf` come from. The planner's
+  `PlannerDeliverable.workPackages` mirrors `parentTag`, so
+  `PlannerProject.deliverables` holds **root** deliverables only — work
+  packages live under their parent's `workPackages` instead — and
+  `flattenRows` recurses into them before a deliverable's own tasks, so a
+  work package draws its own row/bar/twisty. `deliverableProgress` rolls a
+  work package's total/done into its parent's, so a parent's board badge and
+  chart percent reflect the whole thing it's timeboxing. Its span can never
+  extend outside its parent's own — `plannerActions.ts`'s `resizeDeliverable`
+  clamps each edited endpoint independently into the parent's window, and
+  `moveDeliverable` clamps the whole-bar drag's day delta so a move stops dead
+  at whichever edge it reaches rather than shrinking the bar; `workPackageLine`
+  clamps the same way on creation. This is enforced at the write layer, not
+  just in the drag UI, so the "Edit dates…" picker and any other caller get it
+  for free.
 - Any new *trailing* inline marker must be added to `AFTER_ANCHOR` in
   `parser/patterns.ts` (so it can't be pushed past a `^block-id`) *and* to
   `stripInlineMarkers` — strip dependencies before the generic tag strip or

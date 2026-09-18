@@ -11,16 +11,24 @@ import type { PlannerDeliverable } from './plannerSelectors'
 
 interface Props {
   deliverable: PlannerDeliverable
+  /** The deliverable's own span, when `deliverable` is a work package — the edit is clamped to it either way, this just says so upfront. */
+  parentWindow?: { start: string; end: string }
   onApply: (start: string, end: string) => void
 }
 
-export function SpanPicker({ deliverable, onApply }: Props): React.JSX.Element {
+export function SpanPicker({ deliverable, parentWindow, onApply }: Props): React.JSX.Element {
   const [start, setStart] = useState(deliverable.start)
   const [end, setEnd] = useState(deliverable.end)
 
   const length = diffDays(start, end) + 1
   const invalid = start > end
+  const outOfBounds =
+    !invalid && !!parentWindow && (start < parentWindow.start || end > parentWindow.end)
   const dirty = start !== deliverable.start || end !== deliverable.end
+  // A work package is the one being edited whenever it has a parent's window
+  // to be clamped to — everything user-facing here should call it that, not
+  // the umbrella "deliverable" the type is named for.
+  const kind = parentWindow ? 'work package' : 'deliverable'
 
   /** Slide the whole span, keeping its length — the keyboard equivalent of dragging the bar. */
   const shift = (days: number): void => {
@@ -40,6 +48,8 @@ export function SpanPicker({ deliverable, onApply }: Props): React.JSX.Element {
             type="date"
             className="picker-date-input"
             value={start}
+            min={parentWindow?.start}
+            max={parentWindow?.end}
             onChange={(e) => e.target.value && setStart(e.target.value)}
           />
         </label>
@@ -49,6 +59,8 @@ export function SpanPicker({ deliverable, onApply }: Props): React.JSX.Element {
             type="date"
             className="picker-date-input"
             value={end}
+            min={parentWindow?.start}
+            max={parentWindow?.end}
             onChange={(e) => e.target.value && setEnd(e.target.value)}
           />
         </label>
@@ -58,7 +70,7 @@ export function SpanPicker({ deliverable, onApply }: Props): React.JSX.Element {
             <button
               key={days}
               className={`picker-quick${length === days ? ' active' : ''}`}
-              title={`Make this deliverable ${days} day${days === 1 ? '' : 's'} long`}
+              title={`Make this ${kind} ${days} day${days === 1 ? '' : 's'} long`}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => setLength(days)}
             >
@@ -96,6 +108,11 @@ export function SpanPicker({ deliverable, onApply }: Props): React.JSX.Element {
         <div className="span-picker-summary">
           {invalid ? (
             <span className="span-picker-warn">The end date is before the start date.</span>
+          ) : outOfBounds ? (
+            <span className="span-picker-warn">
+              A work package can't extend outside its deliverable's own {parentWindow!.start} →{' '}
+              {parentWindow!.end} span.
+            </span>
           ) : (
             <>
               {dayjs(start).format('ddd, MMM D')} → {dayjs(end).format('ddd, MMM D YYYY')} ·{' '}
@@ -105,10 +122,10 @@ export function SpanPicker({ deliverable, onApply }: Props): React.JSX.Element {
         </div>
       </div>
       <div
-        className={`picker-row picker-apply${invalid || !dirty ? ' disabled' : ''}`}
-        aria-disabled={invalid || !dirty}
+        className={`picker-row picker-apply${invalid || outOfBounds || !dirty ? ' disabled' : ''}`}
+        aria-disabled={invalid || outOfBounds || !dirty}
         onMouseDown={(e) => e.preventDefault()}
-        onClick={invalid || !dirty ? undefined : () => onApply(start, end)}
+        onClick={invalid || outOfBounds || !dirty ? undefined : () => onApply(start, end)}
       >
         Apply dates
       </div>

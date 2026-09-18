@@ -9,7 +9,7 @@ import {
   deliverableRefMarker,
   slugify
 } from '@shared/deliverables'
-import { TASK_MARKER } from '@shared/parser/patterns'
+import { parseDeliverableTag, TASK_MARKER } from '@shared/parser/patterns'
 import { taskChildIndent } from '@shared/parser/taskNoteBody'
 import { host } from '../shared/rpc'
 import { showToast } from '../shared/stores'
@@ -35,7 +35,40 @@ function spanFor(d: PlannerDeliverable, start: string, end: string): [string, st
 }
 
 /**
+ * `date`, pulled inside `parent`'s own window if it falls outside it — a work
+ * package can never extend before or after the deliverable it belongs to.
+ * Clamping each endpoint independently can never invert a span that wasn't
+ * already inverted: clamping to a fixed range is monotonic, so `from <= to`
+ * going in guarantees `clamp(from) <= clamp(to)` coming out.
+ */
+function clampToParent(date: string, parent: Pick<PlannerDeliverable, 'start' | 'end'>): string {
+  if (date < parent.start) return parent.start
+  if (date > parent.end) return parent.end
+  return date
+}
+
+/**
+ * Whole days `d` may shift by without its span leaving `parent`'s window, in
+ * either direction — 0 (no parent) means unconstrained. Used for a whole-bar
+ * move, which must preserve length rather than clamping each endpoint
+ * independently: shifting is a single scalar, so the drag simply stops dead
+ * at whichever boundary it reaches first.
+ */
+function clampShiftToParent(
+  d: PlannerDeliverable,
+  parent: PlannerDeliverable | undefined,
+  days: number
+): number {
+  if (!parent) return days
+  const minDays = diffDays(d.start, parent.start)
+  const maxDays = diffDays(d.end, parent.end)
+  return Math.max(minDays, Math.min(maxDays, days))
+}
+
+/**
  * Move a deliverable by `days`, taking everything that depends on it along.
+ * When `id` is a work package, `days` is clamped first so it can never leave
+ * its parent's window — the drag simply stops at whichever edge it reaches.
  *
  * The writes go out **serially** — `verifiedEdit` re-reads the note per call,
  * so two concurrent writes into one note would make the second stale — in
@@ -52,13 +85,17 @@ export async function moveDeliverable(
   id: string,
   days: number
 ): Promise<void> {
-  if (days === 0) return
-  const order = cascadeShift(model, id, days)
+  const dragged = model.byId.get(id)
+  if (!dragged) return
+  const parent = dragged.parentId ? model.byId.get(dragged.parentId) : undefined
+  const clamped = clampShiftToParent(dragged, parent, days)
+  if (clamped === 0) return
+  const order = cascadeShift(model, id, clamped)
   let written = 0
   for (const currentId of order) {
     const d = model.byId.get(currentId)
     if (!d) continue
-    const [start, end] = spanFor(d, addDays(d.start, days), addDays(d.end, days))
+    const [start, end] = spanFor(d, addDays(d.start, clamped), addDays(d.end, clamped))
     const ok = await guarded(
       () => host.replaceLine(d.path, d.line, d.rawLine, setDeliverableDates(d.rawLine, start, end)),
       order.length === 1
@@ -77,6 +114,12 @@ export async function moveDeliverable(
  * since a dependent's whole reason for waiting is that end date. Moving the
  * *start* never touches dependents: nothing downstream cares when this one
  * began, only when it finishes.
+ *
+ * When `d` is a work package, each endpoint is separately clamped into its
+ * parent's window afterward — unlike `moveDeliverable`'s shift, a resize is
+ * already changing the length, so clamping the far-out endpoint back to the
+ * boundary (rather than refusing the whole edit) is the expected "can't go
+ * past the edge" feel.
  */
 export async function resizeDeliverable(
   model: PlannerModel,
@@ -84,7 +127,12 @@ export async function resizeDeliverable(
   start: string,
   end: string
 ): Promise<void> {
-  const [from, to] = spanFor(d, start, end)
+  let [from, to] = spanFor(d, start, end)
+  const parent = d.parentId ? model.byId.get(d.parentId) : undefined
+  if (parent) {
+    from = clampToParent(from, parent)
+    to = clampToParent(to, parent)
+  }
   if (from === d.start && to === d.end) return
   const ok = await guarded(
     () => host.replaceLine(d.path, d.line, d.rawLine, setDeliverableDates(d.rawLine, from, to)),
@@ -235,6 +283,49 @@ export async function addDeliverable(
 }
 
 /**
+ * The work-package line for a new deliverable nested under `parent`, and the
+ * tag it claims. `start`/`end` are clamped into `parent`'s own window — a
+ * work package can never extend before or after the deliverable it belongs
+ * to, from the moment it's created onward.
+ */
+export function workPackageLine(
+  parent: PlannerDeliverable,
+  name: string,
+  start: string,
+  end: string
+): { line: string; tag: string } {
+  const parentName = parseDeliverableTag(parent.id)!.deliverable
+  const tag = `deliverable/${parent.project}/${slugify(name)}`
+  const clampedStart = clampToParent(start, parent)
+  const clampedEnd = clampToParent(end, parent)
+  return {
+    line: `${taskChildIndent(parent.rawLine)}- [ ] ${TASK_MARKER} ${name} 🛫 ${clampedStart} 📅 ${clampedEnd} ${deliverableRefMarker(tag)} @parent(${parentName})`,
+    tag
+  }
+}
+
+/**
+ * Add a work package under `parent` — a deliverable nested one level inside
+ * it, timeboxing a chunk of its work. Placed right after the parent's own
+ * line and indented one level deeper, same as `addTask` below. Nesting is
+ * capped at one level (`deliverableDefinitions`), so `parent` itself must be
+ * a root deliverable — the caller only offers this action on a root's row,
+ * never on a work package's.
+ */
+export async function addWorkPackage(
+  parent: PlannerDeliverable,
+  name: string,
+  start: string,
+  end: string
+): Promise<void> {
+  const { line } = workPackageLine(parent, name, start, end)
+  await guarded(
+    () => host.insertLine(parent.path, parent.line, parent.rawLine, line),
+    'Deliverable changed on disk — planner refreshed'
+  )
+}
+
+/**
  * Add a task under its deliverable. Anchored on the deliverable's own line —
  * whose exact text we hold — so it's one verified call with no read-then-write
  * race, and the task lands inside the deliverable's own block.
@@ -249,7 +340,7 @@ export async function addTask(d: PlannerDeliverable, text: string): Promise<void
   const line = `${taskChildIndent(d.rawLine)}- [ ] ${text} ${deliverableRefMarker(d.id)}`
   await guarded(
     () => host.insertLine(d.path, d.line, d.rawLine, line),
-    'Deliverable changed on disk — planner refreshed'
+    `${d.parentId ? 'Work package' : 'Deliverable'} changed on disk — planner refreshed`
   )
 }
 
@@ -266,6 +357,6 @@ export async function addMilestone(
         d.rawLine,
         `🏁 ${text} 📅 ${date} ${deliverableRefMarker(d.id)}`
       ),
-    'Deliverable changed on disk — planner refreshed'
+    `${d.parentId ? 'Work package' : 'Deliverable'} changed on disk — planner refreshed`
   )
 }

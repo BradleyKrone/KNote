@@ -515,12 +515,44 @@ old Timeline panel. Everything it shows lives in plain Markdown:
 | Its tasks | any checkbox line **anywhere in the vault** (marked or not) carrying that same `@deliverable(govalle/design)` marker — deliberately *not* a `#tag`, so joining a deliverable never clutters the Tags sidebar or `#` autocomplete |
 | Dependency | `⛓ @deliverable(govalle/contracts)` on the deliverable line — "starts after that one"; repeatable |
 | Milestone | a `🏁 Permits approved 📅 2026-04-12 @deliverable(govalle/design)` line — a diamond on the chart |
+| Work package | `@parent(<name>)` on a deliverable's own line, naming another deliverable **in the same project** it's a work package of — for timeboxing a chunk of work inside a bigger one |
 
 `🛫` is the start date, `📅` the end date (`@start(...)`/`@due(...)` also
 read). A deliverable with no `🛫` is a single-day bar. Notes written before
 KNote switched to `@deliverable(...)` may still carry a deliverable's or
 dependency's identity as a `#deliverable/…` tag — that older form still
 reads fine, but nothing writes it any more.
+
+**Work packages (timeboxing).** A deliverable can be broken down into work
+packages — smaller, separately-scheduled deliverables nested one level
+inside it — a `Release 1` deliverable might contain a `Fix product bugs`
+work package, which contains its own tasks. Nesting stops there: a work
+package can't itself have a work package, so the vocabulary never needs a
+fourth name.
+
+```
+- [ ] @task Release 1 🛫 2026-01-01 📅 2026-03-01 @deliverable(2025-software/release-1)
+- [ ] @task Fix product bugs 🛫 2026-01-15 📅 2026-02-01 @deliverable(2025-software/fix-bugs) @parent(release-1)
+- [ ] @task Fix login crash 📅 2026-01-20 @deliverable(2025-software/fix-bugs)
+```
+
+`@parent(...)` names the deliverable it's a work package of, **by its bare
+name only** — the project is always the same one the line's own
+`@deliverable(...)` belongs to, and the name must belong to a top-level
+deliverable, not another work package. In the chart, a work package draws its
+own bar and twisty, indented under its parent, and its parent's % complete
+and chart bar roll up everything it contains. In the board's task dialog, a
+task that's itself a scheduled deliverable gets a **Work package of…** button
+(next to **Link to deliverable**) to set or clear which deliverable it
+belongs to without typing the marker by hand.
+
+A work package's dates can never fall outside its deliverable's own span —
+dragging its bar, resizing either edge, editing dates from the right-click
+menu, and creating one all clamp to the parent's window, so it's never
+possible to schedule a work package's work outside the deliverable that
+contains it. Right-click → **Add work package…** on a top-level deliverable's
+row to create one directly, its start/end defaulting to (and bounded by) the
+deliverable's own dates.
 
 In the chart:
 
@@ -533,7 +565,7 @@ In the chart:
 | Double-click any row | opens the note at that line |
 | Right-click a deliverable → **Edit dates…** | a calendar for both ends of the span, with 1/3/5/10/20-day length presets and ±1d/±1w/Today nudges that slide the span without changing its length |
 | Right-click a deliverable → **Depends on ▸** | every other deliverable, ticked where it's already a predecessor — click to add or remove. Anything that would create a loop is greyed out and labelled *would loop* |
-| Right-click a row | also: add a deliverable / task / milestone |
+| Right-click a row | also: add a deliverable / task / milestone, and (on a top-level deliverable's row) **Add work package…** |
 | day / week / month | zoom; **Today** re-centres on the today line |
 | **Locked / Unlocked** button | dragging is off by default so you can't nudge a bar by accident — click it to unlock before dragging, then lock again when you're done. Right-click actions (Edit dates…, Depends on ▸, etc.) work either way |
 
@@ -541,13 +573,14 @@ Bar fill is % complete — the share of the deliverable's tasks that are
 checked (or its own checkbox if it has none). A bar that starts before
 something it depends on finishes is outlined in red.
 
-**Editing a deliverable from the editor.** The same **Set start date… /
-Set due date… / Depends on ▸** trio is one right-click away in the note
-itself, not just the Planner panel: right-click a deliverable's own task
-line and its **Task ▸** submenu becomes **Deliverable ▸**, with those three
-items plus the usual tag/priority. Depends on ▸ lists every other live
-deliverable, ticked where it's already a predecessor — the same picker the
-chart's right-click menu uses.
+**Editing a deliverable (or work package) from the editor.** The same
+**Set start date… / Set due date… / Depends on ▸** trio is one right-click
+away in the note itself, not just the Planner panel: right-click a
+deliverable's own task line and its **Task ▸** submenu becomes
+**Deliverable ▸** — or **Work Package ▸**, when that line also carries
+`@parent(...)` — with those three items plus the usual tag/priority.
+Depends on ▸ lists every other live deliverable, ticked where it's already a
+predecessor — the same picker the chart's right-click menu uses.
 
 **Project status.** A project carries a badge in the tree:
 

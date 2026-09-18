@@ -302,6 +302,7 @@ export function TaskNoteDialog(): React.JSX.Element | null {
             if (titleViewRef.current) syncTaskTitleEditor(titleViewRef.current, next)
           }}
           onDone={() => titleViewRef.current?.focus()}
+          ownDeliverableTag={target.kind === 'edit' ? target.card.definesDeliverable : null}
         />
         <div className="task-note-line" ref={titleCmHost} />
 

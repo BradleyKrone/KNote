@@ -13,7 +13,7 @@ export const WIKI_LINK_RE = /(!?)\[\[([^[\]|#\n]+)(#[^[\]|\n]+)?(\|[^[\]\n]+)?\]
  * appended to the end of a task line, so setting one on an already-anchored
  * task used to push the anchor into the middle of the line.
  */
-const AFTER_ANCHOR = String.raw`(?:\s*(?:📅\s*\d{4}-\d{2}-\d{2}|@due\(\d{4}-\d{2}-\d{2}\)|🛫\s*\d{4}-\d{2}-\d{2}|@start\(\d{4}-\d{2}-\d{2}\)|✅\s*\d{4}-\d{2}-\d{2}|⛓\s*#[A-Za-z0-9_][A-Za-z0-9_/-]*|⛓\s*@deliverable\([A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\)|@deliverable\([A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\)|!{1,3}|#[A-Za-z0-9_][A-Za-z0-9_/-]*))*`
+const AFTER_ANCHOR = String.raw`(?:\s*(?:📅\s*\d{4}-\d{2}-\d{2}|@due\(\d{4}-\d{2}-\d{2}\)|🛫\s*\d{4}-\d{2}-\d{2}|@start\(\d{4}-\d{2}-\d{2}\)|✅\s*\d{4}-\d{2}-\d{2}|⛓\s*#[A-Za-z0-9_][A-Za-z0-9_/-]*|⛓\s*@deliverable\([A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\)|@deliverable\([A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\)|@parent\([A-Za-z0-9_-]+\)|!{1,3}|#[A-Za-z0-9_][A-Za-z0-9_/-]*))*`
 
 /**
  * ` ^block-id` at the end of a line — an Obsidian-style block anchor that
@@ -201,8 +201,30 @@ export function parseDeliverableTag(tag: string): { project: string; deliverable
  * carry a defining line's identity as a literal `#deliverable/…` tag instead —
  * that still reads, but nothing writes it any more. Global: a line may join
  * more than one deliverable. Group 1 = project, group 2 = name.
+ *
+ * A deliverable may additionally carry `@parent(<name>)` (see `PARENT_RE`),
+ * an orthogonal marker naming another deliverable in the *same* project that
+ * this one is a **work package** of — nesting for timeboxing, never a change
+ * to the tag shape above, which stays flat on purpose (see
+ * `DELIVERABLE_TAG_RE`).
  */
 export const DELIVERABLE_REF_RE = /@deliverable\(([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]+)\)/g
+
+/**
+ * `@parent(<name>)` — names another deliverable, by its bare name segment
+ * only, as the deliverable this one is a work package of. The project is
+ * always the same project this line's own `@deliverable(...)` belongs to, so
+ * there's nothing to disambiguate. Independent of document
+ * position/indentation on purpose, so reordering or re-indenting a note never
+ * silently changes what a work package is timeboxed under. Resolution (does
+ * the name exist, is it in the same project, does it close a cycle, is the
+ * named deliverable itself a root rather than another work package — nesting
+ * is capped at one level) lives in `shared/deliverables.ts`; an unresolved
+ * `@parent(...)` is simply ignored — the deliverable reads as a root, same
+ * graceful-degradation style as a missing `🛫` falling back to the end date.
+ * Not global: a work package has at most one parent.
+ */
+export const PARENT_RE = /@parent\(([A-Za-z0-9_-]+)\)/
 
 /** ✅ 2026-07-16 — completion-date marker appended to a checked sub-task line. Group 1 = the date. */
 const DONE_DATE_RE = /\s*✅\s*(\d{4}-\d{2}-\d{2})/g
@@ -625,6 +647,7 @@ export function stripInlineMarkers(text: string): string {
       // tag and leave a bare `⛓` behind in the label.
       .replace(DEPENDS_RE, '')
       .replace(DELIVERABLE_REF_RE, '')
+      .replace(PARENT_RE, '')
       .replace(DUE_RE, '')
       .replace(START_RE, '')
       .replace(PRIORITY_RE, ' ')

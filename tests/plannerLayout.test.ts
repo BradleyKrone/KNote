@@ -224,6 +224,61 @@ describe('flattenRows project visibility', () => {
   })
 })
 
+describe('flattenRows — work packages', () => {
+  const nested = new Map<string, NoteMeta>()
+  nested.set(
+    'Software.md',
+    parseNote(
+      'Software.md',
+      [
+        '---',
+        'type: project',
+        'project: software',
+        '---',
+        '- [ ] @task Release 1 🛫 2026-01-01 📅 2026-03-01 @deliverable(software/release-1)',
+        '- [ ] @task Fix product bugs 🛫 2026-01-15 📅 2026-02-01 @deliverable(software/fix-bugs) @parent(release-1)',
+        '- [ ] Fix login crash @deliverable(software/fix-bugs)',
+        ''
+      ].join('\n')
+    )
+  )
+  const nestedModel = buildPlannerModel(nested)
+
+  it('recurses into workPackages before tasks, extending the numbering another level', () => {
+    const rows = flattenRows(nestedModel, new Set())
+    expect(rows.map((r) => `${r.number} ${r.kind}`)).toEqual([
+      '1 project',
+      '1.1 deliverable', // Release 1
+      '1.1.1 deliverable', // Fix product bugs, its work package
+      '1.1.1.1 task' // the plain "Fix login crash" member task
+    ])
+  })
+
+  it('gives the root and its work package an increasing depth', () => {
+    const rows = flattenRows(nestedModel, new Set())
+    const depthOf = (id: string): number | undefined =>
+      rows.find((r) => r.kind === 'deliverable' && r.deliverable.id === id)?.depth
+    expect(depthOf('deliverable/software/release-1')).toBe(1)
+    expect(depthOf('deliverable/software/fix-bugs')).toBe(2)
+  })
+
+  it('collapsing the root hides its work package too', () => {
+    const rows = flattenRows(nestedModel, new Set(['d:deliverable/software/release-1']))
+    expect(rows.map((r) => r.kind)).toEqual(['project', 'deliverable'])
+  })
+
+  it('collapsing the work package hides only its own tasks', () => {
+    const rows = flattenRows(nestedModel, new Set(['d:deliverable/software/fix-bugs']))
+    expect(rows.map((r) => r.kind)).toEqual(['project', 'deliverable', 'deliverable'])
+  })
+
+  it('indexes a work package row for arrow placement, same as a root deliverable', () => {
+    const rows = flattenRows(nestedModel, new Set())
+    const index = rowIndexById(rows)
+    expect(index.get('deliverable/software/fix-bugs')).toBe(2)
+  })
+})
+
 describe('rowTops / rowsHeight', () => {
   const twoProjects = new Map<string, NoteMeta>()
   twoProjects.set(

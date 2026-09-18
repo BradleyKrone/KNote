@@ -3,6 +3,17 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 3.4.0
+
+- **Work packages on the Planner.** A deliverable can now nest one level
+  inside another deliverable of the same project — timeboxing a chunk of
+  work (say, a release) inside a bigger one. Turn a task into one from the
+  new "Work package of…" button next to its own deliverable tag, or create
+  one directly from the Planner's tree with **New work package**. A work
+  package draws its own row and bar under its parent on the chart, its dates
+  are kept inside its parent's span, and its progress rolls up into its
+  parent's "N of M tasks done" count.
+
 ## 3.3.1
 
 - GitHub Releases published for each build now include that version's

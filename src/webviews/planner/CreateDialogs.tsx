@@ -6,12 +6,20 @@ import { useEffect, useRef, useState } from 'react'
 import { addDays, today } from './plannerLayout'
 import { FolderPicker } from './FolderPicker'
 
-export type CreateKind = 'project' | 'deliverable' | 'task' | 'milestone'
+export type CreateKind = 'project' | 'deliverable' | 'workPackage' | 'task' | 'milestone'
 
 export interface CreateRequest {
   kind: CreateKind
   /** Deliverable/task/milestone: which project or deliverable it goes under. */
   contextLabel: string
+  /**
+   * Work package only: its parent deliverable's own span. Start/end default
+   * to it (rather than today) and are constrained to it, since a work package
+   * can never extend before or after the deliverable it belongs to — the
+   * write path clamps regardless, this is just so the form doesn't invite a
+   * date it's going to silently correct.
+   */
+  dateBounds?: { start: string; end: string }
 }
 
 export interface CreateResult {
@@ -35,6 +43,7 @@ interface Props {
 const TITLES: Record<CreateKind, string> = {
   project: 'New project',
   deliverable: 'New deliverable',
+  workPackage: 'New work package',
   task: 'New task',
   milestone: 'New milestone'
 }
@@ -50,8 +59,8 @@ export function CreateDialog({
   // Default to an existing "Projects" folder if the vault has one; otherwise
   // the root, so the picker never opens on a folder that isn't there.
   const [folder, setFolder] = useState(() => (folders.includes('Projects') ? 'Projects' : ''))
-  const [start, setStart] = useState(today())
-  const [end, setEnd] = useState(addDays(today(), 13))
+  const [start, setStart] = useState(request.dateBounds?.start ?? today())
+  const [end, setEnd] = useState(request.dateBounds?.end ?? addDays(today(), 13))
   // Doubles as a milestone's date and a project's target end — a project
   // defaults to a quarter out, which is a nudge to set a real one, not a guess
   // it'll be held to.
@@ -62,7 +71,8 @@ export function CreateDialog({
     setTimeout(() => inputRef.current?.focus(), 0)
   }, [request])
 
-  const canSubmit = name.trim().length > 0 && (request.kind !== 'deliverable' || start <= end)
+  const hasDateRange = request.kind === 'deliverable' || request.kind === 'workPackage'
+  const canSubmit = name.trim().length > 0 && (!hasDateRange || start <= end)
   const submit = (): void => {
     if (!canSubmit) return
     onSubmit({ name: name.trim(), folder: folder.trim(), start, end, date })
@@ -97,7 +107,7 @@ export function CreateDialog({
             onChange={setFolder}
           />
         )}
-        {request.kind === 'deliverable' && (
+        {hasDateRange && (
           <>
             <label className="reason-date-field">
               <span className="reason-date-label">Start</span>
@@ -105,6 +115,8 @@ export function CreateDialog({
                 type="date"
                 className="panel-input small"
                 value={start}
+                min={request.dateBounds?.start}
+                max={request.dateBounds?.end}
                 onChange={(e) => setStart(e.target.value)}
               />
             </label>
@@ -114,6 +126,8 @@ export function CreateDialog({
                 type="date"
                 className="panel-input small"
                 value={end}
+                min={request.dateBounds?.start}
+                max={request.dateBounds?.end}
                 onChange={(e) => setEnd(e.target.value)}
               />
             </label>

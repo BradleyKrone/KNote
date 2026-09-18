@@ -26,6 +26,24 @@
  * one of those two. Answering it independently is what let a dated member task
  * overwrite its deliverable's window and sweep the whole deliverable off the
  * Kanban board.
+ *
+ * A **work package** is a deliverable nested one level inside another
+ * deliverable of the *same* project — for timeboxing a chunk of work (say, a
+ * release) inside a bigger one — by carrying `@parent(<name>)` alongside its
+ * own `@deliverable(...)`. This is deliberately a second, orthogonal marker
+ * rather than a deeper tag path: `DELIVERABLE_TAG_RE` stays flat on purpose,
+ * so nothing that already keys on a bare `deliverable/<project>/<name>` tag
+ * has to change. `parentTag` is resolved once, in `deliverableDefinitions`,
+ * same-project only, with any cycle broken by treating the offending link as
+ * absent (the deliverable simply reads as a root) — see the second pass
+ * there. Nesting is capped at exactly this one extra level: a third pass
+ * ignores `@parent(...)` when it names a deliverable that is itself a work
+ * package, rather than letting a work package acquire a work package of its
+ * own — so "work package" only ever needs the one name, never a fourth tier.
+ * Ordinary membership (`deliverableTagsOf`, joining via `@deliverable(...)`)
+ * is unaffected: a work package's own member tasks still carry only its own
+ * tag, never its parent's — progress rolls up through `deliverableChildren`
+ * instead.
  */
 
 import type { NoteMeta, TaskItem, VaultPath } from './types'
@@ -35,6 +53,7 @@ import {
   DELIVERABLE_TAG_RE,
   DEPENDS_RE,
   DUE_RE,
+  PARENT_RE,
   START_RE,
   dependsTag,
   parseDeliverableTag,
@@ -138,6 +157,12 @@ export function endDateOf(text: string): string | null {
 export function startDateOf(text: string): string | null {
   const m = START_RE.exec(text)
   return m ? (m[1] ?? m[2]) : null
+}
+
+/** The bare name a line's `@parent(<name>)` marker claims as the deliverable it's a work package of, or null. */
+export function parentNameOf(text: string): string | null {
+  const m = PARENT_RE.exec(text)
+  return m ? m[1] : null
 }
 
 /**
@@ -289,6 +314,12 @@ export interface DeliverableDefinition {
   /** Whether the defining line's own checkbox is checked. */
   done: boolean
   statusChar: string
+  /**
+   * Bare tag of the deliverable this one is nested under (same project only),
+   * or null when it's a root. Resolved from `@parent(<name>)` in the second
+   * pass of `deliverableDefinitions`, with any cycle broken to null.
+   */
+  parentTag: string | null
 }
 
 /**
@@ -318,11 +349,97 @@ export function deliverableDefinitions(
         start: start <= end ? start : end,
         end,
         done: isTaskDone(task),
-        statusChar: task.statusChar
+        statusChar: task.statusChar,
+        parentTag: null
       })
     }
   }
+  // Second pass: resolve `@parent(<name>)` now that every tag in the vault is
+  // known, so a forward reference to a deliverable defined later works the
+  // same as one defined earlier. Same-project only, and any cycle is broken
+  // by dropping the *last* link found while walking back to the start — the
+  // deliverable that would have closed the loop simply reads as a root
+  // instead, rather than the whole chain vanishing from the chart.
+  for (const definition of definitions.values()) {
+    const name = parentNameOf(definition.text)
+    if (!name) continue
+    const project = parseDeliverableTag(definition.tag)!.project
+    const parentTag = `deliverable/${project}/${name}`
+    if (parentTag === definition.tag || !definitions.has(parentTag)) continue
+    definition.parentTag = parentTag
+  }
+  for (const definition of definitions.values()) {
+    const seen = new Set<string>([definition.tag])
+    let cursor: DeliverableDefinition | undefined = definition
+    while (cursor?.parentTag) {
+      if (seen.has(cursor.parentTag)) {
+        definition.parentTag = null
+        break
+      }
+      seen.add(cursor.parentTag)
+      cursor = definitions.get(cursor.parentTag)
+    }
+  }
+  // Third pass: cap nesting at one level — a work package's own `@parent(...)`
+  // is honored only when it names a *root* deliverable. Depth is measured on
+  // this still-untouched, post-cycle-break graph and snapshotted before any
+  // capping mutation runs, so which links survive never depends on Map
+  // iteration order: a chain three deep always keeps just its first link
+  // (the work package directly under the root) and orphans the rest to their
+  // own roots, rather than the outcome depending on which node happened to be
+  // visited first.
+  const depthOf = (tag: string, seen: Set<string>): number => {
+    const parentTag = definitions.get(tag)?.parentTag
+    if (!parentTag || seen.has(tag)) return 0
+    return 1 + depthOf(parentTag, new Set([...seen, tag]))
+  }
+  const depths = new Map<string, number>()
+  for (const tag of definitions.keys()) depths.set(tag, depthOf(tag, new Set()))
+  for (const definition of definitions.values()) {
+    if (definition.parentTag && (depths.get(definition.tag) ?? 0) > 1) {
+      definition.parentTag = null
+    }
+  }
   return definitions
+}
+
+/**
+ * Bare tag → its immediate child tags, from `parentTag` — built once and
+ * shared by the recursive progress rollup below and by the planner's row
+ * tree, so neither has to walk `definitions` itself to find them.
+ */
+export function deliverableChildren(
+  definitions: ReadonlyMap<string, DeliverableDefinition>
+): Map<string, string[]> {
+  const children = new Map<string, string[]>()
+  for (const definition of definitions.values()) {
+    if (!definition.parentTag) continue
+    const list = children.get(definition.parentTag) ?? []
+    list.push(definition.tag)
+    children.set(definition.parentTag, list)
+  }
+  return children
+}
+
+/**
+ * Whether `candidateTag` is `ofTag` itself or its work package — nesting is
+ * capped at one level (see `deliverableDefinitions`), so this only ever walks
+ * one hop in practice, but it's written generically rather than assuming that.
+ */
+export function isDescendantOf(
+  definitions: ReadonlyMap<string, DeliverableDefinition>,
+  candidateTag: string,
+  ofTag: string
+): boolean {
+  if (candidateTag === ofTag) return true
+  const children = deliverableChildren(definitions)
+  const queue = [...(children.get(ofTag) ?? [])]
+  while (queue.length > 0) {
+    const next = queue.shift() as string
+    if (next === candidateTag) return true
+    queue.push(...(children.get(next) ?? []))
+  }
+  return false
 }
 
 /** Key identifying one line of one note, for the lookup below. */
@@ -364,31 +481,62 @@ export interface DeliverableProgress {
 }
 
 /**
- * Every deliverable's member-task completion, keyed by its bare tag — the
- * Kanban board's "N of M tasks done" readout on a deliverable's own card.
- * Counts every task anywhere in the vault carrying the tag, excluding the
- * defining line itself (same exclusion `buildPlannerModel`'s member pass
- * makes), mirroring the planner's `percentComplete` ratio (task-only; a
- * deliverable's milestones don't count toward it there either).
+ * Every deliverable's completion, keyed by its bare tag — the Kanban board's
+ * "N of M tasks done" readout on a deliverable's own card. Own count is every
+ * task anywhere in the vault carrying the tag, excluding the defining line
+ * itself (same exclusion `buildPlannerModel`'s member pass makes). A
+ * deliverable with a work package (`deliverableChildren`) additionally rolls
+ * up the work package's own (already-recursive) total/done, so a parent's
+ * readout reflects the whole thing it's timeboxing — a plain task joining the
+ * work package is never double-counted against the parent, since it never
+ * carries the parent's tag directly.
+ *
+ * A tag with a total of zero — no member tasks *and* no work package with any
+ * of its own — has no entry at all, same as before this rolled up anything:
+ * every caller already falls back to the deliverable's own checkbox on a
+ * missing entry, and a present-but-empty one must fall back exactly the same
+ * way, so there is nothing a real entry here would add.
  */
 export function deliverableProgress(
   notes: ReadonlyMap<string, NoteMeta>
 ): Map<string, DeliverableProgress> {
-  const definingTags = definingTagByLine(deliverableDefinitions(notes))
-  const progress = new Map<string, DeliverableProgress>()
+  const definitions = deliverableDefinitions(notes)
+  const definingTags = definingTagByLine(definitions)
+  const own = new Map<string, DeliverableProgress>()
   for (const meta of notes.values()) {
     for (const task of meta.tasks) {
       const defines = definingTags.get(deliverableLineKey(meta.path, task.line))
       for (const tag of deliverableMembershipOf(task.tags, task.text)) {
         if (defines === tag) continue
-        const entry = progress.get(tag) ?? { done: 0, total: 0 }
+        const entry = own.get(tag) ?? { done: 0, total: 0 }
         entry.total++
         if (isTaskDone(task)) entry.done++
-        progress.set(tag, entry)
+        own.set(tag, entry)
       }
     }
   }
-  return progress
+  const children = deliverableChildren(definitions)
+  const memo = new Map<string, DeliverableProgress>()
+  const resolve = (tag: string, path: ReadonlySet<string>): DeliverableProgress => {
+    const cached = memo.get(tag)
+    if (cached) return cached
+    const entry = { ...(own.get(tag) ?? { done: 0, total: 0 }) }
+    if (!path.has(tag)) {
+      for (const child of children.get(tag) ?? []) {
+        const childProgress = resolve(child, new Set([...path, tag]))
+        entry.total += childProgress.total
+        entry.done += childProgress.done
+      }
+    }
+    memo.set(tag, entry)
+    return entry
+  }
+  const rolled = new Map<string, DeliverableProgress>()
+  for (const tag of definitions.keys()) {
+    const entry = resolve(tag, new Set())
+    if (entry.total > 0) rolled.set(tag, entry)
+  }
+  return rolled
 }
 
 /**
