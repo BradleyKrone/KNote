@@ -1,6 +1,6 @@
 // The live-preview editor's right-click menu. Attaches a `contextmenu` listener
 // to the CodeMirror DOM, reads the line under the click to decide which items
-// apply (task/milestone → tag/priority/due/deliverable; 🚜 line → edit machine;
+// apply (task/milestone → tag/priority/due/deliverable; 🚜 entry → edit machine;
 // a checkbox glyph → the Kanban status switcher), and renders the menu — plus
 // any picker an item opens — inside the shared Popover. Reproduces the old
 // Electron app's editor context menu (src/renderer/src/editor/contextMenu.ts).
@@ -21,7 +21,8 @@
 //     has no "Copy link to task"
 //   - a deliverable's own line shows Deliverable ▸; one that also carries
 //     @parent(...) shows Work Package ▸ instead, everywhere the label appears
-//   - a table cell adds Table ▸; a 🚜 line keeps Edit machine entry… flat
+//   - a table cell adds Table ▸; a 🚜 line — or any line of its software/Notes
+//     block — keeps Edit machine entry… flat, and it opens pre-filled
 //   - a misspelled word and a hyperlink keep their items flat at the top
 //   - right-click near the window's right edge / bottom: the flyout flips to
 //     the left / slides up instead of running off-screen
@@ -72,12 +73,7 @@ import {
   Wrench
 } from 'lucide-react'
 import type { BoardColumn, NoteMeta, VaultPath } from '@shared/types'
-import {
-  ARCHIVED_CHAR,
-  MACHINE_ENTRY_RE,
-  MILESTONE_LINE_RE,
-  TASK_LINE_RE
-} from '@shared/parser/patterns'
+import { ARCHIVED_CHAR, MILESTONE_LINE_RE, TASK_LINE_RE } from '@shared/parser/patterns'
 import {
   claimableDeliverableTag,
   definingDeliverableLines,
@@ -110,7 +106,7 @@ import { dependencies as lineDependencies } from '../shared/taskMeta'
 import {
   addLineDeliverable,
   addLineTag,
-  editMachineOnLine,
+  editMachineEntry,
   insertCheckbox,
   insertTask,
   insertCodeBlock,
@@ -121,9 +117,11 @@ import {
   insertWikiLink,
   lineDue,
   lineStart,
+  machineEntryAt,
   removeMarkdownLink,
   replaceMarkdownLink,
   setLineDue,
+  type MachineEntryCtx,
   setLinePriority,
   setLineStart,
   toggleLineDependency
@@ -151,10 +149,10 @@ interface LineCtx {
   /** The checkbox carries `@task`: a Kanban card, with a column menu and a link. */
   isTask: boolean
   isMilestone: boolean
-  isMachine: boolean
+  /** The 🚜 entry the line belongs to — the entry line or any line of its block. */
+  machine: MachineEntryCtx | null
   due: string | null
   start: string | null
-  serial: string
   /** The `[text](url)` hyperlink under the click, if any. */
   link: MdLink | null
   /** Selected text when the menu opened — pre-fills a new link's label. */
@@ -200,10 +198,9 @@ function readLineCtx(view: EditorView, pos: number): LineCtx {
     // in there gets a Kanban column menu or a task link.
     isTask: isBoardTask(view.state, line.text),
     isMilestone: MILESTONE_LINE_RE.test(line.text),
-    isMachine: MACHINE_ENTRY_RE.test(line.text),
+    machine: machineEntryAt(view.state, line.number - 1),
     due: lineDue(line.text),
-    start: lineStart(line.text),
-    serial: MACHINE_ENTRY_RE.exec(line.text)?.[2] ?? ''
+    start: lineStart(line.text)
   }
 }
 
@@ -312,20 +309,21 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
     <Popover anchorPoint={point} onClose={close}>
       {open.sub === 'machine' && (
         <MachineEntryPickerContent
-          onSubmit={(serial, date, tags) => {
+          onSubmit={(serial, date, tags, software) => {
             close()
-            insertMachineEntry(view, serial, date, tags)
+            insertMachineEntry(view, serial, date, tags, software)
           }}
         />
       )}
-      {open.sub === 'edit-machine' && (
+      {open.sub === 'edit-machine' && ctx.machine && (
         <MachineEntryPickerContent
-          initialSerial={ctx.serial}
-          initialDate={ctx.due ?? undefined}
+          initialSerial={ctx.machine.serial}
+          initialDate={ctx.machine.due ?? undefined}
+          initialSoftware={ctx.machine.software}
           submitLabel="Save"
-          onSubmit={(serial, date) => {
+          onSubmit={(serial, date, _tags, software) => {
             close()
-            editMachineOnLine(view, serial, date)
+            editMachineEntry(view, ctx.machine!, serial, date, software)
           }}
         />
       )}
@@ -802,7 +800,7 @@ function mainItems(
       submenu: tableItems(view, table, run)
     })
   }
-  if (ctx.isMachine) {
+  if (ctx.machine) {
     items.push(
       { separator: true },
       {

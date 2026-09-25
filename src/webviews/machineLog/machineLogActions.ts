@@ -1,17 +1,32 @@
-import { MACHINE_ENTRY_RE } from '@shared/parser/patterns'
-import { setDueDate } from '../shared/taskMeta'
-import { rewriteLine } from '../shared/dateLineEdit'
+import { isStaleError } from '@shared/errors'
+import type { MachineSoftware } from '@shared/machineSoftware'
+import { host } from '../shared/rpc'
+import { showToast } from '../shared/stores'
+import { planMachineEntryEdit } from '../shared/machineEntryEdit'
 import type { MachineEntry } from './machineLogSelectors'
 
-/** Change a machine-log entry's serial and date together, leaving inline tags/text untouched. */
+/**
+ * Save the entry popup back to a machine-log entry: serial + date on its 🚜
+ * line, software into the table below it — one verified block edit, so a
+ * change made meanwhile refuses the whole write (KNOTE_STALE) rather than
+ * landing half of it.
+ */
 export async function setMachineEntryFields(
   entry: MachineEntry,
   serial: string,
-  date: string | null
+  date: string | null,
+  software: MachineSoftware
 ): Promise<void> {
-  const m = MACHINE_ENTRY_RE.exec(entry.rawLine)
-  if (!m) return
-  const rest = setDueDate(m[3], date)
-  const newLine = rest ? `${m[1]}🚜 ${serial} ${rest}` : `${m[1]}🚜 ${serial}`
-  await rewriteLine({ path: entry.path, line: entry.line, rawLine: entry.rawLine }, newLine)
+  try {
+    const lines = (await host.readFile(entry.path)).content.split(/\r?\n/)
+    if (lines[entry.line] !== entry.rawLine) {
+      showToast('Note changed on disk — refreshed')
+      return
+    }
+    const plan = planMachineEntryEdit(lines, entry.line, serial, date, software)
+    if (plan) await host.replaceBlock(entry.path, plan.from, plan.expected, plan.next)
+  } catch (err) {
+    if (isStaleError(err)) showToast('Note changed on disk — refreshed')
+    else throw err
+  }
 }

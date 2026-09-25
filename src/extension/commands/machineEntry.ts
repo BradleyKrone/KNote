@@ -4,7 +4,7 @@
 
 import * as vscode from 'vscode'
 import dayjs from 'dayjs'
-import { machineEntryTemplate } from '@shared/machineEntry'
+import { machineEntryTemplate } from '@shared/machineSoftware'
 import { getVaultConfig } from '../../core/vaultConfig'
 import { vaultNoteRel } from '../paths'
 

@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
-import type { MachineDef, NoteMeta, VaultPath } from '@shared/types'
+import type { MachineDef, MachineSoftwareItem, NoteMeta, VaultPath } from '@shared/types'
 import { DUE_RE, stripInlineMarkers } from '@shared/parser/patterns'
+import { SOFTWARE_KINDS, type SoftwareKind } from '@shared/machineSoftware'
 
 /**
  * The Machine Log joins two sources:
@@ -8,7 +9,8 @@ import { DUE_RE, stripInlineMarkers } from '@shared/parser/patterns'
  *  - the registry → serial → configuration, registered in Settings (VaultConfig.machines), NOT parsed from notes
  *
  * Each entry is joined to its machine's registry config so it can be filtered
- * by serial, by any config attribute (model/LGP/…), or by an inline #tag.
+ * by serial, by any config attribute (model/LGP/…), by an inline #tag, or by
+ * the software it flashed.
  */
 
 export interface MachineEntry {
@@ -29,6 +31,8 @@ export interface MachineEntry {
   line: number
   /** Exact full source line, used to verify targeted rewrites (right-click date edit) */
   rawLine: string
+  /** Recorded software lines (blank ones dropped), base section first */
+  software: MachineSoftwareItem[]
 }
 
 export interface MachineFilters {
@@ -36,6 +40,11 @@ export interface MachineFilters {
   /** Matches inline tags AND/OR config attributes/model — every entry here must match (AND) */
   tags: string[]
   text: string
+  /**
+   * Software flashed: `kind` keeps entries that flashed that kind at all, plus
+   * `version` narrows to entries that flashed exactly that version.
+   */
+  software?: { kind: SoftwareKind | null; version: string | null }
 }
 
 const NO_FILTERS: MachineFilters = { serial: null, tags: [], text: '' }
@@ -62,10 +71,18 @@ function matchesFilters(entry: MachineEntry, filters: MachineFilters): boolean {
     )
     if (!matchesAll) return false
   }
+  const sw = filters.software
+  if (sw?.kind) {
+    const flashed = entry.software.find((s) => s.section === 'flashed' && s.kind === sw.kind)
+    if (!flashed || (sw.version && flashed.value !== sw.version)) return false
+  }
   if (filters.text) {
     const q = filters.text.toLowerCase()
-    if (!entry.text.toLowerCase().includes(q) && !entry.serial.toLowerCase().includes(q))
-      return false
+    const hit =
+      entry.text.toLowerCase().includes(q) ||
+      entry.serial.toLowerCase().includes(q) ||
+      entry.software.some((s) => s.value.toLowerCase().includes(q))
+    if (!hit) return false
   }
   return true
 }
@@ -97,7 +114,8 @@ export function collectMachineEntries(
         path: meta.path,
         noteTitle: meta.title,
         line: item.line,
-        rawLine: item.rawLine
+        rawLine: item.rawLine,
+        software: item.software.filter((s) => s.value)
       }
       if (matchesFilters(entry, filters)) entries.push(entry)
     }
@@ -155,4 +173,42 @@ export function machineFilterTags(notes: Map<string, NoteMeta>, machines: Machin
   for (const m of models) others.delete(m)
 
   return [...[...models].sort(), ...[...others].sort()]
+}
+
+/** Distinct versions entries have flashed for `kind`, sorted, for the version filter. */
+export function flashedVersions(entries: MachineEntry[], kind: SoftwareKind): string[] {
+  const versions = new Set<string>()
+  for (const entry of entries) {
+    for (const s of entry.software)
+      if (s.section === 'flashed' && s.kind === kind) versions.add(s.value)
+  }
+  return [...versions].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+}
+
+/**
+ * Every version ever recorded per software kind — base and flashed pooled,
+ * since today's flashed version is tomorrow's base — most recently used first.
+ * Feeds the entry popup's autocomplete, so a version typed once is suggested
+ * from then on without being stored anywhere but the notes themselves.
+ */
+export function knownSoftwareVersions(
+  notes: Map<string, NoteMeta>
+): Record<SoftwareKind, string[]> {
+  const lastUsed = new Map<SoftwareKind, Map<string, string>>(
+    SOFTWARE_KINDS.map((k) => [k, new Map<string, string>()])
+  )
+  for (const entry of collectMachineEntries(notes, [])) {
+    for (const s of entry.software) {
+      const seen = lastUsed.get(s.kind)!
+      const prev = seen.get(s.value)
+      if (!prev || entry.date > prev) seen.set(s.value, entry.date)
+    }
+  }
+  const out = {} as Record<SoftwareKind, string[]>
+  for (const kind of SOFTWARE_KINDS) {
+    out[kind] = [...lastUsed.get(kind)!]
+      .sort((a, b) => b[1].localeCompare(a[1]) || a[0].localeCompare(b[0]))
+      .map(([v]) => v)
+  }
+  return out
 }

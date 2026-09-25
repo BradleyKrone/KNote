@@ -367,6 +367,48 @@ describe('parseNote', () => {
     })
   })
 
+  it('reads the software table under a 🚜 entry', () => {
+    const meta = parseNote(
+      'a.md',
+      [
+        '🚜 A1 📅 2026-09-24',
+        '| Software | Base  | Flashed |',
+        '| -------- | ----- | ------- |',
+        '| Display  | 4.0.1 | 4.1.0   |',
+        '- Notes: ',
+        '',
+        '🚜 B2 📅 2026-09-24',
+        '| Software | Base | Flashed |',
+        '| --- | --- | --- |',
+        '| EC520 | | 2.3 |'
+      ].join('\r\n')
+    )
+    expect(meta.machineLog.map((m) => m.software.map((s) => [s.section, s.kind, s.value]))).toEqual(
+      [
+        [
+          ['base', 'Display', '4.0.1'],
+          ['flashed', 'Display', '4.1.0']
+        ],
+        [
+          ['base', 'EC520', ''],
+          ['flashed', 'EC520', '2.3']
+        ]
+      ]
+    )
+    expect(meta.machineLog[0].software[1]).toMatchObject({
+      line: 3,
+      rawLine: '| Display  | 4.0.1 | 4.1.0   |'
+    })
+  })
+
+  it('does not read software out of a code fence after a 🚜 entry', () => {
+    const meta = parseNote(
+      'a.md',
+      '🚜 A1\n```\n| Software | Base | Flashed |\n| Display | 1 | 9 |\n```\n'
+    )
+    expect(meta.machineLog[0].software).toEqual([])
+  })
+
   it('finds a 🚜 machine entry with an arbitrary label prefix', () => {
     const meta = parseNote('a.md', 'Machine: 🚜 Z6A00101 did work 📅 2026-07-03\n')
     expect(meta.machineLog).toHaveLength(1)

@@ -4,7 +4,9 @@ import { parseNote } from '@shared/parser/parseNote'
 import {
   buildRegistry,
   collectMachineEntries,
+  flashedVersions,
   groupBySerial,
+  knownSoftwareVersions,
   machineFilterTags,
   machineSerials
 } from '@/machineLog/machineLogSelectors'
@@ -147,5 +149,71 @@ describe('machineLogSelectors', () => {
     const notes = vault(['log.md', '🚜 A1 work 📅 2026-07-01\n'])
     const machines: MachineDef[] = [{ serial: 'Z9', model: 'D8', attributes: [] }]
     expect(machineSerials(notes, machines)).toEqual(['A1', 'Z9'])
+  })
+
+  describe('software', () => {
+    const notes = vault([
+      'log.md',
+      [
+        '🚜 A1 display update 📅 2026-09-01',
+        '| Software | Base  | Flashed |',
+        '| -------- | ----- | ------- |',
+        '| EC520    |       |         |',
+        '| Display  | 4.0.1 | 4.1.0   |',
+        '',
+        '🚜 B2 controller 📅 2026-09-10',
+        '| Software | Base  | Flashed |',
+        '| -------- | ----- | ------- |',
+        '| EC520    | 2.2   | 2.3     |',
+        '| Display  | 4.1.0 |         |',
+        '',
+        '🚜 C3 greased 📅 2026-09-12',
+        ''
+      ].join('\n')
+    ])
+    const serialsOf = (software: { kind: 'Display' | 'EC520' | null; version: string | null }) =>
+      collectMachineEntries(notes, [], { serial: null, tags: [], text: '', software }).map(
+        (e) => e.serial
+      )
+
+    it('carries recorded software, dropping blank values', () => {
+      const [b2, a1] = collectMachineEntries(notes, []).filter((e) => e.serial !== 'C3')
+      expect(a1.software.map((s) => `${s.section}:${s.kind}=${s.value}`)).toEqual([
+        'base:Display=4.0.1',
+        'flashed:Display=4.1.0'
+      ])
+      expect(b2.software).toHaveLength(3)
+    })
+
+    it('filters by software flashed, optionally by version', () => {
+      expect(serialsOf({ kind: 'Display', version: null })).toEqual(['A1'])
+      expect(serialsOf({ kind: 'EC520', version: '2.3' })).toEqual(['B2'])
+      expect(serialsOf({ kind: 'EC520', version: '2.2' })).toEqual([])
+      expect(serialsOf({ kind: null, version: null })).toEqual(['C3', 'B2', 'A1'])
+    })
+
+    it('does not match base software against the flashed filter', () => {
+      // B2 had Display 4.1.0 on it already but didn't flash it.
+      expect(serialsOf({ kind: 'Display', version: '4.1.0' })).toEqual(['A1'])
+    })
+
+    it('text search hits software versions', () => {
+      const hits = collectMachineEntries(notes, [], { serial: null, tags: [], text: '2.3' })
+      expect(hits.map((e) => e.serial)).toEqual(['B2'])
+    })
+
+    it('lists flashed versions per kind', () => {
+      const entries = collectMachineEntries(notes, [])
+      expect(flashedVersions(entries, 'Display')).toEqual(['4.1.0'])
+      expect(flashedVersions(entries, 'Implement')).toEqual([])
+    })
+
+    it('remembers every version per kind for autocomplete, newest first', () => {
+      const known = knownSoftwareVersions(notes)
+      expect(known.Display).toEqual(['4.1.0', '4.0.1'])
+      // Same entry date: ties fall back to alphabetical.
+      expect(known.EC520).toEqual(['2.2', '2.3'])
+      expect(known.Implement).toEqual([])
+    })
   })
 })

@@ -13,6 +13,7 @@ import type {
 } from '../types'
 import { titleOf } from '../pathUtils'
 import { anchorText } from '../blockAnchor'
+import { machineDetailEnd, parseMachineDetail } from '../machineSoftware'
 import { extractTags, maskSource, type PositionedNode, type YamlBlock } from './mdScaffold'
 
 /**
@@ -243,7 +244,11 @@ function collectBlockIds(meta: NoteMeta, maskedLines: string[], rawLines: string
   })
 }
 
-/** 🚜 <serial> <activity…> lines — like milestones, never Kanban cards. */
+/**
+ * 🚜 <serial> <activity…> lines — like milestones, never Kanban cards. The
+ * software sections under each are read too; the block's extent is measured on
+ * the masked lines, so a code fence ends it rather than being read as software.
+ */
 function collectMachineLog(meta: NoteMeta, maskedLines: string[], rawLines: string[]): void {
   scanLines(maskedLines, rawLines, MACHINE_ENTRY_RE, (line, rawMatch, rawLine) => {
     const text = (rawMatch[3] ?? '').trim()
@@ -252,7 +257,8 @@ function collectMachineLog(meta: NoteMeta, maskedLines: string[], rawLines: stri
       serial: rawMatch[2],
       text,
       tags: extractTags(text),
-      rawLine
+      rawLine,
+      software: parseMachineDetail(rawLines, line, machineDetailEnd(maskedLines, line))
     } as MachineLogItem)
   })
 }

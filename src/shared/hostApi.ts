@@ -119,6 +119,17 @@ export interface HostApi {
     expectedBlock?: string[],
     meta?: { reasonLine?: string | null; statusChangedLine?: string }
   ): Promise<void>
+  /**
+   * Swap the run of lines starting at `fromLine` — which must still read
+   * exactly `expectedLines` — for `newLines` (non-empty), as one edit. How a
+   * machine entry's popup saves its 🚜 line and software table together.
+   */
+  replaceBlock(
+    path: VaultPath,
+    fromLine: number,
+    expectedLines: string[],
+    newLines: string[]
+  ): Promise<void>
   deleteLine(path: VaultPath, line: number, expectedText: string): Promise<void>
   moveLine(
     path: VaultPath,

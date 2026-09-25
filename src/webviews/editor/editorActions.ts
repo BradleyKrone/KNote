@@ -7,10 +7,10 @@
 // also drive the reason prompt and Status-Changed meta lines via the host.)
 
 import dayjs from 'dayjs'
-import { EditorSelection, type Line } from '@codemirror/state'
+import { EditorSelection, type EditorState, type Line } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
-import { machineEntryTemplate } from '@shared/machineEntry'
-import { DUE_RE, MACHINE_ENTRY_RE, START_RE } from '@shared/parser/patterns'
+import { machineEntryTemplate, type MachineSoftware } from '@shared/machineSoftware'
+import { DUE_RE, START_RE } from '@shared/parser/patterns'
 import {
   addDependency,
   dependencies as lineDependencies,
@@ -22,23 +22,22 @@ import {
   setStartDate
 } from '../shared/taskMeta'
 import { host } from '../shared/rpc'
+import {
+  planMachineEntryEdit,
+  readMachineEntryCtx,
+  type MachineEntryCtx
+} from '../shared/machineEntryEdit'
 import { getNotePath } from './knoteConstructs'
 import { buildMdLink, type MdLink } from './mdLinkLogic'
 
 // ---------- Pure line builders (unit-tested) ----------
 
+export { editMachineLine, type MachineEntryCtx } from '../shared/machineEntryEdit'
+
 /** The 🚜 entry line for a new machine work-log entry (no detail template). */
 export function buildMachineEntryLine(serial: string, date: string, tags: string[]): string {
   const tagStr = tags.length ? ' ' + tags.map((t) => `#${t}`).join(' ') : ''
   return `🚜 ${serial}${tagStr} 📅 ${date}`
-}
-
-/** Rewrite a machine line's serial + date, leaving inline tags/activity text intact. */
-export function editMachineLine(rawLine: string, serial: string, date: string | null): string {
-  const m = MACHINE_ENTRY_RE.exec(rawLine)
-  if (!m) return rawLine
-  const rest = setDueDate(m[3], date)
-  return rest ? `${m[1]}🚜 ${serial} ${rest}` : `${m[1]}🚜 ${serial}`
 }
 
 /** The current 📅 / @due date on a line, or null. */
@@ -59,6 +58,26 @@ export function normalizePastedText(text: string, lineBreak: string): string {
 }
 
 // ---------- View helpers ----------
+
+/** How far either side of a line to read when looking for its machine entry's block. */
+const MACHINE_WINDOW = 200
+
+/** The document lines around `line0` (0-based), plus the 0-based index the slice starts at. */
+function docWindow(state: EditorState, line0: number): { lines: string[]; offset: number } {
+  const doc = state.doc
+  const offset = Math.max(0, line0 - MACHINE_WINDOW)
+  const last = Math.min(doc.lines, line0 + MACHINE_WINDOW + 1)
+  const lines: string[] = []
+  for (let n = offset + 1; n <= last; n++) lines.push(doc.line(n).text)
+  return { lines, offset }
+}
+
+/** The machine entry owning document line `line0` (0-based), in document coordinates. */
+export function machineEntryAt(state: EditorState, line0: number): MachineEntryCtx | null {
+  const { lines, offset } = docWindow(state, line0)
+  const ctx = readMachineEntryCtx(lines, line0 - offset)
+  return ctx && { ...ctx, line0: ctx.line0 + offset }
+}
 
 /** The document line under the caret. */
 function caretLine(view: EditorView): Line {
@@ -121,19 +140,20 @@ export function insertMilestone(view: EditorView): void {
 }
 
 /**
- * Insert a 🚜 machine work-log entry (with any registered tags) plus the blank
- * detail template at the caret, caret left on the entry line ready for the
- * activity text.
+ * Insert a 🚜 machine work-log entry (with any registered tags) plus its
+ * detail template — software sections pre-filled from the popup — at the
+ * caret, caret left on the entry line ready for the activity text.
  */
 export function insertMachineEntry(
   view: EditorView,
   serial: string,
   date: string,
-  tags: string[]
+  tags: string[],
+  software?: MachineSoftware
 ): void {
   const entry = buildMachineEntryLine(serial, date, tags)
   const caret = entry.length + 1 // after the trailing space, before the template
-  insertBlock(view, `${entry} ${machineEntryTemplate()}`, { from: caret, to: caret })
+  insertBlock(view, `${entry} ${machineEntryTemplate(software)}`, { from: caret, to: caret })
 }
 
 /**
@@ -232,7 +252,31 @@ export function addLineDeliverable(view: EditorView, tag: string): void {
   rewriteCaretLine(view, insertDeliverableRef(caretLine(view).text, tag))
 }
 
-/** Rewrite the caret machine line's serial + date, preserving inline tags/text. */
-export function editMachineOnLine(view: EditorView, serial: string, date: string | null): void {
-  rewriteCaretLine(view, editMachineLine(caretLine(view).text, serial, date))
+/**
+ * Save the machine-entry popup back to the entry it was opened on: serial +
+ * date on the 🚜 line, software into its table — one transaction, so one
+ * undo step. A no-op when the entry line has since changed under the popup.
+ */
+export function editMachineEntry(
+  view: EditorView,
+  target: MachineEntryCtx,
+  serial: string,
+  date: string | null,
+  software: MachineSoftware
+): void {
+  const { lines, offset } = docWindow(view.state, target.line0)
+  const entry = target.line0 - offset
+  if (lines[entry] !== target.rawLine) return
+  const plan = planMachineEntryEdit(lines, entry, serial, date, software)
+  if (plan) {
+    const doc = view.state.doc
+    view.dispatch({
+      changes: {
+        from: doc.line(plan.from + offset + 1).from,
+        to: doc.line(plan.to + offset).to,
+        insert: plan.next.join(view.state.lineBreak)
+      }
+    })
+  }
+  view.focus()
 }

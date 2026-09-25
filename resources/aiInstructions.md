@@ -234,11 +234,24 @@ If the user tracks work against specific machines, a log entry starts with
 milestones, it is not a checkbox:
 
 ```markdown
-🚜 SN12345 Replaced power supply #repair 📅 2026-07-07
-  Base Machine Software:
-  Testing Software:
-  Notes:
+🚜 SN12345 Flashed display #repair 📅 2026-07-07
+| Software  | Base  | Flashed |
+| --------- | ----- | ------- |
+| Implement |       |         |
+| EC520     | 2.2.0 |         |
+| Machine   | 1.2.3 | 1.4.0   |
+| Display   | 4.0.1 | 4.1.0   |
+- Notes: 
 ```
+
+- The lines directly under the `🚜` line (the table and list items, **no blank
+  line between**) belong to that entry.
+- The software table's header is exactly `Software | Base | Flashed`, with one
+  row per kind: `Implement`, `EC520`, `Machine`, `Display`. **Base** is what
+  was on the machine before the work; **Flashed** is what was put on it. Leave
+  a cell blank when it isn't known or wasn't changed — keep all four rows.
+- Write versions exactly as they appeared before (same spelling/format): the
+  Machine Log filters by exact flashed version.
 
 ## Weekly notes & templates
 

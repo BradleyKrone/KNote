@@ -1,6 +1,8 @@
 // The shared data model: every type that crosses the main/preload/renderer
 // boundary lives here.
 
+import type { SoftwareKind, SoftwareSection } from './machineSoftware'
+
 /** Vault-relative paths use forward slashes, no leading slash: "folder/note.md" */
 export type VaultPath = string
 
@@ -143,6 +145,18 @@ export interface MachineLogItem {
   text: string
   tags: string[]
   /** Exact full line text, used to verify targeted rewrites */
+  rawLine: string
+  /** Software lines from the entry's Base Machine Software / Software Flashed sections */
+  software: MachineSoftwareItem[]
+}
+
+/** One `- <Kind>: <version>` line under a 🚜 entry's software sections (see shared/machineSoftware.ts). */
+export interface MachineSoftwareItem {
+  kind: SoftwareKind
+  section: SoftwareSection
+  /** '' when the line is present but left blank */
+  value: string
+  line: number
   rawLine: string
 }
 

@@ -4,6 +4,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import * as vault from '../src/core/vaultService'
 import {
+  replaceBlock,
   replaceLines,
   appendLine,
   deleteLine,
@@ -32,6 +33,26 @@ async function seed(name: string, content: string): Promise<void> {
 async function read(name: string): Promise<string> {
   return readFile(join(dir, name), 'utf-8')
 }
+
+describe('replaceBlock', () => {
+  it('swaps a run of lines for a different number of lines, keeping CRLF', async () => {
+    await seed('a.md', 'intro\r\nentry\r\nold\r\nafter\r\n')
+    await replaceBlock('a.md', 1, ['entry', 'old'], ['ENTRY', 'new 1', 'new 2'])
+    expect(await read('a.md')).toBe('intro\r\nENTRY\r\nnew 1\r\nnew 2\r\nafter\r\n')
+  })
+
+  it('finds the run after it shifted, by its first line', async () => {
+    await seed('a.md', 'added\nentry\nold\n')
+    await replaceBlock('a.md', 0, ['entry', 'old'], ['entry', 'new'])
+    expect(await read('a.md')).toBe('added\nentry\nnew\n')
+  })
+
+  it('refuses when any line of the run changed', async () => {
+    await seed('a.md', 'entry\nedited meanwhile\n')
+    await expect(replaceBlock('a.md', 0, ['entry', 'old'], ['x'])).rejects.toThrow('KNOTE_STALE')
+    expect(await read('a.md')).toBe('entry\nedited meanwhile\n')
+  })
+})
 
 describe('replaceLines', () => {
   it('applies every edit in one write', async () => {

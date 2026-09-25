@@ -96,6 +96,7 @@ export function createHostHandlers(): HostHandlers {
     replaceLine: verifiedEdit.replaceLine,
     setTaskStatusMeta: verifiedEdit.setTaskStatusMeta,
     setTaskTextAndNotes: verifiedEdit.setTaskTextAndNotes,
+    replaceBlock: verifiedEdit.replaceBlock,
     deleteLine: verifiedEdit.deleteLine,
     moveLine: verifiedEdit.moveLine,
     insertLine: verifiedEdit.insertLine,
