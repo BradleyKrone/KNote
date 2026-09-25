@@ -1277,7 +1277,18 @@ button {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 10px;
+  padding: 12px 14px;
+  width: 560px;
+  max-width: calc(100vw - 18px);
+  /* Taller than a short editor pane: scroll inside rather than run off-screen. */
+  max-height: calc(100vh - 18px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* Popovers cap at 300px for menus; the machine entry form needs its full width. */
+.popover-panel:has(> .machine-entry-picker) {
+  max-width: none;
 }
 
 .machine-picker-config {
@@ -1286,6 +1297,75 @@ button {
   gap: 5px;
   flex-wrap: wrap;
   margin-top: 6px;
+}
+
+/* Software table in the entry popup: a row per kind, Base → Flashed. */
+.machine-sw-table {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.machine-sw-table .panel-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.machine-sw-col {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.machine-sw-kind {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.machine-sw-arrow {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* Software chips on a Machine Log row: base muted, flashed highlighted. */
+.machine-sw-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.machine-sw-chips-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+.machine-sw-chip {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.machine-sw-chip.flashed {
+  font-weight: 600;
+  color: var(--text-accent);
+  background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  border-color: transparent;
+}
+
+.machine-sw-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .link-picker {

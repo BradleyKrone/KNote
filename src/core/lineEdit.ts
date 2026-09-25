@@ -148,6 +148,27 @@ export async function setTaskTextAndNotes(
   await writeFileAtomic(rel, lines.join(eol))
 }
 
+/**
+ * Verified swap of a run of lines for new ones — how a machine entry's popup
+ * saves its line and software table together. The run is located by its first
+ * line (tolerating a shift, like every edit here) and every following line
+ * must still match too, or nothing is written.
+ */
+export async function replaceBlock(
+  rel: VaultPath,
+  fromLine: number,
+  expectedLines: string[],
+  newLines: string[]
+): Promise<void> {
+  const { eol, lines } = await readNoteLines(rel)
+  const start = expectedLines.length ? locateLine(lines, fromLine, expectedLines[0]) : -1
+  if (start === -1 || !expectedLines.every((l, i) => lines[start + i] === l)) {
+    throw new Error(`${STALE_ERROR}: line changed on disk in ${rel}`)
+  }
+  lines.splice(start, expectedLines.length, ...newLines)
+  await writeFileAtomic(rel, lines.join(eol))
+}
+
 /** Verified line delete (Kanban "delete card"). */
 export async function deleteLine(
   rel: VaultPath,

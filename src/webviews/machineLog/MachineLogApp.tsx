@@ -1,10 +1,11 @@
 // The machine work-log view: 🚜 entries collected from every note, grouped
-// per machine with date/tag filtering. Right-click an entry to edit its
-// machine/date.
+// per machine with date/tag/software filtering. Right-click an entry to edit
+// its machine, date and software.
 
 import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import { Truck, Wrench } from 'lucide-react'
+import { SOFTWARE_KINDS, softwareFromItems, type SoftwareKind } from '@shared/machineSoftware'
 import { host } from '../shared/rpc'
 import { useConfigStore, useIndexStore } from '../shared/stores'
 import { Popover } from '../shared/components/Popover'
@@ -13,6 +14,7 @@ import { MachineEntryPickerContent } from './MachineEntryPickerContent'
 import {
   buildRegistry,
   collectMachineEntries,
+  flashedVersions,
   groupBySerial,
   machineFilterTags,
   machineSerials,
@@ -26,6 +28,8 @@ export function MachineLogApp(): React.JSX.Element {
   const [serialFilter, setSerialFilter] = useState<string | null>(null)
   const [tagFilters, setTagFilters] = useState<string[]>([])
   const [textFilter, setTextFilter] = useState('')
+  const [swKind, setSwKind] = useState<SoftwareKind | null>(null)
+  const [swVersion, setSwVersion] = useState<string | null>(null)
   const [separate, setSeparate] = useState(false)
   const [dateEditor, setDateEditor] = useState<{
     entry: MachineEntry
@@ -45,9 +49,16 @@ export function MachineLogApp(): React.JSX.Element {
       collectMachineEntries(notes, machines, {
         serial: serialFilter,
         tags: tagFilters,
-        text: textFilter
+        text: textFilter,
+        software: { kind: swKind, version: swVersion }
       }),
-    [notes, machines, serialFilter, tagFilters, textFilter]
+    [notes, machines, serialFilter, tagFilters, textFilter, swKind, swVersion]
+  )
+  // Versions offered for the chosen kind: every one flashed anywhere, not just
+  // within the current filter, so picking one never empties its own dropdown.
+  const versions = useMemo(
+    () => (swKind ? flashedVersions(collectMachineEntries(notes, machines), swKind) : []),
+    [notes, machines, swKind]
   )
   const groups = useMemo(
     () => (separate ? groupBySerial(entries, registry) : []),
@@ -62,7 +73,7 @@ export function MachineLogApp(): React.JSX.Element {
     <div
       key={`${entry.path}-${entry.line}-${i}`}
       className="timeline-item machine-item"
-      title="Right-click to edit machine/date"
+      title="Right-click to edit machine, date and software"
       onClick={() => open(entry)}
       onContextMenu={(e) => {
         e.preventDefault()
@@ -76,6 +87,7 @@ export function MachineLogApp(): React.JSX.Element {
       <span className="machine-item-date">{dayjs(entry.date).format('MMM D YYYY')}</span>
       {showSerial && <span className="machine-serial-badge">{entry.serial}</span>}
       <span className="timeline-item-text">{entry.text}</span>
+      <SoftwareChips entry={entry} />
       <span className="machine-item-note">{entry.noteTitle}</span>
       {entry.tags.map((t) => (
         <span key={t} className="board-card-tag">
@@ -111,6 +123,37 @@ export function MachineLogApp(): React.JSX.Element {
               </option>
             ))}
           </select>
+          <span className="machine-sw-filter" title="Only entries that flashed this software">
+            <select
+              className="board-tag-select"
+              value={swKind ?? ''}
+              onChange={(e) => {
+                setSwKind((e.target.value || null) as SoftwareKind | null)
+                setSwVersion(null)
+              }}
+            >
+              <option value="">Any software flashed</option>
+              {SOFTWARE_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {k} flashed
+                </option>
+              ))}
+            </select>
+            {swKind && (
+              <select
+                className="board-tag-select"
+                value={swVersion ?? ''}
+                onChange={(e) => setSwVersion(e.target.value || null)}
+              >
+                <option value="">Any version</option>
+                {versions.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+            )}
+          </span>
           <label className="machine-separate-toggle" title="Show a separate timeline per machine">
             <input
               type="checkbox"
@@ -176,14 +219,38 @@ export function MachineLogApp(): React.JSX.Element {
           <MachineEntryPickerContent
             initialSerial={dateEditor.entry.serial}
             initialDate={dateEditor.entry.date}
+            initialSoftware={softwareFromItems(dateEditor.entry.software)}
             submitLabel="Save"
-            onSubmit={(serial, date) => {
-              void setMachineEntryFields(dateEditor.entry, serial, date)
+            onSubmit={(serial, date, _tags, software) => {
+              void setMachineEntryFields(dateEditor.entry, serial, date, software)
               setDateEditor(null)
             }}
           />
         </Popover>
       )}
     </div>
+  )
+}
+
+/** A row's recorded software: what was on the machine (muted), then what was flashed. */
+function SoftwareChips({ entry }: { entry: MachineEntry }): React.JSX.Element | null {
+  const base = entry.software.filter((s) => s.section === 'base')
+  const flashed = entry.software.filter((s) => s.section === 'flashed')
+  if (!base.length && !flashed.length) return null
+  return (
+    <span className="machine-sw-chips">
+      {base.length > 0 && <span className="machine-sw-chips-label">Base</span>}
+      {base.map((s) => (
+        <span key={`b-${s.kind}`} className="machine-sw-chip">
+          {s.kind} {s.value}
+        </span>
+      ))}
+      {flashed.length > 0 && <span className="machine-sw-chips-label">Flashed</span>}
+      {flashed.map((s) => (
+        <span key={`f-${s.kind}`} className="machine-sw-chip flashed">
+          {s.kind} {s.value}
+        </span>
+      ))}
+    </span>
   )
 }

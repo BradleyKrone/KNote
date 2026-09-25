@@ -255,6 +255,40 @@ export async function setTaskTextAndNotes(
   await applyAndMaybeSave(doc, edit)
 }
 
+/**
+ * Verified swap of a run of lines (see core/lineEdit.replaceBlock) — on an open
+ * buffer one WorkspaceEdit, so one undo step. `newLines` must not be empty.
+ */
+export async function replaceBlock(
+  rel: VaultPath,
+  fromLine: number,
+  expectedLines: string[],
+  newLines: string[]
+): Promise<void> {
+  const doc = openDocFor(rel)
+  if (!doc) {
+    await lineEdit.replaceBlock(rel, fromLine, expectedLines, newLines)
+    void vaultIndex.indexFile(rel)
+    return
+  }
+  const start = expectedLines.length ? locateLine(doc, fromLine, expectedLines[0]) : -1
+  const last = start + expectedLines.length - 1
+  if (
+    start === -1 ||
+    last >= doc.lineCount ||
+    !expectedLines.every((l, i) => doc.lineAt(start + i).text === l)
+  ) {
+    throw stale(rel)
+  }
+  const edit = new vscode.WorkspaceEdit()
+  edit.replace(
+    doc.uri,
+    new vscode.Range(start, 0, last, doc.lineAt(last).text.length),
+    newLines.join('\n')
+  )
+  await applyAndMaybeSave(doc, edit)
+}
+
 export async function deleteLine(
   rel: VaultPath,
   lineNo: number,

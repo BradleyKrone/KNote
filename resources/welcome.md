@@ -297,13 +297,13 @@ left, so you can pick one out at a glance instead of reading down the list:
 | **Task ▸** Toggle task (`@task`) | Promote a checkbox to a card, or demote it back (`Ctrl+Alt+T`) |
 | **Insert ▸** Milestone | Insert a dated `🏁 Milestone 📅 …` line |
 | **Insert ▸** Table… | Pick a row/column count → insert an empty table |
-| **Insert ▸** Machine work… | Pick a serial + date → insert a `🚜` entry with the detail template |
+| **Insert ▸** Machine work… | Pick a serial + date and fill in each software's **Base** → **Flashed** version (Implement / EC520 / Machine / Display — each field autocompletes versions you've used before) → insert a `🚜` entry with a software table under it |
 | **Insert ▸** Draw.io Diagram | Create a blank diagram in your attachments folder, embed it, and open it for editing |
 | **Task ▸** Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
 | **Task ▸** Copy link to task | *(task/milestone lines)* copy a `[[Note#^id\|Task text]]` link to this task (adding a hidden `^anchor` named after the task if needed) — paste it elsewhere to jump back |
 | **Table ▸** *(row/column actions)* | *(inside a table)* insert or delete the clicked row or column, set the clicked column's alignment (Left/Center/Right/Default), or drop to the raw Markdown with Edit table source |
 | Open link / Copy link / Edit link… / Remove link | *(on a hyperlink)* open it in your browser, copy the bare URL, change its text/target, or unwrap it back to plain text |
-| Edit machine entry… | *(🚜 lines)* change the serial + date, keeping the activity text |
+| Edit machine entry… | *(a 🚜 line or any line under it)* reopen the same form pre-filled — change serial, date or software and the table is rewritten neatly, keeping the activity text and notes |
 | *Suggestions* / Add to dictionary / Ignore | *(misspelled words)* replace with a correction, add the word to your vault dictionary, or ignore it this session |
 
 **Right-click a checkbox glyph** for a quick Kanban switcher: pick any
@@ -616,8 +616,10 @@ with no members yet) its own checkbox isn't.
 ## Machine Log, Graph
 
 - **KNote: Open Machine Log** — 🚜 work entries collected from every note,
-  filterable by serial, config attribute, tag, and text, optionally grouped
-  per machine. Insert entries with **KNote: Insert Machine Log Entry**;
+  filterable by serial, config attribute, tag, text, and **software
+  flashed** (pick Implement / EC520 / Machine / Display, then optionally a
+  version), optionally grouped per machine. Each row shows its base and
+  flashed software as chips; right-click a row to edit it in the entry form. Insert entries with **KNote: Insert Machine Log Entry**;
   register machines (serial → model + attributes) in Vault Settings →
   Machines.
 - **KNote: Open Graph View** — force-directed map of your notes and their

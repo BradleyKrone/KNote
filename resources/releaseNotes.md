@@ -3,6 +3,19 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 3.5.0
+
+- **Track software flashed on a machine.** A `🚜` entry can now carry a
+  Software table (Implement / EC520 / Machine / Display, each with a Base and
+  Flashed version) recording what was on the machine before and after the
+  work. Fill it in from **Insert ▸ Machine work…**, where each version field
+  autocompletes from versions you've used before, or right-click an existing
+  entry's `🚜` line (or anything under it) to reopen the same form and edit
+  it in place. The Machine Log's filters gained a matching **software
+  flashed** filter (pick a kind, then optionally an exact version), and each
+  row shows its recorded software as chips. Entries written before this
+  still read fine and upgrade to the new table the first time they're edited.
+
 ## 3.4.0
 
 - **Work packages on the Planner.** A deliverable can now nest one level

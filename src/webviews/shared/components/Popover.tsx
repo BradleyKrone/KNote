@@ -19,39 +19,48 @@ export function Popover({
   children
 }: Props): React.JSX.Element | null {
   const panelRef = useRef<HTMLDivElement>(null)
+  // Where the caller asked for the panel, and where it actually sits once
+  // kept inside the viewport.
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null)
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
-  const clamped = useRef(false)
 
   useEffect(() => {
-    clamped.current = false
     if (anchorPoint) {
-      setPos({ top: anchorPoint.y, left: anchorPoint.x })
+      setAnchor({ top: anchorPoint.y, left: anchorPoint.x })
       return
     }
     if (!anchorEl) return
     const rect = anchorEl.getBoundingClientRect()
-    setPos({ top: rect.bottom + 4, left: rect.left })
+    setAnchor({ top: rect.bottom + 4, left: rect.left })
   }, [anchorEl, anchorPoint])
 
+  // Re-fit whenever the panel's size changes, not just on first layout: the
+  // editor's right-click menu swaps its small item list for a much taller
+  // picker inside the same Popover, and a picker can grow as it's filled in.
   useLayoutEffect(() => {
-    if (!pos || clamped.current) return
     const panel = panelRef.current
-    if (!panel) return
-    const rect = panel.getBoundingClientRect()
-    const overflowX = rect.right - (window.innerWidth - VIEWPORT_MARGIN)
-    const overflowY = rect.bottom - (window.innerHeight - VIEWPORT_MARGIN)
-    clamped.current = true
-    if (overflowX > 0 || overflowY > 0) {
-      setPos((prev) =>
-        prev
-          ? {
-              top: overflowY > 0 ? Math.max(VIEWPORT_MARGIN, prev.top - overflowY) : prev.top,
-              left: overflowX > 0 ? Math.max(VIEWPORT_MARGIN, prev.left - overflowX) : prev.left
-            }
-          : prev
+    if (!anchor || !panel) return
+    const place = (): void => {
+      const { width, height } = panel.getBoundingClientRect()
+      const top = Math.max(
+        VIEWPORT_MARGIN,
+        Math.min(anchor.top, window.innerHeight - VIEWPORT_MARGIN - height)
       )
+      const left = Math.max(
+        VIEWPORT_MARGIN,
+        Math.min(anchor.left, window.innerWidth - VIEWPORT_MARGIN - width)
+      )
+      setPos((prev) => (prev && prev.top === top && prev.left === left ? prev : { top, left }))
     }
-  }, [pos])
+    place()
+    const observer = new ResizeObserver(place)
+    observer.observe(panel)
+    window.addEventListener('resize', place)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', place)
+    }
+  }, [anchor])
 
   useEffect(() => {
     const onDown = (e: MouseEvent): void => {
@@ -75,13 +84,14 @@ export function Popover({
     }
   }, [anchorEl, onClose])
 
-  if ((!anchorEl && !anchorPoint) || !pos) return null
+  const at = pos ?? anchor
+  if ((!anchorEl && !anchorPoint) || !at) return null
 
   return (
     <div
       ref={panelRef}
       className="popover-panel"
-      style={{ top: pos.top, left: pos.left }}
+      style={{ top: at.top, left: at.left }}
       onMouseDown={(e) => e.stopPropagation()}
     >
       {children}
