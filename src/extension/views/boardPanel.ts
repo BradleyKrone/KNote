@@ -5,6 +5,7 @@
 
 import * as vscode from 'vscode'
 import type { DeliverableScopeFilter } from '@shared/deliverables'
+import type { TaskDialogSize } from '@shared/hostApi'
 import { titleOf } from '@shared/pathUtils'
 import { currentVaultRoot, currentVaultRoots } from '../engine'
 import { vaultNoteRel } from '../paths'
@@ -32,6 +33,26 @@ function panelTitle(scope: BoardScope): string {
   return scope.kind === 'note' ? `Board — ${titleOf(scope.path)}` : 'KNote Board'
 }
 
+/** globalState key for the board task editor's dragged size (see HostApi.getTaskDialogSize). */
+const TASK_DIALOG_SIZE_KEY = 'knote.taskDialogSize'
+
+function isTaskDialogSize(v: unknown): v is TaskDialogSize {
+  const s = v as TaskDialogSize | null
+  return (
+    typeof s === 'object' &&
+    s !== null &&
+    Number.isFinite(s.w) &&
+    Number.isFinite(s.h) &&
+    s.w > 0 &&
+    s.h > 0
+  )
+}
+
+function readTaskDialogSize(context: vscode.ExtensionContext): TaskDialogSize | null {
+  const stored = context.globalState.get<unknown>(TASK_DIALOG_SIZE_KEY)
+  return isTaskDialogSize(stored) ? stored : null
+}
+
 function wirePanel(
   context: vscode.ExtensionContext,
   panel: vscode.WebviewPanel,
@@ -51,7 +72,10 @@ function wirePanel(
   const rpc = attach(panel.webview, {
     ...createHostHandlers(),
     attachmentUri: (src: string) => attachmentUriFor(src, null, panel.webview),
-    openWithDrawio: (src: string) => openWithDrawio(src, null)
+    openWithDrawio: (src: string) => openWithDrawio(src, null),
+    getTaskDialogSize: () => readTaskDialogSize(context),
+    setTaskDialogSize: (size: TaskDialogSize | null) =>
+      context.globalState.update(TASK_DIALOG_SIZE_KEY, isTaskDialogSize(size) ? size : undefined)
   })
   panel.webview.html = webviewHtml(
     panel.webview,
@@ -60,7 +84,10 @@ function wirePanel(
     panelTitle(scope),
     {
       scope,
-      initialFilter
+      initialFilter,
+      // In the bootstrap so the first card opened doesn't flash the default
+      // size while an RPC round-trip fetches the saved one.
+      taskDialogSize: readTaskDialogSize(context)
     }
   )
   panel.onDidDispose(() => {

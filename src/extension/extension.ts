@@ -21,7 +21,7 @@ import { registerPasteImage } from './providers/pasteImage'
 import { registerAllCommands } from './commands'
 import { broadcast, registerRpcBroadcasts } from './rpc/webviewRpc'
 import { registerBoardPanel } from './views/boardPanel'
-import { registerPanels } from './views/panels'
+import { isPanelOpen, registerPanels } from './views/panels'
 import { registerLiveEditor } from './views/liveEditorProvider'
 import { registerSidebarViews } from './views/sidebarViews'
 import { registerFilesTree } from './trees/filesTree'
@@ -79,6 +79,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<KnoteA
   // (a workspace folder added or removed restarts it). Registering twice would
   // double every index write, attachment cleanup and rename WorkspaceEdit.
   let engineListenersRegistered = false
+  let homeShown = false
 
   const start = async (layout: VaultLayout): Promise<void> => {
     try {
@@ -97,6 +98,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<KnoteA
       // same startup: its auto-open check ran before the vault was open and
       // silently no-opped. Give it one more chance now that it is.
       quickAccessTrees.retryAutoOpen()
+      // Home greets the first open only — a restart (a workspace folder added
+      // or removed) mustn't reopen a page the user has already closed.
+      if (!homeShown) {
+        homeShown = true
+        const openOnStartup = vscode.workspace
+          .getConfiguration('knote')
+          .get<boolean>('home.openOnStartup', true)
+        if (openOnStartup && !isPanelOpen('knote.home')) {
+          void vscode.commands.executeCommand('knote.openHome')
+        }
+      }
       // A restart may have added folders to the vault; webviews created before
       // it can't load resources from them until their roots are widened.
       refreshResourceRoots(currentVaultRoots())

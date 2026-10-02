@@ -3,6 +3,18 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 3.5.2
+
+- **A Home page.** **KNote: Open Home** opens a dashboard showing what you
+  wrote under the last day heading in your weekly note, the cards in progress,
+  what's due or overdue (including Waiting follow-ups), and the next few weeks
+  of the planner on a mini timeline. It opens automatically with the vault;
+  turn that off with the `knote.home.openOnStartup` setting.
+- **Resize the board's task editor.** Drag any edge or corner of the task
+  dialog to make it bigger; the notes editor grows with it. Double-click an
+  edge to snap back. The size is remembered for every task you open, even
+  after closing VS Code.
+
 ## 3.5.0
 
 - **Track software flashed on a machine.** A `🚜` entry can now carry a

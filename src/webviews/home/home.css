@@ -1,0 +1,739 @@
+/* KNote Home. Every colour is a VS Code theme token (with a fallback), so the
+ * page follows light / dark / high-contrast themes on its own. */
+
+:root {
+  --home-blue: var(--vscode-charts-blue, #3794ff);
+  --home-violet: var(--vscode-charts-purple, #b180d7);
+  --home-green: var(--vscode-charts-green, #89d185);
+  --home-red: var(--vscode-charts-red, #f14c4c);
+  --home-amber: var(--vscode-charts-orange, #d18616);
+  --home-yellow: var(--vscode-charts-yellow, #cca700);
+  --home-card-bg: var(--vscode-editorWidget-background, var(--bg-surface));
+  --home-card-border: var(--vscode-widget-border, var(--border-color));
+  --home-hover: var(--vscode-list-hoverBackground);
+  --home-radius: 12px;
+}
+
+body {
+  background: var(--vscode-editor-background);
+  overflow-y: auto;
+}
+
+#root {
+  height: auto;
+  min-height: 100%;
+}
+
+.home {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 28px 32px 48px;
+}
+
+.home-icon {
+  flex: none;
+}
+
+/* ---------- Hero ---------- */
+
+.home-hero {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 26px 28px;
+  margin-bottom: 22px;
+  border-radius: var(--home-radius);
+  border: 1px solid var(--home-card-border);
+  overflow: hidden;
+  background:
+    radial-gradient(
+      120% 160% at 0% 0%,
+      color-mix(in srgb, var(--home-blue) 22%, transparent) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      90% 140% at 100% 100%,
+      color-mix(in srgb, var(--home-violet) 20%, transparent) 0%,
+      transparent 60%
+    ),
+    var(--home-card-bg);
+}
+
+.home-hero-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.home-hero h1 {
+  margin: 4px 0 2px;
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.home-hero-date {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.home-week {
+  display: flex;
+  gap: 5px;
+  margin-top: 14px;
+}
+
+.home-week-day {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: 1px solid var(--home-card-border);
+}
+
+.home-week-day.past {
+  background: color-mix(in srgb, var(--home-blue) 25%, transparent);
+  border-color: transparent;
+  color: var(--text-normal);
+}
+
+.home-week-day.current {
+  background: var(--home-blue);
+  border-color: var(--home-blue);
+  color: var(--vscode-button-foreground, #fff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--home-blue) 30%, transparent);
+}
+
+.home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.home-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--home-card-border);
+  background: color-mix(in srgb, var(--vscode-editor-background) 70%, transparent);
+  color: var(--text-normal);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.15s,
+    border-color 0.15s;
+}
+
+.home-action:hover {
+  background: var(--home-hover);
+  border-color: var(--interactive-accent);
+  transform: translateY(-1px);
+}
+
+.home-action.primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border-color: transparent;
+}
+
+.home-action.primary:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
+/* ---------- Grid + cards ---------- */
+
+.home-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (min-width: 820px) {
+  .home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1300px) {
+  .home-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .home-card-wide {
+    grid-column: 1 / -1;
+    order: 10;
+  }
+}
+
+.home-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: var(--home-radius);
+  border: 1px solid var(--home-card-border);
+  background: var(--home-card-bg);
+  overflow: hidden;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.home-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 20%, transparent)
+  );
+}
+
+.home-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--home-card-border));
+  box-shadow: 0 8px 24px -12px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.home-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 18px 10px;
+}
+
+.home-card-head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.home-badge {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.home-card-spacer {
+  flex: 1;
+}
+
+.home-card-body {
+  padding: 2px 10px 14px;
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.home-link {
+  border: none;
+  background: transparent;
+  color: var(--text-accent);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.home-link:hover {
+  text-decoration: underline;
+}
+
+.home-empty {
+  padding: 18px 10px 10px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.home-note {
+  margin: 0 8px 6px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+code {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.92em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--vscode-textCodeBlock-background);
+}
+
+/* ---------- Rows ---------- */
+
+.home-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.home-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.home-row:hover,
+.home-row:focus-visible {
+  background: var(--home-hover);
+  outline: none;
+}
+
+.home-row:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--interactive-accent);
+}
+
+.home-row-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.home-row-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-row-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
+.home-row-overdue .home-row-text {
+  color: var(--home-red);
+}
+
+.home-priority {
+  margin-right: 6px;
+  font-weight: 700;
+}
+.home-priority-1 {
+  color: var(--home-yellow);
+}
+.home-priority-2 {
+  color: var(--home-amber);
+}
+.home-priority-3 {
+  color: var(--home-red);
+}
+
+.home-age {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.home-chip-overdue {
+  color: var(--home-red);
+  background: color-mix(in srgb, var(--home-red) 15%, transparent);
+}
+.home-chip-today {
+  color: var(--home-amber);
+  background: color-mix(in srgb, var(--home-amber) 16%, transparent);
+}
+.home-chip-soon {
+  color: var(--home-green);
+  background: color-mix(in srgb, var(--home-green) 15%, transparent);
+}
+.home-chip-later {
+  color: var(--text-muted);
+  border-color: var(--home-card-border);
+}
+.home-chip-followup {
+  color: var(--home-blue);
+  background: color-mix(in srgb, var(--home-blue) 15%, transparent);
+}
+
+/* ---------- Due groups ---------- */
+
+.home-group + .home-group {
+  margin-top: 10px;
+}
+
+.home-group-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.home-group-label span {
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.home-group-overdue .home-group-label {
+  color: var(--home-red);
+}
+.home-group-today .home-group-label {
+  color: var(--home-amber);
+}
+.home-group-followUps .home-group-label {
+  color: var(--home-blue);
+}
+
+/* ---------- Previous day markdown ---------- */
+
+.home-markdown {
+  padding: 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.home-markdown > :first-child {
+  margin-top: 0;
+}
+
+.home-markdown h4,
+.home-markdown h5,
+.home-markdown h6 {
+  margin: 12px 0 4px;
+  font-size: 12.5px;
+}
+
+.home-markdown ul,
+.home-markdown ol {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+
+.home-markdown li.home-check {
+  list-style: none;
+  margin-left: -18px;
+}
+
+.home-markdown li.home-check > p {
+  display: inline;
+}
+
+.home-box {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 7px;
+  vertical-align: -1px;
+  border-radius: 3px;
+  border: 1.5px solid var(--text-muted);
+}
+
+.home-check.done > .home-box,
+.home-check.done > p > .home-box {
+  background: var(--home-green);
+  border-color: var(--home-green);
+}
+
+.home-check.done {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.home-check.partial > .home-box {
+  background: linear-gradient(135deg, var(--home-blue) 50%, transparent 50%);
+  border-color: var(--home-blue);
+}
+
+.home-markdown a {
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+.home-markdown a:hover {
+  text-decoration: underline;
+}
+
+.home-markdown .knote-tag {
+  font-size: 0.9em;
+  padding: 0 6px;
+  border-radius: 999px;
+  color: var(--text-accent);
+  background: color-mix(in srgb, var(--text-accent) 12%, transparent);
+}
+
+.home-markdown .knote-unresolved {
+  opacity: 0.7;
+}
+
+/* ---------- Planner timeline ---------- */
+
+.home-timeline {
+  margin: 4px 8px 12px;
+  padding: 10px 10px 8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--vscode-editor-background) 55%, transparent);
+  border: 1px solid var(--home-card-border);
+}
+
+.home-tl-ruler {
+  display: grid;
+  grid-template-columns: repeat(var(--days), 1fr);
+  margin-bottom: 6px;
+}
+
+.home-tl-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.home-tl-day b {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.home-tl-day.weekend b {
+  color: var(--text-muted);
+}
+
+.home-tl-day.today b {
+  color: var(--vscode-button-foreground, #fff);
+  background: var(--home-blue);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+
+.home-tl-body {
+  position: relative;
+  min-height: 34px;
+}
+
+.home-tl-grid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--days), 1fr);
+  pointer-events: none;
+}
+
+.home-tl-col {
+  border-left: 1px dashed color-mix(in srgb, var(--home-card-border) 70%, transparent);
+}
+
+.home-tl-col.weekend {
+  background: color-mix(in srgb, var(--text-muted) 6%, transparent);
+}
+
+.home-tl-col.today {
+  background: color-mix(in srgb, var(--home-blue) 10%, transparent);
+  border-left: 2px solid var(--home-blue);
+}
+
+.home-tl-row {
+  position: relative;
+  height: 26px;
+  margin: 3px 0;
+}
+
+.home-tl-pins {
+  height: 16px;
+}
+
+.home-tl-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--home-green) 60%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--home-green) 16%, transparent);
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 11.5px;
+  transition: filter 0.15s;
+}
+
+.home-tl-bar:hover {
+  filter: brightness(1.15);
+}
+
+.home-tl-bar.overdue {
+  border-color: color-mix(in srgb, var(--home-red) 60%, transparent);
+  background: color-mix(in srgb, var(--home-red) 16%, transparent);
+}
+
+.home-tl-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: color-mix(in srgb, var(--home-green) 35%, transparent);
+}
+
+.home-tl-bar.overdue .home-tl-fill {
+  background: color-mix(in srgb, var(--home-red) 35%, transparent);
+}
+
+.home-tl-label {
+  position: relative;
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-tl-pin {
+  position: absolute;
+  top: 2px;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: none;
+  transform: rotate(45deg);
+  border-radius: 2px;
+  background: var(--home-violet);
+  cursor: pointer;
+}
+
+.home-tl-pin.important {
+  background: var(--home-red);
+}
+
+.home-tl-empty {
+  position: relative;
+  padding: 8px 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ---------- Planner list ---------- */
+
+.home-ring {
+  flex: none;
+}
+
+.home-ring circle {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.home-ring-track {
+  stroke: color-mix(in srgb, var(--text-muted) 25%, transparent);
+}
+
+.home-ring-value {
+  stroke: var(--home-green);
+  stroke-linecap: round;
+}
+
+.home-ring.overdue .home-ring-value {
+  stroke: var(--home-red);
+}
+
+.home-ring text {
+  font-size: 7px;
+  font-weight: 600;
+  fill: var(--text-muted);
+}
+
+.home-diamond {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  margin: 0 6px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  background: var(--home-violet);
+}
+
+.home-diamond.important {
+  background: var(--home-red);
+}
+
+@media (max-width: 600px) {
+  .home {
+    padding: 16px;
+  }
+  .home-hero {
+    padding: 20px;
+  }
+  .home-hero h1 {
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-card,
+  .home-action,
+  .home-tl-bar {
+    transition: none;
+  }
+  .home-card:hover,
+  .home-action:hover {
+    transform: none;
+  }
+}

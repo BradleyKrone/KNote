@@ -6,7 +6,7 @@ import * as vscode from 'vscode'
 import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import type { VaultPath } from '@shared/types'
-import { joinRel } from '@shared/pathUtils'
+import { weeklyPathFor } from '@shared/previousDay'
 import { resolveTarget } from '@shared/wikiResolve'
 import { headingSectionEnd } from '@shared/embedSlice'
 import { isStaleError } from '@shared/errors'
@@ -34,7 +34,7 @@ export async function ensureThisWeekNote(): Promise<VaultPath> {
   pendingWeekNote = (async () => {
     const config = await getVaultConfig()
     const name = dayjs().startOf('isoWeek').format(config.weeklyFormat)
-    const path = joinRel(config.weeklyFolder, name + '.md')
+    const path = weeklyPathFor(dayjs().format('YYYY-MM-DD'), config)
 
     const existing = resolveTarget(path, notesMap())
     if (existing) return existing

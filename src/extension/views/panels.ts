@@ -1,5 +1,5 @@
-// Singleton editor-area WebviewPanels for the Planner, Machine Log, Graph, and
-// KNote Settings. Unlike the board these rebuild from the index snapshot on
+// Singleton editor-area WebviewPanels for Home, the Planner, Machine Log,
+// Graph, and KNote Settings. Unlike the board these rebuild from the index snapshot on
 // reopen, so no retainContextWhenHidden.
 
 import * as vscode from 'vscode'
@@ -21,6 +21,7 @@ interface PanelDef {
 }
 
 const PANELS: PanelDef[] = [
+  { command: 'knote.openHome', viewType: 'knote.home', view: 'home', title: 'KNote Home' },
   {
     command: 'knote.openPlanner',
     viewType: 'knote.planner',
@@ -42,9 +43,14 @@ const PANELS: PanelDef[] = [
   }
 ]
 
-export function registerPanels(context: vscode.ExtensionContext): void {
-  const open = new Map<string, vscode.WebviewPanel>()
+const open = new Map<string, vscode.WebviewPanel>()
 
+/** Whether the panel of this viewType (e.g. `knote.home`) is currently open. */
+export function isPanelOpen(viewType: string): boolean {
+  return open.has(viewType)
+}
+
+export function registerPanels(context: vscode.ExtensionContext): void {
   for (const def of PANELS) {
     context.subscriptions.push(
       vscode.commands.registerCommand(def.command, () => {
