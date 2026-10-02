@@ -694,11 +694,85 @@ button {
 /* ---------- Board task editor (card pencil → task + its notes) ---------- */
 
 .task-note-panel {
+  position: relative;
   width: 820px;
   max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* Drag-to-resize grips (see dialogResize.ts) — invisible strips straddling the
+   panel's border; only the cursor gives them away. Absolutely positioned, so
+   they take no part in the panel's flex column. */
+.task-note-resize {
+  position: absolute;
+  z-index: 1;
+}
+.task-note-resize-n,
+.task-note-resize-s {
+  left: 8px;
+  right: 8px;
+  height: 8px;
+  cursor: ns-resize;
+}
+.task-note-resize-n {
+  top: -4px;
+}
+.task-note-resize-s {
+  bottom: -4px;
+}
+.task-note-resize-e,
+.task-note-resize-w {
+  top: 8px;
+  bottom: 8px;
+  width: 8px;
+  cursor: ew-resize;
+}
+.task-note-resize-e {
+  right: -4px;
+}
+.task-note-resize-w {
+  left: -4px;
+}
+.task-note-resize-ne,
+.task-note-resize-nw,
+.task-note-resize-se,
+.task-note-resize-sw {
+  width: 14px;
+  height: 14px;
+}
+.task-note-resize-ne {
+  top: -5px;
+  right: -5px;
+  cursor: nesw-resize;
+}
+.task-note-resize-sw {
+  bottom: -5px;
+  left: -5px;
+  cursor: nesw-resize;
+}
+.task-note-resize-nw {
+  top: -5px;
+  left: -5px;
+  cursor: nwse-resize;
+}
+.task-note-resize-se {
+  bottom: -5px;
+  right: -5px;
+  cursor: nwse-resize;
+}
+
+/* Once dragged to a size, the notes editor takes up whatever height the panel
+   has spare instead of stopping at its default 55vh cap. */
+.task-note-panel--sized .task-note-cm {
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: none;
+}
+.task-note-panel--sized .task-note-cm .cm-editor {
+  max-height: none;
 }
 
 .task-note-header {
@@ -1000,7 +1074,7 @@ button {
   margin: 0 auto;
   padding: 24px 32px 40vh;
   border-left: 2px solid var(--border-color);
-  margin-left: max(48px, calc(50% - 380px));
+  margin-left: 48px;
 }
 
 .timeline-empty {

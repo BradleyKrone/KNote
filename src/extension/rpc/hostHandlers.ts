@@ -3,8 +3,11 @@
 // webview through webviewRpc.attach.
 
 import * as vscode from 'vscode'
+import dayjs from 'dayjs'
 import type { EmbedNote, VaultConfig, VaultPath } from '@shared/types'
+import { HOME_COMMANDS, type HomeCommand } from '@shared/hostApi'
 import { sliceEmbedSection } from '@shared/embedSlice'
+import { findPreviousDay } from '@shared/previousDay'
 import { isExternalUrl } from '@shared/externalUrl'
 import { resolveTarget, sectionLine, splitWikiTarget } from '@shared/wikiResolve'
 import { createDrawioDiagram, saveImageAttachment } from '../../core/attachments'
@@ -133,6 +136,28 @@ export function createHostHandlers(): HostHandlers {
         return
       }
       await vscode.env.openExternal(vscode.Uri.parse(url))
+    },
+
+    getPreviousDay: async () => {
+      await whenIndexBuilt()
+      const notes = new Map(vaultIndex.getSnapshot().map((meta) => [meta.path, meta]))
+      // The index keeps every note's text current with open buffers (docSync),
+      // so no disk read is needed — a note it hasn't got simply has no section.
+      return findPreviousDay(
+        notes,
+        (path) => vaultIndex.getContent(path),
+        await getVaultConfig(),
+        dayjs().format('YYYY-MM-DD')
+      )
+    },
+
+    // Allowlisted again here, not just typed: the method name and argument
+    // arrive as untrusted postMessage data.
+    runCommand: async (id: HomeCommand) => {
+      if (!(HOME_COMMANDS as readonly string[]).includes(id)) {
+        throw new Error(`KNote: refusing to run command ${String(id)}`)
+      }
+      await vscode.commands.executeCommand(id)
     }
   } satisfies HostHandlers
 }

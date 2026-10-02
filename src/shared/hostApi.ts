@@ -5,6 +5,7 @@
 // errors.ts) keep working on the webview side.
 
 import type { DeliverableScopeFilter } from './deliverables'
+import type { PreviousDay } from './previousDay'
 import type {
   EmbedNote,
   FileReadResult,
@@ -15,6 +16,12 @@ import type {
   VaultConfig,
   VaultPath
 } from './types'
+
+/** Width and height, in CSS pixels. */
+export interface TaskDialogSize {
+  w: number
+  h: number
+}
 
 export interface HostApi {
   /** Full metadata for every note in the vault (hydrates a webview's index store). */
@@ -54,6 +61,15 @@ export interface HostApi {
    * `attachmentUri`.
    */
   openWithDrawio(src: string): Promise<void>
+
+  /**
+   * The size the board's task editor was last dragged to, or null for its
+   * default. Kept per machine in the host's globalState (not the vault — a
+   * size that suits one screen doesn't suit another) so it survives closing
+   * VS Code. Only the board's webview implements these.
+   */
+  getTaskDialogSize(): Promise<TaskDialogSize | null>
+  setTaskDialogSize(size: TaskDialogSize | null): Promise<void>
 
   /**
    * Save a pasted image's bytes (base64-encoded) into the vault's configured
@@ -204,7 +220,31 @@ export interface HostApi {
    * otherwise.
    */
   setFrontmatter(path: VaultPath, frontmatter: Record<string, unknown>): Promise<void>
+
+  /**
+   * The most recent day before today with something written under its
+   * `### M/D/YYYY` heading in a weekly note — the Home page's previous-day
+   * card. Null when the last two weeks have nothing. See shared/previousDay.ts.
+   */
+  getPreviousDay(): Promise<PreviousDay | null>
+
+  /**
+   * Run one of the KNote commands in `HOME_COMMANDS` — how the Home page's
+   * buttons open the board, planner and weekly note. Anything else is refused
+   * host-side: a webview must never get to run arbitrary commands.
+   */
+  runCommand(id: HomeCommand): Promise<void>
 }
+
+/** The only commands `runCommand` will execute. */
+export const HOME_COMMANDS = [
+  'knote.openBoard',
+  'knote.openPlanner',
+  'knote.openWeeklyNote',
+  'knote.quickCapture'
+] as const
+
+export type HomeCommand = (typeof HOME_COMMANDS)[number]
 
 /** Events the host pushes to every attached webview. */
 export interface HostEvents {

@@ -40,6 +40,23 @@ Updating KNote to a new version shows a one-time "What's new" notice with a
 button straight to the full notes. Reopen them any time with **KNote: Open
 Release Notes** from the Command Palette.
 
+## Home page
+
+**KNote: Open Home** (or the 🏠 icon on the Files view) opens a dashboard
+for the day. It opens on its own when the vault does; turn that off with the
+`knote.home.openOnStartup` setting.
+
+| Card | Shows |
+|---|---|
+| **Previous day** | What you wrote under the last `### M/D/YYYY` day heading in a weekly note. Empty days are skipped, so on a Monday you see Friday |
+| **In Progress** | Every card in the In Progress (`/`) column: priority, due chip, how many days it's been there |
+| **Due & Overdue** | Open cards that are overdue, due today or due in the next 7 days, plus Waiting cards whose follow-up date has arrived |
+| **Upcoming on the Planner** | A 14-day mini timeline plus the next 30 days of deliverables (with % done) and 🏁 milestones. Overdue deliverables come first |
+
+Click any row to jump to its line. The buttons along the top open this week's
+note, the board and the planner, or start a quick capture. Home follows
+the board's project/folder filters and the planner's hidden projects.
+
 ## A vault can span several folders
 
 Notes you want in one vault do not have to live under one path. Add any
@@ -412,6 +429,7 @@ line somewhere in your vault:
   | Save | The task line **and the whole block** go back as one verified edit: one undo step, refused outright rather than half-written if anything in the block moved meanwhile. A column change rides along in that same edit, `Status Changed:` re-stamped with it |
   | Cancel / `Esc` | Throws the lot away (with a confirm if you've typed something) |
   | `Ctrl/Cmd+Enter` | Saves from anywhere in the dialog |
+  | Drag an edge or corner | Makes the dialog bigger (or smaller) — the notes editor grows with it. The size is remembered for every task, even after closing VS Code; double-click an edge to snap back to the default |
 
   This task's own `Reason for <Column>`, `Status Changed` and `Date Entered` are
   KNote's to write, so they show read-only in the row above the editor — and

@@ -11,6 +11,19 @@ import { TaskMetaToolbar } from '../shared/components/TaskMetaToolbar'
 import { confirm, promptReason, useConfigStore } from '../shared/stores'
 import { addCard, updateCardNote } from './boardActions'
 import { columnForChar } from './boardSelectors'
+import { bootstrap, host } from '../shared/rpc'
+import { RESIZE_EDGES, resizeFromEdge, type ResizeEdge, type Size } from './dialogResize'
+
+// The last size the dialog was dragged to (null = the stylesheet default),
+// seeded from the host's globalState via the bootstrap so it survives closing
+// VS Code. Module-level, so a card opens at it immediately; each open also
+// re-asks the host, in case another board panel saved a newer size.
+let savedSize: Size | null = bootstrap<{ taskDialogSize?: Size | null }>().taskDialogSize ?? null
+
+function saveSize(size: Size | null): void {
+  savedSize = size
+  void host.setTaskDialogSize(size)
+}
 import { createTaskTitleEditor, syncTaskTitleEditor } from './taskTitleField'
 import { useTaskNoteStore } from './taskNoteStore'
 
@@ -66,6 +79,29 @@ export function TaskNoteDialog(): React.JSX.Element | null {
   // changes on every keystroke — the ref is what keeps Ctrl+Enter from firing a
   // stale one without rebuilding the editor.
   const saveRef = useRef<() => void>(() => {})
+  // Null is the stylesheet's default size. Every card opens at the size last
+  // dragged to (see `savedSize`).
+  const [size, setSize] = useState<Size | null>(savedSize)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const drag = useRef<{ edge: ResizeEdge; start: Size; x: number; y: number } | null>(null)
+
+  useEffect(() => {
+    setSize(savedSize)
+    if (!target) return
+    let live = true
+    void host.getTaskDialogSize().then(
+      (s) => {
+        // A drag already under way owns the size; don't yank it back.
+        if (!live || drag.current) return
+        savedSize = s
+        setSize(s)
+      },
+      () => {}
+    )
+    return () => {
+      live = false
+    }
+  }, [target])
 
   useEffect(() => {
     if (!target || !cmHost.current || !titleCmHost.current) return
@@ -270,13 +306,66 @@ export function TaskNoteDialog(): React.JSX.Element | null {
     }
   }
 
+  // Pointer capture keeps the drag going when the cursor leaves the thin handle
+  // (or the panel), and the handles sit inside the panel, whose mousedown
+  // stopPropagation keeps a drag from reading as a click on the overlay.
+  const startResize = (edge: ResizeEdge) => (e: React.PointerEvent<HTMLDivElement>) => {
+    const panel = panelRef.current
+    if (!panel || e.button !== 0) return
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    const rect = panel.getBoundingClientRect()
+    drag.current = { edge, start: { w: rect.width, h: rect.height }, x: e.clientX, y: e.clientY }
+  }
+  const sizeAt = (e: React.PointerEvent<HTMLDivElement>): Size | null => {
+    const d = drag.current
+    if (!d) return null
+    return resizeFromEdge(d.edge, d.start, e.clientX - d.x, e.clientY - d.y, {
+      w: window.innerWidth,
+      h: window.innerHeight
+    })
+  }
+  const moveResize = (e: React.PointerEvent<HTMLDivElement>): void => {
+    const next = sizeAt(e)
+    if (next) setSize(next)
+  }
+  // Saved once, when the drag ends — not on every pointer move.
+  const endResize = (e: React.PointerEvent<HTMLDivElement>): void => {
+    const final = sizeAt(e)
+    drag.current = null
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+    if (final) {
+      setSize(final)
+      saveSize(final)
+    }
+  }
+  const resetSize = (): void => {
+    setSize(null)
+    saveSize(null)
+  }
+
   return (
     <div className="modal-overlay" onMouseDown={requestClose}>
       <div
-        className="modal-panel task-note-panel"
+        ref={panelRef}
+        className={`modal-panel task-note-panel${size ? ' task-note-panel--sized' : ''}`}
+        style={size ? { width: size.w, height: size.h } : undefined}
         onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
       >
+        {RESIZE_EDGES.map((edge) => (
+          <div
+            key={edge}
+            className={`task-note-resize task-note-resize-${edge}`}
+            onPointerDown={startResize(edge)}
+            onPointerMove={moveResize}
+            onPointerUp={endResize}
+            onPointerCancel={endResize}
+            onDoubleClick={resetSize}
+          />
+        ))}
         <div className="task-note-header">
           <div className="task-note-title">{target.kind === 'edit' ? 'Edit task' : 'New task'}</div>
           <label className="task-note-status">
