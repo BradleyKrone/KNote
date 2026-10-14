@@ -61,6 +61,16 @@ function wirePanel(
 ): void {
   const key = scopeKey(scope)
   panels.set(key, panel)
+  let rpc: vscode.Disposable | undefined
+  // Registered before anything else in here can throw, so the map entry above
+  // can never outlive its panel. Only clear the entry if it's still ours: two
+  // boards of the same scope can coexist (a restored tab revived after auto-open
+  // already made one), and closing the older must not orphan the newer.
+  panel.onDidDispose(() => {
+    rpc?.dispose()
+    untrackResourceRoots(panel.webview)
+    if (panels.get(key) === panel) panels.delete(key)
+  })
   trackResourceRoots(panel.webview, context.extensionUri)
   // Plus the two attachment handlers, which are per-panel everywhere because
   // they need a note to resolve against. A board has no single note — its cards
@@ -69,7 +79,7 @@ function wirePanel(
   // `/`, which `resolveEmbedPath` reads as exactly that). The board's task
   // editor is a full live-preview editor, so without these its images, embeds,
   // hover previews and draw.io links would all reject as unknown methods.
-  const rpc = attach(panel.webview, {
+  rpc = attach(panel.webview, {
     ...createHostHandlers(),
     attachmentUri: (src: string) => attachmentUriFor(src, null, panel.webview),
     openWithDrawio: (src: string) => openWithDrawio(src, null),
@@ -90,11 +100,28 @@ function wirePanel(
       taskDialogSize: readTaskDialogSize(context)
     }
   )
-  panel.onDidDispose(() => {
-    rpc.dispose()
-    untrackResourceRoots(panel.webview)
+}
+
+/**
+ * Reveal the already-open board for this scope and push `filter` to it.
+ * Returns false when there is none to reveal — including a stale reference to
+ * a disposed panel, whose reveal() throws "Webview is disposed". That entry is
+ * dropped so the caller opens a fresh board; left in place, every later click
+ * on the Kanban icon would hit the same dead panel (the auto-open swallows the
+ * error) and the board would stay unopenable until VS Code restarted.
+ */
+function revealExisting(scope: BoardScope, filter: DeliverableScopeFilter): boolean {
+  const key = scopeKey(scope)
+  const existing = panels.get(key)
+  if (!existing) return false
+  try {
+    existing.reveal()
+  } catch {
     panels.delete(key)
-  })
+    return false
+  }
+  broadcast('boardFilterChanged', filter)
+  return true
 }
 
 function openBoard(context: vscode.ExtensionContext, scope: BoardScope): void {
@@ -102,15 +129,10 @@ function openBoard(context: vscode.ExtensionContext, scope: BoardScope): void {
     void vscode.window.showWarningMessage('KNote: no vault is open in this workspace.')
     return
   }
-  const existing = panels.get(scopeKey(scope))
-  if (existing) {
-    existing.reveal()
-    // Undo any project/deliverable narrowing left over from openBoardWithFilter
-    // — this is the plain "open the board" entry point, so it should always
-    // land on an unfiltered board rather than whatever was last picked.
-    broadcast('boardFilterChanged', { kind: 'all' })
-    return
-  }
+  // Undo any project/deliverable narrowing left over from openBoardWithFilter
+  // — this is the plain "open the board" entry point, so it should always
+  // land on an unfiltered board rather than whatever was last picked.
+  if (revealExisting(scope, { kind: 'all' })) return
   const panel = vscode.window.createWebviewPanel(
     VIEW_TYPE,
     panelTitle(scope),
@@ -140,12 +162,7 @@ export function openBoardWithFilter(
     return
   }
   const scope: BoardScope = { kind: 'global' }
-  const existing = panels.get(scopeKey(scope))
-  if (existing) {
-    existing.reveal()
-    broadcast('boardFilterChanged', filter)
-    return
-  }
+  if (revealExisting(scope, filter)) return
   const panel = vscode.window.createWebviewPanel(
     VIEW_TYPE,
     panelTitle(scope),
