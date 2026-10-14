@@ -3,6 +3,18 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 3.6.0
+
+- **Home comes up fresh every morning.** While VS Code is running, KNote Home
+  opens (or is brought to the front) at 4:00 each day; if the computer was
+  asleep at that time, it opens when the machine wakes. Change the time, or
+  leave it empty to turn this off, with the `knote.home.dailyOpenTime`
+  setting.
+- Fixed the Kanban board sometimes refusing to open from its icon after a
+  previous board tab was closed or restored.
+- Fixed pressing Enter in a list sometimes adding an extra blank line between
+  items.
+
 ## 3.5.2
 
 - **A Home page.** **KNote: Open Home** opens a dashboard showing what you

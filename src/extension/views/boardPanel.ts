@@ -61,6 +61,7 @@ function wirePanel(
 ): void {
   const key = scopeKey(scope)
   panels.set(key, panel)
+  // eslint-disable-next-line prefer-const -- assigned after the dispose hook below is registered
   let rpc: vscode.Disposable | undefined
   // Registered before anything else in here can throw, so the map entry above
   // can never outlive its panel. Only clear the entry if it's still ours: two
