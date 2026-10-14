@@ -22,6 +22,7 @@ import { registerAllCommands } from './commands'
 import { broadcast, registerRpcBroadcasts } from './rpc/webviewRpc'
 import { registerBoardPanel } from './views/boardPanel'
 import { isPanelOpen, registerPanels } from './views/panels'
+import { registerHomeSchedule } from './homeSchedule'
 import { registerLiveEditor } from './views/liveEditorProvider'
 import { registerSidebarViews } from './views/sidebarViews'
 import { registerFilesTree } from './trees/filesTree'
@@ -66,6 +67,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<KnoteA
   registerAllCommands(context)
   registerBoardPanel(context)
   registerPanels(context)
+  registerHomeSchedule(context)
   registerLiveEditor(context)
   registerSidebarViews(context)
   registerFilesTree(context)

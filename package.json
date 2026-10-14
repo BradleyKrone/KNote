@@ -615,6 +615,13 @@
           "type": "boolean",
           "default": true,
           "description": "Open the KNote Home page (previous day, in-progress tasks, what's due, upcoming planner) when the vault opens."
+        },
+        "knote.home.dailyOpenTime": {
+          "type": "string",
+          "default": "04:00",
+          "pattern": "^(([01]?\\d|2[0-3]):[0-5]\\d)?$",
+          "patternErrorMessage": "Use 24-hour HH:MM, e.g. 04:00, or leave empty to disable.",
+          "description": "Time of day (24-hour HH:MM) to open or reveal the KNote Home page each day while VS Code is running. If the computer was asleep at that time, Home opens when it wakes. Leave empty to disable."
         }
       }
     },
