@@ -62,15 +62,39 @@ describe('continueListTight', () => {
     expect(after).toBe('1. first\n2. ')
   })
 
-  it('leaves the tight-to-loose-on-empty-item convention alone', () => {
-    // Pressing Enter on an empty second (and last) bullet is
-    // insertNewlineContinueMarkup's own "make this list non-tight" behavior
-    // (a single blank line inserted before that item, not a double newline
-    // at the cursor) — a different code path from the bug this file fixes,
-    // and this must still run exactly as the library defines it.
+  it('exits the list on Enter in an empty item instead of adding a blank line', () => {
+    // nonTightLists: false — the library's default would make the list loose
+    // ('- one\n\n- '), i.e. two line breaks for one press.
     const doc = '- one\n- '
     const { handled, doc: after } = run(mkState(doc, doc.length))
     expect(handled).toBe(true)
-    expect(after).toBe('- one\n\n- ')
+    expect(after).toBe('- one\n')
+  })
+
+  it('continues a nested item in a loose nested list with a single newline', () => {
+    // A blank line between its first two items makes the nested list loose, and
+    // the library pads the blank line it adds to the outer indent
+    // ('\n \n  - '), which a bare '\n\n' check missed — the reported double Enter.
+    const doc = '- [ ] @task t\n  - a\n\n  - b'
+    const { handled, doc: after, cursor } = run(mkState(doc, doc.length))
+    expect(handled).toBe(true)
+    expect(after).toBe(doc + '\n  - ')
+    expect(cursor).toBe(after.length)
+  })
+
+  it('continues a loose numbered list with a single newline and still renumbers', () => {
+    const doc = '1. a\n\n2. b\n3. c'
+    const cursor = '1. a\n\n2. b'.length
+    const { handled, doc: after, cursor: caret } = run(mkState(doc, cursor))
+    expect(handled).toBe(true)
+    expect(after).toBe('1. a\n\n2. b\n3. \n4. c')
+    expect(caret).toBe('1. a\n\n2. b\n3. '.length)
+  })
+
+  it('steps out one level on Enter in an empty nested item', () => {
+    const doc = '- a\n  - b\n  - '
+    const { handled, doc: after } = run(mkState(doc, doc.length))
+    expect(handled).toBe(true)
+    expect(after).toBe('- a\n  - b\n- ')
   })
 })

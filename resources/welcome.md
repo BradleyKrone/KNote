@@ -44,7 +44,9 @@ Release Notes** from the Command Palette.
 
 **KNote: Open Home** (or the 🏠 icon on the Files view) opens a dashboard
 for the day. It opens on its own when the vault does; turn that off with the
-`knote.home.openOnStartup` setting.
+`knote.home.openOnStartup` setting. It also comes up fresh every morning at
+4:00 while VS Code is running (or on wake, if the computer slept through it) —
+change the time or turn it off with `knote.home.dailyOpenTime`.
 
 | Card | Shows |
 |---|---|
