@@ -162,7 +162,8 @@ export const spellCheck = ViewPlugin.fromClass(
 
     update(update: ViewUpdate): void {
       const forced = update.transactions.some((t) => t.effects.some((e) => e.is(recheckEffect)))
-      if (update.docChanged || update.viewportChanged || forced) {
+      const treeGrew = syntaxTree(update.startState) !== syntaxTree(update.state)
+      if (update.docChanged || update.viewportChanged || forced || treeGrew) {
         this.decorations = buildDecorations(update.view)
       }
     }

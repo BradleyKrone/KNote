@@ -62,6 +62,18 @@ describe('rendered vs source', () => {
     expect(deco).toEqual([[TABLE_FROM, TABLE_TO]])
   })
 
+  it('renders a table past the initial parse once the background parse catches up', () => {
+    // A fresh state is parsed only ~3000 chars deep. The rest arrives in a
+    // transaction that changes neither doc nor selection — the table must
+    // still render then, not wait for the caret to wander near it.
+    const lead = 'filler line of prose\n'.repeat(250) + '\n'
+    const doc = lead + TABLE + '\n\noutro\n'
+    const state = mkState(doc)
+    expect(ranges(state, 'atoms')).toEqual([])
+    const parsed = apply(state, {})
+    expect(ranges(parsed, 'atoms')).toEqual([[lead.length, lead.length + TABLE.length]])
+  })
+
   it('keeps rendering it when a bare caret sits on a table line', () => {
     // The whole point of editing cells in place: arriving with the caret must
     // not swap the grid for raw pipes the way every other construct does.

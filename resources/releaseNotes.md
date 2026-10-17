@@ -3,6 +3,26 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 3.7.0
+
+- **Weekly notes are filed in year / month folders.** A `/` in the weekly
+  filename format (Settings → Weekly notes) now makes a folder; the new
+  default `YYYY/MM MMMM/YYYY-M-D` files each week under its Monday's month
+  (`Weekly/2026/10 October/2026-10-12.md`). **KNote: Organize Weekly Notes
+  into Folders** moves existing notes into place — file names, and so
+  `[[links]]`, stay the same — and vaults with flat weekly notes get a
+  one-time offer to do it. The **This Week** sidebar groups past notes by year
+  and month, and the Files tree lists them newest first.
+- **Drag list items to reprioritize them.** In Live Preview, hover any bullet,
+  numbered item, checkbox or `@task` and drag the `⋮⋮` grip to move it within
+  its list, or use `Alt+↑` / `Alt+↓`. The whole item moves with its notes and
+  sub-items, and one `Ctrl+Z` undoes it. Since the board follows file order,
+  reordering tasks in a note reorders their cards too.
+- Fixed opening this week's note sometimes creating a duplicate
+  (`2026-8-17 1.md`) beside the real one.
+- Fixed tables, Mermaid diagrams and other formatting far down a long note
+  sometimes staying as raw Markdown until you clicked near them.
+
 ## 3.6.0
 
 - **Home comes up fresh every morning.** While VS Code is running, KNote Home
