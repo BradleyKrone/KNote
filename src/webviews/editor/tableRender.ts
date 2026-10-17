@@ -279,6 +279,11 @@ export const tableRender = StateField.define<TableDecorations>({
     if (
       tr.docChanged ||
       tr.selection ||
+      // The background parser (and foldPersist's forceParsing) publishes a
+      // longer tree in a transaction that touches neither doc nor selection —
+      // without this, a table past the ~3000-char initial parse stays raw
+      // pipes until the caret happens to move.
+      syntaxTree(tr.startState) !== syntaxTree(tr.state) ||
       tr.effects.some((e) => e.is(setActiveCell) || e.is(setTableSource)) ||
       // A tabSize reconfigure (Vault Settings) needs every indented table's
       // widget rebuilt: its leading padding is baked in at build time, and

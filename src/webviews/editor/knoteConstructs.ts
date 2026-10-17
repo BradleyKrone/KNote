@@ -709,6 +709,7 @@ export const knoteConstructs = ViewPlugin.fromClass(
         update.docChanged ||
         update.viewportChanged ||
         update.selectionSet ||
+        syntaxTree(update.startState) !== syntaxTree(update.state) ||
         update.startState.facet(EditorState.tabSize) !== update.state.facet(EditorState.tabSize)
       ) {
         this.decorations = buildDecorations(update.view)

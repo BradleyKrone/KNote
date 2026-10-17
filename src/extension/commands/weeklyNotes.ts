@@ -6,15 +6,17 @@ import * as vscode from 'vscode'
 import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import type { VaultPath } from '@shared/types'
-import { weeklyPathFor } from '@shared/previousDay'
+import { findWeeklyNote, weeklyPathFor } from '@shared/previousDay'
+import { parentOf, titleOf } from '@shared/pathUtils'
 import { resolveTarget } from '@shared/wikiResolve'
 import { headingSectionEnd } from '@shared/embedSlice'
 import { isStaleError } from '@shared/errors'
-import { getVaultConfig } from '../../core/vaultConfig'
+import { getVaultConfig, setVaultConfig } from '../../core/vaultConfig'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
 import * as vault from '../../core/vaultService'
 import * as verifiedEdit from '../verifiedEdit'
-import { notesMap } from '../engine'
+import { currentVaultRoot, notesMap, whenIndexBuilt } from '../engine'
+import { folderedFormat, plannedWeeklyMoves } from '../trees/weeklySelectors'
 import { uriForRel } from '../paths'
 import { fillTemplate, readTemplateContent } from './templates'
 import { openNoteInLiveEditor } from '../views/liveEditorProvider'
@@ -32,12 +34,27 @@ let pendingWeekNote: Promise<VaultPath> | null = null
 export async function ensureThisWeekNote(): Promise<VaultPath> {
   if (pendingWeekNote) return pendingWeekNote
   pendingWeekNote = (async () => {
+    // Opening the "This Week" view during activation lands here before the
+    // index is built; asking an empty index "does this week exist?" is how
+    // `createFile`'s uniquify used to mint "2026-8-17 1.md" beside the real one.
+    await whenIndexBuilt()
     const config = await getVaultConfig()
-    const name = dayjs().startOf('isoWeek').format(config.weeklyFormat)
-    const path = weeklyPathFor(dayjs().format('YYYY-MM-DD'), config)
+    const today = dayjs().format('YYYY-MM-DD')
+    const path = weeklyPathFor(today, config)
+    // The file name alone — with a foldered format, the full formatted string
+    // ("2026/10 October/2026-10-12") would land in the template's {{title}}.
+    const name = titleOf(path)
 
-    const existing = resolveTarget(path, notesMap())
+    const existing = findWeeklyNote(today, config, notesMap())
     if (existing) return existing
+    // On disk but not (yet) indexed — e.g. synced in a moment ago.
+    try {
+      await vault.readFile(path)
+      await vaultIndex.indexFile(path)
+      return path
+    } catch {
+      // Genuinely missing: create it below.
+    }
 
     let content = ''
     if (config.weeklyTemplate) {
@@ -123,9 +140,106 @@ async function quickCapture(): Promise<void> {
   void vscode.window.setStatusBarMessage('KNote: captured', 2000)
 }
 
+const plural = (n: number, one: string, many = one + 's'): string => (n === 1 ? one : many)
+
+/**
+ * File every weekly note under the year / month folders its week belongs to
+ * (switching a flat `weeklyFormat` to its foldered form first, file naming
+ * kept). Each note keeps its file name, so `[[2026-10-12]]` links still
+ * resolve; the moves go out as one WorkspaceEdit, so `renameLinks` rewrites
+ * any path-qualified `[[Weekly/…]]` link in the same undo step — the same
+ * route as a drag in the Files tree.
+ *
+ * `confirm: false` skips the preview, for the integration harness.
+ */
+async function organizeWeeklyNotes(options?: { confirm?: boolean }): Promise<void> {
+  if (!currentVaultRoot()) {
+    void vscode.window.showWarningMessage('KNote: no vault is open in this workspace.')
+    return
+  }
+  await whenIndexBuilt()
+  const config = await getVaultConfig()
+  const format = folderedFormat(config.weeklyFormat)
+  const { moves, blocked } = plannedWeeklyMoves(notesMap().values(), {
+    folder: config.weeklyFolder,
+    format
+  })
+
+  if (moves.length > 0 && options?.confirm !== false) {
+    const example = parentOf(moves[0].to)
+    const answer = await vscode.window.showInformationMessage(
+      `Move ${moves.length} weekly ${plural(moves.length, 'note')} into year / month folders?`,
+      {
+        modal: true,
+        detail:
+          `e.g. ${moves[0].from} → ${example}/. File names stay the same, so links keep working.` +
+          (format !== config.weeklyFormat
+            ? `\n\nThe weekly filename format becomes "${format}", so new weekly notes are filed the same way.`
+            : '')
+      },
+      'Organize'
+    )
+    if (answer !== 'Organize') return
+  }
+
+  if (format !== config.weeklyFormat) {
+    await setVaultConfig({ ...config, weeklyFormat: format })
+  }
+
+  if (moves.length > 0) {
+    const edit = new vscode.WorkspaceEdit()
+    for (const move of moves) edit.renameFile(uriForRel(move.from), uriForRel(move.to))
+    await vscode.workspace.applyEdit(edit)
+  }
+
+  const moved =
+    moves.length > 0
+      ? `KNote: moved ${moves.length} weekly ${plural(moves.length, 'note')} into year / month folders.`
+      : 'KNote: weekly notes are already organized.'
+  void vscode.window.showInformationMessage(
+    blocked.length > 0
+      ? `${moved} Skipped ${blocked.length} whose destination already has a note of the same name: ${blocked.join(', ')}`
+      : moved
+  )
+}
+
+const ORGANIZE_PROMPTED = 'knote.weeklyOrganizePrompted'
+
+/**
+ * Once per workspace: if weekly notes sit outside the folders their format
+ * names (a vault from before foldered weekly notes), offer to organize them.
+ * Nothing moves without a click.
+ */
+export async function offerWeeklyOrganize(context: vscode.ExtensionContext): Promise<void> {
+  if (context.workspaceState.get<boolean>(ORGANIZE_PROMPTED)) return
+  await whenIndexBuilt()
+  if (!currentVaultRoot()) return
+  const config = await getVaultConfig()
+  const { moves } = plannedWeeklyMoves(notesMap().values(), {
+    folder: config.weeklyFolder,
+    format: folderedFormat(config.weeklyFormat)
+  })
+  if (moves.length === 0) return
+  const answer = await vscode.window.showInformationMessage(
+    `KNote: ${moves.length} weekly ${plural(moves.length, 'note')} could be filed into year / month folders to keep ${config.weeklyFolder || 'the weekly folder'} short.`,
+    'Organize',
+    'Not now',
+    "Don't ask again"
+  )
+  if (answer === "Don't ask again") await context.workspaceState.update(ORGANIZE_PROMPTED, true)
+  if (answer === 'Organize') {
+    await context.workspaceState.update(ORGANIZE_PROMPTED, true)
+    await organizeWeeklyNotes({ confirm: false })
+  }
+}
+
 export function registerWeeklyNoteCommands(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('knote.openWeeklyNote', openWeeklyNote),
+    vscode.commands.registerCommand(
+      'knote.organizeWeeklyNotes',
+      (options?: { confirm?: boolean }) => organizeWeeklyNotes(options)
+    ),
     vscode.commands.registerCommand('knote.quickCapture', quickCapture),
     // The board's "Add card" (global/folder scope), as a command. Deliberately
     // not contributed to package.json — same reasoning as `knote.setTaskNote`:

@@ -135,7 +135,9 @@ function buildDecorations(state: EditorState): DecorationSet {
 export const mermaidRender = StateField.define<DecorationSet>({
   create: (state) => buildDecorations(state),
   update(value, tr) {
-    if (tr.docChanged || tr.selection) return buildDecorations(tr.state)
+    if (tr.docChanged || tr.selection || syntaxTree(tr.startState) !== syntaxTree(tr.state)) {
+      return buildDecorations(tr.state)
+    }
     return value.map(tr.changes)
   },
   provide: (f) => EditorView.decorations.from(f)

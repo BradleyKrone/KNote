@@ -19,6 +19,7 @@ import { registerHover } from './providers/hover'
 import { registerDecorations } from './providers/decorations'
 import { registerPasteImage } from './providers/pasteImage'
 import { registerAllCommands } from './commands'
+import { offerWeeklyOrganize } from './commands/weeklyNotes'
 import { broadcast, registerRpcBroadcasts } from './rpc/webviewRpc'
 import { registerBoardPanel } from './views/boardPanel'
 import { isPanelOpen, registerPanels } from './views/panels'
@@ -110,6 +111,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<KnoteA
         if (openOnStartup && !isPanelOpen('knote.home')) {
           void vscode.commands.executeCommand('knote.openHome')
         }
+        void offerWeeklyOrganize(context)
       }
       // A restart may have added folders to the vault; webviews created before
       // it can't load resources from them until their roots are widened.

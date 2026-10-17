@@ -32,7 +32,7 @@ import { isTaskLine } from '@shared/parser/patterns'
 import { isBoardTask } from './editorMode'
 
 /** Leading-whitespace width in columns (tabs expand to the next multiple of 2). */
-function indentColumns(text: string): number {
+export function indentColumns(text: string): number {
   let col = 0
   for (const ch of text) {
     if (ch === ' ') col += 1
@@ -47,7 +47,7 @@ function indentColumns(text: string): number {
  * `parentNum` itself when the line is blank or has no indented children. Blank
  * lines interleaved with children are spanned; trailing blanks are not.
  */
-function lastChildLine(state: EditorState, parentNum: number): number {
+export function lastChildLine(state: EditorState, parentNum: number): number {
   const doc = state.doc
   const parent = doc.line(parentNum)
   if (parent.text.trim() === '') return parentNum

@@ -37,6 +37,36 @@ describe('buildTree ordering', () => {
       await rm(dir, { recursive: true, force: true })
     }
   })
+
+  it('lists year and month folders under the weekly folder newest-first too', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'knote-test-'))
+    try {
+      vault.setVault(dir)
+      for (const rel of [
+        '2025/12 December/2025-12-29.md',
+        '2026/09 September/2026-9-28.md',
+        '2026/10 October/2026-10-5.md',
+        '2026/10 October/2026-10-12.md'
+      ]) {
+        await mkdir(join(dir, 'Weekly', rel, '..'), { recursive: true })
+        await writeFile(join(dir, 'Weekly', rel), '')
+      }
+      await mkdir(join(dir, 'Notes', 'B'), { recursive: true })
+      await mkdir(join(dir, 'Notes', 'A'), { recursive: true })
+
+      const tree = await vault.buildTree()
+      const weekly = tree.find((e) => e.name === 'Weekly')!.children!
+      expect(weekly.map((e) => e.name)).toEqual(['2026', '2025'])
+      const y2026 = weekly[0].children!
+      expect(y2026.map((e) => e.name)).toEqual(['10 October', '09 September'])
+      expect(y2026[0].children!.map((e) => e.name)).toEqual(['2026-10-12.md', '2026-10-5.md'])
+      // Folders elsewhere stay A-Z.
+      const notes = tree.find((e) => e.name === 'Notes')!.children!
+      expect(notes.map((e) => e.name)).toEqual(['A', 'B'])
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('readDir', () => {

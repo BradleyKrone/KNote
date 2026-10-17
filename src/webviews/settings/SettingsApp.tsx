@@ -223,7 +223,7 @@ export function SettingsApp(): React.JSX.Element {
               {field(
                 'Filename format',
                 'weeklyFormat',
-                'dayjs tokens applied to the Monday of the week, e.g. YYYY-M-D'
+                'dayjs tokens applied to the Monday of the week; / makes folders, e.g. YYYY/MM MMMM/YYYY-M-D'
               )}
               {field('Template note', 'weeklyTemplate', 'note name or path, empty = none')}
             </>
