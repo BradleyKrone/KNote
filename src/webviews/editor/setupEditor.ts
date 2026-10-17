@@ -28,6 +28,7 @@ import { editorKind, type EditorKind } from './editorMode'
 import { pasteImage } from './pasteImage'
 import { formatKeymap } from './markdownFormatting'
 import { taskFold } from './taskFold'
+import { listDrag } from './listDrag'
 import { foldPersistence } from './foldPersist'
 import { taskEnterKeymap } from './taskEnter'
 import { listContinueTightKeymap } from './listContinueTight'
@@ -177,6 +178,7 @@ export function createEditorState(opts: Omit<CreateEditorOptions, 'parent'>): Ed
       pasteImage,
       spellCheck,
       taskFold,
+      listDrag,
       knoteAutocomplete,
       linkHover,
       mdLink,

@@ -15,7 +15,7 @@ import type {
   VaultInfo,
   VaultPath
 } from '@shared/types'
-import { isMarkdown, joinRel, nameOf, normalizeRel, parentOf } from '@shared/pathUtils'
+import { isInside, isMarkdown, joinRel, nameOf, normalizeRel, parentOf } from '@shared/pathUtils'
 import { getVaultConfig } from './vaultConfig'
 import type { VaultMount } from './mounts'
 import { CONFLICT_ERROR } from '@shared/errors'
@@ -225,9 +225,13 @@ export async function readDir(rel: VaultPath): Promise<FileEntry[]> {
   // notes in chronological order instead of plain lexicographic order.
   const byName = (a: FileEntry, b: FileEntry): number =>
     a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true })
-  folders.sort(byName)
-  // The weekly notes folder reads newest-first; every other folder stays A-Z.
-  files.sort(relDir === normalizeRel(config.weeklyFolder) ? (a, b) => byName(b, a) : byName)
+  // The weekly notes folder reads newest-first — its notes and, with a
+  // foldered format, its year and month folders ("2026" above "2025",
+  // "10 October" above "09 September") all the way down. Everything else is A-Z.
+  const weekly = config.weeklyFolder !== '' && isInside(relDir, config.weeklyFolder)
+  const order = weekly ? (a: FileEntry, b: FileEntry) => byName(b, a) : byName
+  folders.sort(order)
+  files.sort(order)
   return [...folders, ...files]
 }
 

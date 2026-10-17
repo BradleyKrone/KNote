@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { findPreviousDay, weeklyPathFor } from '@shared/previousDay'
+import {
+  findPreviousDay,
+  findWeeklyNote,
+  weeklyFileFormat,
+  weeklyPathFor
+} from '@shared/previousDay'
 import { parseNote } from '@shared/parser/parseNote'
 import type { NoteMeta } from '@shared/types'
 
@@ -110,5 +115,43 @@ describe('findPreviousDay', () => {
     })
     // 9/3 is in an older week with no note; must not match the 9/30 heading.
     expect(findPreviousDay(notes, contentOf, CONFIG, '2026-09-04')).toBeNull()
+  })
+})
+
+describe('foldered weekly notes', () => {
+  const NESTED = { weeklyFolder: 'Weekly', weeklyFormat: 'YYYY/MM MMMM/YYYY-M-D' }
+
+  it('names a year / month path, filed by the Monday', () => {
+    expect(weeklyPathFor('2026-10-14', NESTED)).toBe('Weekly/2026/10 October/2026-10-12.md')
+    expect(weeklyPathFor('2026-10-01', NESTED)).toBe('Weekly/2026/09 September/2026-9-28.md')
+  })
+
+  it('weeklyFileFormat is the part after the last slash', () => {
+    expect(weeklyFileFormat(NESTED.weeklyFormat)).toBe('YYYY-M-D')
+    expect(weeklyFileFormat('YYYY-M-D')).toBe('YYYY-M-D')
+  })
+
+  it('findWeeklyNote prefers the foldered path, then falls back to a flat note', () => {
+    const { notes } = vault({
+      'Weekly/2026/10 October/2026-10-12.md': '',
+      'Weekly/2026-10-5.md': '',
+      'Notes/2026-9-28.md': ''
+    })
+    expect(findWeeklyNote('2026-10-14', NESTED, notes)).toBe('Weekly/2026/10 October/2026-10-12.md')
+    expect(findWeeklyNote('2026-10-07', NESTED, notes)).toBe('Weekly/2026-10-5.md')
+    // Same file name, but outside the weekly folder: not a weekly note.
+    expect(findWeeklyNote('2026-09-30', NESTED, notes)).toBeNull()
+  })
+
+  it('findPreviousDay reaches back from a foldered week into a flat one', () => {
+    const { notes, contentOf } = vault({
+      'Weekly/2026/10 October/2026-10-5.md': week('2026-10-05', {}),
+      'Weekly/2026-9-28.md': week('2026-09-28', { '10/2/2026': '- friday wrap-up' })
+    })
+    expect(findPreviousDay(notes, contentOf, NESTED, '2026-10-05')).toMatchObject({
+      date: '2026-10-02',
+      path: 'Weekly/2026-9-28.md',
+      content: '- friday wrap-up'
+    })
   })
 })

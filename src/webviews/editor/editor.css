@@ -442,6 +442,54 @@
   color: var(--vscode-editorLineNumber-activeForeground);
 }
 
+/* Drag-to-reorder (listDrag.ts). All three are absolutely positioned on
+   .cm-editor — never margins on .cm-line, which break click mapping. The grip
+   sits just left of the hovered item's bullet/checkbox; `left`/`top` mark
+   that bullet's left edge and the line's vertical centre. */
+.cm-knote-drag-grip {
+  position: absolute;
+  z-index: 5;
+  transform: translate(calc(-100% - 4px), -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 24px;
+  cursor: grab;
+  user-select: none;
+  color: var(--vscode-editor-foreground);
+  opacity: 0.6;
+  border-radius: 4px;
+}
+.cm-knote-drag-grip svg {
+  display: block;
+  pointer-events: none;
+}
+.cm-knote-drag-grip:hover {
+  opacity: 1;
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.2));
+}
+.cm-knote-list-dragging,
+.cm-knote-list-dragging .cm-knote-drag-grip {
+  cursor: grabbing;
+}
+.cm-knote-drag-indicator {
+  position: absolute;
+  z-index: 5;
+  height: 2px;
+  transform: translateY(-1px);
+  pointer-events: none;
+  border-radius: 1px;
+  background: var(--vscode-focusBorder, #2f5fb3);
+}
+.cm-knote-drag-source {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: 4px;
+  background: var(--vscode-editor-selectionHighlightBackground, rgba(47, 95, 179, 0.15));
+}
+
 /* Task grouping card: a light box around a top-level task and its indented
    detail block, so it's clear what belongs together. Mirrors the codeblock
    box (side borders on every line, rounded top/bottom on the first/last). */

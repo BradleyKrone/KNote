@@ -186,6 +186,10 @@
         "title": "KNote: Convert Legacy Tasks to @task"
       },
       {
+        "command": "knote.organizeWeeklyNotes",
+        "title": "KNote: Organize Weekly Notes into Folders"
+      },
+      {
         "command": "knote.insertTaskNote",
         "title": "KNote: Add Task Note"
       },

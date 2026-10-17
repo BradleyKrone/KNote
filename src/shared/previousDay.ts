@@ -11,7 +11,7 @@ import dayjs from 'dayjs'
 import isoWeek from 'dayjs/plugin/isoWeek'
 import type { NoteMeta, VaultConfig, VaultPath } from './types'
 import { headingSectionEnd } from './embedSlice'
-import { joinRel } from './pathUtils'
+import { isInside, joinRel, nameOf } from './pathUtils'
 import { resolveTarget } from './wikiResolve'
 
 dayjs.extend(isoWeek)
@@ -30,13 +30,45 @@ export interface PreviousDay {
   content: string
 }
 
-/** Where the weekly note covering `date` (YYYY-MM-DD) lives — named after its ISO week's Monday. */
+/**
+ * Where the weekly note covering `date` (YYYY-MM-DD) lives — named after its
+ * ISO week's Monday. A `/` in the format makes folders: the default
+ * `YYYY/MM MMMM/YYYY-M-D` files a note as `Weekly/2026/10 October/2026-10-12.md`,
+ * so the weekly folder never grows into one endless flat list.
+ */
 export function weeklyPathFor(
   date: string,
   config: Pick<VaultConfig, 'weeklyFolder' | 'weeklyFormat'>
 ): VaultPath {
   const name = dayjs(date).startOf('isoWeek').format(config.weeklyFormat)
   return joinRel(config.weeklyFolder, name + '.md')
+}
+
+/** The file-name part of a weekly format — everything after its last `/`. */
+export function weeklyFileFormat(format: string): string {
+  return format.slice(format.lastIndexOf('/') + 1)
+}
+
+/**
+ * The existing weekly note covering `date`, or null. Tries the path the
+ * current format names first, then any note under the weekly folder with the
+ * right *file name* — a note written before the folders existed (or under an
+ * older format) still counts as that week's note, rather than this week
+ * getting a second copy beside it and the Home page losing last week.
+ */
+export function findWeeklyNote(
+  date: string,
+  config: Pick<VaultConfig, 'weeklyFolder' | 'weeklyFormat'>,
+  notes: Map<string, NoteMeta>
+): VaultPath | null {
+  const expected = weeklyPathFor(date, config)
+  const exact = resolveTarget(expected, notes)
+  if (exact !== null) return exact
+  const name = nameOf(expected).toLowerCase()
+  for (const path of notes.keys()) {
+    if (nameOf(path).toLowerCase() === name && isInside(path, config.weeklyFolder)) return path
+  }
+  return null
 }
 
 /** True when a heading's text names `date` the way weekdaysBlock writes it (`M/D/YYYY`, then anything). */
@@ -59,7 +91,7 @@ export function findPreviousDay(
   const linesByPath = new Map<VaultPath, string[] | null>()
   for (let back = 1; back <= LOOKBACK_DAYS; back++) {
     const date = dayjs(today).subtract(back, 'day').format('YYYY-MM-DD')
-    const path = resolveTarget(weeklyPathFor(date, config), notes)
+    const path = findWeeklyNote(date, config, notes)
     if (path === null) continue
     const meta = notes.get(path)
     if (!meta) continue

@@ -257,6 +257,14 @@ Markdown:
   line; `Ctrl+Alt+[` / `Ctrl+Alt+]` fold / unfold everything. Collapsed
   sections are remembered per note, so closing and reopening a note leaves
   the same sections folded.
+- **Drag to reorder (prioritize) list items** — hover any bullet, numbered
+  item, checkbox or `@task` and a `⋮⋮` grip appears to its left; drag it up
+  or down to a new spot in the same list (a blue line marks the drop slot,
+  `Esc` cancels). The whole item moves — its notes, sub-items and nested
+  tasks come with it — and one `Ctrl+Z` undoes it. `Alt+↑` / `Alt+↓` does
+  the same from the keyboard. Nothing is added to the line: **position is
+  the priority**, and the Kanban board follows file order (with *Sort by
+  priority* off), so reordering tasks in a note reorders their cards too.
 - **Spell checking** — misspelled words get a red wavy underline as you type
   (code, `[[wiki links]]`, `#tags`, URLs and frontmatter are skipped).
   **Right-click a flagged word** for suggested corrections; pick one to
@@ -343,6 +351,7 @@ All in Markdown editors only:
 | `Ctrl+Alt+X` | Toggle a `- [ ]` checkbox on the current line |
 | `Ctrl+Alt+T` | Toggle the `@task` marker — promote a checkbox to a Kanban card, or demote it |
 | `Ctrl+Alt+Enter` | Seed/extend the task's attached note (Status Changed / Date Entered / Notes) |
+| `Alt+↑` / `Alt+↓` | Move the list item (with everything under it) up / down among its siblings — Live Preview |
 
 All hotkeys are ordinary VS Code keybindings — rebind them in **Keyboard
 Shortcuts** (`Ctrl+K Ctrl+S`).
@@ -459,7 +468,7 @@ the main thing, the rows under it jump straight to one item.
 
 | Icon | Section | Top row opens | Rows below |
 | --- | --- | --- | --- |
-| Calendar | **This Week** | **This Week's Note** — opens (creating if needed) the current ISO-week note; just clicking the icon opens it | Past weekly notes, newest first — click to open |
+| Calendar | **This Week** | **This Week's Note** — opens (creating if needed) the current ISO-week note; just clicking the icon opens it | Past weekly notes grouped by year → month, newest first — click to open |
 | Kanban columns | **Boards** | **All Tasks** — the whole-vault board | **Filter by Project** — All / Unassigned / one row per project (expand for its deliverables); clicking a project opens (or narrows) the whole-vault board. **Untick a project to exclude it from the board entirely** — its deliverables and joined tasks stop appearing as cards; the choice is saved in the vault, independently of the Planner's own show/hide. **Filter by Folder** — one row per vault root (the primary root plus each mounted folder); **untick a root to exclude every note under it from the board** — search, backlinks and the Planner are unaffected |
 | Tractor | **Machines** | **Full Machine Log** | Registered machines (then any unregistered serial found in a note); expand for its 🚜 entries, newest first — click to jump to the line |
 | Timeline | **Projects** | **Open Planner** | One row per `type: project` note (deliverable count + span). **Tick a project to show it on the Planner chart, untick to hide it** — the choice is saved in the vault. Click the name to open its note |
@@ -655,6 +664,15 @@ with no members yet) its own checkbox isn't.
 | **KNote: Insert Template** | Inserts a template at the cursor with `{{date}}`, `{{time}}`, `{{title}}`, `{{weekdays}}` expanded |
 | **KNote: Insert Milestone** (± Important) | Inserts a dated 🏁 line |
 | **KNote: Clean Up Orphaned Attachments** | Finds images in the attachments folder no note references and moves them to the trash (after you confirm) |
+| **KNote: Organize Weekly Notes into Folders** | Files every weekly note under year / month folders (`Weekly/2026/10 October/2026-10-12.md`); file names — and so `[[links]]` — stay the same |
+
+**Weekly notes live in year / month folders.** A `/` in the weekly filename
+format (Settings → Weekly notes) makes a folder; the default
+`YYYY/MM MMMM/YYYY-M-D` keeps the Weekly folder short however many years you
+use KNote. A week is filed under its Monday's month. Want one folder per year
+instead? Use `YYYY/YYYY-M-D`. Vaults with flat weekly notes get a one-time
+offer to organize them. The **This Week** sidebar groups past notes the same
+way, and the Files tree lists years, months and notes newest first.
 
 ## Attachments clean themselves up
 

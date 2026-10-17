@@ -237,7 +237,11 @@ export interface BoardColumn {
 
 export interface VaultConfig {
   weeklyFolder: string
-  /** dayjs format string applied to the Monday of the week for weekly note file names */
+  /**
+   * dayjs format string applied to the Monday of the week for weekly note file
+   * names. A `/` makes folders: `YYYY/MM MMMM/YYYY-M-D` files a note under
+   * `<weeklyFolder>/2026/10 October/`.
+   */
   weeklyFormat: string
   /** Vault path of the template note used for new weekly notes ('' = none) */
   weeklyTemplate: string
@@ -312,7 +316,7 @@ export interface VaultConfig {
 
 export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   weeklyFolder: 'Weekly',
-  weeklyFormat: 'YYYY-M-D',
+  weeklyFormat: 'YYYY/MM MMMM/YYYY-M-D',
   weeklyTemplate: '',
   templatesFolder: 'Knote Resources/Templates',
   attachmentsFolder: 'Knote Resources/Attachments',
