@@ -53,6 +53,19 @@
   padding-bottom: 0.5em;
 }
 
+/* Horizontal rule — the `---` is hidden and the empty line draws a 1px rule
+   through its middle (a background, not a border/margin, so line height and
+   click mapping are untouched). */
+.cm-md-hr-line {
+  background-image: linear-gradient(
+    var(--vscode-panel-border, rgba(127, 127, 127, 0.45)),
+    var(--vscode-panel-border, rgba(127, 127, 127, 0.45))
+  );
+  background-size: 100% 1px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 .cm-md-strong {
   font-weight: 700;
 }

@@ -1,4 +1,5 @@
 import {
+  COLOR_RE,
   DEPENDS_RE,
   DUE_RE,
   dependsTag,
@@ -52,6 +53,17 @@ export function setParentDeliverableRef(text: string, name: string): string {
   return preservingBlockId(text, (t) => {
     const stripped = normalize(t.replace(PARENT_RE, ''))
     return `${stripped} @parent(${name})`.trim()
+  })
+}
+
+/**
+ * Set (or, with null, remove) the line's `@color(name)` planner bar color.
+ * A line has one color, so this replaces rather than appends.
+ */
+export function setColorMarker(text: string, color: string | null): string {
+  return preservingBlockId(text, (t) => {
+    const stripped = normalize(t.replace(COLOR_RE, ''))
+    return color ? `${stripped} @color(${color})`.trim() : stripped
   })
 }
 

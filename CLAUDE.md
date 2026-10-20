@@ -200,6 +200,13 @@ the board and the planner agree without importing each other:
   displace an anchor — and listing it would let `BLOCK_ID_RE` read
   `… ^id @task` as a buried anchor and shuffle the marker into the middle of
   the line, silently demoting the card.
+- **Bar colors** are markdown too: `color:` in a project's frontmatter and
+  `@color(<name>)` (`COLOR_RE`, a trailing marker — in `AFTER_ANCHOR` and
+  `stripInlineMarkers`) on a deliverable line, from the named
+  `PLANNER_COLORS` palette in `shared/deliverables.ts`; unknown names are
+  ignored. `barColor` in `plannerSelectors.ts` resolves own → parent
+  deliverable → project → the default per-project cycle. The marker must stay
+  stripped from labels: election slugifies the stripped text.
 - Which projects are charted is stored in `VaultConfig.hiddenProjects` —
   the *hidden* set, so a newly created project shows up on its own.
 - Dragging a bar rewrites the task line through the ordinary verified-edit

@@ -4,16 +4,23 @@
 
 import { isStaleError } from '@shared/errors'
 import {
+  PROJECT_COLOR_KEY,
   PROJECT_END_KEY,
   PROJECT_STATUS_KEY,
   deliverableRefMarker,
-  slugify
+  slugify,
+  type PlannerColor
 } from '@shared/deliverables'
 import { parseDeliverableTag, TASK_MARKER } from '@shared/parser/patterns'
 import { taskChildIndent } from '@shared/parser/taskNoteBody'
 import { host } from '../shared/rpc'
 import { showToast } from '../shared/stores'
-import { addDependency, removeDependency, setDeliverableDates } from '../shared/taskMeta'
+import {
+  addDependency,
+  removeDependency,
+  setColorMarker,
+  setDeliverableDates
+} from '../shared/taskMeta'
 import { addDays, diffDays } from './plannerLayout'
 import { cascadeShift, type PlannerDeliverable, type PlannerModel } from './plannerSelectors'
 
@@ -185,6 +192,31 @@ export async function unlinkDependency(
     () => host.replaceLine(dependent.path, dependent.line, dependent.rawLine, newLine),
     'Note changed on disk — planner refreshed'
   )
+}
+
+/** Set (or, with null, clear back to inherited) a deliverable's own bar color. */
+export async function setDeliverableColor(
+  d: PlannerDeliverable,
+  color: PlannerColor | null
+): Promise<void> {
+  const newLine = setColorMarker(d.rawLine, color)
+  if (newLine === d.rawLine) return
+  await guarded(
+    () => host.replaceLine(d.path, d.line, d.rawLine, newLine),
+    'Note changed on disk — planner refreshed'
+  )
+}
+
+/** Set (or, with null, clear back to the default) a project's bar color. */
+export async function setProjectColor(
+  path: string,
+  frontmatter: Record<string, unknown>,
+  color: PlannerColor | null
+): Promise<void> {
+  const next = { ...frontmatter }
+  if (color) next[PROJECT_COLOR_KEY] = color
+  else delete next[PROJECT_COLOR_KEY]
+  await host.setFrontmatter(path, next)
 }
 
 // ---------- Creation ----------

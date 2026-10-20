@@ -14,8 +14,11 @@
 
 import type { NoteMeta, VaultPath } from '@shared/types'
 import { DEPENDS_RE, PRIORITY_RE, dependsTag, stripInlineMarkers } from '@shared/parser/patterns'
-import type { DeliverableDefinition } from '@shared/deliverables'
+import type { DeliverableDefinition, PlannerColor } from '@shared/deliverables'
 import {
+  DEFAULT_COLOR_CYCLE,
+  PLANNER_COLORS,
+  deliverableColorOf,
   deliverableDefinitions,
   deliverableMembershipOf,
   deliverableProgress,
@@ -23,6 +26,7 @@ import {
   isProjectComplete,
   isProjectNote,
   isTaskDone,
+  projectColor,
   projectEndDate,
   projectSlug
 } from '@shared/deliverables'
@@ -65,6 +69,8 @@ export interface PlannerDeliverable extends LineRef {
   parentId: string | null
   /** This deliverable's own work packages — none of which can have one of their own, since nesting is capped at one level. */
   workPackages: PlannerDeliverable[]
+  /** Its own `@color(...)`, or null to inherit — see `barColor`. */
+  color: PlannerColor | null
   /**
    * 0–100, from `deliverableProgress` — its own member tasks' done ratio
    * rolled up with every work package's (or its own checkbox when there's
@@ -97,6 +103,8 @@ export interface PlannerProject {
   /** Closed for business: no new deliverables or tasks. */
   complete: boolean
   percent: number
+  /** Its `color:` frontmatter, or null for the default cycle — see `barColor`. */
+  color: PlannerColor | null
 }
 
 export interface PlannerModel {
@@ -144,7 +152,8 @@ export function buildPlannerModel(
       dueDate: projectEndDate(meta),
       status: 'active',
       complete: isProjectComplete(meta),
-      percent: 0
+      percent: 0,
+      color: projectColor(meta)
     }
     for (const definition of definitionsByPath.get(meta.path) ?? []) {
       if (byId.has(definition.tag)) continue
@@ -163,6 +172,7 @@ export function buildPlannerModel(
         milestones: [],
         parentId: definition.parentTag,
         workPackages: [],
+        color: deliverableColorOf(definition.text),
         percent: 0
       }
       // Attached to `project.deliverables` (roots) vs. a parent's
@@ -391,6 +401,37 @@ export function deliverableBarStatus(d: PlannerDeliverable, today: string): Deli
   if (isTaskDone(d) && d.tasks.every((t) => t.done)) return 'done'
   if (d.end < today) return 'overdue'
   return 'active'
+}
+
+/**
+ * The color `d` gets when it has no `@color(...)` of its own: a work package
+ * inherits its parent deliverable's (own) color, then everything falls back to
+ * the project's `color:`, then to the default cycle by the project's position
+ * on the chart — which is what every bar looked like before colors could be
+ * picked.
+ */
+export function inheritedBarColor(
+  d: PlannerDeliverable,
+  project: PlannerProject,
+  model: PlannerModel
+): PlannerColor {
+  const parent = d.parentId ? model.byId.get(d.parentId) : undefined
+  return parent?.color ?? project.color ?? defaultProjectColor(project, model)
+}
+
+/** The color a project with no `color:` gets — cycled by its position on the chart. */
+export function defaultProjectColor(project: PlannerProject, model: PlannerModel): PlannerColor {
+  const index = Math.max(0, model.projects.indexOf(project))
+  return PLANNER_COLORS[index % DEFAULT_COLOR_CYCLE]
+}
+
+/** The color `d`'s bar is drawn in: its own `@color(...)`, else `inheritedBarColor`. */
+export function barColor(
+  d: PlannerDeliverable,
+  project: PlannerProject,
+  model: PlannerModel
+): PlannerColor {
+  return d.color ?? inheritedBarColor(d, project, model)
 }
 
 /** Deliverables whose start precedes the end of something they depend on. */

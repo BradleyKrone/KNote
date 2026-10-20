@@ -13,7 +13,7 @@ export const WIKI_LINK_RE = /(!?)\[\[([^[\]|#\n]+)(#[^[\]|\n]+)?(\|[^[\]\n]+)?\]
  * appended to the end of a task line, so setting one on an already-anchored
  * task used to push the anchor into the middle of the line.
  */
-const AFTER_ANCHOR = String.raw`(?:\s*(?:📅\s*\d{4}-\d{2}-\d{2}|@due\(\d{4}-\d{2}-\d{2}\)|🛫\s*\d{4}-\d{2}-\d{2}|@start\(\d{4}-\d{2}-\d{2}\)|✅\s*\d{4}-\d{2}-\d{2}|⛓\s*#[A-Za-z0-9_][A-Za-z0-9_/-]*|⛓\s*@deliverable\([A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\)|@deliverable\([A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\)|@parent\([A-Za-z0-9_-]+\)|!{1,3}|#[A-Za-z0-9_][A-Za-z0-9_/-]*))*`
+const AFTER_ANCHOR = String.raw`(?:\s*(?:📅\s*\d{4}-\d{2}-\d{2}|@due\(\d{4}-\d{2}-\d{2}\)|🛫\s*\d{4}-\d{2}-\d{2}|@start\(\d{4}-\d{2}-\d{2}\)|✅\s*\d{4}-\d{2}-\d{2}|⛓\s*#[A-Za-z0-9_][A-Za-z0-9_/-]*|⛓\s*@deliverable\([A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\)|@deliverable\([A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\)|@parent\([A-Za-z0-9_-]+\)|@color\([A-Za-z]+\)|!{1,3}|#[A-Za-z0-9_][A-Za-z0-9_/-]*))*`
 
 /**
  * ` ^block-id` at the end of a line — an Obsidian-style block anchor that
@@ -225,6 +225,14 @@ export const DELIVERABLE_REF_RE = /@deliverable\(([A-Za-z0-9_-]+)\/([A-Za-z0-9_-
  * Not global: a work package has at most one parent.
  */
 export const PARENT_RE = /@parent\(([A-Za-z0-9_-]+)\)/
+
+/**
+ * `@color(<name>)` — the planner bar color picked for a deliverable from its
+ * right-click menu. Group 1 = the name, validated against `PLANNER_COLORS` in
+ * `shared/deliverables.ts`; an unknown name is ignored and the bar keeps its
+ * inherited/default color. Not global: a line has one color.
+ */
+export const COLOR_RE = /@color\(([A-Za-z]+)\)/
 
 /** ✅ 2026-07-16 — completion-date marker appended to a checked sub-task line. Group 1 = the date. */
 const DONE_DATE_RE = /\s*✅\s*(\d{4}-\d{2}-\d{2})/g
@@ -648,6 +656,7 @@ export function stripInlineMarkers(text: string): string {
       .replace(DEPENDS_RE, '')
       .replace(DELIVERABLE_REF_RE, '')
       .replace(PARENT_RE, '')
+      .replace(COLOR_RE, '')
       .replace(DUE_RE, '')
       .replace(START_RE, '')
       .replace(PRIORITY_RE, ' ')

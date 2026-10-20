@@ -16,6 +16,7 @@ import {
   ListPlus,
   Lock,
   Package,
+  Palette,
   Plus,
   RotateCcw,
   Unlock
@@ -48,10 +49,14 @@ import {
   type PlannerRow,
   type Zoom
 } from './plannerLayout'
+import { PLANNER_COLORS, type PlannerColor } from '@shared/deliverables'
 import {
+  barColor,
   buildPlannerModel,
   cascadeShift,
+  defaultProjectColor,
   deliverableBarStatus,
+  inheritedBarColor,
   vaultFolders,
   violatedDependencies,
   wouldCycle,
@@ -67,6 +72,8 @@ import {
   linkDependency,
   moveDeliverable,
   resizeDeliverable,
+  setDeliverableColor,
+  setProjectColor,
   setProjectComplete,
   setProjectEndDate,
   unlinkDependency
@@ -391,6 +398,38 @@ export function PlannerApp(): React.JSX.Element {
     })
   }
 
+  /**
+   * The Color ▸ flyout: Default (clear the setting, inherit) plus one swatch
+   * per palette name, checked where it's the row's own setting. `inherited`
+   * is what Default resolves to, shown so it's clear what clearing gives you.
+   */
+  const colorEntries = (
+    own: PlannerColor | null,
+    inherited: PlannerColor,
+    inheritedFrom: string,
+    apply: (color: PlannerColor | null) => Promise<void>
+  ): MenuEntry[] => {
+    const pick = (color: PlannerColor | null) => () => {
+      setMenu(null)
+      if (color !== own) void apply(color)
+    }
+    return [
+      {
+        label: 'Default',
+        icon: <span className={`planner-swatch planner-color-${inherited}`} />,
+        ...(own === null ? { checked: true } : { detail: `${inheritedFrom} · ${inherited}` }),
+        onClick: pick(null)
+      },
+      { separator: true },
+      ...PLANNER_COLORS.map((color) => ({
+        label: color[0].toUpperCase() + color.slice(1),
+        icon: <span className={`planner-swatch planner-color-${color}`} />,
+        checked: own === color,
+        onClick: pick(color)
+      }))
+    ]
+  }
+
   const menuItems = (row: PlannerRow): MenuEntry[] => {
     // The span picker opens where the menu did, so it lands under the pointer.
     const menuPoint = menu?.point ?? { x: 0, y: 0 }
@@ -424,6 +463,21 @@ export function PlannerApp(): React.JSX.Element {
             )
           }
         },
+        {
+          label: 'Color',
+          icon: <Palette size={14} />,
+          submenu: colorEntries(
+            row.project.color,
+            defaultProjectColor(row.project, model),
+            'auto',
+            (color) =>
+              setProjectColor(
+                row.project.path,
+                notes.get(row.project.path)?.frontmatter ?? {},
+                color
+              )
+          )
+        },
         { separator: true },
         {
           label: 'Add deliverable…',
@@ -456,6 +510,16 @@ export function PlannerApp(): React.JSX.Element {
           label: 'Depends on',
           icon: <Link2 size={14} />,
           submenu: dependencyEntries(d)
+        },
+        {
+          label: 'Color',
+          icon: <Palette size={14} />,
+          submenu: colorEntries(
+            d.color,
+            inheritedBarColor(d, row.project, model),
+            d.parentId && model.byId.get(d.parentId)?.color ? 'from parent' : 'from project',
+            (color) => setDeliverableColor(d, color)
+          )
         },
         { separator: true },
         {
@@ -645,7 +709,7 @@ export function PlannerApp(): React.JSX.Element {
                             end={span.end}
                             domain={domain}
                             zoom={zoom}
-                            colorIndex={model.projects.indexOf(row.project)}
+                            color={barColor(row.deliverable, row.project, model)}
                             status={deliverableBarStatus(row.deliverable, today)}
                             violated={violated.has(row.deliverable.id)}
                             dragging={drag?.id === row.deliverable.id}

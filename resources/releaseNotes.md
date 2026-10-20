@@ -3,6 +3,81 @@
 The current version number is shown on the KNote entry in VS Code's
 Extensions view.
 
+## 🛠 For developers: what you need to develop, build and release KNote
+
+KNote itself never touches the network, but setting up a machine to work on
+it does need a connection once (to install packages and download a test copy
+of VS Code).
+
+**Install on your computer**
+
+| Tool | Version | What it's for |
+| --- | --- | --- |
+| [Node.js](https://nodejs.org) (includes npm) | 20 or newer (CI builds on 20) | Running the build, tests and packager |
+| [Git](https://git-scm.com) | any recent | Cloning the repo, branches, pull requests |
+| [VS Code](https://code.visualstudio.com) | 1.97 or newer | Running and debugging the extension (F5) |
+| Windows 10/11 | — | CI builds and releases on Windows; macOS/Linux work for development |
+
+Everything else — TypeScript, esbuild, vitest, ESLint, Prettier, and `vsce`
+(the VSIX packager) — is a dev dependency installed by `npm install`, so
+nothing has to be installed globally.
+
+**Develop**
+
+```sh
+git clone https://github.com/BradleyKrone/KNote.git
+cd KNote
+npm install
+npm run watch            # then press F5 → "Run KNote Extension"
+```
+
+**Check a change** (the same gates CI runs on every pull request)
+
+```sh
+npm run typecheck
+npm run lint
+npm run format:check     # npm run format fixes it
+npm test                 # vitest unit tests (tests/)
+npm run test:integration # real VS Code host (test/); first run downloads VS Code
+```
+
+**Build and install locally**
+
+```sh
+npm run build            # bundle to dist/
+npm run package          # produces knote-<version>.vsix
+```
+
+Install it with **Extensions → … → Install from VSIX…**. Bump the version
+first — reinstalling the same version number does nothing.
+
+**Release**
+
+1. Bump `version` in `package.json` and add a matching `## <version>` entry
+   at the top of the version list below (CI fails a pull request that
+   doesn't touch this file, unless it has the `skip-release-notes` label).
+2. Open a pull request into `main`; CI must pass.
+3. Merge it. CI then builds the `.vsix` and publishes a GitHub Release named
+   `KNote v<version> (build N)`, with that version's notes from this file as
+   its description and the `.vsix` attached.
+
+You need push access to the GitHub repo to merge; no Marketplace account or
+token is needed, because KNote is shipped as a `.vsix` from GitHub Releases.
+In Claude Code, `/release-check` does step 1 and runs the CI gates locally for you.
+
+## 3.8.0
+
+- **Color the Planner's bars.** Right-click a project or deliverable on the
+  Planner and pick **Color ▸** (blue, green, yellow, purple, orange, teal,
+  pink or gray). A project's color is saved as `color:` in its frontmatter
+  and applies to all its bars; a deliverable's is saved as `@color(<name>)`
+  on its line and overrides the project's. A work package without its own
+  color uses its parent's; **Default** clears the choice. Overdue (red) and
+  done (gray) bars still show as before.
+- Horizontal rules (`---`, `***`, `___`) now draw as a line across the page
+  in Live Preview instead of showing the raw characters. A note's frontmatter
+  `---` is left alone.
+
 ## 3.7.0
 
 - **Weekly notes are filed in year / month folders.** A `/` in the weekly
