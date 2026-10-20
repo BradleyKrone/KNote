@@ -545,6 +545,7 @@ old Timeline panel. Everything it shows lives in plain Markdown:
 | Dependency | `⛓ @deliverable(govalle/contracts)` on the deliverable line — "starts after that one"; repeatable |
 | Milestone | a `🏁 Permits approved 📅 2026-04-12 @deliverable(govalle/design)` line — a diamond on the chart |
 | Work package | `@parent(<name>)` on a deliverable's own line, naming another deliverable **in the same project** it's a work package of — for timeboxing a chunk of work inside a bigger one |
+| Bar color | `color: green` in a project's frontmatter, or `@color(green)` on a deliverable's line — set both from the right-click **Color ▸** menu |
 
 `🛫` is the start date, `📅` the end date (`@start(...)`/`@due(...)` also
 read). A deliverable with no `🛫` is a single-day bar. Notes written before
@@ -594,6 +595,7 @@ In the chart:
 | Double-click any row | opens the note at that line |
 | Right-click a deliverable → **Edit dates…** | a calendar for both ends of the span, with 1/3/5/10/20-day length presets and ±1d/±1w/Today nudges that slide the span without changing its length |
 | Right-click a deliverable → **Depends on ▸** | every other deliverable, ticked where it's already a predecessor — click to add or remove. Anything that would create a loop is greyed out and labelled *would loop* |
+| Right-click a project or deliverable → **Color ▸** | pick its bar color (blue, green, yellow, purple, orange, teal, pink, gray). A deliverable with no color of its own uses its parent deliverable's, then its project's; **Default** clears the choice. Overdue (red) and done (gray) still override it |
 | Right-click a row | also: add a deliverable / task / milestone, and (on a top-level deliverable's row) **Add work package…** |
 | day / week / month | zoom; **Today** re-centres on the today line |
 | **Locked / Unlocked** button | dragging is off by default so you can't nudge a bar by accident — click it to unlock before dragging, then lock again when you're done. Right-click actions (Edit dates…, Depends on ▸, etc.) work either way |

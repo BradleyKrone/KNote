@@ -123,10 +123,25 @@ export function isLineRevealed(state: EditorState, n: number): boolean {
   )
 }
 
+/**
+ * Last line (1-based) of a leading YAML frontmatter block, or 0 if there is
+ * none. Lezer has no frontmatter rule, so its opening `---` parses as a
+ * HorizontalRule — which must not be drawn as a rule.
+ */
+function frontmatterEnd(doc: Text): number {
+  if (doc.lines < 2 || doc.line(1).text.trimEnd() !== '---') return 0
+  for (let n = 2; n <= doc.lines; n++) {
+    const t = doc.line(n).text.trimEnd()
+    if (t === '---' || t === '...') return n
+  }
+  return 0
+}
+
 function buildDecorations(view: EditorView): DecorationSet {
   const decorations: Range<Decoration>[] = []
   const revealed = revealedLines(view)
   const { doc } = view.state
+  const fmEnd = frontmatterEnd(doc)
 
   for (const { from, to } of view.visibleRanges) {
     syntaxTree(view.state).iterate({
@@ -160,6 +175,19 @@ function buildDecorations(view: EditorView): DecorationSet {
             decorations.push(Decoration.line({ class: 'cm-md-quote-line' }).range(line.from))
           })
         }
+        // A thematic break (`---`, `***`, `___`) becomes a rule across the
+        // page: the marks are hidden and the line itself draws the rule, so
+        // the line keeps its normal text height and stays clickable.
+        if (name === 'HorizontalRule') {
+          const line = doc.lineAt(node.from)
+          if (line.number > fmEnd && !revealed.has(line.number)) {
+            decorations.push(Decoration.line({ class: 'cm-md-hr-line' }).range(line.from))
+            if (node.to > node.from) {
+              decorations.push(Decoration.replace({}).range(node.from, node.to))
+            }
+          }
+        }
+
         // Tables are rendered separately (tableRender.ts) — as a block widget
         // that can't be provided from a view plugin.
 

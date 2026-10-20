@@ -1968,23 +1968,42 @@ button {
   box-shadow: 0 0 0 2px var(--vscode-focusBorder);
 }
 
-.planner-color-0 {
+/* Named bar palette — `PLANNER_COLORS` in shared/deliverables.ts. The first
+   six are also the default per-project cycle, in this order. */
+.planner-color-blue {
   --bar-color: #4c8dd8;
 }
-.planner-color-1 {
+.planner-color-green {
   --bar-color: #3fa66a;
 }
-.planner-color-2 {
+.planner-color-yellow {
   --bar-color: #d8a33f;
 }
-.planner-color-3 {
+.planner-color-purple {
   --bar-color: #b06fd0;
 }
-.planner-color-4 {
+.planner-color-orange {
   --bar-color: #d87f4c;
 }
-.planner-color-5 {
+.planner-color-teal {
   --bar-color: #4cbfc0;
+}
+.planner-color-pink {
+  --bar-color: #d86a9e;
+}
+.planner-color-gray {
+  --bar-color: #8a8f98;
+}
+
+/* Swatch shown beside each name in the planner's Color ▸ menu. */
+.planner-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--bar-color);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  vertical-align: middle;
 }
 
 .planner-bar.bar-overdue {

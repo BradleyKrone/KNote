@@ -23,7 +23,8 @@ interface Props {
   end: string
   domain: Domain
   zoom: Zoom
-  colorIndex: number
+  /** Palette name from `barColor` — overridden by the overdue/done status colors. */
+  color: string
   status: DeliverableBarStatus
   violated: boolean
   dragging: boolean
@@ -41,7 +42,7 @@ export function Bar({
   end,
   domain,
   zoom,
-  colorIndex,
+  color,
   status,
   violated,
   dragging,
@@ -56,7 +57,7 @@ export function Bar({
   const width = Math.max(PX_PER_DAY[zoom], (diffDays(start, end) + 1) * PX_PER_DAY[zoom])
   const className = [
     'planner-bar',
-    `planner-color-${colorIndex % 6}`,
+    `planner-color-${color}`,
     status !== 'active' ? `bar-${status}` : '',
     dragging ? 'dragging' : '',
     violated ? 'violated' : '',

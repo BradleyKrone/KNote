@@ -49,6 +49,7 @@
 import type { NoteMeta, TaskItem, VaultPath } from './types'
 import {
   ARCHIVED_CHAR,
+  COLOR_RE,
   DELIVERABLE_REF_RE,
   DELIVERABLE_TAG_RE,
   DEPENDS_RE,
@@ -145,6 +146,47 @@ export function projectEndDate(meta: NoteMeta): string | null {
     if (date) return date
   }
   return null
+}
+
+/**
+ * The named planner bar colors. The first six are the default palette a
+ * project without a `color:` cycles through (by chart position), so picking
+ * one explicitly looks exactly like the defaults. No red: that's the overdue
+ * signal.
+ */
+export const PLANNER_COLORS = [
+  'blue',
+  'green',
+  'yellow',
+  'purple',
+  'orange',
+  'teal',
+  'pink',
+  'gray'
+] as const
+export type PlannerColor = (typeof PLANNER_COLORS)[number]
+/** How many of `PLANNER_COLORS` the default per-project cycle uses. */
+export const DEFAULT_COLOR_CYCLE = 6
+
+/** Frontmatter key a project's planner bar color lives under. */
+export const PROJECT_COLOR_KEY = 'color'
+
+/** A palette name, case-insensitively, or null for anything else. */
+export function parsePlannerColor(value: unknown): PlannerColor | null {
+  if (typeof value !== 'string') return null
+  const name = value.trim().toLowerCase()
+  return (PLANNER_COLORS as readonly string[]).includes(name) ? (name as PlannerColor) : null
+}
+
+/** A deliverable line's own `@color(...)`, or null. */
+export function deliverableColorOf(text: string): PlannerColor | null {
+  const m = COLOR_RE.exec(text)
+  return m ? parsePlannerColor(m[1]) : null
+}
+
+/** A project note's `color:` frontmatter, or null. */
+export function projectColor(meta: NoteMeta): PlannerColor | null {
+  return parsePlannerColor(meta.frontmatter[PROJECT_COLOR_KEY])
 }
 
 /** The `📅`/`@due(...)` date on a line's text, or null. */

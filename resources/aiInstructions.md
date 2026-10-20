@@ -214,6 +214,11 @@ end: 2026-06-30
   - [ ] @task Release 1 🛫 2026-01-01 📅 2026-03-01 @deliverable(govalle/release-1)
   - [ ] @task Fix bugs 🛫 2026-01-15 📅 2026-02-01 @deliverable(govalle/fix-bugs) @parent(release-1)
   ```
+- **Bar color (optional):** `color: <name>` in a project's frontmatter colors
+  all its bars; `@color(<name>)` on a deliverable's own line overrides that
+  for one deliverable (a work package without one uses its parent's). Names:
+  `blue`, `green`, `yellow`, `purple`, `orange`, `teal`, `pink`, `gray`. Leave
+  it out for the default color.
 
 ## Timeline entries
 
