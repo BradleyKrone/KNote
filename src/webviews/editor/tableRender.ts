@@ -10,13 +10,16 @@
 // when the caret arrives: click a cell and type into the grid instead (see
 // tableCellEdit.ts). The table block is atomic so the caret can't land inside
 // it, and raw pipes appear only when explicitly asked for via the right-click
-// "Edit table source", or when a non-empty selection covers the table — without
-// that second case a find/replace hit inside a table would highlight text the
-// user can't see.
+// "Edit table source", or when a non-empty selection spans more than one cell.
+// A selection inside a single cell — a find/replace hit, above all — keeps the
+// grid rendered and is painted onto the cell text instead, along with every
+// other search match in the table (tableSearchLogic.ts), since CodeMirror's own
+// match highlighter can't reach text a widget has replaced.
 
 import { syntaxTree } from '@codemirror/language'
 import { EditorState, type Range, StateField } from '@codemirror/state'
 import { Decoration, type DecorationSet, EditorView, WidgetType } from '@codemirror/view'
+import { getSearchQuery, searchPanelOpen } from '@codemirror/search'
 import {
   activateCell,
   activeCellField,
@@ -32,9 +35,31 @@ import { leadingColumns, SPACE_EM } from './hangingIndent'
 import { enclosingGroupLastLine } from './taskFold'
 import { maskActiveCell } from './tableCellLogic'
 import { cellOffsets, columnWidths, parseTable, type Align } from './tableModel'
+import {
+  cellHighlights,
+  withinOneCell,
+  type CellHighlight,
+  type RawHighlight
+} from './tableSearchLogic'
 
 /** A cell's markdown `<br>` breaks, split out so they render as real ones. */
-const BR = /<br\s*\/?>/i
+const BR = /<br\s*\/?>/gi
+
+/** Past this many search hits in one table, the rest go unpainted — keeps a pathological query cheap. */
+const MAX_TABLE_HITS = 1000
+
+/** Search hits per rendered cell, keyed `"row:col"` (tableSearchLogic.cellHighlights). */
+type CellHits = Map<string, CellHighlight[]>
+
+function hitsKey(hits: CellHits): string {
+  let key = ''
+  for (const [cell, list] of hits) {
+    key += `${cell}=`
+    for (const h of list) key += `${h.from}-${h.to}${h.selected ? '*' : ''},`
+    key += ';'
+  }
+  return key
+}
 
 /**
  * The table block's own leading whitespace — from `indentTable` (tableEdit.ts)
@@ -74,16 +99,21 @@ class TableWidget extends WidgetType {
     // know a tabSize change (Vault Settings, reaching an already-open editor)
     // makes two otherwise-identical widgets unequal, or CodeMirror reuses the
     // stale DOM and toDOM never runs again to repaint the indent.
-    private readonly tabSize: number
+    private readonly tabSize: number,
+    private readonly hits: CellHits
   ) {
     super()
+    this.hitsSig = hitsKey(hits)
   }
+
+  private readonly hitsSig: string
 
   eq(other: TableWidget): boolean {
     return (
       sameCell(other.active, this.active) &&
       sameGroup(other.group, this.group) &&
       other.tabSize === this.tabSize &&
+      other.hitsSig === this.hitsSig &&
       maskActiveCell(other.raw, other.active) === maskActiveCell(this.raw, this.active)
     )
   }
@@ -103,7 +133,7 @@ class TableWidget extends WidgetType {
       indentEm += 0.7 // matches --knote-group-line's own padding-left
     }
     if (indentEm) wrap.style.paddingLeft = `${indentEm}em`
-    const table = buildTable(this.raw)
+    const table = buildTable(this.raw, this.hits)
     wrap.appendChild(table)
 
     wrap.addEventListener('mousedown', (e) => {
@@ -156,16 +186,52 @@ function cellElement(table: HTMLTableElement, row: number, col: number): HTMLEle
   return (tr?.cells[col] as HTMLElement | undefined) ?? null
 }
 
-/** Fill a cell, turning markdown's `<br>` into real line breaks. */
-function fillCell(el: HTMLElement, text: string, align: Align | undefined): void {
-  text.split(BR).forEach((part, i) => {
-    if (i > 0) el.appendChild(document.createElement('br'))
-    el.appendChild(document.createTextNode(part))
-  })
+/**
+ * Append `text[from, to)` to `el`, wrapping whatever the search hits cover in
+ * the same `cm-searchMatch` spans CodeMirror's highlighter draws, so a hit in
+ * a rendered cell looks exactly like one in ordinary text.
+ */
+function appendText(
+  el: HTMLElement,
+  text: string,
+  from: number,
+  to: number,
+  hits: readonly CellHighlight[]
+): void {
+  let pos = from
+  for (const h of hits) {
+    const a = Math.max(h.from, pos)
+    const b = Math.min(h.to, to)
+    if (a >= b) continue
+    if (a > pos) el.appendChild(document.createTextNode(text.slice(pos, a)))
+    const mark = document.createElement('span')
+    mark.className = h.selected ? 'cm-searchMatch cm-searchMatch-selected' : 'cm-searchMatch'
+    mark.textContent = text.slice(a, b)
+    el.appendChild(mark)
+    pos = b
+  }
+  if (pos < to) el.appendChild(document.createTextNode(text.slice(pos, to)))
+}
+
+/** Fill a cell, turning markdown's `<br>` into real line breaks and painting any search hits. */
+function fillCell(
+  el: HTMLElement,
+  text: string,
+  align: Align | undefined,
+  hits: readonly CellHighlight[] = []
+): void {
+  const sorted = [...hits].sort((a, b) => a.from - b.from)
+  let pos = 0
+  for (const br of text.matchAll(BR)) {
+    appendText(el, text, pos, br.index, sorted)
+    el.appendChild(document.createElement('br'))
+    pos = br.index + br[0].length
+  }
+  appendText(el, text, pos, text.length, sorted)
   if (align) el.style.textAlign = align
 }
 
-function buildTable(raw: string): HTMLTableElement {
+function buildTable(raw: string, hits: CellHits): HTMLTableElement {
   const { header, aligns, rows } = parseTable(raw)
   const table = document.createElement('table')
   table.className = 'cm-md-rendered-table'
@@ -175,22 +241,22 @@ function buildTable(raw: string): HTMLTableElement {
   const htr = document.createElement('tr')
   header.forEach((cell, i) => {
     const th = document.createElement('th')
-    fillCell(th, cell, aligns[i])
+    fillCell(th, cell, aligns[i], hits.get(`-1:${i}`))
     htr.appendChild(th)
   })
   thead.appendChild(htr)
   table.appendChild(thead)
 
   const tbody = document.createElement('tbody')
-  for (const cells of rows) {
+  rows.forEach((cells, r) => {
     const tr = document.createElement('tr')
     cells.forEach((cell, i) => {
       const td = document.createElement('td')
-      fillCell(td, cell, aligns[i])
+      fillCell(td, cell, aligns[i], hits.get(`${r}:${i}`))
       tr.appendChild(td)
     })
     tbody.appendChild(tr)
-  }
+  })
   table.appendChild(tbody)
   return table
 }
@@ -207,6 +273,8 @@ function buildDecorations(state: EditorState): TableDecorations {
   const { doc } = state
   const active: ActiveCell | null = state.field(activeCellField, false) ?? null
   const sourceAt = state.field(tableSourceField, false) ?? null
+  const query = getSearchQuery(state)
+  const searching = searchPanelOpen(state) && query.search !== '' && query.valid
 
   syntaxTree(state).iterate({
     enter: (node) => {
@@ -216,18 +284,23 @@ function buildDecorations(state: EditorState): TableDecorations {
       const first = doc.line(firstNum)
       const last = doc.line(lastNum)
 
+      const raw = doc.sliceString(first.from, last.to)
       // A bare caret never reveals the source — that's the whole point of
       // editing cells in place. An explicit "Edit table source", or a non-empty
-      // selection covering the table (a search hit, a drag-select), does.
+      // selection reaching past one cell (a drag-select), does. A selection
+      // inside a single cell — what Ctrl+F's find-next lands on — stays rendered
+      // and is painted on the cell instead.
+      const touching = state.selection.ranges.filter(
+        (r) => !r.empty && r.from <= last.to && r.to >= first.from
+      )
       const showSource =
         (sourceAt != null && sourceAt >= first.from && sourceAt <= last.to) ||
-        state.selection.ranges.some((r) => !r.empty && r.from <= last.to && r.to >= first.from)
+        touching.some((r) => !withinOneCell(raw, r.from - first.from, r.to - first.from))
 
       if (showSource) {
         // Keep the raw pipes, but hold each column to a fixed width via mark
         // decorations so it still reads as a table while being typed into —
         // padding the raw text itself would fight the user's cursor position.
-        const raw = doc.sliceString(first.from, last.to)
         const widths = columnWidths(parseTable(raw))
         for (let n = firstNum; n <= lastNum; n++) {
           const line = doc.line(n)
@@ -251,7 +324,23 @@ function buildDecorations(state: EditorState): TableDecorations {
           }
         }
       } else {
-        const raw = doc.sliceString(first.from, last.to)
+        const hits: RawHighlight[] = touching.map((r) => ({
+          from: r.from - first.from,
+          to: r.to - first.from,
+          selected: true
+        }))
+        if (searching) {
+          const cursor = query.getCursor(state, first.from, last.to)
+          let n = 0
+          for (let m = cursor.next(); !m.done && n < MAX_TABLE_HITS; m = cursor.next(), n++) {
+            const from = m.value.from - first.from
+            const to = m.value.to - first.from
+            // The selected match is already in from the selection above.
+            if (!hits.some((h) => h.from === from && h.to === to)) {
+              hits.push({ from, to, selected: false })
+            }
+          }
+        }
         const cell = active && active.tableFrom === first.from ? active : null
         const groupLastLine = enclosingGroupLastLine(state, firstNum)
         const group =
@@ -260,7 +349,13 @@ function buildDecorations(state: EditorState): TableDecorations {
             : null
         decorations.push(
           Decoration.replace({
-            widget: new TableWidget(raw, cell, group, state.facet(EditorState.tabSize)),
+            widget: new TableWidget(
+              raw,
+              cell,
+              group,
+              state.facet(EditorState.tabSize),
+              cellHighlights(raw, hits)
+            ),
             block: true
           }).range(first.from, last.to)
         )
@@ -285,6 +380,10 @@ export const tableRender = StateField.define<TableDecorations>({
       // pipes until the caret happens to move.
       syntaxTree(tr.startState) !== syntaxTree(tr.state) ||
       tr.effects.some((e) => e.is(setActiveCell) || e.is(setTableSource)) ||
+      // Find: a new query, or the widget opening/closing, repaints the hits
+      // painted onto rendered cells.
+      getSearchQuery(tr.startState) !== getSearchQuery(tr.state) ||
+      searchPanelOpen(tr.startState) !== searchPanelOpen(tr.state) ||
       // A tabSize reconfigure (Vault Settings) needs every indented table's
       // widget rebuilt: its leading padding is baked in at build time, and
       // WidgetType.eq() (keyed on raw/active/group, not tabSize) would

@@ -131,8 +131,9 @@
    min-width (see tableRender.ts's cm-md-table-cell-inline marks, sized from
    tableModel's columnWidths) so it still reads as a grid while being typed
    into, instead of drifting out of alignment with the other rows. Reached only
-   via the right-click "Edit table source", or a selection covering the table —
-   the caret alone renders cells editable in place instead. */
+   via the right-click "Edit table source", or a selection spanning cells — the
+   caret alone renders cells editable in place instead, and a find hit inside
+   one cell is painted onto the rendered grid. */
 .cm-md-table-line {
   font-family: var(--vscode-editor-font-family, ui-monospace, monospace);
   font-size: 0.9em;
