@@ -65,6 +65,16 @@ You need push access to the GitHub repo to merge; no Marketplace account or
 token is needed, because KNote is shipped as a `.vsix` from GitHub Releases.
 In Claude Code, `/release-check` does step 1 and runs the CI gates locally for you.
 
+## 3.9.0
+
+- **A proper Find and Replace in Live Preview.** `Ctrl+F` opens a
+  VS Code–style box at the top right of the note, and `Ctrl+H` opens it with
+  the replace row showing. Toggle match case (`Aa`, `Alt+C`), whole word
+  (`ab`, `Alt+W`) and regex (`.*`, `Alt+R`); a count shows where you are
+  ("3 of 12"). `Enter` / `Shift+Enter` jump to the next / previous match and
+  `Esc` closes it. This replaces the plain bar that used to sit under the
+  note.
+
 ## 3.8.0
 
 - **Color the Planner's bars.** Right-click a project or deliverable on the

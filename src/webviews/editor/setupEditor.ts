@@ -13,7 +13,8 @@ import { indentUnit, syntaxHighlighting } from '@codemirror/language'
 import { markdown } from '@codemirror/lang-markdown'
 import { Strikethrough, Table, Autolink } from '@lezer/markdown'
 import { codeLanguageFor } from './codeLanguages'
-import { search, searchKeymap } from '@codemirror/search'
+import { searchKeymap } from '@codemirror/search'
+import { findWidget } from './findWidget'
 import { completionKeymap } from '@codemirror/autocomplete'
 import type { CmEdit, CmPos } from '@shared/editorSync'
 import { vscodeApi } from '../shared/rpc'
@@ -197,7 +198,7 @@ export function createEditorState(opts: Omit<CreateEditorOptions, 'parent'>): Ed
       // large tabSize can't be allowed to indent a list line by its full width.
       Prec.highest(keymap.of(listIndentTightKeymap)),
       keymap.of([...formatKeymap, ...defaultKeymap, ...searchKeymap, indentWithTab]),
-      search(),
+      findWidget,
       knoteTheme,
       knoteTooltipTheme,
       ...(kind === 'note'

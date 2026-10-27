@@ -352,6 +352,7 @@ All in Markdown editors only:
 | `Ctrl+Alt+T` | Toggle the `@task` marker — promote a checkbox to a Kanban card, or demote it |
 | `Ctrl+Alt+Enter` | Seed/extend the task's attached note (Status Changed / Date Entered / Notes) |
 | `Alt+↑` / `Alt+↓` | Move the list item (with everything under it) up / down among its siblings — Live Preview |
+| `Ctrl+F` / `Ctrl+H` | Find / find & replace in Live Preview — a VS Code–style box at the top right with `Aa` / `ab` / `.*` toggles (`Alt+C`/`W`/`R`) and a match count; `Enter` / `Shift+Enter` next / previous, `Esc` closes |
 
 All hotkeys are ordinary VS Code keybindings — rebind them in **Keyboard
 Shortcuts** (`Ctrl+K Ctrl+S`).
