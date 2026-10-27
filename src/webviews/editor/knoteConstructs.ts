@@ -6,6 +6,7 @@
 //   • clickable checkboxes  → cycle Kanban columns via host.setTaskStatusMeta
 //   • [[wiki links]]        → clickable chips, host.openWikiTarget on click
 //   • ![[embed]] / ![](img) → inline images via host.attachmentUri
+//   • ![[clip.mp4|640]] → an inline, corner-resizable video player
 //   • #tags                 → styled pills
 //   • priority / milestone / machine / auto-meta lines → dimmed/emphasized
 //
@@ -25,7 +26,14 @@ import {
 } from '@codemirror/view'
 import { isStaleError } from '@shared/errors'
 import { definingDeliverableLines } from '@shared/deliverables'
-import { isDrawioFile, isImage, resolveEmbedPath, samePath } from '@shared/pathUtils'
+import {
+  embedWidthOf,
+  isDrawioFile,
+  isImage,
+  isVideo,
+  resolveEmbedPath,
+  samePath
+} from '@shared/pathUtils'
 import type { BoardColumn } from '@shared/types'
 import {
   ARCHIVED_CHAR,
@@ -437,6 +445,108 @@ class ImageWidget extends WidgetType {
   }
 }
 
+/** Smallest width a video can be dragged down to — keeps its controls usable. */
+const MIN_VIDEO_WIDTH = 160
+
+/**
+ * Rewrite the `![[target…]]` embed starting at `from` so it carries `|width`
+ * (Obsidian's sizing syntax), replacing any size it already had. One change,
+ * so a resize is a single undo step and reaches disk like any other edit.
+ */
+function setEmbedWidth(view: EditorView, from: number, target: string, width: number): void {
+  const line = view.state.doc.lineAt(from)
+  WIKI_LINK_RE.lastIndex = 0
+  let hit: RegExpExecArray | null = null
+  for (let m = WIKI_LINK_RE.exec(line.text); m; m = WIKI_LINK_RE.exec(line.text)) {
+    if (m[1] !== '!' || m[2] !== target) continue
+    hit = m
+    if (line.from + m.index === from) break
+  }
+  if (!hit) return
+  const start = line.from + hit.index
+  view.dispatch({
+    changes: {
+      from: start,
+      to: start + hit[0].length,
+      insert: `![[${hit[2]}${hit[3] ?? ''}|${width}]]`
+    }
+  })
+}
+
+/**
+ * An embedded `![[clip.mp4]]`, played in place with the browser's own video
+ * controls. The bottom-right grip resizes it — height follows the video's
+ * aspect ratio — and letting go writes the new width into the embed as
+ * `![[clip.mp4|640]]`, so the size is saved with the note.
+ */
+class VideoWidget extends WidgetType {
+  constructor(
+    private readonly src: string,
+    private readonly width: number | null
+  ) {
+    super()
+  }
+  eq(other: VideoWidget): boolean {
+    return other.src === this.src && other.width === this.width
+  }
+  toDOM(view: EditorView): HTMLElement {
+    const wrap = document.createElement('span')
+    wrap.className = 'cm-knote-video'
+    if (this.width) wrap.style.width = `${this.width}px`
+
+    const video = document.createElement('video')
+    video.controls = true
+    video.preload = 'metadata'
+    video.addEventListener('error', () => wrap.classList.add('cm-knote-video-error'))
+    void host.attachmentUri(attachmentRef(this.src)).then((uri) => {
+      if (uri) video.src = uri
+      else wrap.classList.add('cm-knote-video-missing')
+    })
+    wrap.appendChild(video)
+
+    const grip = document.createElement('span')
+    grip.className = 'cm-knote-video-resize'
+    grip.title = 'Drag to resize'
+    grip.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return
+      e.preventDefault()
+      e.stopPropagation()
+      grip.setPointerCapture(e.pointerId)
+      const startX = e.clientX
+      const startWidth = wrap.getBoundingClientRect().width
+      const maxWidth = Math.max(MIN_VIDEO_WIDTH, view.contentDOM.clientWidth - 16)
+      let width = Math.round(startWidth)
+      wrap.classList.add('cm-knote-video-resizing')
+
+      const onMove = (ev: PointerEvent): void => {
+        width = Math.round(
+          Math.min(maxWidth, Math.max(MIN_VIDEO_WIDTH, startWidth + ev.clientX - startX))
+        )
+        wrap.style.width = `${width}px`
+      }
+      const onUp = (): void => {
+        grip.removeEventListener('pointermove', onMove)
+        grip.removeEventListener('pointerup', onUp)
+        grip.removeEventListener('pointercancel', onUp)
+        wrap.classList.remove('cm-knote-video-resizing')
+        if (width !== this.width && Math.abs(width - startWidth) >= 1) {
+          setEmbedWidth(view, view.posAtDOM(wrap), this.src, width)
+        }
+      }
+      grip.addEventListener('pointermove', onMove)
+      grip.addEventListener('pointerup', onUp)
+      grip.addEventListener('pointercancel', onUp)
+    })
+    wrap.appendChild(grip)
+    return wrap
+  }
+  // The player owns its mouse handling: clicking play, scrubbing or dragging
+  // the grip must not drop the caret onto the line and reveal the raw source.
+  ignoreEvent(): boolean {
+    return true
+  }
+}
+
 // ---------- Decoration builder ----------
 
 function revealedLines(view: EditorView): Set<number> {
@@ -636,6 +746,9 @@ function decorateLine(
       // the broken-image box an ImageWidget would draw for it.
       if (!isRevealed && isImage(m[2])) {
         out.push(Decoration.replace({ widget: new ImageWidget(m[2]) }).range(from, to))
+      } else if (!isRevealed && isVideo(m[2])) {
+        const width = embedWidthOf(m[4]?.slice(1))
+        out.push(Decoration.replace({ widget: new VideoWidget(m[2], width) }).range(from, to))
       }
     } else if (!isRevealed) {
       const alias = m[4] ? m[4].slice(1) : ''

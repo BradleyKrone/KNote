@@ -91,6 +91,14 @@ export interface HostApi {
    */
   createDrawioDiagram(notePath: VaultPath | null): Promise<VaultPath>
 
+  /**
+   * Ask the user to pick a video file (native open dialog), copy it into the
+   * vault's attachments folder, and return the vault-relative path it was
+   * saved at — or null if the dialog was cancelled. Used by the live-preview
+   * editor's "Insert ▸ Video…" right-click action.
+   */
+  importVideo(notePath: VaultPath | null): Promise<VaultPath | null>
+
   // Verified line edits — routed through the host's verifiedEdit (live
   // buffer when the doc is open, atomic disk write otherwise); all fail
   // with KNOTE_STALE instead of writing when the expected text moved.

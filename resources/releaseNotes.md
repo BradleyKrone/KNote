@@ -65,6 +65,16 @@ You need push access to the GitHub repo to merge; no Marketplace account or
 token is needed, because KNote is shipped as a `.vsix` from GitHub Releases.
 In Claude Code, `/release-check` does step 1 and runs the CI gates locally for you.
 
+## 3.10.0
+
+- **Embed and play videos in your notes.** Right-click in Live Preview and
+  pick **Insert ▸ Video…** (or run **KNote: Insert Video…**), then choose an
+  `.mp4` (or `.m4v`/`.webm`) from anywhere on your computer. KNote copies it
+  into your attachments folder and embeds it as a player you can play right
+  in the note. Drag the grip in the video's bottom-right corner to resize it;
+  the size is saved in the note as `![[clip.mp4|640]]`. MP4s recorded in
+  HEVC/H.265 (some newer iPhones) can't be played and show a note saying so.
+
 ## 3.9.0
 
 - **A proper Find and Replace in Live Preview.** `Ctrl+F` opens a

@@ -169,6 +169,7 @@ KNote uses Obsidian-style wiki-links:
 | `[[Note Name\|Display text]]` | Link with custom display text |
 | `![[Note Name]]` | Embed (transclude) another note inline |
 | `![[image.png]]` | Embed an image from the Attachments folder |
+| `![[clip.mp4]]` / `![[clip.mp4\|640]]` | Embed a video (`.mp4`, `.m4v`, `.webm`) as an inline player; a number after `\|` is its width in pixels |
 | `[[Note Name#^block-id]]` | Link straight to one line, via a `^block-id` anchor at the end of that line |
 
 Use `[[wiki-links]]` (not `[text](note.md)` paths) to connect notes — that's

@@ -416,6 +416,65 @@
   color: var(--vscode-errorForeground);
   font-size: 0.85em;
 }
+/* Embedded video: the browser's own player, resized by the corner grip. Width
+   comes from the embed's `|640` (inline style); height follows the aspect. */
+.cm-knote-video {
+  position: relative;
+  display: inline-block;
+  width: 480px;
+  max-width: 100%;
+  line-height: 0;
+  vertical-align: bottom;
+}
+.cm-knote-video video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 80vh;
+  border-radius: 4px;
+  background: #000;
+}
+.cm-knote-video-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  touch-action: none;
+  border-bottom-right-radius: 4px;
+  background: linear-gradient(
+    135deg,
+    transparent 0 45%,
+    var(--vscode-focusBorder) 45% 55%,
+    transparent 55% 65%,
+    var(--vscode-focusBorder) 65% 75%,
+    transparent 75%
+  );
+  opacity: 0.6;
+}
+.cm-knote-video:hover .cm-knote-video-resize,
+.cm-knote-video-resizing .cm-knote-video-resize {
+  opacity: 1;
+}
+.cm-knote-video-resizing {
+  outline: 1px dashed var(--vscode-focusBorder);
+  outline-offset: 2px;
+  user-select: none;
+}
+.cm-knote-video-missing::after,
+.cm-knote-video-error::after {
+  display: block;
+  line-height: normal;
+  color: var(--vscode-errorForeground);
+  font-size: 0.85em;
+}
+.cm-knote-video-missing::after {
+  content: '⚠ video not found';
+}
+.cm-knote-video-error::after {
+  content: "⚠ can't play this video (unsupported codec — try an H.264 MP4)";
+}
 .cm-knote-image-drawio img {
   cursor: pointer;
   outline: 1px dashed var(--vscode-descriptionForeground);
@@ -828,4 +887,13 @@
   border-radius: 8px;
   padding: 0.05em 0.45em;
   font-size: 0.9em;
+}
+
+/* `![[clip.mp4]]` rendered outside the editor proper (embed cards, Reading mode). */
+.knote-embed-video {
+  display: block;
+  width: 480px;
+  max-width: 100%;
+  border-radius: 4px;
+  background: #000;
 }

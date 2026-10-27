@@ -15,7 +15,7 @@ import MarkdownIt from 'markdown-it'
 import type { StateInline } from 'markdown-it/index.js'
 import { hljsHighlight } from './codeHighlight'
 import { TAG_RE } from './parser/patterns'
-import { isDrawioFile, isImage } from './pathUtils'
+import { embedWidthOf, isDrawioFile, isImage, isVideo } from './pathUtils'
 import { splitWikiTarget } from './wikiResolve'
 
 export interface KnoteRenderOptions {
@@ -27,6 +27,11 @@ export interface KnoteRenderOptions {
   wikiHref?: (rawTarget: string) => string | null
   /** Source URI for an `![[image]]` / `![](image)` target, or null when it doesn't resolve. */
   imageSrc?: (target: string) => string | null
+  /**
+   * Source URI for an `![[clip.mp4]]` video embed, or null when it doesn't
+   * resolve. Omitted, a video embed renders as an ordinary wiki link.
+   */
+  videoSrc?: (target: string) => string | null
 }
 
 const ESCAPES: Record<string, string> = {
@@ -68,7 +73,10 @@ function wikiLinkRule(opts: KnoteRenderOptions) {
       const display = (pipe === -1 ? '' : inner.slice(pipe + 1).trim()) || rawTarget
       const { target } = splitWikiTarget(rawTarget)
       if (isEmbed && isImage(target)) pushImage(state, target, display, opts)
-      else pushWikiLink(state, rawTarget, display, opts)
+      else if (isEmbed && isVideo(target) && opts.videoSrc) {
+        const alias = pipe === -1 ? null : inner.slice(pipe + 1)
+        pushVideo(state, target, embedWidthOf(alias), opts.videoSrc)
+      } else pushWikiLink(state, rawTarget, display, opts)
     }
     state.pos = close + 2
     return true
@@ -142,6 +150,29 @@ function pushImage(
   alt.content = display
   token.children = [alt]
   token.content = display
+}
+
+/**
+ * Emit a `<video>` player for an `![[clip.mp4|640]]` embed. markdown-it has no
+ * video token, so this is raw markup — built here from escaped attributes
+ * only, never from note text, so `html: false` still holds for the source.
+ */
+function pushVideo(
+  state: StateInline,
+  target: string,
+  width: number | null,
+  videoSrc: (target: string) => string | null
+): void {
+  const src = videoSrc(target)
+  const token = state.push('html_inline', '', 0)
+  if (src === null) {
+    token.content = `<span class="knote-embed-missing">${escapeHtml(target)}</span>`
+    return
+  }
+  const style = width ? ` style="width:${width}px;max-width:100%"` : ''
+  token.content =
+    `<video class="knote-embed-video" controls preload="metadata" src="${escapeHtml(src)}"` +
+    `${style}></video>`
 }
 
 /**

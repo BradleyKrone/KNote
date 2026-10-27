@@ -326,6 +326,7 @@ left, so you can pick one out at a glance instead of reading down the list:
 | **Insert ▸** Table… | Pick a row/column count → insert an empty table |
 | **Insert ▸** Machine work… | Pick a serial + date and fill in each software's **Base** → **Flashed** version (Implement / EC520 / Machine / Display — each field autocompletes versions you've used before) → insert a `🚜` entry with a software table under it |
 | **Insert ▸** Draw.io Diagram | Create a blank diagram in your attachments folder, embed it, and open it for editing |
+| **Insert ▸** Video… | Pick an `.mp4` (or `.m4v`/`.webm`) from anywhere on disk → copy it into your attachments folder and embed a playable video |
 | **Task ▸** Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
 | **Task ▸** Copy link to task | *(task/milestone lines)* copy a `[[Note#^id\|Task text]]` link to this task (adding a hidden `^anchor` named after the task if needed) — paste it elsewhere to jump back |
 | **Table ▸** *(row/column actions)* | *(inside a table)* insert or delete the clicked row or column, set the clicked column's alignment (Left/Center/Right/Default), or drop to the raw Markdown with Edit table source |
@@ -719,6 +720,27 @@ Embed a draw.io diagram in a note and edit it without leaving VS Code:
   first time you try to edit a diagram if it isn't there yet. That
   extension's editor runs fully offline once installed, same as everything
   else in KNote.
+
+## Videos
+
+Embed a video in a note and play it right there:
+
+- **Right-click in Live Preview → Insert ▸ Video…** opens a file picker;
+  the video you choose is **copied** into your attachments folder (the
+  original stays put) and embedded at the cursor as `![[/…/clip.mp4]]`.
+  **KNote: Insert Video…** in the Command Palette does the same from the raw
+  text editor.
+- The embed renders as a player with the usual play/pause, scrub, volume and
+  full-screen controls — all local, nothing streams.
+- **Drag the grip in the video's bottom-right corner** to resize it; the
+  height follows the video's shape. Letting go saves the width into the
+  embed, Obsidian-style: `![[clip.mp4|640]]`. Undo (`Ctrl+Z`) puts the old
+  size back.
+- Supported: `.mp4`/`.m4v` with H.264 video (what phones and screen
+  recorders normally produce) and `.webm`. An HEVC/H.265 MP4 can't be played
+  by VS Code and shows a "can't play this video" note instead.
+- Videos are never trashed by the unused-attachment cleanup — delete one
+  yourself from the Files view if you no longer need it.
 
 ## Exporting a note to PDF
 

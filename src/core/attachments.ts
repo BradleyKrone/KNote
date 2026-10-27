@@ -4,6 +4,7 @@
 // and the live-preview webview's own paste handler (routed through the host
 // RPC channel, rpc/hostHandlers.ts). vscode-free so it's directly unit-testable.
 
+import { basename } from 'path'
 import dayjs from 'dayjs'
 import type { VaultPath } from '@shared/types'
 import { joinRel, normalizeRel } from '@shared/pathUtils'
@@ -65,4 +66,17 @@ export async function createDrawioDiagram(noteRel: VaultPath | null): Promise<Va
   // "…-1.drawio.svg", which would stop isDrawioFile from recognizing it.
   const fileName = `Diagram ${dayjs().format('YYYYMMDDHHmmssSSS')}.drawio.svg`
   return vault.createBinaryFile(joinRel(folder, fileName), Buffer.alloc(0))
+}
+
+/**
+ * Copy a file the user picked (e.g. a video from "Insert ▸ Video…") into the
+ * attachments folder for `noteRel`, keeping its own file name — uniquified
+ * if one by that name is already there.
+ */
+export async function importAttachment(
+  srcAbs: string,
+  noteRel: VaultPath | null
+): Promise<VaultPath> {
+  const folder = await attachmentsFolderFor(noteRel)
+  return vault.copyInFile(srcAbs, joinRel(folder, basename(srcAbs)))
 }

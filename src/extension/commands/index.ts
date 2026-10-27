@@ -6,6 +6,7 @@ import { registerWeeklyNoteCommands } from './weeklyNotes'
 import { registerMachineEntryCommands } from './machineEntry'
 import { registerMaintenanceCommands } from './maintenance'
 import { registerDrawioCommands } from './drawio'
+import { registerVideoCommands } from './video'
 import { registerExportPdfCommands } from './exportPdf'
 
 export function registerAllCommands(context: vscode.ExtensionContext): void {
@@ -16,5 +17,6 @@ export function registerAllCommands(context: vscode.ExtensionContext): void {
   registerMachineEntryCommands(context)
   registerMaintenanceCommands(context)
   registerDrawioCommands(context)
+  registerVideoCommands(context)
   registerExportPdfCommands(context)
 }

@@ -167,6 +167,25 @@ export async function insertDrawioDiagram(view: EditorView): Promise<void> {
   void host.openWithDrawio(`/${saved}`)
 }
 
+/**
+ * Pick a video from disk (host-side open dialog), copy it into the vault's
+ * attachments folder, and embed it on its own line at the caret. The caret
+ * lands on the line *after* the embed, so the player renders right away
+ * instead of the line staying revealed as raw `![[…]]` source.
+ */
+export async function insertVideo(view: EditorView): Promise<void> {
+  const saved = await host.importVideo(getNotePath())
+  if (!saved) return
+  const { head } = view.state.selection.main
+  const line = view.state.doc.lineAt(head)
+  const insert = `${head > line.from ? '\n' : ''}![[/${saved}]]\n`
+  view.dispatch({
+    changes: { from: head, insert },
+    selection: EditorSelection.cursor(head + insert.length)
+  })
+  view.focus()
+}
+
 /** Insert a `[[]]` wiki link at the caret (wrapping the selection when there is one). */
 export function insertWikiLink(view: EditorView): void {
   const tr = view.state.changeByRange((range) => ({
