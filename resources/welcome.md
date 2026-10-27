@@ -327,6 +327,7 @@ left, so you can pick one out at a glance instead of reading down the list:
 | **Insert ▸** Machine work… | Pick a serial + date and fill in each software's **Base** → **Flashed** version (Implement / EC520 / Machine / Display — each field autocompletes versions you've used before) → insert a `🚜` entry with a software table under it |
 | **Insert ▸** Draw.io Diagram | Create a blank diagram in your attachments folder, embed it, and open it for editing |
 | **Insert ▸** Image… | Pick a picture (`.png`, `.jpg`, `.gif`, `.svg`, `.webp`, …) from anywhere on disk → copy it into your attachments folder and embed it |
+| **Insert ▸** File link… | Pick any file on disk (pdf, docx, …) → insert a `[name](file:///…)` link to it; click the link to open it in its default app. The file is not copied, so the link breaks if the file moves. Programs/scripts (`.exe`, `.bat`, `.ps1`, …) are refused on click |
 | **Insert ▸** Video… | Pick an `.mp4` (or `.m4v`/`.webm`) from anywhere on disk → copy it into your attachments folder and embed a playable video |
 | **Task ▸** Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
 | **Task ▸** Copy link to task | *(task/milestone lines)* copy a `[[Note#^id\|Task text]]` link to this task (adding a hidden `^anchor` named after the task if needed) — paste it elsewhere to jump back |

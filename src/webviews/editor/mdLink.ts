@@ -31,7 +31,12 @@ function followableLinkAt(view: EditorView, event: MouseEvent): MdLink | null {
   // that reach); a click has to land strictly inside, so the blank space past
   // a line-ending link still just places the caret.
   if (!link || pos <= link.from || pos >= link.to) return null
-  return isExternalUrl(link.url) ? link : null
+  return isExternalUrl(link.url) || link.url.startsWith('file:') ? link : null
+}
+
+/** Hand a followed link to the host: `file:` opens in the default app, the rest in the browser. */
+export function openLink(url: string): void {
+  void (url.startsWith('file:') ? host.openFile(url) : host.openExternal(url))
 }
 
 export const mdLink = EditorView.domEventHandlers({
@@ -42,7 +47,7 @@ export const mdLink = EditorView.domEventHandlers({
     // Stop CodeMirror placing the caret first — that would reveal the raw
     // markdown and shift the text out from under the click.
     event.preventDefault()
-    void host.openExternal(link.url)
+    openLink(link.url)
     return true
   }
 })
