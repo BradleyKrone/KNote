@@ -3,14 +3,14 @@
 // taskLinkLogic.ts already use).
 
 import { WIKI_LINK_RE } from '@shared/parser/patterns'
-import { isImage } from '@shared/pathUtils'
+import { isMedia } from '@shared/pathUtils'
 import { splitWikiTarget } from '@shared/wikiResolve'
 
 /**
  * The raw target of a *note* embed that owns this whole line, or null.
  *
  * Two deliberate restrictions:
- *  - **Image embeds are excluded** — knoteConstructs.ts renders those inline,
+ *  - **Image and video embeds are excluded** — knoteConstructs.ts renders those inline,
  *    and it does it well; only notes need the card treatment.
  *  - **The embed must be alone on its line** (whitespace aside). The card is a
  *    block widget replacing the entire line, so anything sharing that line
@@ -23,7 +23,7 @@ export function noteEmbedLine(text: string): string | null {
   const m = WIKI_LINK_RE.exec(trimmed)
   if (!m || m[0] !== trimmed || m[1] !== '!') return null
   const rawTarget = m[2] + (m[3] ?? '')
-  if (isImage(splitWikiTarget(rawTarget).target)) return null
+  if (isMedia(splitWikiTarget(rawTarget).target)) return null
   return rawTarget
 }
 

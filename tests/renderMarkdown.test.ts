@@ -119,3 +119,36 @@ describe('renderKnoteMarkdown', () => {
     expect(html).toContain('the @task convention')
   })
 })
+
+describe('video embeds', () => {
+  const withVideo = {
+    ...opts,
+    videoSrc: (target: string) => (target === 'gone.mp4' ? null : `vscode-webview://vid/${target}`)
+  }
+
+  it('renders ![[clip.mp4]] as a <video> player with controls', () => {
+    const html = renderKnoteMarkdown('![[clip.mp4]]', withVideo)
+    expect(html).toContain('<video class="knote-embed-video" controls')
+    expect(html).toContain('src="vscode-webview://vid/clip.mp4"')
+  })
+
+  it('applies a |640 width', () => {
+    const html = renderKnoteMarkdown('![[clip.mp4|640]]', withVideo)
+    expect(html).toContain('style="width:640px;max-width:100%"')
+  })
+
+  it('marks an unresolved video as missing', () => {
+    const html = renderKnoteMarkdown('![[gone.mp4]]', withVideo)
+    expect(html).not.toContain('<video')
+    expect(html).toContain('knote-embed-missing')
+  })
+
+  it('falls back to a wiki link when the renderer has no videoSrc', () => {
+    expect(renderKnoteMarkdown('![[clip.mp4]]', opts)).not.toContain('<video')
+  })
+
+  it('escapes the src attribute', () => {
+    const html = renderKnoteMarkdown('![[a"b.mp4]]', withVideo)
+    expect(html).toContain('src="vscode-webview://vid/a&quot;b.mp4"')
+  })
+})

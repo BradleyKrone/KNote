@@ -5,7 +5,7 @@
 // This module must stay free of Electron/VS Code imports so it runs under
 // vitest and bundles anywhere; host-specific behavior (trash) is injected.
 
-import { promises as fs } from 'fs'
+import { constants as fsConstants, promises as fs } from 'fs'
 import { dirname, relative, resolve, sep } from 'path'
 import { parse as parseYaml, stringify as yamlStringify } from 'yaml'
 import type {
@@ -374,6 +374,20 @@ export async function createBinaryFile(rel: VaultPath, data: Buffer): Promise<Va
   await fs.mkdir(dirname(abs), { recursive: true })
   ownWriteMarker(abs)
   await fs.writeFile(abs, data, { flag: 'wx' })
+  return target
+}
+
+/**
+ * Copy a file from anywhere on disk into the vault at `rel` (uniquified, never
+ * clobbering). Streams through `fs.copyFile` rather than reading the bytes in,
+ * so importing a large video never holds it in memory.
+ */
+export async function copyInFile(srcAbs: string, rel: VaultPath): Promise<VaultPath> {
+  const target = await uniquify(rel)
+  const abs = toAbs(target)
+  await fs.mkdir(dirname(abs), { recursive: true })
+  ownWriteMarker(abs)
+  await fs.copyFile(srcAbs, abs, fsConstants.COPYFILE_EXCL)
   return target
 }
 

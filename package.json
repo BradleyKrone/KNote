@@ -166,6 +166,10 @@
         "title": "KNote: Insert Draw.io Diagram"
       },
       {
+        "command": "knote.insertVideo",
+        "title": "KNote: Insert Video…"
+      },
+      {
         "command": "knote.cycleTaskStatus",
         "title": "KNote: Cycle Task Status"
       },

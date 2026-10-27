@@ -52,6 +52,30 @@ export function isImage(rel: string): boolean {
   return IMAGE_EXTS.has(extOf(rel))
 }
 
+/** Video formats VS Code's webviews can play inline (`.mp4`/`.m4v` as H.264). */
+export const VIDEO_EXTS = ['mp4', 'm4v', 'webm'] as const
+const VIDEO_EXT_SET = new Set<string>(VIDEO_EXTS)
+
+export function isVideo(rel: string): boolean {
+  return VIDEO_EXT_SET.has(extOf(rel))
+}
+
+/** An embed target that renders inline as media rather than as a note card. */
+export function isMedia(rel: string): boolean {
+  return isImage(rel) || isVideo(rel)
+}
+
+/**
+ * The display width (px) a `|640` alias sets on a media embed, or null when
+ * the alias is absent or isn't a bare number — Obsidian's sizing syntax.
+ */
+export function embedWidthOf(alias: string | undefined | null): number | null {
+  const m = /^\s*(\d{1,5})\s*$/.exec(alias ?? '')
+  if (!m) return null
+  const n = Number(m[1])
+  return n > 0 ? n : null
+}
+
 /**
  * True for a draw.io diagram file: raw XML (`.drawio`) or one of draw.io's
  * "editable image" exports (`.drawio.svg`, `.drawio.png`), which embed the

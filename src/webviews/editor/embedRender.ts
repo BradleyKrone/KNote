@@ -53,13 +53,19 @@ function renderCard(wrap: HTMLElement, content: string, notePath: string): void 
     imageSrc: (target) => {
       const rel = resolveEmbedPath(folder, target)
       return rel === null ? null : IMG_MARKER + rel
+    },
+    videoSrc: (target) => {
+      const rel = resolveEmbedPath(folder, target)
+      return rel === null ? null : IMG_MARKER + rel
     }
   })
   const body = document.createElement('div')
   body.className = 'cm-knote-embed-body'
   body.innerHTML = md.render(content)
 
-  for (const img of Array.from(body.querySelectorAll('img'))) {
+  for (const img of Array.from(
+    body.querySelectorAll<HTMLImageElement | HTMLVideoElement>('img, video')
+  )) {
     const src = img.getAttribute('src') ?? ''
     if (!src.startsWith(IMG_MARKER)) continue
     img.removeAttribute('src')
@@ -73,7 +79,15 @@ function renderCard(wrap: HTMLElement, content: string, notePath: string): void 
   // open their note instead of dropping the caret into the embed source. The
   // target comes from data-knote-target, not the href — the href has been
   // URL-normalized by then and openWikiTarget needs it verbatim.
+  // A video's controls belong to the player: clicking play or scrubbing must
+  // not fall through to the card, which would swap it for the raw source.
+  const onVideo = (e: Event): boolean =>
+    (e.target as HTMLElement | null)?.closest?.('video') != null
   body.addEventListener('click', (e) => {
+    if (onVideo(e)) {
+      e.stopPropagation()
+      return
+    }
     const target = wikiTargetOf(e.target)
     if (target === null) return
     e.preventDefault()
@@ -83,7 +97,7 @@ function renderCard(wrap: HTMLElement, content: string, notePath: string): void 
   // Mousedown has to be stopped too: the card's own mousedown handler would
   // otherwise replace this DOM with the raw source before the click landed.
   body.addEventListener('mousedown', (e) => {
-    if (wikiTargetOf(e.target) !== null) e.stopPropagation()
+    if (onVideo(e) || wikiTargetOf(e.target) !== null) e.stopPropagation()
   })
 
   wrap.appendChild(body)

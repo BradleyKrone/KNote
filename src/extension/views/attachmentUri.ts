@@ -1,4 +1,4 @@
-// Resolving a note-relative image / draw.io reference for a webview.
+// Resolving a note-relative image / video / draw.io reference for a webview.
 //
 // Lives apart from any one panel because two panels need it now: the Live
 // Preview editor, which knows exactly which note it is showing, and the board,
@@ -10,7 +10,7 @@
 // `/` as vault-root-relative).
 
 import * as vscode from 'vscode'
-import { isImage, resolveEmbedPath } from '@shared/pathUtils'
+import { isMedia, resolveEmbedPath } from '@shared/pathUtils'
 import { toAbs } from '../../core/vaultService'
 
 /** The folder a note-relative reference resolves against, given the note's own vault path. */
@@ -33,7 +33,7 @@ export async function attachmentUriFor(
 ): Promise<string | null> {
   if (/^[a-z][a-z0-9+.-]*:/i.test(src)) return src // data:, already a URI
   const rel = resolveEmbedPath(folderOf(noteRel), src)
-  if (!rel || !isImage(rel)) return null
+  if (!rel || !isMedia(rel)) return null
   try {
     const fileUri = vscode.Uri.file(toAbs(rel))
     const stat = await vscode.workspace.fs.stat(fileUri)

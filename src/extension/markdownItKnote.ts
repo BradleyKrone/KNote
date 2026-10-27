@@ -12,7 +12,7 @@
 import type MarkdownIt from 'markdown-it'
 import type { NoteMeta } from '@shared/types'
 import { applyKnoteRules } from '@shared/renderMarkdown'
-import { isImage, resolveEmbedPath } from '@shared/pathUtils'
+import { isImage, isVideo, resolveEmbedPath } from '@shared/pathUtils'
 import { resolveTarget, splitWikiTarget } from '@shared/wikiResolve'
 import * as vaultIndex from '../core/indexer/vaultIndex'
 
@@ -59,6 +59,11 @@ export function extendMarkdownIt(md: MarkdownIt): MarkdownIt {
     imageSrc: (target) => {
       const rel = resolveEmbedPath('', target)
       return rel === null || !isImage(rel) ? null : '/' + rel
+    },
+    // Same vault-relative resolution for `![[clip.mp4]]`, played by a <video>.
+    videoSrc: (target) => {
+      const rel = resolveEmbedPath('', target)
+      return rel === null || !isVideo(rel) ? null : '/' + rel
     }
   })
 }

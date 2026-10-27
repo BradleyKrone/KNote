@@ -37,3 +37,11 @@ describe('noteEmbedLine', () => {
     expect(isNoteEmbedLine('![[Note]] and text')).toBe(false)
   })
 })
+
+describe('noteEmbedLine — videos', () => {
+  it('leaves a video embed to the inline player, not a note card', () => {
+    expect(noteEmbedLine('![[/Knote Resources/Attachments/clip.mp4]]')).toBeNull()
+    expect(noteEmbedLine('![[clip.mp4|640]]')).toBeNull()
+    expect(isNoteEmbedLine('![[clip.webm]]')).toBe(false)
+  })
+})

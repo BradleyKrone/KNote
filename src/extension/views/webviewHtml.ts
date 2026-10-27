@@ -23,6 +23,8 @@ export function webviewHtml(
   const csp = [
     `default-src 'none'`,
     `img-src ${webview.cspSource} data:`,
+    // Embedded videos play straight from the vault through asWebviewUri.
+    `media-src ${webview.cspSource}`,
     `style-src ${webview.cspSource} 'unsafe-inline'`,
     `script-src 'nonce-${nonce}'`,
     `font-src ${webview.cspSource}`

@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile, mkdir } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import * as vault from '../src/core/vaultService'
-import { createDrawioDiagram, saveImageAttachment } from '../src/core/attachments'
+import { createDrawioDiagram, importAttachment, saveImageAttachment } from '../src/core/attachments'
 
 vi.mock('dayjs', () => {
   const fixed = () => ({ format: () => '20260724120000' })
@@ -87,5 +87,42 @@ describe('createDrawioDiagram', () => {
     const second = await createDrawioDiagram()
     expect(second).not.toBe(first)
     expect(second).toBe(`${ATT}/Diagram 20260724120000.drawio 1.svg`)
+  })
+})
+
+describe('importAttachment', () => {
+  let dir: string
+  let outside: string
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'knote-attach-'))
+    outside = await mkdtemp(join(tmpdir(), 'knote-import-src-'))
+    vault.setVault(dir)
+  })
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+    await rm(outside, { recursive: true, force: true })
+  })
+
+  it('copies a file from outside the vault into the attachments folder under its own name', async () => {
+    const src = join(outside, 'Holiday clip.mp4')
+    await writeFile(src, 'fake-mp4-bytes')
+    const saved = await importAttachment(src, null)
+    expect(saved).toBe(`${ATT}/Holiday clip.mp4`)
+    expect((await readFile(join(dir, saved))).toString()).toBe('fake-mp4-bytes')
+    // A copy, not a move: the original stays where it was.
+    expect((await readFile(src)).toString()).toBe('fake-mp4-bytes')
+  })
+
+  it('uniquifies instead of overwriting a same-named attachment', async () => {
+    const src = join(outside, 'clip.mp4')
+    await writeFile(src, 'new')
+    await mkdir(join(dir, ATT), { recursive: true })
+    await writeFile(join(dir, ATT, 'clip.mp4'), 'old')
+    const saved = await importAttachment(src, null)
+    expect(saved).toBe(`${ATT}/clip 1.mp4`)
+    expect((await readFile(join(dir, ATT, 'clip.mp4'))).toString()).toBe('old')
+    expect((await readFile(join(dir, saved))).toString()).toBe('new')
   })
 })
