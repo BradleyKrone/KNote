@@ -72,8 +72,11 @@ function wikiLinkRule(opts: KnoteRenderOptions) {
       const rawTarget = (pipe === -1 ? inner : inner.slice(0, pipe)).trim()
       const display = (pipe === -1 ? '' : inner.slice(pipe + 1).trim()) || rawTarget
       const { target } = splitWikiTarget(rawTarget)
-      if (isEmbed && isImage(target)) pushImage(state, target, display, opts)
-      else if (isEmbed && isVideo(target) && opts.videoSrc) {
+      if (isEmbed && isImage(target)) {
+        const alias = pipe === -1 ? null : inner.slice(pipe + 1)
+        const width = embedWidthOf(alias)
+        pushImage(state, target, width ? rawTarget : display, width, opts)
+      } else if (isEmbed && isVideo(target) && opts.videoSrc) {
         const alias = pipe === -1 ? null : inner.slice(pipe + 1)
         pushVideo(state, target, embedWidthOf(alias), opts.videoSrc)
       } else pushWikiLink(state, rawTarget, display, opts)
@@ -125,6 +128,7 @@ function pushImage(
   state: StateInline,
   target: string,
   display: string,
+  width: number | null,
   opts: KnoteRenderOptions
 ): void {
   const src = opts.imageSrc?.(target) ?? null
@@ -145,6 +149,7 @@ function pushImage(
       isDrawioFile(target) ? 'knote-embed-image knote-embed-image-drawio' : 'knote-embed-image'
     ]
   ]
+  if (width) token.attrs.push(['style', `width:${width}px;max-width:100%`])
   // markdown-it's image renderer derives the alt text from the token's children.
   const alt = new state.Token('text', '', 0)
   alt.content = display

@@ -326,6 +326,7 @@ left, so you can pick one out at a glance instead of reading down the list:
 | **Insert ▸** Table… | Pick a row/column count → insert an empty table |
 | **Insert ▸** Machine work… | Pick a serial + date and fill in each software's **Base** → **Flashed** version (Implement / EC520 / Machine / Display — each field autocompletes versions you've used before) → insert a `🚜` entry with a software table under it |
 | **Insert ▸** Draw.io Diagram | Create a blank diagram in your attachments folder, embed it, and open it for editing |
+| **Insert ▸** Image… | Pick a picture (`.png`, `.jpg`, `.gif`, `.svg`, `.webp`, …) from anywhere on disk → copy it into your attachments folder and embed it |
 | **Insert ▸** Video… | Pick an `.mp4` (or `.m4v`/`.webm`) from anywhere on disk → copy it into your attachments folder and embed a playable video |
 | **Task ▸** Add tag… / Set priority… / Set due date… | *(task/milestone lines)* edit that line's `#tag` / `!!!` / `📅` |
 | **Task ▸** Copy link to task | *(task/milestone lines)* copy a `[[Note#^id\|Task text]]` link to this task (adding a hidden `^anchor` named after the task if needed) — paste it elsewhere to jump back |
@@ -720,6 +721,23 @@ Embed a draw.io diagram in a note and edit it without leaving VS Code:
   first time you try to edit a diagram if it isn't there yet. That
   extension's editor runs fully offline once installed, same as everything
   else in KNote.
+
+## Images
+
+Put a picture from anywhere on your computer into a note, and size it:
+
+- **Right-click in Live Preview → Insert ▸ Image…** opens a file picker; the
+  image you choose is **copied** into your attachments folder (the original
+  stays put) and embedded at the cursor as `![[/…/photo.png]]`.
+  **KNote: Insert Image…** in the Command Palette does the same from the raw
+  text editor. Pasting an image (`Ctrl+V`) still works too.
+- **Hover an image and drag the grip in its bottom-right corner** to resize
+  it; the height follows the picture's shape. Letting go saves the width into
+  the embed, Obsidian-style: `![[photo.png|300]]` (`|300x200` is read too —
+  the width wins). Undo (`Ctrl+Z`) puts the old size back. The size also
+  applies in Reading mode, embed cards and PDF export.
+- Only `![[…]]` embeds can be resized — a plain `![alt](photo.png)` has
+  nowhere to keep a size.
 
 ## Videos
 

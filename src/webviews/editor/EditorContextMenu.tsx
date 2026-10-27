@@ -49,6 +49,7 @@ import {
   ExternalLink,
   Eye,
   Film,
+  ImagePlus,
   Flag,
   IndentDecrease,
   IndentIncrease,
@@ -113,6 +114,7 @@ import {
   insertCodeBlock,
   insertDrawioDiagram,
   insertMachineEntry,
+  insertImage,
   insertVideo,
   insertMarkdownLink,
   insertMilestone,
@@ -668,6 +670,11 @@ function insertItems(
       label: 'Draw.io Diagram',
       icon: <Workflow size={ICON} />,
       onClick: run(() => void insertDrawioDiagram(view))
+    },
+    {
+      label: 'Image…',
+      icon: <ImagePlus size={ICON} />,
+      onClick: run(() => void insertImage(view))
     },
     {
       label: 'Video…',

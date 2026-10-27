@@ -126,6 +126,10 @@ describe('imageRefsOf', () => {
     ].join('\n')
     expect(imageRefsOf(content, 'Note.md')).toEqual([`${ATT}/wiki.png`, `${ATT}/markdown.jpg`])
   })
+
+  it('still counts a resized embed (|300) as a reference', () => {
+    expect(imageRefsOf(`![[${ATT}/sized.png|300]]`, 'Note.md')).toEqual([`${ATT}/sized.png`])
+  })
 })
 
 // The bug this API exists for: an attachment is written to disk the moment it is

@@ -56,6 +56,15 @@ function ranges(state: EditorState, which: 'deco' | 'atoms'): Array<[number, num
   return out
 }
 
+/** The rendered table's widget, for peeking at what it was built with. */
+function tableWidget(state: EditorState): unknown {
+  let widget: unknown = null
+  state.field(tableRender).deco.between(0, state.doc.length, (_f, _t, v) => {
+    widget = v.spec.widget
+  })
+  return widget
+}
+
 describe('rendered vs source', () => {
   it('renders the table as a single block widget by default', () => {
     const deco = ranges(mkState(), 'deco')
@@ -88,9 +97,19 @@ describe('rendered vs source', () => {
     expect(deco).not.toContainEqual([TABLE_FROM, TABLE_TO])
   })
 
-  it('shows raw source under a non-empty selection, so a search hit is visible', () => {
+  it('keeps the grid under a selection inside one cell, painting it on the cell', () => {
+    // What Ctrl+F's find-next lands on: "Name" in the header.
     const state = apply(mkState(), {
       selection: EditorSelection.range(TABLE_FROM + 2, TABLE_FROM + 6)
+    })
+    expect(ranges(state, 'deco')).toEqual([[TABLE_FROM, TABLE_TO]])
+    const hits = (tableWidget(state) as unknown as { hits: Map<string, unknown> }).hits
+    expect(hits.get('-1:0')).toEqual([{ from: 0, to: 4, selected: true }])
+  })
+
+  it('shows raw source under a selection spanning cells', () => {
+    const state = apply(mkState(), {
+      selection: EditorSelection.range(TABLE_FROM + 2, TABLE_FROM + 10)
     })
     expect(ranges(state, 'deco')).not.toContainEqual([TABLE_FROM, TABLE_TO])
   })

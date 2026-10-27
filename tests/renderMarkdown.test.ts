@@ -120,6 +120,22 @@ describe('renderKnoteMarkdown', () => {
   })
 })
 
+describe('image embed widths', () => {
+  it('applies a |300 width to an image embed', () => {
+    const html = renderKnoteMarkdown('![[photo.png|300]]', opts)
+    expect(html).toContain('<img')
+    expect(html).toContain('style="width:300px;max-width:100%"')
+    // The size is not alt text.
+    expect(html).not.toContain('alt="300"')
+  })
+
+  it('keeps a non-numeric alias as the alt text, unsized', () => {
+    const html = renderKnoteMarkdown('![[photo.png|A sunset]]', opts)
+    expect(html).toContain('alt="A sunset"')
+    expect(html).not.toContain('style=')
+  })
+})
+
 describe('video embeds', () => {
   const withVideo = {
     ...opts,
