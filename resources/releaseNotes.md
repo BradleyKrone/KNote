@@ -65,6 +65,19 @@ You need push access to the GitHub repo to merge; no Marketplace account or
 token is needed, because KNote is shipped as a `.vsix` from GitHub Releases.
 In Claude Code, `/release-check` does step 1 and runs the CI gates locally for you.
 
+## 3.11.0
+
+- **Insert and resize images.** Right-click in Live Preview and pick
+  **Insert ▸ Image…** (or run **KNote: Insert Image…**), then choose a
+  picture from anywhere on your computer. KNote copies it into your
+  attachments folder and embeds it in the note. Hover any `![[…]]` image and
+  drag the grip in its bottom-right corner to resize it; the size is saved in
+  the note as `![[photo.png|300]]` and shows in Reading mode and PDF export
+  too.
+- **Find works inside tables.** `Ctrl+F` no longer turns a table back into
+  raw `|` pipes when a match is inside it. The table stays a table, and every
+  match in its cells is highlighted like anywhere else in the note.
+
 ## 3.10.0
 
 - **Embed and play videos in your notes.** Right-click in Live Preview and

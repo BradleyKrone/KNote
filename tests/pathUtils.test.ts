@@ -81,6 +81,10 @@ describe('embedWidthOf', () => {
     expect(embedWidthOf('')).toBeNull()
     expect(embedWidthOf('0')).toBeNull()
     expect(embedWidthOf('My clip')).toBeNull()
-    expect(embedWidthOf('640x480')).toBeNull()
+  })
+
+  it("reads Obsidian's |WIDTHxHEIGHT form for its width", () => {
+    expect(embedWidthOf('640x480')).toBe(640)
+    expect(embedWidthOf('300 x 200')).toBe(300)
   })
 })

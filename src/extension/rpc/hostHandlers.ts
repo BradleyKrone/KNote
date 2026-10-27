@@ -11,7 +11,7 @@ import { findPreviousDay } from '@shared/previousDay'
 import { isExternalUrl } from '@shared/externalUrl'
 import { resolveTarget, sectionLine, splitWikiTarget } from '@shared/wikiResolve'
 import { createDrawioDiagram, saveImageAttachment } from '../../core/attachments'
-import { pickAndImportVideo } from '../commands/video'
+import { pickAndImportImage, pickAndImportVideo } from '../commands/media'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
 import * as searchIndex from '../../core/indexer/searchIndex'
 import { findMentions } from '../../core/indexer/mentions'
@@ -97,6 +97,7 @@ export function createHostHandlers(): HostHandlers {
 
     createDrawioDiagram: (notePath: VaultPath | null) => createDrawioDiagram(notePath),
 
+    importImage: (notePath: VaultPath | null) => pickAndImportImage(notePath),
     importVideo: (notePath: VaultPath | null) => pickAndImportVideo(notePath),
 
     replaceLine: verifiedEdit.replaceLine,

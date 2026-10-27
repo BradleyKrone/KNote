@@ -168,13 +168,11 @@ export async function insertDrawioDiagram(view: EditorView): Promise<void> {
 }
 
 /**
- * Pick a video from disk (host-side open dialog), copy it into the vault's
- * attachments folder, and embed it on its own line at the caret. The caret
- * lands on the line *after* the embed, so the player renders right away
+ * Embed an imported attachment on its own line at the caret. The caret lands
+ * on the line *after* the embed, so the image or player renders right away
  * instead of the line staying revealed as raw `![[…]]` source.
  */
-export async function insertVideo(view: EditorView): Promise<void> {
-  const saved = await host.importVideo(getNotePath())
+function insertMediaEmbed(view: EditorView, saved: string | null): void {
   if (!saved) return
   const { head } = view.state.selection.main
   const line = view.state.doc.lineAt(head)
@@ -184,6 +182,16 @@ export async function insertVideo(view: EditorView): Promise<void> {
     selection: EditorSelection.cursor(head + insert.length)
   })
   view.focus()
+}
+
+/** Pick an image from disk (host-side open dialog), copy it into the attachments folder, and embed it. */
+export async function insertImage(view: EditorView): Promise<void> {
+  insertMediaEmbed(view, await host.importImage(getNotePath()))
+}
+
+/** Pick a video from disk (host-side open dialog), copy it into the attachments folder, and embed it. */
+export async function insertVideo(view: EditorView): Promise<void> {
+  insertMediaEmbed(view, await host.importVideo(getNotePath()))
 }
 
 /** Insert a `[[]]` wiki link at the caret (wrapping the selection when there is one). */

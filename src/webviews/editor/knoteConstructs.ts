@@ -6,7 +6,7 @@
 //   • clickable checkboxes  → cycle Kanban columns via host.setTaskStatusMeta
 //   • [[wiki links]]        → clickable chips, host.openWikiTarget on click
 //   • ![[embed]] / ![](img) → inline images via host.attachmentUri
-//   • ![[clip.mp4|640]] → an inline, corner-resizable video player
+//   • ![[photo.png|300]] / ![[clip.mp4|640]] → corner-resizable image / video player
 //   • #tags                 → styled pills
 //   • priority / milestone / machine / auto-meta lines → dimmed/emphasized
 //
@@ -394,16 +394,31 @@ on('attachmentChanged', (changedPath) => {
   }
 })
 
+/**
+ * An inline image. A `![[photo.png]]` embed (`resizable`) also gets the corner
+ * grip videos have, saving its width as `![[photo.png|300]]`; a plain markdown
+ * `![alt](src)` has nowhere to keep a size, so it doesn't.
+ */
 class ImageWidget extends WidgetType {
-  constructor(private readonly src: string) {
+  constructor(
+    private readonly src: string,
+    private readonly width: number | null = null,
+    private readonly resizable = false
+  ) {
     super()
   }
   eq(other: ImageWidget): boolean {
-    return other.src === this.src
+    return (
+      other.src === this.src && other.width === this.width && other.resizable === this.resizable
+    )
   }
-  toDOM(): HTMLElement {
+  toDOM(view: EditorView): HTMLElement {
     const wrap = document.createElement('span')
     wrap.className = 'cm-knote-image'
+    if (this.width) {
+      wrap.classList.add('cm-knote-image-sized')
+      wrap.style.width = `${this.width}px`
+    }
     const img = document.createElement('img')
     img.alt = this.src
     void host.attachmentUri(attachmentRef(this.src)).then((uri) => {
@@ -431,6 +446,10 @@ class ImageWidget extends WidgetType {
         void host.openWithDrawio(attachmentRef(this.src))
       })
     }
+    if (this.resizable) {
+      wrap.classList.add('cm-knote-image-resizable')
+      wrap.appendChild(resizeGrip(view, wrap, this.src, this.width, MIN_IMAGE_WIDTH))
+    }
     return wrap
   }
   destroy(dom: HTMLElement): void {
@@ -447,6 +466,8 @@ class ImageWidget extends WidgetType {
 
 /** Smallest width a video can be dragged down to — keeps its controls usable. */
 const MIN_VIDEO_WIDTH = 160
+/** Smallest width an image can be dragged down to — still big enough to grab again. */
+const MIN_IMAGE_WIDTH = 32
 
 /**
  * Rewrite the `![[target…]]` embed starting at `from` so it carries `|width`
@@ -471,6 +492,52 @@ function setEmbedWidth(view: EditorView, from: number, target: string, width: nu
       insert: `![[${hit[2]}${hit[3] ?? ''}|${width}]]`
     }
   })
+}
+
+/**
+ * The bottom-right drag handle shared by image and video embeds. Dragging
+ * resizes `wrap` live (height follows the media's aspect ratio); letting go
+ * writes the new width into the `![[src]]` embed as `|width`.
+ */
+function resizeGrip(
+  view: EditorView,
+  wrap: HTMLElement,
+  src: string,
+  current: number | null,
+  minWidth: number
+): HTMLElement {
+  const grip = document.createElement('span')
+  grip.className = 'cm-knote-resize'
+  grip.title = 'Drag to resize'
+  grip.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    grip.setPointerCapture(e.pointerId)
+    const startX = e.clientX
+    const startWidth = wrap.getBoundingClientRect().width
+    const maxWidth = Math.max(minWidth, view.contentDOM.clientWidth - 16)
+    let width = Math.round(startWidth)
+    wrap.classList.add('cm-knote-resizing')
+
+    const onMove = (ev: PointerEvent): void => {
+      width = Math.round(Math.min(maxWidth, Math.max(minWidth, startWidth + ev.clientX - startX)))
+      wrap.style.width = `${width}px`
+    }
+    const onUp = (): void => {
+      grip.removeEventListener('pointermove', onMove)
+      grip.removeEventListener('pointerup', onUp)
+      grip.removeEventListener('pointercancel', onUp)
+      wrap.classList.remove('cm-knote-resizing')
+      if (width !== current && Math.abs(width - startWidth) >= 1) {
+        setEmbedWidth(view, view.posAtDOM(wrap), src, width)
+      }
+    }
+    grip.addEventListener('pointermove', onMove)
+    grip.addEventListener('pointerup', onUp)
+    grip.addEventListener('pointercancel', onUp)
+  })
+  return grip
 }
 
 /**
@@ -504,40 +571,7 @@ class VideoWidget extends WidgetType {
     })
     wrap.appendChild(video)
 
-    const grip = document.createElement('span')
-    grip.className = 'cm-knote-video-resize'
-    grip.title = 'Drag to resize'
-    grip.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0) return
-      e.preventDefault()
-      e.stopPropagation()
-      grip.setPointerCapture(e.pointerId)
-      const startX = e.clientX
-      const startWidth = wrap.getBoundingClientRect().width
-      const maxWidth = Math.max(MIN_VIDEO_WIDTH, view.contentDOM.clientWidth - 16)
-      let width = Math.round(startWidth)
-      wrap.classList.add('cm-knote-video-resizing')
-
-      const onMove = (ev: PointerEvent): void => {
-        width = Math.round(
-          Math.min(maxWidth, Math.max(MIN_VIDEO_WIDTH, startWidth + ev.clientX - startX))
-        )
-        wrap.style.width = `${width}px`
-      }
-      const onUp = (): void => {
-        grip.removeEventListener('pointermove', onMove)
-        grip.removeEventListener('pointerup', onUp)
-        grip.removeEventListener('pointercancel', onUp)
-        wrap.classList.remove('cm-knote-video-resizing')
-        if (width !== this.width && Math.abs(width - startWidth) >= 1) {
-          setEmbedWidth(view, view.posAtDOM(wrap), this.src, width)
-        }
-      }
-      grip.addEventListener('pointermove', onMove)
-      grip.addEventListener('pointerup', onUp)
-      grip.addEventListener('pointercancel', onUp)
-    })
-    wrap.appendChild(grip)
+    wrap.appendChild(resizeGrip(view, wrap, this.src, this.width, MIN_VIDEO_WIDTH))
     return wrap
   }
   // The player owns its mouse handling: clicking play, scrubbing or dragging
@@ -744,10 +778,10 @@ function decorateLine(
       // a card owned by embedRender.ts (and this line was skipped above); one
       // sharing a line with other text stays raw, which reads far better than
       // the broken-image box an ImageWidget would draw for it.
+      const width = embedWidthOf(m[4]?.slice(1))
       if (!isRevealed && isImage(m[2])) {
-        out.push(Decoration.replace({ widget: new ImageWidget(m[2]) }).range(from, to))
+        out.push(Decoration.replace({ widget: new ImageWidget(m[2], width, true) }).range(from, to))
       } else if (!isRevealed && isVideo(m[2])) {
-        const width = embedWidthOf(m[4]?.slice(1))
         out.push(Decoration.replace({ widget: new VideoWidget(m[2], width) }).range(from, to))
       }
     } else if (!isRevealed) {

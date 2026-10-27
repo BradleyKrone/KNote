@@ -46,10 +46,12 @@ export function isMarkdown(rel: string): boolean {
   return extOf(rel) === 'md'
 }
 
-const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'avif'])
+/** Image formats rendered inline (and offered by "Insert ▸ Image…"). */
+export const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'avif'] as const
+const IMAGE_EXT_SET = new Set<string>(IMAGE_EXTS)
 
 export function isImage(rel: string): boolean {
-  return IMAGE_EXTS.has(extOf(rel))
+  return IMAGE_EXT_SET.has(extOf(rel))
 }
 
 /** Video formats VS Code's webviews can play inline (`.mp4`/`.m4v` as H.264). */
@@ -67,10 +69,11 @@ export function isMedia(rel: string): boolean {
 
 /**
  * The display width (px) a `|640` alias sets on a media embed, or null when
- * the alias is absent or isn't a bare number — Obsidian's sizing syntax.
+ * the alias is absent or isn't a bare number — Obsidian's sizing syntax. Its
+ * `|300x200` form is read for the width alone; height follows the aspect.
  */
 export function embedWidthOf(alias: string | undefined | null): number | null {
-  const m = /^\s*(\d{1,5})\s*$/.exec(alias ?? '')
+  const m = /^\s*(\d{1,5})(?:\s*x\s*\d{1,5})?\s*$/.exec(alias ?? '')
   if (!m) return null
   const n = Number(m[1])
   return n > 0 ? n : null

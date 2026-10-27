@@ -412,8 +412,29 @@
   border-radius: 4px;
   vertical-align: bottom;
 }
+/* A `![[photo.png]]` embed carries the same corner grip as a video, shown
+   only on hover so a picture doesn't wear a handle when you're just reading.
+   Once sized (`|300`, inline width on the wrap) the image fills that width and
+   drops the height cap, which would otherwise squash it out of proportion. */
+.cm-knote-image-resizable {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+  vertical-align: bottom;
+}
+.cm-knote-image-resizable .cm-knote-resize {
+  opacity: 0;
+}
+.cm-knote-image-sized img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: none;
+}
 .cm-knote-image-missing::after {
   content: '⚠ image not found';
+  line-height: normal;
   color: var(--vscode-errorForeground);
   font-size: 0.85em;
 }
@@ -435,7 +456,7 @@
   border-radius: 4px;
   background: #000;
 }
-.cm-knote-video-resize {
+.cm-knote-resize {
   position: absolute;
   right: 0;
   bottom: 0;
@@ -454,11 +475,12 @@
   );
   opacity: 0.6;
 }
-.cm-knote-video:hover .cm-knote-video-resize,
-.cm-knote-video-resizing .cm-knote-video-resize {
+.cm-knote-video:hover .cm-knote-resize,
+.cm-knote-image-resizable:hover .cm-knote-resize,
+.cm-knote-resizing .cm-knote-resize {
   opacity: 1;
 }
-.cm-knote-video-resizing {
+.cm-knote-resizing {
   outline: 1px dashed var(--vscode-focusBorder);
   outline-offset: 2px;
   user-select: none;

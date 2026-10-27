@@ -92,6 +92,14 @@ export interface HostApi {
   createDrawioDiagram(notePath: VaultPath | null): Promise<VaultPath>
 
   /**
+   * Ask the user to pick an image file (native open dialog), copy it into the
+   * vault's attachments folder, and return the vault-relative path it was
+   * saved at — or null if the dialog was cancelled. Used by the live-preview
+   * editor's "Insert ▸ Image…" right-click action.
+   */
+  importImage(notePath: VaultPath | null): Promise<VaultPath | null>
+
+  /**
    * Ask the user to pick a video file (native open dialog), copy it into the
    * vault's attachments folder, and return the vault-relative path it was
    * saved at — or null if the dialog was cancelled. Used by the live-preview
