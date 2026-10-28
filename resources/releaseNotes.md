@@ -65,6 +65,16 @@ You need push access to the GitHub repo to merge; no Marketplace account or
 token is needed, because KNote is shipped as a `.vsix` from GitHub Releases.
 In Claude Code, `/release-check` does step 1 and runs the CI gates locally for you.
 
+## 3.13.0
+
+- **Milestones on a project.** Right-click a project's row in the Planner and
+  pick **Add milestone…** to add a dated milestone that belongs to the project
+  itself rather than to any deliverable. It shows as a diamond on its own row
+  under the project. In markdown it's a `🏁 Go live 📅 2026-06-15` line in the
+  project note with no `@deliverable(...)` marker.
+- Fixed a project milestone dated after every deliverable falling off the
+  right-hand edge of the Planner chart.
+
 ## 3.12.0
 
 - **Link to any file on your computer.** Right-click in Live Preview and pick
