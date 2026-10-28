@@ -1,6 +1,29 @@
 import { describe, expect, it } from 'vitest'
 import { isExternalUrl } from '../src/shared/externalUrl'
-import { buildMdLink, mdLinkAt } from '../src/webviews/editor/mdLinkLogic'
+import { buildMdLink, mdLinkAt, rangeTouches } from '../src/webviews/editor/mdLinkLogic'
+
+describe('rangeTouches', () => {
+  const caret = (n: number) => [{ from: n, to: n }]
+
+  it('reveals a link only when the caret is strictly inside it', () => {
+    expect(rangeTouches(caret(5), 0, 10)).toBe(true)
+    expect(rangeTouches(caret(0), 0, 10)).toBe(false)
+    // Clicking the blank space past a line-ending link parks the caret at `to`.
+    expect(rangeTouches(caret(10), 0, 10)).toBe(false)
+    expect(rangeTouches(caret(20), 0, 10)).toBe(false)
+  })
+
+  it('with edges, a caret against either end counts too (keyboard entry)', () => {
+    expect(rangeTouches(caret(0), 0, 10, true)).toBe(true)
+    expect(rangeTouches(caret(10), 0, 10, true)).toBe(true)
+    expect(rangeTouches(caret(11), 0, 10, true)).toBe(false)
+  })
+
+  it('reveals when a selection overlaps the link', () => {
+    expect(rangeTouches([{ from: 8, to: 20 }], 0, 10)).toBe(true)
+    expect(rangeTouches([{ from: 10, to: 20 }], 0, 10)).toBe(false)
+  })
+})
 
 describe('mdLinkAt', () => {
   const line = 'See [the docs](https://example.com/a) and [other](https://b.test) here'

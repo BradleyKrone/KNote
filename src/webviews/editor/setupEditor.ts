@@ -20,6 +20,7 @@ import type { CmEdit, CmPos } from '@shared/editorSync'
 import { vscodeApi } from '../shared/rpc'
 import { knoteTheme, knoteTooltipTheme, knoteHighlightStyle } from './theme'
 import { livePreview } from './livePreview'
+import { keyboardCaret } from './reveal'
 import { tableCellEdit } from './tableCellEdit'
 import { tableRender } from './tableRender'
 import { mermaidRender } from './mermaidRender'
@@ -174,6 +175,9 @@ export function createEditorState(opts: Omit<CreateEditorOptions, 'parent'>): Ed
       tableRender,
       mermaidRender,
       embedRender,
+      // How the caret last moved (keyboard vs mouse) — livePreview and
+      // knoteConstructs read it to decide which construct reveals its raw text.
+      keyboardCaret,
       livePreview,
       knoteConstructs,
       pasteImage,

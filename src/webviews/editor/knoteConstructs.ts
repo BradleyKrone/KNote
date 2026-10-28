@@ -10,8 +10,9 @@
 //   • #tags                 → styled pills
 //   • priority / milestone / machine / auto-meta lines → dimmed/emphasized
 //
-// Like livePreview, raw syntax is revealed on the line(s) under the selection
-// so everything stays directly editable.
+// Like livePreview, a construct reveals its raw syntax only while the
+// selection is in it (see reveal.ts) — not merely on its line — so it stays
+// directly editable without a caret elsewhere on the line unrendering it.
 
 import dayjs from 'dayjs'
 import { syntaxTree } from '@codemirror/language'
@@ -60,6 +61,7 @@ import { editorKind, isBoardTask } from './editorMode'
 import { isNoteEmbedLine } from './embedLogic'
 import { hangingIndentEm } from './hangingIndent'
 import { isCollapsedMermaidFence } from './mermaidRender'
+import { rangeRevealed } from './reveal'
 
 // One webview holds exactly one live CodeMirror view; the vault-relative path
 // of the note it belongs to is set at init. A fragment view (the board's task
@@ -736,8 +738,8 @@ function decorateLine(
         )
       }
     }
-    if (!isRevealed) {
-      const from = line.from + box.from
+    const from = line.from + box.from
+    if (!rangeRevealed(view.state, from, line.from + box.to)) {
       out.push(
         Decoration.replace({
           widget: new CheckboxWidget(box.statusChar, isTask, line.number - 1, text)
@@ -750,8 +752,8 @@ function decorateLine(
   // marker — they're handled by the checkbox widget above, so `box` is set).
   if (!box) {
     const bullet = /^(\s*)[-*+](\s)/.exec(text)
-    if (bullet && !isRevealed) {
-      const from = line.from + bullet[1].length
+    const from = bullet ? line.from + bullet[1].length : 0
+    if (bullet && !rangeRevealed(view.state, from, from + 1)) {
       out.push(Decoration.replace({ widget: new BulletWidget() }).range(from, from + 1))
     }
   }
@@ -773,18 +775,19 @@ function decorateLine(
     if (inCode(view, from)) continue
     const isEmbed = m[1] === '!'
     const target = m[2] + (m[3] ?? '')
+    const shown = !rangeRevealed(view.state, from, to)
     if (isEmbed) {
       // Only *image* embeds render inline here. A note embed on its own line is
       // a card owned by embedRender.ts (and this line was skipped above); one
       // sharing a line with other text stays raw, which reads far better than
       // the broken-image box an ImageWidget would draw for it.
       const width = embedWidthOf(m[4]?.slice(1))
-      if (!isRevealed && isImage(m[2])) {
+      if (shown && isImage(m[2])) {
         out.push(Decoration.replace({ widget: new ImageWidget(m[2], width, true) }).range(from, to))
-      } else if (!isRevealed && isVideo(m[2])) {
+      } else if (shown && isVideo(m[2])) {
         out.push(Decoration.replace({ widget: new VideoWidget(m[2], width) }).range(from, to))
       }
-    } else if (!isRevealed) {
+    } else if (shown) {
       const alias = m[4] ? m[4].slice(1) : ''
       const display = alias || m[2] + (m[3] ?? '') || (m[3] ?? '')
       out.push(Decoration.replace({ widget: new WikiLinkWidget(target, display) }).range(from, to))
@@ -796,7 +799,7 @@ function decorateLine(
   for (let m = MD_IMAGE_RE.exec(text); m; m = MD_IMAGE_RE.exec(text)) {
     const from = line.from + m.index
     const to = from + m[0].length
-    if (inCode(view, from) || isRevealed) continue
+    if (inCode(view, from) || rangeRevealed(view.state, from, to)) continue
     out.push(Decoration.replace({ widget: new ImageWidget(m[1]) }).range(from, to))
   }
 
@@ -812,14 +815,14 @@ function decorateLine(
   }
 
   // @deliverable(project/name) markers — collapsed to a pill naming just the
-  // deliverable, same reveal-on-caret treatment [[wiki links]] get; raw text stays
-  // visible (and editable) on the line the caret is on. Filled when this match is
+  // deliverable, same reveal-on-caret treatment [[wiki links]] get; raw text
+  // shows (and is editable) while the caret is in the marker. Filled when this match is
   // the one the line itself defines, outlined when it's merely a join elsewhere.
   DELIVERABLE_REF_RE.lastIndex = 0
   for (let m = DELIVERABLE_REF_RE.exec(text); m; m = DELIVERABLE_REF_RE.exec(text)) {
     const from = line.from + m.index
     const to = from + m[0].length
-    if (inCode(view, from) || isRevealed) continue
+    if (inCode(view, from) || rangeRevealed(view.state, from, to)) continue
     const isDefining = definingTag === `deliverable/${m[1]}/${m[2]}`
     out.push(
       Decoration.replace({ widget: new DeliverableRefWidget(m[1], m[2], isDefining) }).range(
@@ -831,14 +834,15 @@ function decorateLine(
 
   // Hide a trailing `^block-id` anchor (the target of a [[Note#^id]] link, added
   // by "Copy link to task") in preview — it's link plumbing, not prose. The raw
-  // `^id` reveals on the line under the cursor so it stays editable/removable.
+  // `^id` reveals with the caret against it so it stays editable/removable.
   // On a line written before preservingBlockId existed the anchor can sit
   // *behind* a due date or tag (BLOCK_ID_RE group 2); hide only the ` ^id`
   // itself, so those markers stay on screen.
   const anchor = BLOCK_ID_RE.exec(text)
-  if (anchor && !isRevealed) {
+  if (anchor) {
     const from = line.from + anchor.index
-    out.push(Decoration.replace({}).range(from, from + anchor[0].length - anchor[2].length))
+    const to = from + anchor[0].length - anchor[2].length
+    if (!rangeRevealed(view.state, from, to)) out.push(Decoration.replace({}).range(from, to))
   }
 }
 
