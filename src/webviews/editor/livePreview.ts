@@ -8,7 +8,7 @@
 // (checkboxes, wiki-links, tags, embeds) are layered on in knoteConstructs.ts.
 
 import { syntaxTree } from '@codemirror/language'
-import type { EditorState, Line, Range, Text } from '@codemirror/state'
+import type { Line, Range, Text } from '@codemirror/state'
 import {
   Decoration,
   type DecorationSet,
@@ -17,6 +17,7 @@ import {
   type ViewUpdate
 } from '@codemirror/view'
 import { isCollapsedMermaidFence } from './mermaidRender'
+import { rangeRevealed } from './reveal'
 
 // Syntax-mark nodes to hide (the `#`, `**`, `` ` ``, `>`, `-`, `[`/`]`/`(`/`)`).
 const HIDE = new Set([
@@ -113,15 +114,20 @@ function revealedLines(view: EditorView): Set<number> {
 }
 
 /**
- * True when line `n` (1-based) has its raw markdown revealed because the
- * selection touches it. mdLink.ts uses this to leave clicks alone on the line
- * you're editing, where the `(url)` is visible and directly editable.
+ * Inline elements whose syntax marks reveal on their own, per element (see
+ * reveal.ts), rather than with the whole line. Line-level syntax — heading
+ * `#`s, blockquote `>`, code fences — still reveals with its line, since there
+ * the line *is* the element.
  */
-export function isLineRevealed(state: EditorState, n: number): boolean {
-  return state.selection.ranges.some(
-    (r) => state.doc.lineAt(r.from).number <= n && n <= state.doc.lineAt(r.to).number
-  )
-}
+const INLINE_PARENTS = new Set([
+  'Emphasis',
+  'StrongEmphasis',
+  'Strikethrough',
+  'InlineCode',
+  'Link',
+  'Image',
+  'Autolink'
+])
 
 /**
  * Last line (1-based) of a leading YAML frontmatter block, or 0 if there is
@@ -195,7 +201,7 @@ function buildDecorations(view: EditorView): DecorationSet {
         // link text (mdLink.ts makes it clickable). `URL` can't go in HIDE:
         // the same node type sits under `Image` — whose src knoteConstructs
         // needs — and under `Autolink`, where the URL *is* the visible text.
-        if (name === 'Link' && !revealed.has(doc.lineAt(node.from).number)) {
+        if (name === 'Link' && !rangeRevealed(view.state, node.from, node.to)) {
           const url = node.node.getChild('URL')
           if (url && url.to > url.from) {
             decorations.push(Decoration.replace({}).range(url.from, url.to))
@@ -207,7 +213,12 @@ function buildDecorations(view: EditorView): DecorationSet {
 
         if (HIDE.has(name)) {
           const line = doc.lineAt(node.from).number
-          if (revealed.has(line)) return
+          // Inline marks (`**`, ```, `[`/`](`…) follow their own element alone,
+          // so a caret elsewhere on the line leaves them rendered.
+          const parent = node.node.parent
+          if (parent && INLINE_PARENTS.has(parent.name)) {
+            if (rangeRevealed(view.state, parent.from, parent.to)) return
+          } else if (revealed.has(line)) return
           let end = node.to
           // Eat the single space after ATX heading hashes and blockquote `>`.
           if (

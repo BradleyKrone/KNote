@@ -8,10 +8,11 @@ import type { EmbedNote, VaultConfig, VaultPath } from '@shared/types'
 import { HOME_COMMANDS, type HomeCommand } from '@shared/hostApi'
 import { sliceEmbedSection } from '@shared/embedSlice'
 import { findPreviousDay } from '@shared/previousDay'
-import { isExternalUrl } from '@shared/externalUrl'
+import { fileURLToPath } from 'url'
+import { isExternalUrl, isOpenableFileUrl } from '@shared/externalUrl'
 import { resolveTarget, sectionLine, splitWikiTarget } from '@shared/wikiResolve'
 import { createDrawioDiagram, saveImageAttachment } from '../../core/attachments'
-import { pickAndImportImage, pickAndImportVideo } from '../commands/media'
+import { pickAndImportImage, pickAndImportVideo, pickFileForLink } from '../commands/media'
 import * as vaultIndex from '../../core/indexer/vaultIndex'
 import * as searchIndex from '../../core/indexer/searchIndex'
 import { findMentions } from '../../core/indexer/mentions'
@@ -140,6 +141,16 @@ export function createHostHandlers(): HostHandlers {
         return
       }
       await vscode.env.openExternal(vscode.Uri.parse(url))
+    },
+
+    pickFileForLink: () => pickFileForLink(),
+
+    openFile: async (url: string) => {
+      if (!isOpenableFileUrl(url)) {
+        void vscode.window.showWarningMessage(`KNote: refusing to open ${url}`)
+        return
+      }
+      await vscode.env.openExternal(vscode.Uri.file(fileURLToPath(url)))
     },
 
     getPreviousDay: async () => {

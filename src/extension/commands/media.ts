@@ -6,6 +6,9 @@
 // the command palette.
 
 import * as vscode from 'vscode'
+import * as path from 'path'
+import { pathToFileURL } from 'url'
+import { encodeFileUrl } from '@shared/externalUrl'
 import type { VaultPath } from '@shared/types'
 import { IMAGE_EXTS, VIDEO_EXTS } from '@shared/pathUtils'
 import { wrapEmbedForInsertion } from '@shared/embedInsert'
@@ -52,6 +55,35 @@ export const pickAndImportImage = (noteRel: VaultPath | null): Promise<VaultPath
 export const pickAndImportVideo = (noteRel: VaultPath | null): Promise<VaultPath | null> =>
   pickAndImport(VIDEO, noteRel)
 
+/** Pick any file on disk for a `file:` link. Null when cancelled. */
+export async function pickFileForLink(): Promise<{ name: string; url: string } | null> {
+  const picked = await vscode.window.showOpenDialog({
+    canSelectFiles: true,
+    canSelectFolders: false,
+    canSelectMany: false,
+    openLabel: 'Link File',
+    title: 'KNote: Link to File'
+  })
+  const file = picked?.[0]
+  if (!file) return null
+  return {
+    name: path.basename(file.fsPath),
+    url: encodeFileUrl(pathToFileURL(file.fsPath).href)
+  }
+}
+
+async function insertFileLink(): Promise<void> {
+  const editor = vscode.window.activeTextEditor
+  if (!editor) {
+    void vscode.window.showWarningMessage('KNote: open a note to insert a file link into.')
+    return
+  }
+  const picked = await pickFileForLink()
+  if (!picked) return
+  const text = editor.document.getText(editor.selection) || picked.name
+  await editor.edit((b) => b.replace(editor.selection, `[${text}](${picked.url})`))
+}
+
 async function insertMedia(kind: MediaKind): Promise<void> {
   const editor = vscode.window.activeTextEditor
   const noteRel = editor ? vaultNoteRel(editor.document) : null
@@ -73,6 +105,7 @@ async function insertMedia(kind: MediaKind): Promise<void> {
 export function registerMediaCommands(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('knote.insertImage', () => insertMedia(IMAGE)),
-    vscode.commands.registerCommand('knote.insertVideo', () => insertMedia(VIDEO))
+    vscode.commands.registerCommand('knote.insertVideo', () => insertMedia(VIDEO)),
+    vscode.commands.registerCommand('knote.insertFileLink', () => insertFileLink())
   )
 }

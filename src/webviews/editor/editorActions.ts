@@ -194,6 +194,14 @@ export async function insertVideo(view: EditorView): Promise<void> {
   insertMediaEmbed(view, await host.importVideo(getNotePath()))
 }
 
+/** Pick any file from disk (host-side open dialog) and insert a `[name](file:///…)` link to it. */
+export async function insertFileLink(view: EditorView): Promise<void> {
+  const picked = await host.pickFileForLink()
+  if (!picked) return
+  const { from, to } = view.state.selection.main
+  insertMarkdownLink(view, from === to ? picked.name : view.state.sliceDoc(from, to), picked.url)
+}
+
 /** Insert a `[[]]` wiki link at the caret (wrapping the selection when there is one). */
 export function insertWikiLink(view: EditorView): void {
   const tr = view.state.changeByRange((range) => ({

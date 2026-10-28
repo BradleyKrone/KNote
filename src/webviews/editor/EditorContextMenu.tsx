@@ -49,6 +49,7 @@ import {
   ExternalLink,
   Eye,
   Film,
+  FileText,
   ImagePlus,
   Flag,
   IndentDecrease,
@@ -97,6 +98,7 @@ import { titleOf } from '@shared/pathUtils'
 import { host } from '../shared/rpc'
 import { toggleWrap } from './markdownFormatting'
 import { mdLinkAt, type MdLink } from './mdLinkLogic'
+import { openLink } from './mdLink'
 import { setCheckboxStatus, setSubtaskChecked, getNotePath } from './knoteConstructs'
 import { isBoardTask } from './editorMode'
 import { copyTaskLink } from './taskLink'
@@ -114,6 +116,7 @@ import {
   insertCodeBlock,
   insertDrawioDiagram,
   insertMachineEntry,
+  insertFileLink,
   insertImage,
   insertVideo,
   insertMarkdownLink,
@@ -413,7 +416,7 @@ function linkItems(
     {
       label: 'Open link',
       icon: <ExternalLink size={ICON} />,
-      onClick: run(() => void host.openExternal(link.url))
+      onClick: run(() => openLink(link.url))
     },
     {
       label: 'Copy link',
@@ -647,6 +650,11 @@ function insertItems(
       onClick: run(() => insertWikiLink(view))
     },
     { label: 'Link…', icon: <Link size={ICON} />, onClick: openSub('link') },
+    {
+      label: 'File link…',
+      icon: <FileText size={ICON} />,
+      onClick: run(() => void insertFileLink(view))
+    },
     { separator: true },
     {
       label: 'Task',

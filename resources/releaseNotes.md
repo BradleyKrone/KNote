@@ -65,6 +65,22 @@ You need push access to the GitHub repo to merge; no Marketplace account or
 token is needed, because KNote is shipped as a `.vsix` from GitHub Releases.
 In Claude Code, `/release-check` does step 1 and runs the CI gates locally for you.
 
+## 3.12.0
+
+- **Link to any file on your computer.** Right-click in Live Preview and pick
+  **Insert ▸ File link…** (or run **KNote: Insert File Link…**), then choose a
+  file — a PDF, Word document, spreadsheet, anything. KNote inserts a
+  `[name](file:///…)` link to it; click the link to open the file in its
+  default app. The file isn't copied, so the link breaks if the file moves.
+  Programs and scripts (`.exe`, `.bat`, `.ps1`, …) are refused on click.
+- **Links, images and videos stay rendered while you edit.** Clicking a line
+  no longer turns everything on it back into raw markdown. A link stays a
+  clickable link, an image stays an image, and the same goes for videos,
+  `[[wiki links]]`, checkboxes, bullets, deliverable pills and bold/italic
+  text. Only the one item the caret is actually inside shows its raw text.
+  Clicking the empty space past a link puts the caret there so you can keep
+  typing; arrow into an item with the keyboard to edit its markdown.
+
 ## 3.11.0
 
 - **Insert and resize images.** Right-click in Live Preview and pick

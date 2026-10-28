@@ -225,6 +225,16 @@ export interface HostApi {
   openExternal(url: string): Promise<void>
 
   /**
+   * Ask the user to pick any file on disk (native open dialog) and return its
+   * display name and `file:` URL — or null if cancelled. Used by "Insert ▸
+   * File link…". Nothing is copied.
+   */
+  pickFileForLink(): Promise<{ name: string; url: string } | null>
+
+  /** Open a `file:` link in the OS default app (refuses runnable files). */
+  openFile(url: string): Promise<void>
+
+  /**
    * Open a raw wiki target ("Note", "Note#Heading", "folder/Note"), creating
    * the note (Obsidian behavior) when it doesn't resolve.
    */

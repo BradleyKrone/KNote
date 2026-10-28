@@ -43,6 +43,29 @@ export function mdLinkAt(lineText: string, lineFrom: number, pos: number): MdLin
 }
 
 /**
+ * True when a selection range reaches into `[from, to)` — the test for
+ * revealing one construct's raw markdown (see reveal.ts). By default a bare
+ * caret has to sit strictly inside: clicking the empty space past a
+ * line-ending link parks it exactly at `to`, and that must not unrender the
+ * link. With `edges`, a caret sitting right against either end counts too —
+ * how the keyboard gets into a widget it would otherwise hop straight over.
+ */
+export function rangeTouches(
+  ranges: readonly { from: number; to: number }[],
+  from: number,
+  to: number,
+  edges = false
+): boolean {
+  return ranges.some((r) =>
+    r.from === r.to
+      ? edges
+        ? r.from >= from && r.from <= to
+        : r.from > from && r.from < to
+      : r.from < to && r.to > from
+  )
+}
+
+/**
  * A `[text](url)` link. The text falls back to the URL when blank, so an
  * inserted link is never an invisible empty span.
  */

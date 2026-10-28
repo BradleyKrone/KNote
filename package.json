@@ -1,7 +1,7 @@
 {
   "name": "knote",
   "displayName": "KNote",
-  "version": "3.11.0",
+  "version": "3.12.0",
   "description": "KNote — a local-first Markdown vault with a checkbox-driven Kanban board, wiki links, and vault-wide search, as a VS Code extension",
   "publisher": "bradleykrone",
   "main": "./dist/extension.js",
@@ -172,6 +172,10 @@
       {
         "command": "knote.insertVideo",
         "title": "KNote: Insert Video…"
+      },
+      {
+        "command": "knote.insertFileLink",
+        "title": "KNote: Insert File Link…"
       },
       {
         "command": "knote.cycleTaskStatus",
