@@ -73,6 +73,27 @@ describe('domainOf', () => {
     expect(domain.end).toBe('2027-01-31')
   })
 
+  it('stretches to include a project milestone past every deliverable', () => {
+    const withMilestone = new Map(notes)
+    withMilestone.set(
+      'Q.md',
+      parseNote(
+        'Q.md',
+        [
+          '---',
+          'type: project',
+          'project: q',
+          '---',
+          '- [ ] @task C 🛫 2026-04-01 📅 2026-04-10 @deliverable(q/c)',
+          '🏁 Launch 📅 2026-06-15',
+          ''
+        ].join('\n')
+      )
+    )
+    const domain = domainOf(buildPlannerModel(withMilestone), '2026-04-15')
+    expect(domain.end).toBe('2026-07-15')
+  })
+
   it('still produces a usable domain for an empty vault', () => {
     const empty = domainOf(buildPlannerModel(new Map()), '2026-04-15')
     expect(empty.days).toBe(45)

@@ -2,17 +2,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const replaceLine = vi.fn().mockResolvedValue(undefined)
 const insertLine = vi.fn().mockResolvedValue(undefined)
+const appendToNote = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@/shared/rpc', () => ({
   host: {
     replaceLine: (...args: unknown[]) => replaceLine(...args),
-    insertLine: (...args: unknown[]) => insertLine(...args)
+    insertLine: (...args: unknown[]) => insertLine(...args),
+    appendToNote: (...args: unknown[]) => appendToNote(...args)
   }
 }))
 vi.mock('@/shared/stores', () => ({ showToast: vi.fn() }))
 
-const { addWorkPackage, moveDeliverable, resizeDeliverable, workPackageLine } =
-  await import('@/planner/plannerActions')
+const {
+  addProjectMilestone,
+  addWorkPackage,
+  moveDeliverable,
+  projectMilestoneLine,
+  resizeDeliverable,
+  workPackageLine
+} = await import('@/planner/plannerActions')
 const { buildPlannerModel } = await import('@/planner/plannerSelectors')
 const { parseNote } = await import('@shared/parser/parseNote')
 
@@ -244,5 +252,36 @@ describe('a work package can never extend before or after its deliverable', () =
       release1.rawLine,
       expect.stringContaining('📅 2027-01-01')
     )
+  })
+})
+
+describe('project milestones', () => {
+  beforeEach(() => appendToNote.mockClear())
+
+  it('writes a 🏁 line naming no deliverable', () => {
+    expect(projectMilestoneLine('Go live', '2026-02-01')).toBe('🏁 Go live 📅 2026-02-01')
+  })
+
+  it('appends it to the project note', async () => {
+    await addProjectMilestone('Project.md', 'Go live', '2026-02-01')
+    expect(appendToNote).toHaveBeenCalledWith('Project.md', '🏁 Go live 📅 2026-02-01')
+  })
+
+  it('round-trips onto the project row, not any deliverable', () => {
+    const text = [
+      '---',
+      'type: project',
+      'project: p',
+      '---',
+      '',
+      '- [ ] @task A 🛫 2026-01-01 📅 2026-01-09 @deliverable(p/a)',
+      projectMilestoneLine('Go live', '2026-02-01'),
+      ''
+    ].join('\n')
+    const model = buildPlannerModel(new Map([['Project.md', parseNote('Project.md', text)]]))
+    expect(model.projects[0].milestones.map((m) => [m.text, m.date])).toEqual([
+      ['Go live', '2026-02-01']
+    ])
+    expect(model.byId.get('deliverable/p/a')!.milestones).toEqual([])
   })
 })

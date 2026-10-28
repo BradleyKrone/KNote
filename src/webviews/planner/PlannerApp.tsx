@@ -66,6 +66,7 @@ import {
 import {
   addDeliverable,
   addMilestone,
+  addProjectMilestone,
   addTask,
   addWorkPackage,
   createProject,
@@ -361,6 +362,15 @@ export function PlannerApp(): React.JSX.Element {
     })
   }
 
+  /** A milestone on the project itself — pinned to its row, owned by no deliverable. */
+  const askNewProjectMilestone = (project: PlannerProject): void => {
+    if (refuseIfClosed(project)) return
+    setCreate({
+      request: { kind: 'milestone', contextLabel: project.title },
+      run: (r) => addProjectMilestone(project.path, r.name, r.date)
+    })
+  }
+
   /**
    * One row per other deliverable *in the same project* — dependencies can't
    * cross projects, so the list isn't diluted with candidates that could
@@ -487,6 +497,16 @@ export function PlannerApp(): React.JSX.Element {
           onClick: () => {
             setMenu(null)
             askNewDeliverable(row)
+          }
+        },
+        {
+          label: 'Add milestone…',
+          icon: <Flag size={14} />,
+          disabled: closed,
+          detail: closedNote,
+          onClick: () => {
+            setMenu(null)
+            askNewProjectMilestone(row.project)
           }
         }
       )

@@ -392,3 +392,24 @@ export async function addMilestone(
     `${d.parentId ? 'Work package' : 'Deliverable'} changed on disk — planner refreshed`
   )
 }
+
+/**
+ * A milestone owned by the project itself rather than any deliverable: a 🏁
+ * line in the project note naming no `@deliverable(...)`, which
+ * `buildPlannerModel` pins to the project row.
+ */
+export function projectMilestoneLine(text: string, date: string): string {
+  return `🏁 ${text} 📅 ${date}`
+}
+
+/**
+ * Appended like `addDeliverable` — the line is unindented, so it can never
+ * land inside a deliverable's owned block and get read as one of its members.
+ */
+export async function addProjectMilestone(
+  projectPath: string,
+  text: string,
+  date: string
+): Promise<void> {
+  await host.appendToNote(projectPath, projectMilestoneLine(text, date))
+}
