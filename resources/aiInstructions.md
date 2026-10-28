@@ -204,6 +204,10 @@ end: 2026-06-30
   depend on ("start after") that other deliverable; repeatable.
 - A `🏁 Permits approved 📅 2026-04-12 @deliverable(govalle/design)` line is
   a milestone tied to that deliverable, shown as a diamond on the chart.
+- A `🏁 Go live 📅 2026-06-15` line **in the project's own note** that names
+  no `@deliverable(...)` is a **project milestone**: it belongs to the project
+  itself and is pinned to the project's row. (Outside a project note, a 🏁 line
+  without a deliverable marker is just a timeline entry.)
 - `@parent(<name>)` on a deliverable's own line turns it into a **work
   package** of another deliverable **in the same project**, naming that
   deliverable by its bare name segment only (never `project/name` — the
@@ -287,7 +291,9 @@ When the user asks you to…
   bracket char (`x` / `/` / `w`), adding a Waiting reason line if it's `w`,
   and removing an existing one if it isn't.
 - **Link notes** → use `[[Note Name]]`.
-- **Add a project milestone / deadline marker** → use a `🏁 … 📅 date` line.
+- **Add a project milestone / deadline marker** → use a `🏁 … 📅 date` line —
+  in the project's own note with no `@deliverable(...)` for one owned by the
+  project, or with `@deliverable(<project>/<name>)` to tie it to a deliverable.
 - **Add a project deliverable** → a `@task` line with
   `@deliverable(<project>/<name>)` in the project's own note.
 - **Turn a deliverable into a work package (timeboxing)** → add

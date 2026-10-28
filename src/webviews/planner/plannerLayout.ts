@@ -57,6 +57,12 @@ export function domainOf(model: PlannerModel, now: string = today()): Domain {
       if (m.date > max) max = m.date
     }
   }
+  for (const p of model.projects) {
+    for (const m of p.milestones) {
+      if (m.date < min) min = m.date
+      if (m.date > max) max = m.date
+    }
+  }
   const start = addDays(min, -14)
   const end = addDays(max, 30)
   return { start, end, days: diffDays(start, end) + 1 }
