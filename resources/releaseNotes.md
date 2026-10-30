@@ -65,6 +65,14 @@ You need push access to the GitHub repo to merge; no Marketplace account or
 token is needed, because KNote is shipped as a `.vsix` from GitHub Releases.
 In Claude Code, `/release-check` does step 1 and runs the CI gates locally for you.
 
+## 3.13.1
+
+- Fixed a deliverable dragged to the right in the Planner snapping back to
+  where it started when you let go. The new dates were always saved; the chart
+  just redrew underneath the bar. Dropped bars now stay where you drop them.
+- Fixed the Planner jumping back to today after you dragged a bar past the end
+  of the chart. It now only scrolls to today when you change the zoom.
+
 ## 3.13.0
 
 - **Milestones on a project.** Right-click a project's row in the Planner and
@@ -74,11 +82,6 @@ In Claude Code, `/release-check` does step 1 and runs the CI gates locally for y
   project note with no `@deliverable(...)` marker.
 - Fixed a project milestone dated after every deliverable falling off the
   right-hand edge of the Planner chart.
-- Fixed a deliverable dragged to the right in the Planner snapping back to
-  where it started when you let go. The new dates were always saved; the chart
-  just redrew underneath the bar. Dropped bars now stay where you drop them.
-- Fixed the Planner jumping back to today after you dragged a bar past the end
-  of the chart. It now only scrolls to today when you change the zoom.
 
 ## 3.12.0
 
