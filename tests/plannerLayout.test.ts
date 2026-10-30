@@ -5,6 +5,7 @@ import {
   dateToX,
   diffDays,
   domainOf,
+  domainShiftPx,
   flattenRows,
   gridWidth,
   GROUP_GAP,
@@ -16,6 +17,7 @@ import {
   rowsHeight,
   rowTops,
   ROW_HEIGHT,
+  stableDomain,
   subBands,
   xToDate,
   type Zoom
@@ -57,6 +59,37 @@ describe('date helpers', () => {
   it('crosses year boundaries', () => {
     expect(addDays('2025-12-31', 1)).toBe('2026-01-01')
     expect(diffDays('2025-12-30', '2026-01-02')).toBe(3)
+  })
+})
+
+describe('stableDomain', () => {
+  const span = (start: string, end: string) => ({ start, end, days: diffDays(start, end) + 1 })
+
+  it('takes the first domain as-is', () => {
+    const next = span('2026-01-01', '2026-03-01')
+    expect(stableDomain(null, next)).toBe(next)
+  })
+
+  it('never lets the start move later — the chart would slide left under a dropped bar', () => {
+    // Dragging the earliest deliverable right pulls `domainOf`'s start along.
+    const prev = span('2026-01-01', '2026-03-01')
+    expect(stableDomain(prev, span('2026-01-20', '2026-03-01'))).toBe(prev)
+  })
+
+  it('never lets the end move earlier', () => {
+    const prev = span('2026-01-01', '2026-03-01')
+    expect(stableDomain(prev, span('2026-01-01', '2026-02-01'))).toBe(prev)
+  })
+
+  it('widens to cover a later end and an earlier start', () => {
+    const grown = stableDomain(span('2026-01-10', '2026-03-01'), span('2026-01-01', '2026-04-01'))
+    expect(grown).toEqual(span('2026-01-01', '2026-04-01'))
+  })
+
+  it('reports how far an earlier start pushed the content right', () => {
+    const prev = span('2026-01-10', '2026-03-01')
+    expect(domainShiftPx(prev, span('2026-01-01', '2026-03-01'), 'week')).toBe(9 * PX_PER_DAY.week)
+    expect(domainShiftPx(prev, prev, 'week')).toBe(0)
   })
 })
 

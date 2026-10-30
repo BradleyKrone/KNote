@@ -68,6 +68,29 @@ export function domainOf(model: PlannerModel, now: string = today()): Domain {
   return { start, end, days: diffDays(start, end) + 1 }
 }
 
+/**
+ * `next`, widened to still cover all of `prev` — the domain an open chart
+ * actually draws. Every bar's x is measured from `domain.start`, so letting
+ * the range shrink under an edit slides the whole chart sideways while the
+ * scroll position stays put: drag the earliest deliverable right and the left
+ * edge follows it, and the bar you just dropped appears to snap back. Growing
+ * only keeps every date at the same x, apart from extending to the left, which
+ * the caller compensates for by scrolling (see `domainShiftPx`). Returns `prev`
+ * itself when nothing changed, so it can sit in state without re-rendering.
+ */
+export function stableDomain(prev: Domain | null, next: Domain): Domain {
+  if (!prev) return next
+  const start = prev.start < next.start ? prev.start : next.start
+  const end = prev.end > next.end ? prev.end : next.end
+  if (start === prev.start && end === prev.end) return prev
+  return { start, end, days: diffDays(start, end) + 1 }
+}
+
+/** Pixels the content moved right when the domain's start went from `prev` to `next`. */
+export function domainShiftPx(prev: Domain, next: Domain, zoom: Zoom): number {
+  return diffDays(next.start, prev.start) * PX_PER_DAY[zoom]
+}
+
 export function dateToX(domain: Domain, date: string, zoom: Zoom): number {
   return diffDays(domain.start, date) * PX_PER_DAY[zoom]
 }

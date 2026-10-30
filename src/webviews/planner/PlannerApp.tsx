@@ -5,7 +5,7 @@
 // stays the source of truth and an external edit reconciles by simply
 // re-rendering from the next index delta.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   CalendarPlus,
   CalendarRange,
@@ -37,6 +37,7 @@ import {
   addDays,
   dateToX,
   domainOf,
+  domainShiftPx,
   flattenRows,
   gridWidth,
   monthBands,
@@ -44,8 +45,10 @@ import {
   rowsHeight,
   rowTops,
   ROW_HEIGHT,
+  stableDomain,
   subBands,
   today as todayDate,
+  type Domain,
   type PlannerRow,
   type Zoom
 } from './plannerLayout'
@@ -128,7 +131,12 @@ export function PlannerApp(): React.JSX.Element {
   const rowIndex = useMemo(() => rowIndexById(rows), [rows])
   const tops = useMemo(() => rowTops(rows), [rows])
   const chartHeight = useMemo(() => rowsHeight(rows), [rows])
-  const domain = useMemo(() => domainOf(model, today), [model, today])
+  // Only ever widens while the planner is open — see `stableDomain`.
+  const domainRef = useRef<Domain | null>(null)
+  const domain = useMemo(
+    () => (domainRef.current = stableDomain(domainRef.current, domainOf(model, today))),
+    [model, today]
+  )
   const months = useMemo(() => monthBands(domain, zoom), [domain, zoom])
   const subs = useMemo(() => subBands(domain, zoom), [domain, zoom])
   const violated = useMemo(() => violatedDependencies(model), [model])
@@ -268,7 +276,21 @@ export function PlannerApp(): React.JSX.Element {
     centeredOnce.current = true
     scrollToToday()
   }, [model, scrollToToday])
-  useEffect(() => scrollToToday(), [zoom, scrollToToday])
+  // Keyed on zoom alone: `scrollToToday` changes identity with the domain, and
+  // re-running on that would yank the view back to today whenever an edit
+  // grew the chart — e.g. dragging a bar right past its end.
+  const scrollToTodayRef = useRef(scrollToToday)
+  scrollToTodayRef.current = scrollToToday
+  useEffect(() => scrollToTodayRef.current(), [zoom])
+
+  // When the domain grows to the left, everything already drawn moves right
+  // by the same amount; scroll with it so nothing on screen appears to move.
+  const shownDomain = useRef(domain)
+  useLayoutEffect(() => {
+    const shift = domainShiftPx(shownDomain.current, domain, zoom)
+    shownDomain.current = domain
+    if (shift !== 0 && scrollRef.current) scrollRef.current.scrollLeft += shift
+  }, [domain, zoom])
 
   // ---------- Default collapse ----------
   // Start every deliverable collapsed so the chart opens showing just the
