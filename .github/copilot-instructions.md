@@ -209,6 +209,10 @@ the board and the planner agree without importing each other:
   stripped from labels: election slugifies the stripped text.
 - Which projects are charted is stored in `VaultConfig.hiddenProjects` —
   the *hidden* set, so a newly created project shows up on its own.
+- The tree's drag-to-reorder is stored in `VaultConfig.plannerOrder` (scope
+  `''`/`p:<slug>`/`d:<tag>` → line-free row keys) and applied in
+  `flattenRows` — display-only, like `hiddenProjects`; it never rewrites a
+  note, and a drop is refused between rows with different parents.
 - Dragging a bar rewrites the task line through the ordinary verified-edit
   path (`plannerActions.ts` → `verifiedEdit` / `core/lineEdit`); it is not a
   special case. Layout maths live in `plannerLayout.ts` and are unit-tested

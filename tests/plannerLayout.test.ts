@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   addDays,
+  applyOrder,
+  moveInOrder,
+  scopeOrderKeys,
   dateToCenterX,
   dateToX,
   diffDays,
@@ -242,6 +245,103 @@ describe('flattenRows project visibility', () => {
 
   it('yields nothing when every project is unticked', () => {
     expect(flattenRows(both, new Set(), null, new Set(['a', 'b']))).toEqual([])
+  })
+})
+
+describe('applyOrder / moveInOrder', () => {
+  const id = (s: string): string => s
+
+  it('leaves the default order alone with nothing saved', () => {
+    expect(applyOrder(['a', 'b', 'c'], id, undefined)).toEqual(['a', 'b', 'c'])
+    expect(applyOrder(['a', 'b', 'c'], id, [])).toEqual(['a', 'b', 'c'])
+  })
+
+  it('puts saved keys first in saved order, the rest after in default order', () => {
+    expect(applyOrder(['a', 'b', 'c', 'd'], id, ['c', 'a'])).toEqual(['c', 'a', 'b', 'd'])
+  })
+
+  it('ignores saved keys that no longer match anything', () => {
+    expect(applyOrder(['a', 'b'], id, ['gone', 'b'])).toEqual(['b', 'a'])
+  })
+
+  it('moves a key before or after a target', () => {
+    expect(moveInOrder(['a', 'b', 'c'], 'c', 'a', 'before')).toEqual(['c', 'a', 'b'])
+    expect(moveInOrder(['a', 'b', 'c'], 'a', 'b', 'after')).toEqual(['b', 'a', 'c'])
+    expect(moveInOrder(['a', 'b', 'c'], 'a', 'c', 'after')).toEqual(['b', 'c', 'a'])
+  })
+
+  it('is a no-op for a missing key or a drop onto itself', () => {
+    expect(moveInOrder(['a', 'b'], 'x', 'a', 'before')).toEqual(['a', 'b'])
+    expect(moveInOrder(['a', 'b'], 'a', 'a', 'after')).toEqual(['a', 'b'])
+  })
+})
+
+describe('flattenRows — saved order', () => {
+  const twoProjects = new Map<string, NoteMeta>()
+  twoProjects.set(
+    'A.md',
+    parseNote(
+      'A.md',
+      '---\ntype: project\nproject: a\n---\n- [ ] @task A1 📅 2026-06-01 #deliverable/a/one\n'
+    )
+  )
+  twoProjects.set(
+    'B.md',
+    parseNote(
+      'B.md',
+      '---\ntype: project\nproject: b\n---\n- [ ] @task B1 📅 2026-06-01 #deliverable/b/one\n'
+    )
+  )
+  const both = buildPlannerModel(twoProjects)
+
+  it('reorders projects and renumbers them by position', () => {
+    const rows = flattenRows(both, new Set(), null, new Set(), { '': ['p:b', 'p:a'] })
+    const projects = rows.filter((r) => r.kind === 'project')
+    expect(projects.map((r) => r.kind === 'project' && r.project.slug)).toEqual(['b', 'a'])
+    expect(projects.map((r) => r.number)).toEqual(['1', '2'])
+    // Each project's children move with it.
+    expect(rows.map((r) => r.number)).toEqual(['1', '1.1', '2', '2.1'])
+  })
+
+  it('reorders a project’s deliverables and milestones, carrying their children', () => {
+    const rows = flattenRows(model, new Set(), null, new Set(), {
+      'p:p': ['d:deliverable/p/b', 'd:deliverable/p/a']
+    })
+    expect(rows.map((r) => `${r.number} ${r.kind}`)).toEqual([
+      '1 project',
+      '1.1 deliverable',
+      '1.2 deliverable',
+      '1.2.1 task',
+      '1.2.2 milestone'
+    ])
+    expect(rows[1].kind === 'deliverable' && rows[1].deliverable.id).toBe('deliverable/p/b')
+  })
+
+  it('reorders a deliverable’s tasks and milestones by line-free keys', () => {
+    const rows = flattenRows(model, new Set(), null, new Set(), {
+      'd:deliverable/p/a': ['m:P.md::Kickoff']
+    })
+    expect(rows.slice(2, 4).map((r) => r.kind)).toEqual(['milestone', 'task'])
+    expect(rows[2].parentKey).toBe('d:deliverable/p/a')
+  })
+
+  it('tags every row with its scope and order key', () => {
+    const rows = flattenRows(model, new Set())
+    expect(rows.map((r) => [r.parentKey, r.orderKey])).toEqual([
+      ['', 'p:p'],
+      ['p:p', 'd:deliverable/p/a'],
+      ['d:deliverable/p/a', 't:P.md::a task'],
+      ['d:deliverable/p/a', 'm:P.md::Kickoff'],
+      ['p:p', 'd:deliverable/p/b']
+    ])
+  })
+
+  it('scopeOrderKeys includes hidden projects so their places survive a drop', () => {
+    expect(scopeOrderKeys(both, '', { '': ['p:b'] })).toEqual(['p:b', 'p:a'])
+    expect(scopeOrderKeys(model, 'd:deliverable/p/a', {})).toEqual([
+      't:P.md::a task',
+      'm:P.md::Kickoff'
+    ])
   })
 })
 

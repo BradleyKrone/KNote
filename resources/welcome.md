@@ -598,6 +598,7 @@ In the chart:
 | Drag a bar's right edge, or edit its due date | changes the end date — **and carries anything waiting on it along by the same number of days**, same as a full drag |
 | Drag the 🔗 grip onto another bar | makes that bar wait on this one (a link that would create a loop is refused) |
 | Double-click any row | opens the note at that line |
+| Drag a row in the tree up or down | reorders it among its siblings — projects among projects, a project's deliverables and milestones, a deliverable's work packages, tasks and milestones (children move with it). It can't change a row's parent. The order is saved in the vault's `.knote/config.json`, never in your notes; right-click → **Reset order** puts that level back to the default |
 | Right-click a deliverable → **Edit dates…** | a calendar for both ends of the span, with 1/3/5/10/20-day length presets and ±1d/±1w/Today nudges that slide the span without changing its length |
 | Right-click a deliverable → **Depends on ▸** | every other deliverable, ticked where it's already a predecessor — click to add or remove. Anything that would create a loop is greyed out and labelled *would loop* |
 | Right-click a project or deliverable → **Color ▸** | pick its bar color (blue, green, yellow, purple, orange, teal, pink, gray). A deliverable with no color of its own uses its parent deliverable's, then its project's; **Default** clears the choice. Overdue (red) and done (gray) still override it |
@@ -628,7 +629,7 @@ predecessor — the same picker the chart's right-click menu uses.
 
 Right-click a project for **Set target end date…** and **Mark project
 completed** / **Reopen project**. Completed projects sort to the bottom of
-the list and are **closed for business**: Add deliverable / task /
+the list (unless you've dragged them elsewhere) and are **closed for business**: Add deliverable / task /
 milestone are greyed out, and their deliverables disappear from
 `@deliverable(...)` and `#` tag autocomplete, so old work can't be filed
 against a finished project by accident. Reopening restores all of it.
