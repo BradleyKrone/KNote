@@ -21,15 +21,15 @@ import {
   RotateCcw,
   Unlock
 } from 'lucide-react'
-import { DatePickerContent } from '../shared/components/DatePickerContent'
 import { host } from '../shared/rpc'
 import { showToast, useConfigStore, useIndexStore } from '../shared/stores'
 import { Popover } from '../shared/components/Popover'
 import { ContextMenuList, type MenuEntry } from '../shared/components/ContextMenuList'
-import { Bar, MilestoneMark } from './Bar'
+import { Bar, MilestoneMark, ProjectWindow } from './Bar'
 import { CreateDialog, type CreateRequest, type CreateResult } from './CreateDialogs'
 import { DependencyArrows, LinkPreview, type Span } from './DependencyArrows'
 import { GridBody, GridHeader } from './TimeGrid'
+import { ProjectDatesPicker } from './ProjectDatesPicker'
 import { SpanPicker } from './SpanPicker'
 import { TreePane } from './TreePane'
 import { useBarDrag, type DragState } from './useBarDrag'
@@ -46,6 +46,7 @@ import {
   rowTops,
   ROW_HEIGHT,
   moveInOrder,
+  projectOrderKey,
   scopeOrderKeys,
   stableDomain,
   subBands,
@@ -63,6 +64,7 @@ import {
   defaultProjectColor,
   deliverableBarStatus,
   inheritedBarColor,
+  projectWindow,
   vaultFolders,
   violatedDependencies,
   wouldCycle,
@@ -77,23 +79,159 @@ import {
   addTask,
   addWorkPackage,
   createProject,
+  editProjectDates,
+  lineKey,
   linkDependency,
+  moveDatedLine,
   moveDeliverable,
+  moveProject,
+  planProjectDates,
+  planProjectMove,
+  planShrink,
+  projectEdgeDates,
+  type PointOwner,
+  reflowPreview,
   resizeDeliverable,
   setDeliverableColor,
   setProjectColor,
   setProjectComplete,
-  setProjectEndDate,
   unlinkDependency
 } from './plannerActions'
 
 const TREE_WIDTH = 260
 const ZOOMS: Zoom[] = ['day', 'week', 'month']
 
+/**
+ * A project's dates as a drag (or a write still in flight) leaves them — laid
+ * over the model's own when drawing its window.
+ */
+type ProjectDates = Pick<PlannerProject, 'startDate' | 'dueDate' | 'start' | 'end'>
+
 /** A drag's committed dates take a moment to come back as an index delta; show them meanwhile. */
 interface Pending {
   spans: Map<string, Span>
+  /** Diamonds re-dated along with the bars, by `lineKey`. */
+  points: Map<string, string>
+  /** Project windows moved or resized, by slug. */
+  projects: Map<string, ProjectDates>
   timer: number
+}
+
+/**
+ * Everything a drag in flight changes besides what `spanFor` already shifts
+ * itself: a project drag's bars, diamonds and window, or the children a
+ * shrinking deliverable fits back inside it. Drawn live, and held on drop.
+ */
+interface DragPlan {
+  spans: Map<string, Span>
+  points: Map<string, string>
+  project: { slug: string; dates: ProjectDates } | null
+}
+
+function planDrag(
+  model: PlannerModel,
+  projects: Map<string, PlannerProject>,
+  drag: DragState | null
+): DragPlan | null {
+  if (!drag || drag.mode === 'link' || drag.deltaDays === 0) return null
+  const days = drag.deltaDays
+  const project = projects.get(drag.id)
+  if (project) {
+    if (drag.mode === 'move') {
+      const { spans, points } = planProjectMove(model, project, days)
+      const shift = (date: string | null): string | null => (date ? addDays(date, days) : null)
+      return {
+        spans,
+        points,
+        project: {
+          slug: project.slug,
+          dates: {
+            startDate: shift(project.startDate),
+            dueDate: shift(project.dueDate),
+            start: shift(project.start),
+            end: shift(project.end)
+          }
+        }
+      }
+    }
+    const dates = projectEdgeDates(project, drag.mode === 'resize-start' ? 'start' : 'end', days)
+    if (!dates) return null
+    const { after, reflow } = planProjectDates(project, dates)
+    return {
+      ...reflowPreview(reflow),
+      project: {
+        slug: project.slug,
+        dates: {
+          startDate: after.start,
+          dueDate: after.end,
+          start: project.start,
+          end: project.end
+        }
+      }
+    }
+  }
+  const d = model.byId.get(drag.id)
+  if (!d || drag.mode === 'move') return null
+  const start = drag.mode === 'resize-end' ? d.start : addDays(d.start, days)
+  const end = drag.mode === 'resize-start' ? d.end : addDays(d.end, days)
+  const reflow = planShrink(
+    { kind: 'deliverable', deliverable: d },
+    { start: d.start, end: d.end },
+    start <= end ? { start, end } : { start: end, end }
+  )
+  return { ...reflowPreview(reflow), project: null }
+}
+
+/** Every diamond's current date, by `lineKey` — what a pending re-date is checked against. */
+function lineDates(model: PlannerModel): Map<string, string> {
+  const dates = new Map<string, string>()
+  for (const p of model.projects) for (const m of p.milestones) dates.set(lineKey(m), m.date)
+  for (const d of model.byId.values()) {
+    for (const m of d.milestones) dates.set(lineKey(m), m.date)
+    for (const t of d.tasks) if (t.due) dates.set(lineKey(t), t.due)
+  }
+  return dates
+}
+
+const sameProjectDates = (p: PlannerProject, o: ProjectDates): boolean =>
+  p.startDate === o.startDate && p.dueDate === o.dueDate
+
+/**
+ * A single-date diamond on the chart — a 🏁 milestone, or a task's 📅 — keyed
+ * by its row key, which is also its drag id (`m:`/`t:` never collide with a
+ * deliverable tag).
+ */
+interface DatedPoint {
+  ref: { path: string; line: number; rawLine: string; label: string }
+  date: string
+  /** What it has to stay inside — the deliverable it's drawn under, else its project. */
+  owner: PointOwner | null
+}
+
+function datedPoints(model: PlannerModel, rows: readonly PlannerRow[]): Map<string, DatedPoint> {
+  const points = new Map<string, DatedPoint>()
+  for (const row of rows) {
+    if (row.kind === 'milestone') {
+      const project = row.deliverable
+        ? undefined
+        : model.projects.find((p) => projectOrderKey(p) === row.parentKey)
+      points.set(row.key, {
+        ref: { ...row.milestone, label: row.milestone.text },
+        date: row.milestone.date,
+        owner: row.deliverable
+          ? { kind: 'deliverable', deliverable: row.deliverable }
+          : project
+            ? { kind: 'project', project }
+            : null
+      })
+    } else if (row.kind === 'task' && row.task.due)
+      points.set(row.key, {
+        ref: { ...row.task, label: row.task.text },
+        date: row.task.due,
+        owner: { kind: 'deliverable', deliverable: row.deliverable }
+      })
+  }
+  return points
 }
 
 /**
@@ -101,15 +239,34 @@ interface Pending {
  * the dragged one plus, for a move or resize-end, everything cascading after
  * it — so the chart can grow to fit. Null when nothing is moving.
  */
-function dragReachOf(model: PlannerModel, drag: DragState | null): Span | null {
+function dragReachOf(
+  model: PlannerModel,
+  points: Map<string, DatedPoint>,
+  drag: DragState | null,
+  plan: DragPlan | null
+): Span | null {
   if (!drag || drag.mode === 'link' || drag.deltaDays === 0) return null
+  if (plan?.project) {
+    const { dates } = plan.project
+    const all = [
+      ...[...plan.spans.values()].flatMap((s) => [s.start, s.end]),
+      ...plan.points.values(),
+      ...[dates.startDate, dates.dueDate, dates.start, dates.end].filter((x): x is string => !!x)
+    ].sort()
+    return all.length > 0 ? { start: all[0], end: all[all.length - 1] } : null
+  }
+  const point = points.get(drag.id)
+  if (point) {
+    const date = addDays(point.date, drag.deltaDays)
+    return { start: date, end: date }
+  }
   const d = model.byId.get(drag.id)
   if (!d) return null
   const delta = drag.deltaDays
   let start = drag.mode === 'resize-end' ? d.start : addDays(d.start, delta)
   let end = drag.mode === 'resize-start' ? d.end : addDays(d.end, delta)
   if (drag.mode !== 'resize-start') {
-    for (const id of cascadeShift(model, drag.id, delta)) {
+    for (const id of cascadeShift(model, drag.id, delta, drag.mode === 'move')) {
       const moved = id === drag.id ? undefined : model.byId.get(id)
       if (!moved) continue
       const s = addDays(moved.start, delta)
@@ -165,7 +322,16 @@ export function PlannerApp(): React.JSX.Element {
   // Mirrors the bar drag in flight (see `useBarDrag` below); declared up here
   // because the domain grows to fit it.
   const [drag, setDrag] = useState<DragState | null>(null)
-  const dragReach = useMemo(() => dragReachOf(model, drag), [model, drag])
+  const points = useMemo(() => datedPoints(model, rows), [model, rows])
+  const projectByKey = useMemo(
+    () => new Map(model.projects.map((p) => [projectOrderKey(p), p])),
+    [model]
+  )
+  const dragPlan = useMemo(() => planDrag(model, projectByKey, drag), [model, projectByKey, drag])
+  const dragReach = useMemo(
+    () => dragReachOf(model, points, drag, dragPlan),
+    [model, points, drag, dragPlan]
+  )
   // Only ever widens while the planner is open — see `stableDomain`. A drag
   // past the chart's edge widens it too, so the bar always has room to go.
   const domainRef = useRef<Domain | null>(null)
@@ -188,11 +354,49 @@ export function PlannerApp(): React.JSX.Element {
   // than lying about the schedule forever.
   const [pending, setPending] = useState<Pending | null>(null)
   useEffect(() => {
-    if (pending) setPending(null)
-    // Any index change means the write came back — drop the overlay.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes])
+    // Drop each bar from the overlay only once the index shows it at its new
+    // dates. A move writes several lines one after another (a deliverable,
+    // then its work packages and dependents), and each lands as its own delta
+    // — clearing everything on the first would snap the rest back for a beat
+    // before their own writes arrived.
+    setPending((prev) => {
+      if (!prev) return prev
+      const spans = new Map(
+        [...prev.spans].filter(([id, span]) => {
+          const d = model.byId.get(id)
+          return !d || d.start !== span.start || d.end !== span.end
+        })
+      )
+      const dates = lineDates(model)
+      const points = new Map([...prev.points].filter(([key, date]) => dates.get(key) !== date))
+      const projects = new Map(
+        [...prev.projects].filter(([slug, o]) => {
+          const p = model.projects.find((x) => x.slug === slug)
+          return !!p && !sameProjectDates(p, o)
+        })
+      )
+      if (
+        spans.size === prev.spans.size &&
+        points.size === prev.points.size &&
+        projects.size === prev.projects.size
+      )
+        return prev
+      if (spans.size + points.size + projects.size > 0) return { ...prev, spans, points, projects }
+      window.clearTimeout(prev.timer)
+      return null
+    })
+  }, [model])
   useEffect(() => () => (pending ? window.clearTimeout(pending.timer) : undefined), [pending])
+
+  // Same idea for dropped milestones / task diamonds: row key → date written.
+  const [pendingPoints, setPendingPoints] = useState<Map<string, string>>(new Map())
+  useEffect(() => {
+    setPendingPoints((prev) => {
+      if (prev.size === 0) return prev
+      const next = new Map([...prev].filter(([key, date]) => points.get(key)?.date !== date))
+      return next.size === prev.size ? prev : next
+    })
+  }, [points])
 
   const previewOf = useCallback(
     (id: string): Span | null => pending?.spans.get(id) ?? null,
@@ -202,6 +406,82 @@ export function PlannerApp(): React.JSX.Element {
   // ---------- Drag ----------
   const commit = useCallback(
     (state: DragState) => {
+      const point = points.get(state.id)
+      if (point) {
+        if (state.mode !== 'move' || state.deltaDays === 0) return
+        const key = state.id
+        // Held where it was dropped while the extend question (if any) is
+        // open; `onPlan` then swaps in what will really be written.
+        let date = addDays(point.date, state.deltaDays)
+        setPendingPoints((prev) => new Map(prev).set(key, date))
+        const clear = (): void =>
+          setPendingPoints((prev) => {
+            if (prev.get(key) !== date) return prev
+            const next = new Map(prev)
+            next.delete(key)
+            return next
+          })
+        const onPlan = (planned: string, spans: Map<string, Span>): void => {
+          date = planned
+          setPendingPoints((prev) => new Map(prev).set(key, planned))
+          // Safety net, as for bars: a refused write must not leave it parked.
+          window.setTimeout(clear, 2000)
+          if (spans.size > 0)
+            setPending((prev) => {
+              if (prev) window.clearTimeout(prev.timer)
+              return {
+                spans,
+                points: new Map(),
+                projects: new Map(),
+                timer: window.setTimeout(() => setPending(null), 2000)
+              }
+            })
+        }
+        void moveDatedLine(model, point.owner, point.ref, point.date, state.deltaDays, onPlan).then(
+          (ok) => ok || clear()
+        )
+        return
+      }
+      const project = projectByKey.get(state.id)
+      if (project) {
+        if (state.mode === 'link' || state.deltaDays === 0) return
+        const dropped = planDrag(model, projectByKey, state)
+        if (!dropped?.project) return
+        const { slug, dates } = dropped.project
+        // Held where it was dropped, with no timeout while a trim warning may
+        // be open; `onPlan` then swaps in what's really written, project
+        // window kept, and starts the safety timer.
+        setPending((prev) => {
+          if (prev) window.clearTimeout(prev.timer)
+          return {
+            spans: dropped.spans,
+            points: dropped.points,
+            projects: new Map([[slug, dates]]),
+            timer: 0
+          }
+        })
+        const onPlan = (spans: Map<string, Span>, planned: Map<string, string>): void =>
+          setPending((prev) => {
+            if (prev) window.clearTimeout(prev.timer)
+            return {
+              spans,
+              points: planned,
+              projects: new Map([[slug, dates]]),
+              timer: window.setTimeout(() => setPending(null), 2000)
+            }
+          })
+        if (state.mode === 'move') {
+          void moveProject(model, project, state.deltaDays, onPlan)
+          return
+        }
+        const edge = projectEdgeDates(
+          project,
+          state.mode === 'resize-start' ? 'start' : 'end',
+          state.deltaDays
+        )
+        if (edge) void editProjectDates(project, edge, onPlan).then((ok) => ok || setPending(null))
+        return
+      }
       const d = model.byId.get(state.id)
       if (!d) return
       if (state.mode === 'link') {
@@ -219,47 +499,52 @@ export function PlannerApp(): React.JSX.Element {
         return
       }
       if (state.deltaDays === 0) return
-      if (state.mode === 'move') {
-        // Preview the whole cascade, not just the bar under the pointer.
-        const spans = new Map<string, Span>()
-        for (const id of cascadeShift(model, state.id, state.deltaDays)) {
+      const start = state.mode === 'resize-end' ? d.start : addDays(d.start, state.deltaDays)
+      const end = state.mode === 'resize-start' ? d.end : addDays(d.end, state.deltaDays)
+      // Hold every bar where it was dropped — the dragged one plus whatever was
+      // moving with it (work packages, dependents), exactly as the drag drew
+      // them — with no timeout yet: the write may first ask whether to extend
+      // a parent, and nothing should snap back while that question is open.
+      // `onPlan` then swaps in what will actually be written (clamped, or with
+      // the parent grown) and starts the timer.
+      const dropped = new Map<string, Span>([[d.id, { start, end }]])
+      if (state.mode !== 'resize-start')
+        for (const id of cascadeShift(model, d.id, state.deltaDays, state.mode === 'move')) {
           const moved = model.byId.get(id)
-          if (moved)
-            spans.set(id, {
+          if (moved && id !== d.id)
+            dropped.set(id, {
               start: addDays(moved.start, state.deltaDays),
               end: addDays(moved.end, state.deltaDays)
             })
         }
-        startPending(spans)
-        void moveDeliverable(model, state.id, state.deltaDays)
-        return
-      }
-      const start = state.mode === 'resize-start' ? addDays(d.start, state.deltaDays) : d.start
-      const end = state.mode === 'resize-end' ? addDays(d.end, state.deltaDays) : d.end
-      const spans = new Map<string, Span>([[d.id, { start, end }]])
-      if (state.mode === 'resize-end') {
-        // Preview the downstream cascade too, same as a whole-bar move.
-        for (const id of cascadeShift(model, state.id, state.deltaDays)) {
-          if (id === d.id) continue
-          const moved = model.byId.get(id)
-          if (moved)
-            spans.set(id, {
-              start: addDays(moved.start, state.deltaDays),
-              end: addDays(moved.end, state.deltaDays)
-            })
+      // A shrink also holds the children it fits back inside.
+      const fitted = planDrag(model, projectByKey, state)
+      for (const [id, span] of fitted?.spans ?? []) if (!dropped.has(id)) dropped.set(id, span)
+      setPending((prev) => {
+        if (prev) window.clearTimeout(prev.timer)
+        return {
+          spans: dropped,
+          points: fitted?.points ?? new Map(),
+          projects: new Map(),
+          timer: 0
         }
-      }
-      startPending(spans)
-      void resizeDeliverable(model, d, start, end)
-
-      function startPending(spans: Map<string, Span>): void {
+      })
+      const onPlan = (spans: Map<string, Span>, planned: Map<string, string>): void =>
         setPending((prev) => {
           if (prev) window.clearTimeout(prev.timer)
-          return { spans, timer: window.setTimeout(() => setPending(null), 2000) }
+          return spans.size === 0 && planned.size === 0
+            ? null
+            : {
+                spans,
+                points: planned,
+                projects: new Map(),
+                timer: window.setTimeout(() => setPending(null), 2000)
+              }
         })
-      }
+      if (state.mode === 'move') void moveDeliverable(model, state.id, state.deltaDays, onPlan)
+      else void resizeDeliverable(model, d, start, end, onPlan)
     },
-    [model]
+    [model, points, projectByKey]
   )
 
   const bar = useBarDrag({ zoom, scrollRef, leftInset: TREE_WIDTH, onCommit: commit })
@@ -285,17 +570,34 @@ export function PlannerApp(): React.JSX.Element {
         // was waiting on.
         const cascading =
           (drag.mode === 'move' || drag.mode === 'resize-end') &&
-          cascadeShift(model, drag.id, drag.deltaDays).includes(id)
+          cascadeShift(model, drag.id, drag.deltaDays, drag.mode === 'move').includes(id)
         if (cascading)
           return {
             start: addDays(base.start, drag.deltaDays),
             end: addDays(base.end, drag.deltaDays)
           }
       }
-      return previewOf(id) ?? base
+      // A project drag's bars, or the children a shrinking bar fits inside it.
+      return dragPlan?.spans.get(id) ?? previewOf(id) ?? base
     },
-    [model, drag, previewOf, today]
+    [model, drag, dragPlan, previewOf, today]
   )
+
+  /** Date to draw a milestone/task diamond at: the live drag, then the pending write, then the model. */
+  const pointDate = (key: string, ref: { path: string; line: number }, date: string): string => {
+    if (drag?.id === key && drag.mode === 'move') return addDays(date, drag.deltaDays)
+    const line = lineKey(ref)
+    return dragPlan?.points.get(line) ?? pendingPoints.get(key) ?? pending?.points.get(line) ?? date
+  }
+
+  /** `project` with its dates as a drag in flight, or a write not yet landed, leaves them. */
+  const projectAsDrawn = (project: PlannerProject): PlannerProject => {
+    const dates =
+      dragPlan?.project?.slug === project.slug
+        ? dragPlan.project.dates
+        : pending?.projects.get(project.slug)
+    return dates ? { ...project, ...dates } : project
+  }
 
   // ---------- Scroll to today ----------
   // The tree pane is sticky-left inside the same scroller, so today is offset
@@ -538,9 +840,12 @@ export function PlannerApp(): React.JSX.Element {
     if (row.kind === 'project') {
       items.push(
         {
-          label: 'Set target end date…',
+          label: 'Set project dates…',
           icon: <CalendarRange size={14} />,
-          detail: row.project.dueDate ?? 'none',
+          detail:
+            row.project.startDate || row.project.dueDate
+              ? `${row.project.startDate ?? '…'} → ${row.project.dueDate ?? '…'}`
+              : 'none',
           onClick: () => {
             setMenu(null)
             setProjectDate({ project: row.project, point: menuPoint })
@@ -819,6 +1124,31 @@ export function PlannerApp(): React.JSX.Element {
                     className={`planner-lane${row.kind === 'project' && i > 0 ? ' project-start' : ''}`}
                     style={{ top: tops[i], height: ROW_HEIGHT }}
                   >
+                    {row.kind === 'project' &&
+                      (() => {
+                        const w = projectWindow(projectAsDrawn(row.project))
+                        return (
+                          w && (
+                            <ProjectWindow
+                              window={w}
+                              title={row.project.title}
+                              color={row.project.color ?? defaultProjectColor(row.project, model)}
+                              domain={domain}
+                              zoom={zoom}
+                              dragging={drag?.id === row.key}
+                              locked={locked}
+                              onGrip={(e, mode) => {
+                                if (!locked) bar.start(e, row.key, mode)
+                              }}
+                              onOpen={() => openRow(row)}
+                              onContextMenu={(e) => {
+                                e.preventDefault()
+                                setMenu({ row, point: { x: e.clientX, y: e.clientY } })
+                              }}
+                            />
+                          )
+                        )
+                      })()}
                     {row.kind === 'deliverable' &&
                       (() => {
                         const span = spanFor(row.deliverable.id)
@@ -849,9 +1179,17 @@ export function PlannerApp(): React.JSX.Element {
                       })()}
                     {row.kind === 'milestone' && (
                       <MilestoneMark
-                        milestone={row.milestone}
+                        milestone={{
+                          ...row.milestone,
+                          date: pointDate(row.key, row.milestone, row.milestone.date)
+                        }}
                         domain={domain}
                         zoom={zoom}
+                        dragging={drag?.id === row.key}
+                        locked={locked}
+                        onPointerDown={(e) => {
+                          if (!locked) bar.start(e, row.key, 'move')
+                        }}
                         onOpen={() => openRow(row)}
                       />
                     )}
@@ -860,11 +1198,16 @@ export function PlannerApp(): React.JSX.Element {
                         milestone={{
                           ...row.task,
                           text: row.task.text,
-                          date: row.task.due,
+                          date: pointDate(row.key, row.task, row.task.due),
                           important: false
                         }}
                         domain={domain}
                         zoom={zoom}
+                        dragging={drag?.id === row.key}
+                        locked={locked}
+                        onPointerDown={(e) => {
+                          if (!locked) bar.start(e, row.key, 'move')
+                        }}
                         onOpen={() => openRow(row)}
                       />
                     )}
@@ -912,11 +1255,26 @@ export function PlannerApp(): React.JSX.Element {
           // span the user never saw.
           const d = model.byId.get(spanEditor.deliverable.id) ?? spanEditor.deliverable
           const parent = d.parentId ? model.byId.get(d.parentId) : undefined
+          const project = parent ? undefined : model.projects.find((p) => p.slug === d.project)
           return (
             <Popover anchorPoint={spanEditor.point} onClose={() => setSpanEditor(null)}>
               <SpanPicker
                 deliverable={d}
-                parentWindow={parent && { start: parent.start, end: parent.end }}
+                bound={
+                  parent
+                    ? {
+                        label: `deliverable “${parent.label}”`,
+                        start: parent.start,
+                        end: parent.end
+                      }
+                    : project && (project.startDate || project.dueDate)
+                      ? {
+                          label: `project “${project.title}”`,
+                          start: project.startDate,
+                          end: project.dueDate
+                        }
+                      : undefined
+                }
                 onApply={(start, end) => {
                   setSpanEditor(null)
                   void resizeDeliverable(model, d, start, end)
@@ -925,18 +1283,23 @@ export function PlannerApp(): React.JSX.Element {
             </Popover>
           )
         })()}
-      {projectDate && (
-        <Popover anchorPoint={projectDate.point} onClose={() => setProjectDate(null)}>
-          <DatePickerContent
-            currentDate={projectDate.project.dueDate}
-            onSelect={(date) => {
-              const path = projectDate.project.path
-              setProjectDate(null)
-              void setProjectEndDate(path, notes.get(path)?.frontmatter ?? {}, date)
-            }}
-          />
-        </Popover>
-      )}
+      {projectDate &&
+        (() => {
+          // Live model, like the span editor above: a delta may have landed meanwhile.
+          const project =
+            model.projects.find((p) => p.path === projectDate.project.path) ?? projectDate.project
+          return (
+            <Popover anchorPoint={projectDate.point} onClose={() => setProjectDate(null)}>
+              <ProjectDatesPicker
+                project={project}
+                onApply={(start, end) => {
+                  setProjectDate(null)
+                  void editProjectDates(project, { start, end })
+                }}
+              />
+            </Popover>
+          )
+        })()}
       {create && (
         <CreateDialog
           request={create.request}

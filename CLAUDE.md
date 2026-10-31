@@ -184,14 +184,45 @@ the board and the planner agree without importing each other:
   `flattenRows` recurses into them before a deliverable's own tasks, so a
   work package draws its own row/bar/twisty. `deliverableProgress` rolls a
   work package's total/done into its parent's, so a parent's board badge and
-  chart percent reflect the whole thing it's timeboxing. Its span can never
-  extend outside its parent's own — `plannerActions.ts`'s `resizeDeliverable`
-  clamps each edited endpoint independently into the parent's window, and
-  `moveDeliverable` clamps the whole-bar drag's day delta so a move stops dead
-  at whichever edge it reaches rather than shrinking the bar; `workPackageLine`
-  clamps the same way on creation. This is enforced at the write layer, not
-  just in the drag UI, so the "Edit dates…" picker and any other caller get it
-  for free.
+  chart percent reflect the whole thing it's timeboxing. When a move or
+  resize would run it outside its parent's span — or run a root deliverable
+  outside its project's `start:`/`end:` — `plannerActions.ts` asks (`planOverrun` →
+  `confirm`) whether to **extend** the parent to fit (the deliverable line
+  first, the child unclamped, the project's frontmatter *last*, since a YAML
+  rewrite can shift line numbers). Declined, it clamps: `resizeDeliverable`
+  clamps each edited endpoint independently, `moveDeliverable` clamps the
+  whole-bar drag's day delta so a move stops dead at whichever edge it reaches
+  rather than shrinking the bar. Either way the window is widened by the
+  child's *current* span (`boundsOf`), so a bar already sticking out is never
+  yanked back. A whole-bar move of a deliverable carries its work packages
+  along by the same days (`cascadeShift`, which also does this for every
+  cascaded dependent); a resize of it does not (`movesWhole: false`).
+  `workPackageLine` always clamps on creation. A dragged 🏁 milestone (or a
+  task's due-date diamond) follows the same rules against the deliverable it
+  is drawn under — or, on the project row, the project's dates — via
+  `planPointOverrun`/`moveDatedLine`; that overrun can chain (work package →
+  deliverable → project), so `Overrun.parents` is a list, innermost first,
+  written outermost first. This lives at the
+  write layer, not just in the drag UI, so the "Edit dates…" picker and any
+  other caller get it for free.
+- **Shrinking a parent fits its children** (`planShrink` in
+  `plannerActions.ts`, shared by `resizeDeliverable`, `editProjectDates` and
+  the chart's live preview). Only a side that moved *inward* is enforced, so
+  `boundsOf`'s "never yank back a bar already sticking out" still holds on the
+  other side. A child bar **slides** in keeping its length, carrying
+  everything it holds by the same days. A bar too long to slide is
+  **trimmed** to fill the window, and its own children are then fitted to
+  that, recursively. Any trim must be warned about first (`confirmTrim`), and
+  Cancel writes nothing. Diamonds clamp to the edge. Dependencies are *not*
+  cascaded by a fit, since that would push a dependent back out of a window
+  that only got smaller.
+- The project's date bracket is draggable too, with drag id `p:<slug>`, its
+  row key. `moveProject` (built on the pure `planProjectMove`) shifts every
+  deliverable and work package in the project, their `cascadeShift`
+  dependents in any project, and every 🏁 milestone and dated member task.
+  Each line is written once, and the frontmatter goes **last**, declared
+  sides only (an undeclared side is derived and follows the deliverables).
+  An edge drag is `editProjectDates` via `projectEdgeDates`.
 - Any new *trailing* inline marker must be added to `AFTER_ANCHOR` in
   `parser/patterns.ts` (so it can't be pushed past a `^block-id`) *and* to
   `stripInlineMarkers` — strip dependencies before the generic tag strip or

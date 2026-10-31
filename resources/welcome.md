@@ -542,7 +542,7 @@ old Timeline panel. Everything it shows lives in plain Markdown:
 | Thing | How you write it |
 | --- | --- |
 | Project | a note with `type: project` (and optionally `project: <slug>`) in its frontmatter |
-| Its deadline | `end: 2026-06-30` in the same frontmatter (`due:`/`deadline:` also read) |
+| Its dates | `start: 2026-04-01` and `end: 2026-06-30` in the same frontmatter, both optional (`due:`/`deadline:` also read as the end) — drawn as a bracket on the project's row |
 | Finishing it | `status: completed` — set it from the planner's right-click menu |
 | Deliverable | a `@task` line in that note: `- [ ] @task Design 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/design)` |
 | Its tasks | any checkbox line **anywhere in the vault** (marked or not) carrying that same `@deliverable(govalle/design)` marker — deliberately *not* a `#tag`, so joining a deliverable never clutters the Tags sidebar or `#` autocomplete |
@@ -581,13 +581,26 @@ task that's itself a scheduled deliverable gets a **Work package of…** button
 (next to **Link to deliverable**) to set or clear which deliverable it
 belongs to without typing the marker by hand.
 
-A work package's dates can never fall outside its deliverable's own span —
-dragging its bar, resizing either edge, editing dates from the right-click
-menu, and creating one all clamp to the parent's window, so it's never
-possible to schedule a work package's work outside the deliverable that
-contains it. Right-click → **Add work package…** on a top-level deliverable's
+**Running past a parent.** Drag, resize or edit a work package's dates
+past its deliverable's span — or a deliverable outside its project's `start:`/`end:`
+dates — and the planner asks whether to **Extend** the parent to fit (a
+work package that pushes its deliverable past the project end extends both,
+in one question). **Keep inside** stops it at the parent's edge instead, so
+an accidental overshoot never moves anything. Dragging a whole deliverable bar takes its work
+packages with it; widening it leaves them where they are. New work packages are always
+created inside their deliverable. Right-click → **Add work package…** on a top-level deliverable's
 row to create one directly, its start/end defaulting to (and bounded by) the
 deliverable's own dates.
+
+**Shrinking a parent.** Make a project's dates or a deliverable's span
+shorter (by dragging an edge, or with **Edit dates…** / **Set project
+dates…**) and anything inside it that now sticks out is pulled back in. A
+work package or deliverable **slides in, keeping its length**, and takes
+everything it holds with it. A 🏁 milestone or task due date stops at the new
+edge. If a bar is longer than the new window and would have to be
+**shortened**, a warning lists each one before → after first. **Cancel**
+leaves everything as it was. Only the side you moved is enforced, so
+something that already stuck out on the other side stays put.
 
 In the chart:
 
@@ -596,6 +609,9 @@ In the chart:
 | Drag a bar | moves it — **and everything that depends on it**, by the same number of days. Independent bars never move |
 | Drag a bar's left edge | changes just the start date |
 | Drag a bar's right edge, or edit its due date | changes the end date — **and carries anything waiting on it along by the same number of days**, same as a full drag |
+| Drag a 🏁 milestone (or a task's due-date diamond) | re-dates it — only that line's `📅` changes. Dropped outside the deliverable it sits under (or, on the project row, the project's `start:`/`end:`), it asks whether to **Extend** that parent to fit, exactly like a bar; declined, it stops at the edge |
+| Drag a project's date bracket (on its row) | moves the **whole project**: its `start:`/`end:`, every deliverable and work package, every 🏁 milestone and dated task in it, and anything in another project that depends on one of its deliverables, all by the same number of days |
+| Drag either end of a project's bracket | changes just that date (dragging an open, undeclared end sets it). Shrinking it fits the deliverables inside, as described above |
 | Drag the 🔗 grip onto another bar | makes that bar wait on this one (a link that would create a loop is refused) |
 | Hold any bar drag at the chart's left or right edge | scrolls the chart that way (faster the closer you get), and the timeline grows to fit, so one drag can go as far as you need |
 | Double-click any row | opens the note at that line |
@@ -628,7 +644,7 @@ predecessor — the same picker the chart's right-click menu uses.
 | **overdue** | its `end:` date has passed with work still open. A project with no `end:` date is never overdue — a derived finish isn't a promise |
 | **done** | `status: completed` |
 
-Right-click a project for **Set target end date…** and **Mark project
+Right-click a project for **Set project dates…** (start and end, each optional — press **Apply dates**) and **Mark project
 completed** / **Reopen project**. Completed projects sort to the bottom of
 the list (unless you've dragged them elsewhere) and are **closed for business**: Add deliverable / task /
 milestone are greyed out, and their deliverables disappear from

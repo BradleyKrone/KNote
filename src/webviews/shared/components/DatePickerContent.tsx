@@ -16,9 +16,11 @@ export function DatePickerContent({ currentDate, onSelect }: Props): React.JSX.E
 
   // Draft is local so browsing the native calendar (which fires a real "change" on every
   // month/day it lands on, not just on a final pick) doesn't apply-and-close the popover
-  // on the first click of the next-month arrow. Only a blur (user done with the field)
-  // or a quick-pick button commits.
+  // on the first click of the next-month arrow. A quick-pick button, the Apply row, Enter,
+  // or a blur commits. Blur alone isn't enough: clicking outside closes the popover and
+  // unmounts the input before its blur ever reaches us, silently dropping the pick.
   const [draft, setDraft] = useState(currentDate ?? '')
+  const dirty = !!draft && draft !== currentDate
 
   return (
     <div className="picker">
@@ -40,10 +42,24 @@ export function DatePickerContent({ currentDate, onSelect }: Props): React.JSX.E
           className="picker-date-input"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && dirty) {
+              e.preventDefault()
+              onSelect(draft)
+            }
+          }}
           onBlur={() => {
-            if (draft && draft !== currentDate) onSelect(draft)
+            if (dirty) onSelect(draft)
           }}
         />
+      </div>
+      <div
+        className={`picker-row picker-apply${dirty ? '' : ' disabled'}`}
+        aria-disabled={!dirty}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={dirty ? () => onSelect(draft) : undefined}
+      >
+        Apply date
       </div>
       {currentDate && (
         <div

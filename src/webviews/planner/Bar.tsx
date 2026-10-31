@@ -11,7 +11,12 @@ import {
   type Domain,
   type Zoom
 } from './plannerLayout'
-import type { DeliverableBarStatus, PlannerDeliverable, PlannerMilestone } from './plannerSelectors'
+import type {
+  DeliverableBarStatus,
+  PlannerDeliverable,
+  PlannerMilestone,
+  ProjectWindowSpan
+} from './plannerSelectors'
 import type { DragMode } from './useBarDrag'
 
 const BAR_HEIGHT = 18
@@ -106,28 +111,116 @@ export function Bar({
   )
 }
 
-/** A 🏁 milestone: a diamond pinned to its date. */
+/** A 🏁 milestone: a diamond pinned to its date, dragged sideways to re-date it. */
 export function MilestoneMark({
   milestone,
   domain,
   zoom,
+  dragging,
+  locked,
+  onPointerDown,
   onOpen
 }: {
   milestone: PlannerMilestone
   domain: Domain
   zoom: Zoom
+  dragging: boolean
+  /** Board-wide drag lock, as for bars. */
+  locked: boolean
+  onPointerDown: (e: React.PointerEvent) => void
   onOpen: () => void
 }): React.JSX.Element {
   const size = milestone.important ? 16 : 11
+  const className = [
+    'planner-milestone',
+    milestone.important ? 'important' : '',
+    dragging ? 'dragging' : '',
+    locked ? 'locked' : ''
+  ]
+    .filter(Boolean)
+    .join(' ')
   return (
     <div
-      className={`planner-milestone${milestone.important ? ' important' : ''}`}
+      className={className}
       style={{ left: dateToCenterX(domain, milestone.date, zoom), top: (ROW_HEIGHT - size) / 2 }}
-      title={`${milestone.text} · ${milestone.date}`}
+      title={`${milestone.text} · ${milestone.date}${locked ? ' · locked — unlock the board to drag' : ''}`}
+      onPointerDown={onPointerDown}
       onDoubleClick={onOpen}
     >
       <span className="planner-diamond" style={{ width: size, height: size }} />
       <span className="planner-milestone-label">{milestone.text}</span>
+    </div>
+  )
+}
+
+/**
+ * A project's declared `start:` → `end:` window, drawn as a thin bracket on
+ * the project row. A side the project didn't declare borrows its deliverables'
+ * extent and is drawn open (no end tick), so a derived edge never reads as a
+ * commitment.
+ *
+ * Dragged like a bar: the body moves the whole project (everything in it
+ * comes along), an edge grip moves that one date — dragging an open edge
+ * declares it.
+ */
+export function ProjectWindow({
+  window: w,
+  title,
+  color,
+  domain,
+  zoom,
+  dragging,
+  locked,
+  onGrip,
+  onOpen,
+  onContextMenu
+}: {
+  window: ProjectWindowSpan
+  title: string
+  color: string
+  domain: Domain
+  zoom: Zoom
+  dragging: boolean
+  /** Board-wide drag lock, as for bars. */
+  locked: boolean
+  onGrip: (e: React.PointerEvent, mode: Exclude<DragMode, 'link'>) => void
+  onOpen: () => void
+  onContextMenu: (e: React.MouseEvent) => void
+}): React.JSX.Element {
+  const x = dateToX(domain, w.start, zoom)
+  const width = Math.max(PX_PER_DAY[zoom], (diffDays(w.start, w.end) + 1) * PX_PER_DAY[zoom])
+  const className = [
+    'planner-project-window',
+    `planner-color-${color}`,
+    w.declaredStart ? 'declared-start' : '',
+    w.declaredEnd ? 'declared-end' : '',
+    dragging ? 'dragging' : '',
+    locked ? 'locked' : ''
+  ]
+    .filter(Boolean)
+    .join(' ')
+  return (
+    <div
+      className={className}
+      style={{ left: x, width }}
+      title={`${title} · ${w.declaredStart ? w.start : 'no start'} → ${w.declaredEnd ? w.end : 'no end'}${
+        locked ? ' · locked — unlock the board to drag' : ' · drag to move the whole project'
+      }`}
+      onPointerDown={(e) => onGrip(e, 'move')}
+      onDoubleClick={onOpen}
+      onContextMenu={onContextMenu}
+    >
+      <span className="planner-project-bracket" />
+      <span
+        className="planner-grip start"
+        title="Drag to change the project's start date"
+        onPointerDown={(e) => onGrip(e, 'resize-start')}
+      />
+      <span
+        className="planner-grip end"
+        title="Drag to change the project's end date"
+        onPointerDown={(e) => onGrip(e, 'resize-end')}
+      />
     </div>
   )
 }

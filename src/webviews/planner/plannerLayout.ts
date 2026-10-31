@@ -58,6 +58,11 @@ export function domainOf(model: PlannerModel, now: string = today()): Domain {
     }
   }
   for (const p of model.projects) {
+    // A declared window is drawn on the project row, so it has to fit too.
+    for (const date of [p.startDate, p.dueDate]) {
+      if (date && date < min) min = date
+      if (date && date > max) max = date
+    }
     for (const m of p.milestones) {
       if (m.date < min) min = m.date
       if (m.date > max) max = m.date

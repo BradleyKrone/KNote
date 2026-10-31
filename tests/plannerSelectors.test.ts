@@ -5,6 +5,7 @@ import {
   childFolders,
   deliverableBarStatus,
   notesInFolder,
+  projectWindow,
   vaultFolders,
   violatedDependencies,
   wouldCycle
@@ -492,6 +493,34 @@ describe('project status', () => {
       expect(buildPlannerModel(project([`status: ${value}`], OPEN)).projects[0].complete).toBe(true)
     }
     expect(buildPlannerModel(project(['status: active'], OPEN)).projects[0].complete).toBe(false)
+  })
+
+  it('reads start: as the project’s start date', () => {
+    const p = buildPlannerModel(project(['start: 2026-01-05'], OPEN)).projects[0]
+    expect(p.startDate).toBe('2026-01-05')
+    expect(buildPlannerModel(project([], OPEN)).projects[0].startDate).toBeNull()
+  })
+
+  it('projectWindow is drawn only for a declared side, borrowing the other from deliverables', () => {
+    const window = (fm: string[]) => projectWindow(buildPlannerModel(project(fm, OPEN)).projects[0])
+    expect(window([])).toBeNull()
+    expect(window(['start: 2025-12-01', 'end: 2026-03-01'])).toEqual({
+      start: '2025-12-01',
+      end: '2026-03-01',
+      declaredStart: true,
+      declaredEnd: true
+    })
+    // Deliverable A runs 2026-01-01 → 2026-02-01.
+    expect(window(['end: 2026-03-01'])).toMatchObject({
+      start: '2026-01-01',
+      declaredStart: false
+    })
+    expect(window(['start: 2026-01-15'])).toMatchObject({
+      end: '2026-02-01',
+      declaredEnd: false
+    })
+    // Deliverables all done before the declared start: a one-day mark, not inverted.
+    expect(window(['start: 2026-05-01'])).toMatchObject({ start: '2026-05-01', end: '2026-05-01' })
   })
 
   it('sorts completed projects below live ones', () => {

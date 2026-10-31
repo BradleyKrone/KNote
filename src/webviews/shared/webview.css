@@ -655,6 +655,62 @@ button {
   line-height: 1.5;
 }
 
+.confirm-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.confirm-title + .confirm-message {
+  margin-top: -6px;
+  opacity: 0.85;
+}
+
+.confirm-changes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  column-gap: 8px;
+  row-gap: 4px;
+  align-items: baseline;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 12.5px;
+}
+
+.confirm-change {
+  display: contents;
+}
+
+.confirm-change-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.confirm-change-from {
+  opacity: 0.6;
+  text-decoration: line-through;
+  white-space: nowrap;
+}
+
+.confirm-change-arrow {
+  opacity: 0.6;
+}
+
+.confirm-change-to {
+  white-space: nowrap;
+}
+
+.icon-btn.confirm-btn-primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border-color: var(--vscode-button-background);
+}
+.icon-btn.confirm-btn-primary:hover {
+  background: var(--vscode-button-hoverBackground);
+}
+
 .confirm-actions {
   display: flex;
   justify-content: flex-end;
@@ -2021,6 +2077,49 @@ button {
   --bar-color: #8a8f98;
 }
 
+/* A project's declared start:/end: window, a bracket on its row. A side the
+   project didn't declare is borrowed from its deliverables and left open. */
+/* The hit area is taller than the bracket it draws, so the thin window is
+   still easy to grab. */
+.planner-project-window {
+  position: absolute;
+  top: calc(50% - 8px);
+  height: 16px;
+  pointer-events: auto;
+  cursor: grab;
+  z-index: 1;
+}
+.planner-project-window.dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+}
+.planner-project-window.locked,
+.planner-project-window.locked .planner-grip {
+  cursor: default;
+}
+.planner-project-window.locked .planner-grip {
+  pointer-events: none;
+}
+.planner-project-bracket {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4px;
+  height: 8px;
+  box-sizing: border-box;
+  border-bottom: 2px solid var(--bar-color, #4c8dd8);
+  background: color-mix(in srgb, var(--bar-color, #4c8dd8) 18%, transparent);
+}
+.planner-project-window:not(.locked):hover .planner-project-bracket {
+  background: color-mix(in srgb, var(--bar-color, #4c8dd8) 32%, transparent);
+}
+.planner-project-window.declared-start .planner-project-bracket {
+  border-left: 2px solid var(--bar-color, #4c8dd8);
+}
+.planner-project-window.declared-end .planner-project-bracket {
+  border-right: 2px solid var(--bar-color, #4c8dd8);
+}
+
 /* Swatch shown beside each name in the planner's Color ▸ menu. */
 .planner-swatch {
   display: inline-block;
@@ -2099,6 +2198,21 @@ button {
   align-items: center;
   gap: 5px;
   z-index: 2;
+  cursor: grab;
+  touch-action: none;
+}
+
+.planner-milestone.locked {
+  cursor: default;
+}
+
+.planner-milestone.dragging {
+  cursor: grabbing;
+  z-index: 5;
+}
+
+.planner-milestone.dragging .planner-diamond {
+  outline: 1px solid var(--vscode-focusBorder);
 }
 
 /* Centered on the date pixel itself, not the whole diamond+label row — the
@@ -2212,6 +2326,11 @@ button {
 
 .span-picker-warn {
   color: var(--danger);
+}
+
+.span-picker-hint {
+  margin-top: 4px;
+  opacity: 0.8;
 }
 
 .picker-apply {
