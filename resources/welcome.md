@@ -597,14 +597,15 @@ In the chart:
 | Drag a bar's left edge | changes just the start date |
 | Drag a bar's right edge, or edit its due date | changes the end date — **and carries anything waiting on it along by the same number of days**, same as a full drag |
 | Drag the 🔗 grip onto another bar | makes that bar wait on this one (a link that would create a loop is refused) |
+| Hold any bar drag at the chart's left or right edge | scrolls the chart that way (faster the closer you get), and the timeline grows to fit, so one drag can go as far as you need |
 | Double-click any row | opens the note at that line |
-| Drag a row in the tree up or down | reorders it among its siblings — projects among projects, a project's deliverables and milestones, a deliverable's work packages, tasks and milestones (children move with it). It can't change a row's parent. The order is saved in the vault's `.knote/config.json`, never in your notes; right-click → **Reset order** puts that level back to the default |
+| Drag a row in the tree up or down (while **Unlocked**) | reorders it among its siblings — projects among projects, a project's deliverables and milestones, a deliverable's work packages, tasks and milestones (children move with it). It can't change a row's parent. The order is saved in the vault's `.knote/config.json`, never in your notes; right-click → **Reset order** puts that level back to the default |
 | Right-click a deliverable → **Edit dates…** | a calendar for both ends of the span, with 1/3/5/10/20-day length presets and ±1d/±1w/Today nudges that slide the span without changing its length |
 | Right-click a deliverable → **Depends on ▸** | every other deliverable, ticked where it's already a predecessor — click to add or remove. Anything that would create a loop is greyed out and labelled *would loop* |
 | Right-click a project or deliverable → **Color ▸** | pick its bar color (blue, green, yellow, purple, orange, teal, pink, gray). A deliverable with no color of its own uses its parent deliverable's, then its project's; **Default** clears the choice. Overdue (red) and done (gray) still override it |
 | Right-click a row | also: add a deliverable / task / milestone, and (on a top-level deliverable's row) **Add work package…**. **Add milestone…** on a *project* row adds a project milestone, owned by no deliverable |
 | day / week / month | zoom; **Today** re-centres on the today line |
-| **Locked / Unlocked** button | dragging is off by default so you can't nudge a bar by accident — click it to unlock before dragging, then lock again when you're done. Right-click actions (Edit dates…, Depends on ▸, etc.) work either way |
+| **Locked / Unlocked** button | dragging (bars *and* tree rows) is off by default so you can't nudge one by accident — click it to unlock before dragging, then lock again when you're done. Right-click actions (Edit dates…, Depends on ▸, etc.) work either way |
 
 Bar fill is % complete — the share of the deliverable's tasks that are
 checked (or its own checkbox if it has none). A bar that starts before

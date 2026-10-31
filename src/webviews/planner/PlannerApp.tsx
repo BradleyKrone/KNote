@@ -52,7 +52,8 @@ import {
   today as todayDate,
   type Domain,
   type PlannerRow,
-  type Zoom
+  type Zoom,
+  widenDomain
 } from './plannerLayout'
 import { PLANNER_COLORS, type PlannerColor } from '@shared/deliverables'
 import {
@@ -66,6 +67,7 @@ import {
   violatedDependencies,
   wouldCycle,
   type PlannerDeliverable,
+  type PlannerModel,
   type PlannerProject
 } from './plannerSelectors'
 import {
@@ -92,6 +94,31 @@ const ZOOMS: Zoom[] = ['day', 'week', 'month']
 interface Pending {
   spans: Map<string, Span>
   timer: number
+}
+
+/**
+ * Earliest start and latest end among the bars a drag is moving right now —
+ * the dragged one plus, for a move or resize-end, everything cascading after
+ * it — so the chart can grow to fit. Null when nothing is moving.
+ */
+function dragReachOf(model: PlannerModel, drag: DragState | null): Span | null {
+  if (!drag || drag.mode === 'link' || drag.deltaDays === 0) return null
+  const d = model.byId.get(drag.id)
+  if (!d) return null
+  const delta = drag.deltaDays
+  let start = drag.mode === 'resize-end' ? d.start : addDays(d.start, delta)
+  let end = drag.mode === 'resize-start' ? d.end : addDays(d.end, delta)
+  if (drag.mode !== 'resize-start') {
+    for (const id of cascadeShift(model, drag.id, delta)) {
+      const moved = id === drag.id ? undefined : model.byId.get(id)
+      if (!moved) continue
+      const s = addDays(moved.start, delta)
+      const e = addDays(moved.end, delta)
+      if (s < start) start = s
+      if (e > end) end = e
+    }
+  }
+  return start <= end ? { start, end } : { start: end, end: start }
 }
 
 export function PlannerApp(): React.JSX.Element {
@@ -135,12 +162,18 @@ export function PlannerApp(): React.JSX.Element {
   const rowIndex = useMemo(() => rowIndexById(rows), [rows])
   const tops = useMemo(() => rowTops(rows), [rows])
   const chartHeight = useMemo(() => rowsHeight(rows), [rows])
-  // Only ever widens while the planner is open — see `stableDomain`.
+  // Mirrors the bar drag in flight (see `useBarDrag` below); declared up here
+  // because the domain grows to fit it.
+  const [drag, setDrag] = useState<DragState | null>(null)
+  const dragReach = useMemo(() => dragReachOf(model, drag), [model, drag])
+  // Only ever widens while the planner is open — see `stableDomain`. A drag
+  // past the chart's edge widens it too, so the bar always has room to go.
   const domainRef = useRef<Domain | null>(null)
-  const domain = useMemo(
-    () => (domainRef.current = stableDomain(domainRef.current, domainOf(model, today))),
-    [model, today]
-  )
+  const domain = useMemo(() => {
+    const base = domainOf(model, today)
+    const next = dragReach ? widenDomain(base, dragReach.start, dragReach.end) : base
+    return (domainRef.current = stableDomain(domainRef.current, next))
+  }, [model, today, dragReach])
   const months = useMemo(() => monthBands(domain, zoom), [domain, zoom])
   const subs = useMemo(() => subBands(domain, zoom), [domain, zoom])
   const violated = useMemo(() => violatedDependencies(model), [model])
@@ -167,8 +200,6 @@ export function PlannerApp(): React.JSX.Element {
   )
 
   // ---------- Drag ----------
-  const [drag, setDrag] = useState<DragState | null>(null)
-
   const commit = useCallback(
     (state: DragState) => {
       const d = model.byId.get(state.id)
@@ -231,8 +262,9 @@ export function PlannerApp(): React.JSX.Element {
     [model]
   )
 
-  const bar = useBarDrag({ zoom, scrollRef, onCommit: commit })
+  const bar = useBarDrag({ zoom, scrollRef, leftInset: TREE_WIDTH, onCommit: commit })
   useEffect(() => setDrag(bar.drag), [bar.drag])
+  const rebaseDrag = bar.rebase
 
   /** The span to draw for a deliverable: the live drag, then the pending write, then the model. */
   const spanFor = useCallback(
@@ -293,8 +325,12 @@ export function PlannerApp(): React.JSX.Element {
   useLayoutEffect(() => {
     const shift = domainShiftPx(shownDomain.current, domain, zoom)
     shownDomain.current = domain
-    if (shift !== 0 && scrollRef.current) scrollRef.current.scrollLeft += shift
-  }, [domain, zoom])
+    if (shift !== 0 && scrollRef.current) {
+      scrollRef.current.scrollLeft += shift
+      // That scroll isn't the pointer travelling — keep it out of the drag delta.
+      rebaseDrag(shift)
+    }
+  }, [domain, zoom, rebaseDrag])
 
   // ---------- Default collapse ----------
   // Start every deliverable collapsed so the chart opens showing just the
@@ -708,8 +744,8 @@ export function PlannerApp(): React.JSX.Element {
             onClick={() => setLocked((l) => !l)}
             title={
               locked
-                ? 'Bars are locked — click to unlock and allow dragging'
-                : 'Bars are unlocked — click to lock and prevent dragging'
+                ? 'Bars and rows are locked — click to unlock and allow dragging'
+                : 'Bars and rows are unlocked — click to lock and prevent dragging'
             }
           >
             {locked ? <Lock size={14} /> : <Unlock size={14} />} {locked ? 'Locked' : 'Unlocked'}
@@ -766,6 +802,7 @@ export function PlannerApp(): React.JSX.Element {
               onToggle={toggle}
               onOpen={openRow}
               onReorder={reorder}
+              locked={locked}
               onContextMenu={(e, row) => {
                 e.preventDefault()
                 setMenu({ row, point: { x: e.clientX, y: e.clientY } })

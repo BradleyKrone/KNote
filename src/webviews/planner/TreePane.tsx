@@ -3,7 +3,7 @@
 // so the two panes can never drift out of vertical sync.
 //
 // Rows drag up and down to reorder, but only among siblings (same
-// `parentKey`): moving a row under a different parent would mean rewriting
+// `parentKey`), and only while the board is unlocked: moving a row under a different parent would mean rewriting
 // its `@deliverable(...)`/`@parent(...)` markers, which a drag shouldn't do.
 // The order itself is saved by the parent (`onReorder`), not in any note.
 
@@ -22,6 +22,8 @@ interface Props {
   onContextMenu: (e: React.MouseEvent, row: PlannerRow) => void
   /** A sibling dropped onto another — `position` is which side of `target` it lands. */
   onReorder: (dragged: PlannerRow, target: PlannerRow, position: 'before' | 'after') => void
+  /** Board-wide drag lock — shared with the bars, so reordering is just as deliberate. */
+  locked: boolean
   width: number
 }
 
@@ -78,6 +80,7 @@ export function TreePane({
   onOpen,
   onContextMenu,
   onReorder,
+  locked,
   width
 }: Props): React.JSX.Element {
   const [dragged, setDragged] = useState<PlannerRow | null>(null)
@@ -118,8 +121,12 @@ export function TreePane({
             style={{ height: ROW_HEIGHT, top: tops[i] }}
             onDoubleClick={() => onOpen(row)}
             onContextMenu={(e) => onContextMenu(e, row)}
-            draggable
+            draggable={!locked}
             onDragStart={(e) => {
+              if (locked) {
+                e.preventDefault()
+                return
+              }
               e.dataTransfer.effectAllowed = 'move'
               // Firefox won't start a drag without some data set.
               e.dataTransfer.setData('text/plain', row.key)

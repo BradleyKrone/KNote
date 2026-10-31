@@ -63,9 +63,48 @@ export function domainOf(model: PlannerModel, now: string = today()): Domain {
       if (m.date > max) max = m.date
     }
   }
-  const start = addDays(min, -14)
-  const end = addDays(max, 30)
+  const start = addDays(min, -DOMAIN_PAD_BEFORE)
+  const end = addDays(max, DOMAIN_PAD_AFTER)
   return { start, end, days: diffDays(start, end) + 1 }
+}
+
+/** Days of empty chart kept before the earliest and after the latest date. */
+const DOMAIN_PAD_BEFORE = 14
+const DOMAIN_PAD_AFTER = 30
+
+/**
+ * `domain`, extended so `start`…`end` fits with the usual padding either side —
+ * how the chart keeps growing ahead of a bar being dragged past its edge.
+ * Returns `domain` itself when it already fits.
+ */
+export function widenDomain(domain: Domain, start: string, end: string): Domain {
+  const from = addDays(start, -DOMAIN_PAD_BEFORE)
+  const to = addDays(end, DOMAIN_PAD_AFTER)
+  if (from >= domain.start && to <= domain.end) return domain
+  const s = from < domain.start ? from : domain.start
+  const e = to > domain.end ? to : domain.end
+  return { start: s, end: e, days: diffDays(s, e) + 1 }
+}
+
+/** Width of the zone inside each edge of the chart where a drag starts auto-scrolling. */
+export const EDGE_SCROLL_ZONE = 48
+/** Fastest auto-scroll, in px per animation frame. */
+export const EDGE_SCROLL_MAX = 6
+
+/**
+ * Signed px per frame to auto-scroll the chart while a drag's pointer is at
+ * `x`, given the visible chart's `left`/`right` edges: 0 away from the edges,
+ * ramping up to `EDGE_SCROLL_MAX` at the edge and staying there past it
+ * (pointer capture keeps reporting positions outside the scroller).
+ */
+export function edgeScrollSpeed(x: number, left: number, right: number): number {
+  const zone = Math.min(EDGE_SCROLL_ZONE, (right - left) / 4)
+  if (zone <= 0) return 0
+  const ramp = (depth: number): number =>
+    Math.ceil(EDGE_SCROLL_MAX * Math.min(1, Math.max(0, depth) / zone))
+  if (x > right - zone) return ramp(x - (right - zone))
+  if (x < left + zone) return -ramp(left + zone - x)
+  return 0
 }
 
 /**

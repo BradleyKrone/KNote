@@ -9,6 +9,9 @@ import {
   diffDays,
   domainOf,
   domainShiftPx,
+  edgeScrollSpeed,
+  EDGE_SCROLL_MAX,
+  EDGE_SCROLL_ZONE,
   flattenRows,
   gridWidth,
   GROUP_GAP,
@@ -22,6 +25,7 @@ import {
   ROW_HEIGHT,
   stableDomain,
   subBands,
+  widenDomain,
   xToDate,
   type Zoom
 } from '@/planner/plannerLayout'
@@ -93,6 +97,55 @@ describe('stableDomain', () => {
     const prev = span('2026-01-10', '2026-03-01')
     expect(domainShiftPx(prev, span('2026-01-01', '2026-03-01'), 'week')).toBe(9 * PX_PER_DAY.week)
     expect(domainShiftPx(prev, prev, 'week')).toBe(0)
+  })
+})
+
+describe('widenDomain', () => {
+  const span = (start: string, end: string) => ({ start, end, days: diffDays(start, end) + 1 })
+
+  it('returns the same domain when the dragged span already fits with padding', () => {
+    const domain = span('2026-01-01', '2026-06-01')
+    expect(widenDomain(domain, '2026-02-01', '2026-03-01')).toBe(domain)
+  })
+
+  it('grows the end to 30 days past a bar dragged off the right', () => {
+    const grown = widenDomain(span('2026-01-01', '2026-03-01'), '2026-02-01', '2026-03-10')
+    expect(grown).toEqual(span('2026-01-01', '2026-04-09'))
+  })
+
+  it('grows the start to 14 days before a bar dragged off the left', () => {
+    const grown = widenDomain(span('2026-01-10', '2026-03-01'), '2026-01-05', '2026-01-20')
+    expect(grown).toEqual(span('2025-12-22', '2026-03-01'))
+  })
+})
+
+describe('edgeScrollSpeed', () => {
+  // A 1000px-wide visible chart from x=100 to x=1100.
+  const at = (x: number) => edgeScrollSpeed(x, 100, 1100)
+
+  it('is still away from the edges', () => {
+    expect(at(600)).toBe(0)
+    expect(at(100 + EDGE_SCROLL_ZONE + 1)).toBe(0)
+    expect(at(1100 - EDGE_SCROLL_ZONE - 1)).toBe(0)
+  })
+
+  it('ramps up toward the right edge and caps at it and beyond', () => {
+    const near = at(1100 - EDGE_SCROLL_ZONE / 2)
+    expect(near).toBeGreaterThan(0)
+    expect(near).toBeLessThan(EDGE_SCROLL_MAX)
+    expect(at(1100)).toBe(EDGE_SCROLL_MAX)
+    expect(at(1500)).toBe(EDGE_SCROLL_MAX)
+  })
+
+  it('scrolls left (negative) near the left edge', () => {
+    expect(at(100 + EDGE_SCROLL_ZONE / 2)).toBeLessThan(0)
+    expect(at(100)).toBe(-EDGE_SCROLL_MAX)
+    expect(at(0)).toBe(-EDGE_SCROLL_MAX)
+  })
+
+  it('shrinks the zone on a narrow chart so the middle stays still', () => {
+    expect(edgeScrollSpeed(150, 100, 200)).toBe(0)
+    expect(edgeScrollSpeed(200, 100, 200)).toBe(EDGE_SCROLL_MAX)
   })
 })
 
