@@ -1844,6 +1844,32 @@ button {
   font-weight: 600;
 }
 
+/* Drag-to-reorder: the row being dragged dims, and the insertion line sits on
+   the edge of the row it will land next to. Drawn with ::after (::before is the
+   project-start rule) and inside the row, since the row clips its overflow. */
+.planner-tree-row.dragging {
+  opacity: 0.45;
+}
+
+.planner-tree-row.drop-before::after,
+.planner-tree-row.drop-after::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--vscode-focusBorder);
+  pointer-events: none;
+}
+
+.planner-tree-row.drop-before::after {
+  top: 0;
+}
+
+.planner-tree-row.drop-after::after {
+  bottom: 0;
+}
+
 .planner-tree-row.leaf .planner-row-label {
   color: var(--vscode-descriptionForeground);
 }

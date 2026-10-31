@@ -45,6 +45,8 @@ import {
   rowsHeight,
   rowTops,
   ROW_HEIGHT,
+  moveInOrder,
+  scopeOrderKeys,
   stableDomain,
   subBands,
   today as todayDate,
@@ -124,9 +126,11 @@ export function PlannerApp(): React.JSX.Element {
   const model = useMemo(() => buildPlannerModel(notes), [notes])
   const hiddenProjects = useConfigStore((s) => s.vaultConfig.hiddenProjects)
   const hidden = useMemo(() => new Set(hiddenProjects ?? []), [hiddenProjects])
+  const plannerOrder = useConfigStore((s) => s.vaultConfig.plannerOrder)
+  const order = useMemo(() => plannerOrder ?? {}, [plannerOrder])
   const rows = useMemo(
-    () => flattenRows(model, collapsed, projectFilter, hidden),
-    [model, collapsed, projectFilter, hidden]
+    () => flattenRows(model, collapsed, projectFilter, hidden, order),
+    [model, collapsed, projectFilter, hidden, order]
   )
   const rowIndex = useMemo(() => rowIndexById(rows), [rows])
   const tops = useMemo(() => rowTops(rows), [rows])
@@ -317,6 +321,29 @@ export function PlannerApp(): React.JSX.Element {
       if (!next.delete(key)) next.add(key)
       return next
     })
+
+  /**
+   * Saves one scope's row order to `.knote/config.json` — `null` drops it, so
+   * the scope goes back to the computed order. Display-only: no note changes.
+   */
+  const saveOrder = (scope: string, keys: string[] | null): void => {
+    const config = useConfigStore.getState().vaultConfig
+    const next = { ...(config.plannerOrder ?? {}) }
+    if (keys) next[scope] = keys
+    else delete next[scope]
+    const updated = { ...config, plannerOrder: next }
+    useConfigStore.setState({ vaultConfig: updated })
+    void host.setVaultConfig(updated)
+  }
+
+  const reorder = (dragged: PlannerRow, target: PlannerRow, position: 'before' | 'after'): void => {
+    if (dragged.parentKey !== target.parentKey) return
+    const scope = dragged.parentKey
+    const current = scopeOrderKeys(model, scope, order)
+    const next = moveInOrder(current, dragged.orderKey, target.orderKey, position)
+    if (next.every((key, i) => key === current[i])) return
+    saveOrder(scope, next)
+  }
 
   const openRow = (row: PlannerRow): void => {
     if (row.kind === 'project') void host.openNote(row.project.path)
@@ -614,6 +641,19 @@ export function PlannerApp(): React.JSX.Element {
     }
     items.push(
       { separator: true },
+      ...(order[row.parentKey]
+        ? [
+            {
+              label: 'Reset order',
+              icon: <RotateCcw size={14} />,
+              detail: 'this level',
+              onClick: () => {
+                setMenu(null)
+                saveOrder(row.parentKey, null)
+              }
+            }
+          ]
+        : []),
       {
         label: 'Open in editor',
         onClick: () => {
@@ -725,6 +765,7 @@ export function PlannerApp(): React.JSX.Element {
               collapsed={collapsed}
               onToggle={toggle}
               onOpen={openRow}
+              onReorder={reorder}
               onContextMenu={(e, row) => {
                 e.preventDefault()
                 setMenu({ row, point: { x: e.clientX, y: e.clientY } })

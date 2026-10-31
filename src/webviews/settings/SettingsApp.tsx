@@ -167,6 +167,7 @@ export function SettingsApp(): React.JSX.Element {
       // edited through "KNote: Manage Mounted Folders". tabSize is a number,
       // edited through its own numeric input in the Editor category.
       // boardSortByPriority is a checkbox, toggled from the board toolbar itself.
+      // plannerOrder is set by dragging rows in the Planner tree.
       | 'columns'
       | 'machines'
       | 'deprecatedTags'
@@ -175,6 +176,7 @@ export function SettingsApp(): React.JSX.Element {
       | 'mountNames'
       | 'tabSize'
       | 'boardSortByPriority'
+      | 'plannerOrder'
     >,
     hint?: string
   ): React.JSX.Element => (

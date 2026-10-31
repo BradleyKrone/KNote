@@ -182,32 +182,107 @@ export function subBands(domain: Domain, zoom: Zoom): Band[] {
 
 // ---------- Rows ----------
 
-export type PlannerRow =
-  | { kind: 'project'; key: string; depth: 0; number: string; project: PlannerProject }
-  | {
-      kind: 'deliverable'
-      key: string
-      depth: number
-      number: string
-      project: PlannerProject
-      deliverable: PlannerDeliverable
-    }
-  | {
-      kind: 'task'
-      key: string
-      depth: number
-      number: string
-      deliverable: PlannerDeliverable
-      task: PlannerDeliverable['tasks'][number]
-    }
-  | {
-      kind: 'milestone'
-      key: string
-      depth: number
-      number: string
-      milestone: PlannerMilestone
-      deliverable?: PlannerDeliverable
-    }
+/**
+ * Fields every row carries for drag-to-reorder. `parentKey` names the scope a
+ * row can be reordered within ('' for projects, `p:<slug>` for a project's
+ * children, `d:<id>` for a deliverable's) and `orderKey` is the row's id inside
+ * it. Unlike `key`, `orderKey` carries no line number, so a saved order
+ * survives lines being inserted above a task.
+ */
+interface RowOrder {
+  parentKey: string
+  orderKey: string
+}
+
+export type PlannerRow = RowOrder &
+  (
+    | { kind: 'project'; key: string; depth: 0; number: string; project: PlannerProject }
+    | {
+        kind: 'deliverable'
+        key: string
+        depth: number
+        number: string
+        project: PlannerProject
+        deliverable: PlannerDeliverable
+      }
+    | {
+        kind: 'task'
+        key: string
+        depth: number
+        number: string
+        deliverable: PlannerDeliverable
+        task: PlannerDeliverable['tasks'][number]
+      }
+    | {
+        kind: 'milestone'
+        key: string
+        depth: number
+        number: string
+        milestone: PlannerMilestone
+        deliverable?: PlannerDeliverable
+      }
+  )
+
+/**
+ * The user's drag-to-reorder overrides, `VaultConfig.plannerOrder`: scope
+ * (`parentKey`) → `orderKey`s in the order they were left in.
+ */
+export type PlannerOrder = Readonly<Record<string, readonly string[]>>
+
+/**
+ * `items` reordered by a saved order: every item `saved` names comes first, in
+ * that order, and everything it doesn't (a deliverable created since, say)
+ * follows in its default order. Keys in `saved` that match nothing are
+ * ignored, so a deleted row never leaves a hole.
+ */
+export function applyOrder<T>(
+  items: readonly T[],
+  keyOf: (item: T) => string,
+  saved: readonly string[] | undefined
+): T[] {
+  if (!saved || saved.length === 0) return [...items]
+  const rank = new Map(saved.map((key, i) => [key, i]))
+  return items
+    .map((item, i) => ({ item, i, r: rank.get(keyOf(item)) }))
+    .sort((a, b) => {
+      if (a.r !== undefined && b.r !== undefined) return a.r - b.r
+      if (a.r !== undefined) return -1
+      if (b.r !== undefined) return 1
+      return a.i - b.i
+    })
+    .map((x) => x.item)
+}
+
+/**
+ * `keys` with `dragged` moved to just before or after `target`. Unchanged when
+ * either key is missing or they're the same row.
+ */
+export function moveInOrder(
+  keys: readonly string[],
+  dragged: string,
+  target: string,
+  position: 'before' | 'after'
+): string[] {
+  if (dragged === target || !keys.includes(dragged) || !keys.includes(target)) return [...keys]
+  const rest = keys.filter((k) => k !== dragged)
+  const at = rest.indexOf(target) + (position === 'after' ? 1 : 0)
+  rest.splice(at, 0, dragged)
+  return rest
+}
+
+export const projectOrderKey = (project: PlannerProject): string => `p:${project.slug}`
+export const deliverableOrderKey = (deliverable: PlannerDeliverable): string =>
+  `d:${deliverable.id}`
+const taskOrderKey = (task: PlannerDeliverable['tasks'][number]): string =>
+  `t:${task.path}::${task.text}`
+const milestoneOrderKey = (milestone: PlannerMilestone): string =>
+  `m:${milestone.path}::${milestone.text}`
+
+/** One child of a project or deliverable, before it is numbered. */
+type Child =
+  | { kind: 'deliverable'; orderKey: string; deliverable: PlannerDeliverable }
+  | { kind: 'task'; orderKey: string; task: PlannerDeliverable['tasks'][number] }
+  | { kind: 'milestone'; orderKey: string; milestone: PlannerMilestone }
 
 /**
  * Flattens the model into the numbered row list both panes render, honouring
@@ -215,89 +290,166 @@ export type PlannerRow =
  * layout: a row's y is its index × ROW_HEIGHT in both panes, which is what lets
  * one scroll container drive them together.
  *
- * A deliverable's own `workPackages` are pushed before its tasks/milestones,
- * so a work package's own work always sits directly under it rather than
- * after every sibling work package's. Nesting is capped at one level (see
- * `deliverableDefinitions`), but `pushDeliverable` recurses generically
- * rather than assuming that.
+ * By default a deliverable's own `workPackages` are pushed before its
+ * tasks/milestones, so a work package's own work always sits directly under
+ * it rather than after every sibling work package's. `order` (the user's
+ * drag-to-reorder) then rearranges siblings within each scope; numbering is
+ * assigned after that, so `1.2` is always the second row on screen. Nesting is
+ * capped at one level (see `deliverableDefinitions`), but `pushDeliverable`
+ * recurses generically rather than assuming that.
  */
 export function flattenRows(
   model: PlannerModel,
   collapsed: ReadonlySet<string>,
   projectFilter: string | null = null,
   /** Slugs unticked in the Projects sidebar — off the chart entirely. */
-  hidden: ReadonlySet<string> = new Set()
+  hidden: ReadonlySet<string> = new Set(),
+  order: PlannerOrder = {}
 ): PlannerRow[] {
   const rows: PlannerRow[] = []
+
+  const pushChildren = (
+    project: PlannerProject,
+    parentKey: string,
+    children: Child[],
+    depth: number,
+    prefix: string,
+    owner: PlannerDeliverable | undefined
+  ): void => {
+    applyOrder(children, (c) => c.orderKey, order[parentKey]).forEach((child, i) => {
+      const number = `${prefix}.${i + 1}`
+      if (child.kind === 'deliverable') {
+        pushDeliverable(project, child.deliverable, parentKey, depth, number)
+      } else if (child.kind === 'task' && owner) {
+        rows.push({
+          kind: 'task',
+          key: `t:${child.task.path}:${child.task.line}`,
+          parentKey,
+          orderKey: child.orderKey,
+          depth,
+          number,
+          deliverable: owner,
+          task: child.task
+        })
+      } else if (child.kind === 'milestone') {
+        rows.push({
+          kind: 'milestone',
+          key: `m:${child.milestone.path}:${child.milestone.line}`,
+          parentKey,
+          orderKey: child.orderKey,
+          depth,
+          number,
+          milestone: child.milestone,
+          ...(owner ? { deliverable: owner } : {})
+        })
+      }
+    })
+  }
 
   const pushDeliverable = (
     project: PlannerProject,
     deliverable: PlannerDeliverable,
+    parentKey: string,
     depth: number,
     number: string
   ): void => {
+    const key = deliverableOrderKey(deliverable)
     rows.push({
       kind: 'deliverable',
-      key: `d:${deliverable.id}`,
+      key,
+      parentKey,
+      orderKey: key,
       depth,
       number,
       project,
       deliverable
     })
-    if (collapsed.has(`d:${deliverable.id}`)) return
-    let c = 0
-    for (const pkg of deliverable.workPackages) {
-      c++
-      pushDeliverable(project, pkg, depth + 1, `${number}.${c}`)
-    }
-    for (const task of deliverable.tasks) {
-      c++
-      rows.push({
-        kind: 'task',
-        key: `t:${task.path}:${task.line}`,
-        depth: depth + 1,
-        number: `${number}.${c}`,
-        deliverable,
-        task
-      })
-    }
-    for (const milestone of deliverable.milestones) {
-      c++
-      rows.push({
-        kind: 'milestone',
-        key: `m:${milestone.path}:${milestone.line}`,
-        depth: depth + 1,
-        number: `${number}.${c}`,
-        milestone,
-        deliverable
-      })
-    }
+    if (collapsed.has(key)) return
+    pushChildren(
+      project,
+      key,
+      [
+        ...deliverable.workPackages.map((pkg): Child => ({
+          kind: 'deliverable',
+          orderKey: deliverableOrderKey(pkg),
+          deliverable: pkg
+        })),
+        ...deliverable.tasks.map((task): Child => ({
+          kind: 'task',
+          orderKey: taskOrderKey(task),
+          task
+        })),
+        ...deliverable.milestones.map((milestone): Child => ({
+          kind: 'milestone',
+          orderKey: milestoneOrderKey(milestone),
+          milestone
+        }))
+      ],
+      depth + 1,
+      number,
+      deliverable
+    )
   }
 
-  let n = 0
-  for (const project of model.projects) {
-    if (hidden.has(project.slug)) continue
-    if (projectFilter && project.slug !== projectFilter) continue
-    n++
-    rows.push({ kind: 'project', key: `p:${project.slug}`, depth: 0, number: String(n), project })
-    if (collapsed.has(`p:${project.slug}`)) continue
-    let d = 0
-    for (const deliverable of project.deliverables) {
-      d++
-      pushDeliverable(project, deliverable, 1, `${n}.${d}`)
-    }
-    for (const milestone of project.milestones) {
-      d++
-      rows.push({
-        kind: 'milestone',
-        key: `m:${milestone.path}:${milestone.line}`,
-        depth: 1,
-        number: `${n}.${d}`,
-        milestone
-      })
-    }
-  }
+  const visible = model.projects.filter(
+    (project) => !hidden.has(project.slug) && (!projectFilter || project.slug === projectFilter)
+  )
+  applyOrder(visible, projectOrderKey, order['']).forEach((project, i) => {
+    const key = projectOrderKey(project)
+    const n = String(i + 1)
+    rows.push({ kind: 'project', key, parentKey: '', orderKey: key, depth: 0, number: n, project })
+    if (collapsed.has(key)) return
+    pushChildren(
+      project,
+      key,
+      [
+        ...project.deliverables.map((deliverable): Child => ({
+          kind: 'deliverable',
+          orderKey: deliverableOrderKey(deliverable),
+          deliverable
+        })),
+        ...project.milestones.map((milestone): Child => ({
+          kind: 'milestone',
+          orderKey: milestoneOrderKey(milestone),
+          milestone
+        }))
+      ],
+      1,
+      n,
+      undefined
+    )
+  })
   return rows
+}
+
+/**
+ * Every `orderKey` in `scope`, in display order — what a drop rewrites. Read
+ * from the model rather than the visible rows, so a scope that is partly
+ * filtered out (a hidden project, say) keeps its hidden members' places.
+ */
+export function scopeOrderKeys(model: PlannerModel, scope: string, order: PlannerOrder): string[] {
+  let keys: string[]
+  if (scope === '') {
+    keys = model.projects.map(projectOrderKey)
+  } else if (scope.startsWith('p:')) {
+    const project = model.projects.find((p) => projectOrderKey(p) === scope)
+    keys = project
+      ? [
+          ...project.deliverables.map(deliverableOrderKey),
+          ...project.milestones.map(milestoneOrderKey)
+        ]
+      : []
+  } else {
+    const deliverable = model.byId.get(scope.slice(2))
+    keys = deliverable
+      ? [
+          ...deliverable.workPackages.map(deliverableOrderKey),
+          ...deliverable.tasks.map(taskOrderKey),
+          ...deliverable.milestones.map(milestoneOrderKey)
+        ]
+      : []
+  }
+  return applyOrder(keys, (k) => k, order[scope])
 }
 
 /** Blank space above each project group — the visual break between projects. */
