@@ -87,7 +87,20 @@ export function showToast(message: string): void {
 interface ConfirmRequest {
   message: string
   danger: boolean
+  okLabel: string
+  cancelLabel: string
+  title?: string
+  changes?: ConfirmChange[]
+  /** Style OK as the main action rather than a plain button. */
+  primary: boolean
   resolve: (ok: boolean) => void
+}
+
+/** One "before → after" row a confirm can lay out under its message. */
+export interface ConfirmChange {
+  label: string
+  from: string
+  to: string
 }
 
 interface ConfirmState {
@@ -104,9 +117,30 @@ export const useConfirmStore = create<ConfirmState>((set, get) => ({
 }))
 
 /** In-webview replacement for window.confirm() (blocked inside VS Code webviews). */
-export function confirm(message: string, opts: { danger?: boolean } = {}): Promise<boolean> {
+export function confirm(
+  message: string,
+  opts: {
+    danger?: boolean
+    okLabel?: string
+    cancelLabel?: string
+    title?: string
+    changes?: ConfirmChange[]
+    primary?: boolean
+  } = {}
+): Promise<boolean> {
   return new Promise((resolve) => {
-    useConfirmStore.setState({ request: { message, danger: opts.danger ?? false, resolve } })
+    useConfirmStore.setState({
+      request: {
+        message,
+        danger: opts.danger ?? false,
+        okLabel: opts.okLabel ?? 'OK',
+        cancelLabel: opts.cancelLabel ?? 'Cancel',
+        title: opts.title,
+        changes: opts.changes,
+        primary: opts.primary ?? false,
+        resolve
+      }
+    })
   })
 }
 

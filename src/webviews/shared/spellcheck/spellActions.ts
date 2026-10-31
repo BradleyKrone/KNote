@@ -1,12 +1,14 @@
 // Right-click menu actions for a misspelled word: replace it with a suggestion,
 // add it to the persisted personal dictionary, or ignore it for this session.
+// Adding and ignoring notify every spell-checked box in the webview
+// (dictionary.ts onSpellingChanged), so the squiggle clears everywhere at once.
 
 import { EditorSelection } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view'
-import { host } from '../../shared/rpc'
-import { useConfigStore } from '../../shared/stores'
+import { host } from '../rpc'
+import { useConfigStore } from '../stores'
 import { ignoreWord } from './dictionary'
-import { recheckSpelling, type WordSpan } from './spellCheck'
+import type { WordSpan } from './spellWords'
 
 /** Replace the misspelled word with the chosen correction. */
 export function replaceWord(view: EditorView, span: WordSpan, replacement: string): void {
@@ -31,7 +33,6 @@ export function addToDictionary(word: string): void {
 }
 
 /** Stop flagging this word for the rest of the session (not persisted). */
-export function ignoreSpelling(view: EditorView, word: string): void {
+export function ignoreSpelling(word: string): void {
   ignoreWord(word)
-  recheckSpelling(view)
 }

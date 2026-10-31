@@ -179,8 +179,8 @@ rarely need to write image embeds by hand.
 
 ## Projects & the Planner (optional feature)
 
-A note with `type: project` frontmatter is a **project**; its deadline is
-`end: 2026-06-30` (`due:`/`deadline:` also read), and `status: completed`
+A note with `type: project` frontmatter is a **project**; its planned dates are
+`start: 2026-04-01` and `end: 2026-06-30`, both optional (`due:`/`deadline:` also read as the end), and `status: completed`
 closes it. Inside that note, a `@task` line carrying
 `@deliverable(<project-slug>/<deliverable-slug>)` is a **deliverable** —
 exactly two segments inside the parens:
@@ -189,6 +189,7 @@ exactly two segments inside the parens:
 ---
 type: project
 project: govalle
+start: 2026-04-01
 end: 2026-06-30
 ---
 

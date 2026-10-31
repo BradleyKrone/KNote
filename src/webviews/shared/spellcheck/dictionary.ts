@@ -1,4 +1,5 @@
-// The spell-check engine for the live-preview editor. Wraps typo-js with the
+// The spell-check engine shared by every KNote text box — the note editor, the
+// task dialog's title, table cells and plain inputs (inputSpellCheck.ts). Wraps typo-js with the
 // bundled en_US Hunspell dictionary (inlined as strings by esbuild — no file
 // or network load, so it stays fully offline), plus two extra word sets layered
 // on top of the base dictionary:
@@ -14,6 +15,7 @@
 import Typo from 'typo-js'
 import affData from 'typo-js/dictionaries/en_US/en_US.aff'
 import dicData from 'typo-js/dictionaries/en_US/en_US.dic'
+import { useConfigStore } from '../stores'
 
 let typo: Typo | null = null
 let loadPromise: Promise<void> | null = null
@@ -53,6 +55,45 @@ export function setPersonalWords(words: string[]): void {
 /** Ignore a word for the rest of this session (not persisted). */
 export function ignoreWord(word: string): void {
   ignoredWords.add(word.toLowerCase())
+  notify()
+}
+
+const listeners = new Set<() => void>()
+let started = false
+
+function notify(): void {
+  for (const cb of listeners) cb()
+}
+
+/**
+ * Subscribe to "the answer to checkWord may have changed" — the dictionary
+ * finished loading, or a word was added to the personal dictionary or ignored.
+ * Starts the engine on first use. Returns an unsubscribe function.
+ */
+export function onSpellingChanged(cb: () => void): () => void {
+  startSpellCheck()
+  listeners.add(cb)
+  return () => listeners.delete(cb)
+}
+
+/**
+ * Load the dictionary and keep the personal word list in step with the vault
+ * config (an "Add to dictionary" here, or a configChanged from another view).
+ * Once per webview; safe to call repeatedly.
+ */
+function startSpellCheck(): void {
+  if (started) return
+  started = true
+  let applied = useConfigStore.getState().vaultConfig.userDictionary ?? []
+  setPersonalWords(applied)
+  useConfigStore.subscribe(() => {
+    const words = useConfigStore.getState().vaultConfig.userDictionary ?? []
+    if (words === applied) return
+    applied = words
+    setPersonalWords(words)
+    notify()
+  })
+  void loadDictionary().then(notify)
 }
 
 /**

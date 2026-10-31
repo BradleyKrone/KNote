@@ -32,6 +32,7 @@ export function DeliverablePickerContent({ onSelect }: Props): React.JSX.Element
       <input
         ref={inputRef}
         className="picker-input"
+        spellCheck={false}
         placeholder="Search a deliverable…"
         value={query}
         onChange={(e) => {

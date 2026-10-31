@@ -269,7 +269,9 @@ Markdown:
   (code, `[[wiki links]]`, `#tags`, URLs and frontmatter are skipped).
   **Right-click a flagged word** for suggested corrections; pick one to
   replace it, or **Add to dictionary** (saved to your vault) / **Ignore**
-  (this session). Runs fully offline on a bundled English dictionary.
+  (this session). Runs fully offline on a bundled English dictionary. The
+  same checker covers the task dialog's title, table cells and the text
+  boxes in KNote's dialogs; search and filter boxes are skipped.
 - Need the raw source? **KNote: Reopen as Raw Text** (or the `</>` button in
   the editor title bar) switches this note to the plain text editor; **KNote:
   Open in Live Preview** (the book button) switches back. Right-click a note →
@@ -542,7 +544,7 @@ old Timeline panel. Everything it shows lives in plain Markdown:
 | Thing | How you write it |
 | --- | --- |
 | Project | a note with `type: project` (and optionally `project: <slug>`) in its frontmatter |
-| Its deadline | `end: 2026-06-30` in the same frontmatter (`due:`/`deadline:` also read) |
+| Its dates | `start: 2026-04-01` and `end: 2026-06-30` in the same frontmatter, both optional (`due:`/`deadline:` also read as the end) — drawn as a bracket on the project's row |
 | Finishing it | `status: completed` — set it from the planner's right-click menu |
 | Deliverable | a `@task` line in that note: `- [ ] @task Design 🛫 2026-04-01 📅 2026-04-20 @deliverable(govalle/design)` |
 | Its tasks | any checkbox line **anywhere in the vault** (marked or not) carrying that same `@deliverable(govalle/design)` marker — deliberately *not* a `#tag`, so joining a deliverable never clutters the Tags sidebar or `#` autocomplete |
@@ -581,13 +583,26 @@ task that's itself a scheduled deliverable gets a **Work package of…** button
 (next to **Link to deliverable**) to set or clear which deliverable it
 belongs to without typing the marker by hand.
 
-A work package's dates can never fall outside its deliverable's own span —
-dragging its bar, resizing either edge, editing dates from the right-click
-menu, and creating one all clamp to the parent's window, so it's never
-possible to schedule a work package's work outside the deliverable that
-contains it. Right-click → **Add work package…** on a top-level deliverable's
+**Running past a parent.** Drag, resize or edit a work package's dates
+past its deliverable's span — or a deliverable outside its project's `start:`/`end:`
+dates — and the planner asks whether to **Extend** the parent to fit (a
+work package that pushes its deliverable past the project end extends both,
+in one question). **Keep inside** stops it at the parent's edge instead, so
+an accidental overshoot never moves anything. Dragging a whole deliverable bar takes its work
+packages with it; widening it leaves them where they are. New work packages are always
+created inside their deliverable. Right-click → **Add work package…** on a top-level deliverable's
 row to create one directly, its start/end defaulting to (and bounded by) the
 deliverable's own dates.
+
+**Shrinking a parent.** Make a project's dates or a deliverable's span
+shorter (by dragging an edge, or with **Edit dates…** / **Set project
+dates…**) and anything inside it that now sticks out is pulled back in. A
+work package or deliverable **slides in, keeping its length**, and takes
+everything it holds with it. A 🏁 milestone or task due date stops at the new
+edge. If a bar is longer than the new window and would have to be
+**shortened**, a warning lists each one before → after first. **Cancel**
+leaves everything as it was. Only the side you moved is enforced, so
+something that already stuck out on the other side stays put.
 
 In the chart:
 
@@ -596,14 +611,19 @@ In the chart:
 | Drag a bar | moves it — **and everything that depends on it**, by the same number of days. Independent bars never move |
 | Drag a bar's left edge | changes just the start date |
 | Drag a bar's right edge, or edit its due date | changes the end date — **and carries anything waiting on it along by the same number of days**, same as a full drag |
+| Drag a 🏁 milestone (or a task's due-date diamond) | re-dates it — only that line's `📅` changes. Dropped outside the deliverable it sits under (or, on the project row, the project's `start:`/`end:`), it asks whether to **Extend** that parent to fit, exactly like a bar; declined, it stops at the edge |
+| Drag a project's date bracket (on its row) | moves the **whole project**: its `start:`/`end:`, every deliverable and work package, every 🏁 milestone and dated task in it, and anything in another project that depends on one of its deliverables, all by the same number of days |
+| Drag either end of a project's bracket | changes just that date (dragging an open, undeclared end sets it). Shrinking it fits the deliverables inside, as described above |
 | Drag the 🔗 grip onto another bar | makes that bar wait on this one (a link that would create a loop is refused) |
+| Hold any bar drag at the chart's left or right edge | scrolls the chart that way (faster the closer you get), and the timeline grows to fit, so one drag can go as far as you need |
 | Double-click any row | opens the note at that line |
+| Drag a row in the tree up or down (while **Unlocked**) | reorders it among its siblings — projects among projects, a project's deliverables and milestones, a deliverable's work packages, tasks and milestones (children move with it). It can't change a row's parent. The order is saved in the vault's `.knote/config.json`, never in your notes; right-click → **Reset order** puts that level back to the default |
 | Right-click a deliverable → **Edit dates…** | a calendar for both ends of the span, with 1/3/5/10/20-day length presets and ±1d/±1w/Today nudges that slide the span without changing its length |
 | Right-click a deliverable → **Depends on ▸** | every other deliverable, ticked where it's already a predecessor — click to add or remove. Anything that would create a loop is greyed out and labelled *would loop* |
 | Right-click a project or deliverable → **Color ▸** | pick its bar color (blue, green, yellow, purple, orange, teal, pink, gray). A deliverable with no color of its own uses its parent deliverable's, then its project's; **Default** clears the choice. Overdue (red) and done (gray) still override it |
 | Right-click a row | also: add a deliverable / task / milestone, and (on a top-level deliverable's row) **Add work package…**. **Add milestone…** on a *project* row adds a project milestone, owned by no deliverable |
 | day / week / month | zoom; **Today** re-centres on the today line |
-| **Locked / Unlocked** button | dragging is off by default so you can't nudge a bar by accident — click it to unlock before dragging, then lock again when you're done. Right-click actions (Edit dates…, Depends on ▸, etc.) work either way |
+| **Locked / Unlocked** button | dragging (bars *and* tree rows) is off by default so you can't nudge one by accident — click it to unlock before dragging, then lock again when you're done. Right-click actions (Edit dates…, Depends on ▸, etc.) work either way |
 
 Bar fill is % complete — the share of the deliverable's tasks that are
 checked (or its own checkbox if it has none). A bar that starts before
@@ -626,9 +646,9 @@ predecessor — the same picker the chart's right-click menu uses.
 | **overdue** | its `end:` date has passed with work still open. A project with no `end:` date is never overdue — a derived finish isn't a promise |
 | **done** | `status: completed` |
 
-Right-click a project for **Set target end date…** and **Mark project
+Right-click a project for **Set project dates…** (start and end, each optional — press **Apply dates**) and **Mark project
 completed** / **Reopen project**. Completed projects sort to the bottom of
-the list and are **closed for business**: Add deliverable / task /
+the list (unless you've dragged them elsewhere) and are **closed for business**: Add deliverable / task /
 milestone are greyed out, and their deliverables disappear from
 `@deliverable(...)` and `#` tag autocomplete, so old work can't be filed
 against a finished project by accident. Reopening restores all of it.

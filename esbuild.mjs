@@ -54,7 +54,7 @@ const webviewOptions = (() => {
     // stubbed because typo-js references it only on its auto-load path, which
     // KNote never takes (we always preload the data).
     loader: { '.aff': 'text', '.dic': 'text' },
-    alias: { ...alias, fs: resolve('src/webviews/editor/spellcheck/fsStub.js') },
+    alias: { ...alias, fs: resolve('src/webviews/shared/spellcheck/fsStub.js') },
     logLevel: 'info'
   }
 })()

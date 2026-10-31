@@ -65,6 +65,46 @@ You need push access to the GitHub repo to merge; no Marketplace account or
 token is needed, because KNote is shipped as a `.vsix` from GitHub Releases.
 In Claude Code, `/release-check` does step 1 and runs the CI gates locally for you.
 
+## 3.14.0
+
+- **Projects have a start date, and you can drag them.** A project's
+  frontmatter can now say `start:` as well as `end:` (both optional), drawn as
+  a bracket on the project's row in the Planner. Right-click a project →
+  **Set project dates…** to set either one. With the chart unlocked, drag the
+  bracket to move the **whole project**: every deliverable, work package,
+  🏁 milestone and dated task in it, plus anything in another project that
+  waits on one of its deliverables, all shift by the same number of days.
+  Drag either end of the bracket to change just that date.
+- **Running past a parent asks first.** Drag, resize or re-date a work package
+  past its deliverable, or a deliverable past its project's dates, and the
+  Planner asks whether to **Extend** the parent to fit. **Keep inside** stops
+  it at the edge instead. Dragging a whole deliverable takes its work packages
+  with it.
+- **Shrinking a parent fits what's inside it.** Make a project or deliverable
+  shorter and anything sticking out slides back in, keeping its length. If a
+  bar would have to be shortened, a warning lists each one first, and
+  **Cancel** leaves everything as it was.
+- **Drag milestones and task due dates.** 🏁 milestones and task due-date
+  diamonds can now be dragged to re-date them, following the same Extend /
+  Keep inside rules as bars.
+- **Reorder the Planner's tree.** With the chart unlocked, drag a row up or
+  down to reorder it among its siblings. The order is saved in the vault's
+  `.knote/config.json`, never in your notes; right-click → **Reset order**
+  puts a level back to the default.
+- **Drag past the edge of the chart.** Hold a bar drag at the chart's left or
+  right edge and it scrolls that way, growing the timeline as it goes.
+- **Spell check in every text box.** A task's title in the board's task
+  dialog, table cells, and the text boxes in KNote's dialogs and panels (the
+  waiting reason, new project and deliverable names, link text, column names,
+  properties) now get the same red squiggles as a note. Right-click a flagged
+  word for suggestions, **Add to dictionary** or **Ignore**. Search, filter
+  and code-like boxes (URLs, serial numbers, date formats) are left alone.
+- Fixed a deliverable dragged to the right in the Planner snapping back to
+  where it started when you let go. The new dates were always saved; the chart
+  just redrew underneath the bar. Dropped bars now stay where you drop them.
+- Fixed the Planner jumping back to today after you dragged a bar past the end
+  of the chart. It now only scrolls to today when you change the zoom.
+
 ## 3.13.0
 
 - **Milestones on a project.** Right-click a project's row in the Planner and

@@ -20,17 +20,30 @@ export function ConfirmDialog(): React.JSX.Element | null {
   return (
     <div className="modal-overlay" onMouseDown={() => answer(false)}>
       <div className="modal-panel confirm-panel" onMouseDown={(e) => e.stopPropagation()}>
+        {request.title && <div className="confirm-title">{request.title}</div>}
         <div className="confirm-message">{request.message}</div>
+        {request.changes && request.changes.length > 0 && (
+          <div className="confirm-changes">
+            {request.changes.map((c) => (
+              <div key={c.label} className="confirm-change">
+                <span className="confirm-change-label">{c.label}</span>
+                <span className="confirm-change-from">{c.from}</span>
+                <span className="confirm-change-arrow">→</span>
+                <span className="confirm-change-to">{c.to}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="confirm-actions">
           <button className="icon-btn confirm-btn" onClick={() => answer(false)}>
-            Cancel
+            {request.cancelLabel}
           </button>
           <button
-            className={`icon-btn confirm-btn${request.danger ? ' confirm-btn-danger' : ''}`}
+            className={`icon-btn confirm-btn${request.danger ? ' confirm-btn-danger' : ''}${request.primary ? ' confirm-btn-primary' : ''}`}
             onClick={() => answer(true)}
             autoFocus
           >
-            OK
+            {request.okLabel}
           </button>
         </div>
       </div>

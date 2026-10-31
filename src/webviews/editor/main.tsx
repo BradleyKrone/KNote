@@ -9,6 +9,7 @@ import './editorShell.css'
 import { createRoot } from 'react-dom/client'
 import { bootstrap, on } from '../shared/rpc'
 import { initStores } from '../shared/stores'
+import { installInputSpellCheck } from '../shared/spellcheck/inputSpellCheck'
 import { refreshEmbedCards } from './embedRender'
 import { createEditor, setTabSize } from './setupEditor'
 import { wireInboundSync, revealLine } from './sync'
@@ -28,6 +29,7 @@ const { path = null, text = '', line, foldedKeys, tabSize } = bootstrap<EditorBo
 
 setNotePath(path)
 initStores() // hydrates the vault config (Kanban columns) + index for the editor
+installInputSpellCheck() // plain text boxes in its dialogs (link text, picker fields…)
 
 const view = createEditor({
   parent: document.getElementById('root')!,

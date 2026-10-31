@@ -30,7 +30,7 @@
 
 import { useEffect, useState } from 'react'
 import { EditorSelection } from '@codemirror/state'
-import type { EditorView } from '@codemirror/view'
+import { EditorView } from '@codemirror/view'
 import {
   AlignCenter,
   AlignLeft,
@@ -102,9 +102,10 @@ import { openLink } from './mdLink'
 import { setCheckboxStatus, setSubtaskChecked, getNotePath } from './knoteConstructs'
 import { isBoardTask } from './editorMode'
 import { copyTaskLink } from './taskLink'
-import { misspelledRangeAt, type WordSpan } from './spellcheck/spellCheck'
-import { suggestWords } from './spellcheck/dictionary'
-import { addToDictionary, ignoreSpelling, replaceWord } from './spellcheck/spellActions'
+import { misspelledRangeAt, type WordSpan } from '../shared/spellcheck/spellCheck'
+import { suggestWords } from '../shared/spellcheck/dictionary'
+import { addToDictionary, ignoreSpelling, replaceWord } from '../shared/spellcheck/spellActions'
+import { openSpellMenu } from '../shared/spellcheck/SpellMenu'
 import { copySelection, cutSelection, pasteAtSelection } from './clipboard'
 import { dependencies as lineDependencies } from '../shared/taskMeta'
 import {
@@ -250,6 +251,10 @@ export function EditorContextMenu({ view }: { view: EditorView }): React.JSX.Ele
     const onContextMenu = (e: MouseEvent): void => {
       e.preventDefault()
       const point = { x: e.clientX, y: e.clientY }
+      // A misspelled word in the live table cell gets just the spell menu,
+      // corrected in the cell's own view — the full menu below would commit
+      // and close the cell first, taking the word's offsets with it.
+      if (spellInTableCell(view, e.target as HTMLElement | null, point)) return
       const pos = view.posAtCoords(point) ?? view.state.selection.main.head
       const target = e.target as HTMLElement | null
       const onCheckbox = target?.closest('.cm-knote-check') != null
@@ -580,12 +585,32 @@ function spellItems(view: EditorView, span: WordSpan, close: () => void): MenuEn
       icon: <Eye size={ICON} />,
       onClick: () => {
         close()
-        ignoreSpelling(view, span.word)
+        ignoreSpelling(span.word)
       }
     },
     { separator: true }
   )
   return items
+}
+
+/**
+ * If the right-click landed on a misspelled word inside the active table
+ * cell's nested editor, open the spell menu for it and return true.
+ */
+function spellInTableCell(
+  outer: EditorView,
+  target: HTMLElement | null,
+  point: { x: number; y: number }
+): boolean {
+  const cellDom = target?.closest('.cm-editor')
+  if (!cellDom || cellDom === outer.dom || !(cellDom instanceof HTMLElement)) return false
+  const cell = EditorView.findFromDOM(cellDom)
+  if (!cell) return false
+  const pos = cell.posAtCoords(point)
+  const span = pos == null ? null : misspelledRangeAt(cell, pos)
+  if (!span) return false
+  openSpellMenu({ ...point, word: span.word, replace: (s) => replaceWord(cell, span, s) })
+  return true
 }
 
 const ICON = 14

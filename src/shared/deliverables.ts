@@ -108,6 +108,8 @@ export function slugify(text: string): string {
 export const PROJECT_STATUS_KEY = 'status'
 /** Frontmatter key a project's target end date lives under. */
 export const PROJECT_END_KEY = 'end'
+/** Frontmatter key a project's planned start date lives under. */
+export const PROJECT_START_KEY = 'start'
 
 /**
  * True when the project note is marked finished (`status: completed`).
@@ -146,6 +148,14 @@ export function projectEndDate(meta: NoteMeta): string | null {
     if (date) return date
   }
   return null
+}
+
+/**
+ * A project's own planned start date (`start:` frontmatter). Null when it
+ * hasn't been given one — its deliverables may then start whenever they like.
+ */
+export function projectStartDate(meta: NoteMeta): string | null {
+  return frontmatterDate(meta.frontmatter[PROJECT_START_KEY])
 }
 
 /**

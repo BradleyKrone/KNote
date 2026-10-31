@@ -47,6 +47,7 @@ export function ParentDeliverablePickerContent({ ownTag, onSelect }: Props): Rea
       <input
         ref={inputRef}
         className="picker-input"
+        spellCheck={false}
         placeholder="Search a deliverable…"
         value={query}
         onChange={(e) => {

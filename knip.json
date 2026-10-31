@@ -2,7 +2,7 @@
   "entry": [
     "src/extension/extension.ts",
     "src/webviews/*/main.tsx",
-    "src/webviews/editor/spellcheck/fsStub.js",
+    "src/webviews/shared/spellcheck/fsStub.js",
     "esbuild.mjs",
     ".vscode-test.mjs",
     "tests/**/*.test.ts",

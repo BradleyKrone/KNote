@@ -269,6 +269,14 @@ export interface VaultConfig {
    */
   hiddenProjects: string[]
   /**
+   * The Planner tree's drag-to-reorder overrides: a scope ('' for the project
+   * list, `p:<slug>` for a project's children, `d:<tag>` for a deliverable's)
+   * → its rows' order keys in the order the user left them. Display-only —
+   * nothing in a note changes — and a scope with no entry keeps the computed
+   * order (see `flattenRows` in the planner's `plannerLayout.ts`).
+   */
+  plannerOrder: Record<string, string[]>
+  /**
    * Project slugs unticked in the Boards sidebar's "Filter by Project" list,
    * excluded from the Kanban board — their deliverables and joined tasks stop
    * appearing as cards. Independent of `hiddenProjects`: a project can be
@@ -332,6 +340,7 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   userDictionary: [],
   linkUpdate: 'always',
   hiddenProjects: [],
+  plannerOrder: {},
   boardHiddenProjects: [],
   boardHiddenRoots: [],
   boardSortByPriority: false,

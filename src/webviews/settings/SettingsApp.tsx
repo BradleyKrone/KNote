@@ -167,6 +167,7 @@ export function SettingsApp(): React.JSX.Element {
       // edited through "KNote: Manage Mounted Folders". tabSize is a number,
       // edited through its own numeric input in the Editor category.
       // boardSortByPriority is a checkbox, toggled from the board toolbar itself.
+      // plannerOrder is set by dragging rows in the Planner tree.
       | 'columns'
       | 'machines'
       | 'deprecatedTags'
@@ -175,6 +176,7 @@ export function SettingsApp(): React.JSX.Element {
       | 'mountNames'
       | 'tabSize'
       | 'boardSortByPriority'
+      | 'plannerOrder'
     >,
     hint?: string
   ): React.JSX.Element => (
@@ -185,6 +187,7 @@ export function SettingsApp(): React.JSX.Element {
       </label>
       <input
         className="panel-input"
+        spellCheck={false}
         value={draft[key]}
         onChange={(e) => edit({ ...draft, [key]: e.target.value })}
       />
@@ -322,6 +325,7 @@ export function SettingsApp(): React.JSX.Element {
                     />
                     <input
                       className="panel-input small char-input"
+                      spellCheck={false}
                       value={col.char === ' ' ? '␣' : col.char}
                       maxLength={1}
                       onChange={(e) => {
@@ -383,6 +387,7 @@ export function SettingsApp(): React.JSX.Element {
                 <div key={i} className="settings-machine-row">
                   <input
                     className="panel-input small"
+                    spellCheck={false}
                     value={m.serial}
                     placeholder="Serial (e.g. Z6A00101)"
                     onChange={(e) => {
@@ -393,6 +398,7 @@ export function SettingsApp(): React.JSX.Element {
                   />
                   <input
                     className="panel-input small"
+                    spellCheck={false}
                     value={m.model}
                     placeholder="Model (e.g. D6)"
                     onChange={(e) => {
@@ -403,6 +409,7 @@ export function SettingsApp(): React.JSX.Element {
                   />
                   <input
                     className="panel-input small"
+                    spellCheck={false}
                     value={machineAttrText[i] ?? ''}
                     placeholder="Attributes (e.g. LGP VP EX)"
                     onChange={(e) => {
@@ -459,6 +466,7 @@ export function SettingsApp(): React.JSX.Element {
                     {renamingTag === tag ? (
                       <input
                         className="panel-input small"
+                        spellCheck={false}
                         autoFocus
                         value={renameValue}
                         disabled={tagBusy}

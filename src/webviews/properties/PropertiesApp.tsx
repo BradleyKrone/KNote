@@ -100,6 +100,7 @@ export function PropertiesApp({ initialNote }: { initialNote: string | null }): 
         <div className="property-row add-row">
           <input
             className="panel-input small"
+            spellCheck={false}
             placeholder="Add property…"
             value={newKey}
             onChange={(e) => setNewKey(e.target.value)}

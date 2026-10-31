@@ -28,7 +28,8 @@ import {
   isTaskDone,
   projectColor,
   projectEndDate,
-  projectSlug
+  projectSlug,
+  projectStartDate
 } from '@shared/deliverables'
 
 /** A line the planner can point at and verify-rewrite. */
@@ -99,12 +100,16 @@ export interface PlannerProject {
   end: string | null
   /** The project's own `end:` frontmatter target, if it declared one. */
   dueDate: string | null
+  /** The project's own `start:` frontmatter date, if it declared one. */
+  startDate: string | null
   status: ProjectStatus
   /** Closed for business: no new deliverables or tasks. */
   complete: boolean
   percent: number
   /** Its `color:` frontmatter, or null for the default cycle — see `barColor`. */
   color: PlannerColor | null
+  /** The note's whole frontmatter — what a `setFrontmatter` rewrite (a new `end:`, say) starts from. */
+  frontmatter: Record<string, unknown>
 }
 
 export interface PlannerModel {
@@ -150,10 +155,12 @@ export function buildPlannerModel(
       start: null,
       end: null,
       dueDate: projectEndDate(meta),
+      startDate: projectStartDate(meta),
       status: 'active',
       complete: isProjectComplete(meta),
       percent: 0,
-      color: projectColor(meta)
+      color: projectColor(meta),
+      frontmatter: meta.frontmatter
     }
     for (const definition of definitionsByPath.get(meta.path) ?? []) {
       if (byId.has(definition.tag)) continue
@@ -349,11 +356,22 @@ export function notesInFolder(paths: Iterable<string>, folder: string): string[]
  * nearby, or that `id` itself depends on, never move — a drag only ever pushes
  * work that was waiting on it.
  *
+ * Anything that moves *whole* also carries its work packages along — they're
+ * timeboxed inside it, so they'd otherwise be left behind outside its span.
+ * That's every cascaded dependent, and the dragged bar itself unless
+ * `movesWhole` is false: a resize only moves one edge of `id`, which leaves
+ * its work packages where they are.
+ *
  * Returned in topological-ish order (BFS from the dragged node), which is the
  * order the writes go out in. A cycle can't loop forever here: `seen` admits
  * each id once.
  */
-export function cascadeShift(model: PlannerModel, id: string, days: number): string[] {
+export function cascadeShift(
+  model: PlannerModel,
+  id: string,
+  days: number,
+  movesWhole = true
+): string[] {
   if (!model.byId.has(id)) return []
   const order: string[] = []
   const seen = new Set<string>()
@@ -364,6 +382,8 @@ export function cascadeShift(model: PlannerModel, id: string, days: number): str
     seen.add(current)
     order.push(current)
     if (days === 0) continue
+    if (movesWhole || current !== id)
+      for (const wp of model.byId.get(current)?.workPackages ?? []) queue.push(wp.id)
     for (const next of model.dependents.get(current) ?? []) queue.push(next)
   }
   return order
@@ -420,6 +440,37 @@ export function inheritedBarColor(
 }
 
 /** The color a project with no `color:` gets — cycled by its position on the chart. */
+/** What `ProjectWindow` draws on a project's row. */
+export interface ProjectWindowSpan {
+  start: string
+  end: string
+  /** False when that side is borrowed from the deliverables, not the frontmatter. */
+  declaredStart: boolean
+  declaredEnd: boolean
+}
+
+/**
+ * A project's declared window, for its chart row. Null unless it declares at
+ * least one of `start:`/`end:` — the deliverables' own extent is no promise,
+ * so it isn't drawn on its own. An undeclared side falls back to the
+ * deliverables' extent, then to the declared side (a one-day mark).
+ */
+export function projectWindow(project: PlannerProject): ProjectWindowSpan | null {
+  const { startDate, dueDate } = project
+  if (!startDate && !dueDate) return null
+  const start = startDate ?? minOf(project.start, dueDate!)
+  const end = dueDate ?? maxOf(project.end, startDate!)
+  if (start > end) return null
+  return { start, end, declaredStart: !!startDate, declaredEnd: !!dueDate }
+}
+
+// The undeclared side never crosses the declared one — a project whose
+// deliverables all finish before its declared start still gets a sane mark.
+const minOf = (derived: string | null, declared: string): string =>
+  derived && derived < declared ? derived : declared
+const maxOf = (derived: string | null, declared: string): string =>
+  derived && derived > declared ? derived : declared
+
 export function defaultProjectColor(project: PlannerProject, model: PlannerModel): PlannerColor {
   const index = Math.max(0, model.projects.indexOf(project))
   return PLANNER_COLORS[index % DEFAULT_COLOR_CYCLE]
