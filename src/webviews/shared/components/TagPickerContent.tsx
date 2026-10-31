@@ -47,6 +47,7 @@ export function TagPickerContent({ onSelect }: Props): React.JSX.Element {
       <input
         ref={inputRef}
         className="picker-input"
+        spellCheck={false}
         placeholder="Search or create a tag…"
         value={query}
         onChange={(e) => {

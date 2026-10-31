@@ -38,7 +38,7 @@ import { listIndentTightKeymap } from './listIndentTight'
 import { knoteAutocomplete } from './completions'
 import { linkHover } from './linkHover'
 import { mdLink } from './mdLink'
-import { spellCheck } from './spellcheck/spellCheck'
+import { spellCheck } from '../shared/spellcheck/spellCheck'
 import { fromHost } from './sync'
 
 /** CodeMirror offset → the line/character position the host speaks in. */

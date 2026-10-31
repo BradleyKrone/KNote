@@ -50,6 +50,7 @@ export function LinkPickerContent({
         <label className="picker-field-label">URL</label>
         <input
           className="panel-input small"
+          spellCheck={false}
           placeholder="https://example.com"
           value={url}
           autoFocus

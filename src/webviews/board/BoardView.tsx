@@ -268,6 +268,7 @@ export function BoardView({
         <div className="board-controls">
           <input
             className="panel-input small board-filter"
+            spellCheck={false}
             placeholder="Filter tasks…"
             value={textFilter}
             onChange={(e) => setTextFilter(e.target.value)}

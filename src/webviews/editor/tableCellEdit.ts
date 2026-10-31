@@ -47,6 +47,7 @@ import { EditorView, drawSelection, keymap, tooltips, type KeyBinding } from '@c
 import { Autolink, Strikethrough, Table } from '@lezer/markdown'
 import { knoteAutocomplete } from './completions'
 import { formatKeymap } from './markdownFormatting'
+import { spellCheck } from '../shared/spellcheck/spellCheck'
 import {
   cellText,
   commitPlan,
@@ -381,6 +382,9 @@ function cellExtensions(outer: EditorView, sessionId: number): Extension[] {
     // The completion popup would otherwise be clipped by the table wrap's
     // overflow-x and by the cell's own box.
     tooltips({ parent: document.body, position: 'fixed' }),
+    // KNote's own spell checker (the native one is off in VS Code webviews);
+    // EditorContextMenu routes a right-click on a flagged word to this view.
+    spellCheck,
     EditorView.contentAttributes.of({
       spellcheck: 'false',
       autocorrect: 'off',

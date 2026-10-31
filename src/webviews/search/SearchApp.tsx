@@ -35,6 +35,7 @@ export function SearchApp({ initialQuery }: { initialQuery: string }): React.JSX
       <div className="side-panel-search">
         <input
           className="panel-input"
+          spellCheck={false}
           placeholder={'Search  (path: tag: file: -term "phrase")'}
           value={query}
           autoFocus

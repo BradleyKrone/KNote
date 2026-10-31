@@ -269,7 +269,9 @@ Markdown:
   (code, `[[wiki links]]`, `#tags`, URLs and frontmatter are skipped).
   **Right-click a flagged word** for suggested corrections; pick one to
   replace it, or **Add to dictionary** (saved to your vault) / **Ignore**
-  (this session). Runs fully offline on a bundled English dictionary.
+  (this session). Runs fully offline on a bundled English dictionary. The
+  same checker covers the task dialog's title, table cells and the text
+  boxes in KNote's dialogs; search and filter boxes are skipped.
 - Need the raw source? **KNote: Reopen as Raw Text** (or the `</>` button in
   the editor title bar) switches this note to the plain text editor; **KNote:
   Open in Live Preview** (the book button) switches back. Right-click a note →

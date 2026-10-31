@@ -1,9 +1,10 @@
 // A single-line CodeMirror view for the task dialog's title field. Deliberately
 // not the full note editor (`editor/setupEditor.ts`) — no markdown grammar,
-// tables, embeds or spell check — just the same #tag/priority styling
-// `knoteConstructs.ts` gives a task line in the real editor, so the title here
-// reads the same way it does on the card and in a note instead of showing raw
-// `#tag`/`!!` markup as plain text.
+// tables or embeds — just the same #tag/priority styling `knoteConstructs.ts`
+// gives a task line in the real editor, so the title here reads the same way
+// it does on the card and in a note instead of showing raw `#tag`/`!!` markup
+// as plain text. It is spell checked like a note, with its own right-click
+// spell menu (the note editor's full menu isn't mounted on it).
 
 import { completionKeymap } from '@codemirror/autocomplete'
 import { Prec, type Range } from '@codemirror/state'
@@ -21,6 +22,9 @@ import { DELIVERABLE_REF_RE, PRIORITY_RE, TAG_RE } from '@shared/parser/patterns
 import { knoteAutocomplete } from '../editor/completions'
 import { DeliverableRefWidget } from '../editor/knoteConstructs'
 import { knoteTooltipTheme } from '../editor/theme'
+import { replaceWord } from '../shared/spellcheck/spellActions'
+import { misspelledRangeAt, spellCheck } from '../shared/spellcheck/spellCheck'
+import { openSpellMenu } from '../shared/spellcheck/SpellMenu'
 
 function buildDecorations(text: string, definesDeliverable: string | null): DecorationSet {
   const decorations: Range<Decoration>[] = []
@@ -108,6 +112,7 @@ export function createTaskTitleEditor(opts: TaskTitleEditorOptions): EditorView 
       EditorView.lineWrapping,
       placeholder(opts.placeholderText),
       decorateTitle(opts.definesDeliverable ?? null),
+      spellCheck,
       titleTheme,
       // The same VS Code-themed popup colors (and above-the-modal z-index)
       // the note editor's autocomplete uses, so it reads the same here.
@@ -140,6 +145,17 @@ export function createTaskTitleEditor(opts: TaskTitleEditorOptions): EditorView 
         ])
       ),
       EditorView.domEventHandlers({
+        // Right-click on a misspelled word: suggestions / add / ignore.
+        // Anywhere else keeps the native menu.
+        contextmenu: (event, view) => {
+          const point = { x: event.clientX, y: event.clientY }
+          const pos = view.posAtCoords(point)
+          const span = pos == null ? null : misspelledRangeAt(view, pos)
+          if (!span) return false
+          event.preventDefault()
+          openSpellMenu({ ...point, word: span.word, replace: (s) => replaceWord(view, span, s) })
+          return true
+        },
         // A task's text is one line on disk — flatten a multi-line paste
         // instead of letting it split the task across lines.
         paste: (event, view) => {

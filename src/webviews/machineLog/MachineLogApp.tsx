@@ -107,6 +107,7 @@ export function MachineLogApp(): React.JSX.Element {
         <div className="board-controls">
           <input
             className="panel-input small board-filter"
+            spellCheck={false}
             placeholder="Filter log…"
             value={textFilter}
             onChange={(e) => setTextFilter(e.target.value)}

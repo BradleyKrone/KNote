@@ -8,6 +8,7 @@ import '../editor/editor.css'
 import type { DeliverableScopeFilter } from '@shared/deliverables'
 import { bootstrap, vscodeApi } from '../shared/rpc'
 import { initStores } from '../shared/stores'
+import { installInputSpellCheck } from '../shared/spellcheck/inputSpellCheck'
 import { ConfirmDialog } from '../shared/components/ConfirmDialog'
 import { ReasonDialog } from '../shared/components/ReasonDialog'
 import { Toast } from '../shared/components/Toast'
@@ -25,6 +26,7 @@ const { scope = { kind: 'global' }, initialFilter = null } = bootstrap<{
 vscodeApi.setState({ scope })
 
 initStores()
+installInputSpellCheck()
 
 createRoot(document.getElementById('root')!).render(
   <>

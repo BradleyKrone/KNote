@@ -93,6 +93,12 @@ In Claude Code, `/release-check` does step 1 and runs the CI gates locally for y
   puts a level back to the default.
 - **Drag past the edge of the chart.** Hold a bar drag at the chart's left or
   right edge and it scrolls that way, growing the timeline as it goes.
+- **Spell check in every text box.** A task's title in the board's task
+  dialog, table cells, and the text boxes in KNote's dialogs and panels (the
+  waiting reason, new project and deliverable names, link text, column names,
+  properties) now get the same red squiggles as a note. Right-click a flagged
+  word for suggestions, **Add to dictionary** or **Ignore**. Search, filter
+  and code-like boxes (URLs, serial numbers, date formats) are left alone.
 - Fixed a deliverable dragged to the right in the Planner snapping back to
   where it started when you let go. The new dates were always saved; the chart
   just redrew underneath the bar. Dropped bars now stay where you drop them.

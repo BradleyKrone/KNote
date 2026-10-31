@@ -459,6 +459,7 @@ export function GraphApp(): React.JSX.Element {
         <div className="board-controls">
           <input
             className="panel-input small board-filter"
+            spellCheck={false}
             placeholder="Highlight notes…"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}

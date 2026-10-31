@@ -2539,3 +2539,31 @@ button {
 .planner-tree-row.depth-0 .planner-row-label {
   letter-spacing: 0.01em;
 }
+
+/* ---- Spell check outside the note editor ----
+   The note editor styles .cm-spell-error in editor/theme.ts; this covers the
+   other CodeMirror fields (the task dialog's title) and the squiggle overlay
+   inputSpellCheck.ts lays over plain <input>/<textarea> boxes. */
+.cm-spell-error,
+.knote-spell-error {
+  text-decoration: underline wavy var(--vscode-editorError-foreground, #e51400);
+  text-decoration-skip-ink: none;
+  text-underline-offset: 0.2em;
+}
+
+/* A transparent copy of the field's text, drawn over it, so only the
+   squiggles show. Never takes a click — the field underneath does. */
+.knote-spell-overlay {
+  position: absolute;
+  pointer-events: none;
+  overflow: hidden;
+  color: transparent;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+.knote-spell-overlay-text {
+  position: relative;
+}

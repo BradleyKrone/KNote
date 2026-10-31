@@ -74,6 +74,7 @@ export function MachineEntryPickerContent({
         <label className="picker-field-label">Serial number</label>
         <input
           className="panel-input small"
+          spellCheck={false}
           list="machine-serials"
           placeholder="e.g. Z6A00101"
           value={serial}
@@ -139,6 +140,7 @@ export function MachineEntryPickerContent({
                   {i > 0 && <span className="machine-sw-arrow">→</span>}
                   <input
                     className="panel-input small"
+                    spellCheck={false}
                     list={`machine-sw-${kind}`}
                     aria-label={`${kind} ${SECTION_LABELS[section]}`}
                     value={software[section][kind]}
