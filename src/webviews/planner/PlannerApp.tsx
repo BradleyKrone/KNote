@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Unlock
 } from 'lucide-react'
+import type { VaultConfig } from '@shared/types'
 import { host } from '../shared/rpc'
 import { showToast, useConfigStore, useIndexStore } from '../shared/stores'
 import { Popover } from '../shared/components/Popover'
@@ -38,7 +39,11 @@ import {
   dateToX,
   domainOf,
   domainShiftPx,
+  clampTreeWidth,
+  collapsedKeys,
+  DEFAULT_TREE_WIDTH,
   flattenRows,
+  toggleCollapsed,
   gridWidth,
   monthBands,
   rowIndexById,
@@ -98,7 +103,6 @@ import {
   unlinkDependency
 } from './plannerActions'
 
-const TREE_WIDTH = 260
 const ZOOMS: Zoom[] = ['day', 'week', 'month']
 
 /**
@@ -285,7 +289,6 @@ export function PlannerApp(): React.JSX.Element {
   // accident while scrolling or reading the chart. Unlocking is a deliberate
   // per-session choice; it isn't persisted, so a reopened planner is safe again.
   const [locked, setLocked] = useState(true)
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set())
   const [projectFilter, setProjectFilter] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ row: PlannerRow; point: { x: number; y: number } } | null>(
     null
@@ -312,6 +315,17 @@ export function PlannerApp(): React.JSX.Element {
   const hidden = useMemo(() => new Set(hiddenProjects ?? []), [hiddenProjects])
   const plannerOrder = useConfigStore((s) => s.vaultConfig.plannerOrder)
   const order = useMemo(() => plannerOrder ?? {}, [plannerOrder])
+  // Expand/collapse and the title column's width live in the vault config, so
+  // a reopened planner comes back exactly as it was left.
+  const savedCollapsed = useConfigStore((s) => s.vaultConfig.plannerCollapsed)
+  const collapsed = useMemo(
+    () => collapsedKeys(model, savedCollapsed ?? {}),
+    [model, savedCollapsed]
+  )
+  const savedTreeWidth = useConfigStore((s) => s.vaultConfig.plannerTreeWidth)
+  // Only set while the column border is being dragged; saved on release.
+  const [liveTreeWidth, setLiveTreeWidth] = useState<number | null>(null)
+  const treeWidth = clampTreeWidth(liveTreeWidth ?? savedTreeWidth)
   const rows = useMemo(
     () => flattenRows(model, collapsed, projectFilter, hidden, order),
     [model, collapsed, projectFilter, hidden, order]
@@ -547,7 +561,7 @@ export function PlannerApp(): React.JSX.Element {
     [model, points, projectByKey]
   )
 
-  const bar = useBarDrag({ zoom, scrollRef, leftInset: TREE_WIDTH, onCommit: commit })
+  const bar = useBarDrag({ zoom, scrollRef, leftInset: treeWidth, onCommit: commit })
   useEffect(() => setDrag(bar.drag), [bar.drag])
   const rebaseDrag = bar.rebase
 
@@ -605,8 +619,8 @@ export function PlannerApp(): React.JSX.Element {
   const scrollToToday = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
-    el.scrollLeft = Math.max(0, TREE_WIDTH + dateToX(domain, today, zoom) - el.clientWidth / 3)
-  }, [domain, today, zoom])
+    el.scrollLeft = Math.max(0, treeWidth + dateToX(domain, today, zoom) - el.clientWidth / 3)
+  }, [domain, today, zoom, treeWidth])
 
   const centeredOnce = useRef(false)
   useEffect(() => {
@@ -634,44 +648,71 @@ export function PlannerApp(): React.JSX.Element {
     }
   }, [domain, zoom, rebaseDrag])
 
-  // ---------- Default collapse ----------
-  // Start every deliverable collapsed so the chart opens showing just the
-  // deliverable bars, not every task under them. Runs once, the first time
-  // the model has data — later index deltas must not stomp on the user's
-  // own expand/collapse choices.
-  const collapsedOnce = useRef(false)
-  useEffect(() => {
-    if (collapsedOnce.current || model.byId.size === 0) return
-    collapsedOnce.current = true
-    setCollapsed((prev) => {
-      const next = new Set(prev)
-      // `byId` covers every deliverable regardless of nesting — a
-      // project's `deliverables` array holds root deliverables only.
-      for (const deliverable of model.byId.values()) next.add(`d:${deliverable.id}`)
-      return next
-    })
-  }, [model])
-
   // ---------- Actions ----------
+  /** Merges `patch` into the vault config and saves it to `.knote/config.json`. */
+  const saveConfig = (patch: Partial<VaultConfig>): void => {
+    const updated = { ...useConfigStore.getState().vaultConfig, ...patch }
+    useConfigStore.setState({ vaultConfig: updated })
+    void host.setVaultConfig(updated)
+  }
+
   const toggle = (key: string): void =>
-    setCollapsed((prev) => {
-      const next = new Set(prev)
-      if (!next.delete(key)) next.add(key)
-      return next
+    saveConfig({
+      plannerCollapsed: toggleCollapsed(
+        model,
+        useConfigStore.getState().vaultConfig.plannerCollapsed ?? {},
+        key
+      )
     })
+
+  /** Drag the title column's right border; double-click puts it back. */
+  const startTreeResize = (e: React.PointerEvent<HTMLElement>): void => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    const handle = e.currentTarget
+    handle.setPointerCapture(e.pointerId)
+    const startX = e.clientX
+    const startWidth = treeWidth
+    let latest = startWidth
+    const onMove = (ev: PointerEvent): void => {
+      latest = clampTreeWidth(startWidth + ev.clientX - startX)
+      setLiveTreeWidth(latest)
+    }
+    const onUp = (): void => {
+      handle.removeEventListener('pointermove', onMove)
+      handle.removeEventListener('pointerup', onUp)
+      handle.removeEventListener('pointercancel', onUp)
+      if (latest !== startWidth) saveConfig({ plannerTreeWidth: latest })
+      setLiveTreeWidth(null)
+    }
+    handle.addEventListener('pointermove', onMove)
+    handle.addEventListener('pointerup', onUp)
+    handle.addEventListener('pointercancel', onUp)
+  }
+  const resetTreeWidth = (): void => {
+    if (treeWidth !== DEFAULT_TREE_WIDTH) saveConfig({ plannerTreeWidth: DEFAULT_TREE_WIDTH })
+  }
+  // The title column's right border, draggable to widen it. Rendered inside
+  // both the sticky corner and the sticky tree, so it spans the full height
+  // and stays put while the chart scrolls sideways.
+  const treeResizer = (
+    <div
+      className={`planner-tree-resizer${liveTreeWidth !== null ? ' active' : ''}`}
+      title="Drag to resize the title column (double-click to reset)"
+      onPointerDown={startTreeResize}
+      onDoubleClick={resetTreeWidth}
+    />
+  )
 
   /**
    * Saves one scope's row order to `.knote/config.json` — `null` drops it, so
    * the scope goes back to the computed order. Display-only: no note changes.
    */
   const saveOrder = (scope: string, keys: string[] | null): void => {
-    const config = useConfigStore.getState().vaultConfig
-    const next = { ...(config.plannerOrder ?? {}) }
+    const next = { ...(useConfigStore.getState().vaultConfig.plannerOrder ?? {}) }
     if (keys) next[scope] = keys
     else delete next[scope]
-    const updated = { ...config, plannerOrder: next }
-    useConfigStore.setState({ vaultConfig: updated })
-    void host.setVaultConfig(updated)
+    saveConfig({ plannerOrder: next })
   }
 
   const reorder = (dragged: PlannerRow, target: PlannerRow, position: 'before' | 'after'): void => {
@@ -1089,8 +1130,10 @@ export function PlannerApp(): React.JSX.Element {
         </div>
       ) : (
         <div className="planner-scroll" ref={scrollRef}>
-          <div className="planner-canvas" style={{ width: TREE_WIDTH + width }}>
-            <div className="planner-corner" style={{ width: TREE_WIDTH }} />
+          <div className="planner-canvas" style={{ width: treeWidth + width }}>
+            <div className="planner-corner" style={{ width: treeWidth }}>
+              {treeResizer}
+            </div>
             <GridHeader
               domain={domain}
               zoom={zoom}
@@ -1112,7 +1155,8 @@ export function PlannerApp(): React.JSX.Element {
                 e.preventDefault()
                 setMenu({ row, point: { x: e.clientX, y: e.clientY } })
               }}
-              width={TREE_WIDTH}
+              width={treeWidth}
+              resizer={treeResizer}
             />
             <div className="planner-chart" ref={bodyRef}>
               <GridBody domain={domain} zoom={zoom} today={today} height={chartHeight}>

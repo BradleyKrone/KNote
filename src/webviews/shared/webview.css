@@ -1873,6 +1873,36 @@ button {
   border-right: 1px solid var(--border-color);
 }
 
+/* The title column's right border, draggable to widen it (inside both the
+   sticky corner and the sticky tree, so it runs the full height). */
+.planner-tree-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -4px;
+  width: 7px;
+  z-index: 5;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.planner-tree-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 1px;
+  background: transparent;
+  transition: background 0.1s;
+}
+
+.planner-tree-resizer:hover::after,
+.planner-tree-resizer.active::after {
+  width: 2px;
+  background: var(--vscode-sash-hoverBorder, var(--vscode-focusBorder));
+}
+
 /* Rows are placed at the offsets plannerLayout computes, not stacked in flow:
    the chart puts its bars at the same offsets, and the gap between projects
    means a row's y is no longer just index × height. */

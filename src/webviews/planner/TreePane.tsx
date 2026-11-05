@@ -25,6 +25,8 @@ interface Props {
   /** Board-wide drag lock — shared with the bars, so reordering is just as deliberate. */
   locked: boolean
   width: number
+  /** The column-resize handle, drawn on the tree's right border. */
+  resizer?: React.ReactNode
 }
 
 type DropPosition = 'before' | 'after'
@@ -81,7 +83,8 @@ export function TreePane({
   onContextMenu,
   onReorder,
   locked,
-  width
+  width,
+  resizer
 }: Props): React.JSX.Element {
   const [dragged, setDragged] = useState<PlannerRow | null>(null)
   const [drop, setDrop] = useState<{ key: string; position: DropPosition } | null>(null)
@@ -96,6 +99,7 @@ export function TreePane({
     // offsets, and a flow layout here would drift the moment a row's height or
     // margin changed on one side only.
     <div className="planner-tree" style={{ width, height }}>
+      {resizer}
       {rows.map((row, i) => {
         const collapsible = row.kind === 'project' || row.kind === 'deliverable'
         const isCollapsed = collapsed.has(row.key)
