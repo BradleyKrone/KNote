@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   addDays,
   applyOrder,
+  clampTreeWidth,
+  collapsedKeys,
+  DEFAULT_TREE_WIDTH,
+  MAX_TREE_WIDTH,
+  MIN_TREE_WIDTH,
+  toggleCollapsed,
   moveInOrder,
   scopeOrderKeys,
   dateToCenterX,
@@ -526,5 +532,46 @@ describe('rowTops / rowsHeight', () => {
   it('centres a row within its own height, gaps excluded', () => {
     const tops = rowTops(rows)
     expect(rowCenter(tops, 2)).toBe(2 * ROW_HEIGHT + GROUP_GAP + ROW_HEIGHT / 2)
+  })
+})
+
+describe('collapsedKeys / toggleCollapsed — remembered expand state', () => {
+  it('defaults to projects open, deliverables collapsed', () => {
+    expect([...collapsedKeys(model, {})].sort()).toEqual(['d:deliverable/p/a', 'd:deliverable/p/b'])
+  })
+
+  it('honours saved choices over the default', () => {
+    const keys = collapsedKeys(model, { 'd:deliverable/p/a': false, 'p:p': true })
+    expect([...keys].sort()).toEqual(['d:deliverable/p/b', 'p:p'])
+  })
+
+  it('flips a row from however it currently shows', () => {
+    const expanded = toggleCollapsed(model, {}, 'd:deliverable/p/a')
+    expect(expanded).toEqual({ 'd:deliverable/p/a': false })
+    expect(collapsedKeys(model, expanded).has('d:deliverable/p/a')).toBe(false)
+    // Back to the default — nothing left to save.
+    expect(toggleCollapsed(model, expanded, 'd:deliverable/p/a')).toEqual({})
+    expect(toggleCollapsed(model, {}, 'p:p')).toEqual({ 'p:p': true })
+  })
+
+  it('drops entries for rows that no longer exist', () => {
+    const saved = { 'd:deliverable/p/gone': false, 'p:gone': true, 'p:p': true }
+    expect(toggleCollapsed(model, saved, 'd:deliverable/p/b')).toEqual({
+      'p:p': true,
+      'd:deliverable/p/b': false
+    })
+  })
+})
+
+describe('clampTreeWidth', () => {
+  it('keeps the title column within bounds', () => {
+    expect(clampTreeWidth(10)).toBe(MIN_TREE_WIDTH)
+    expect(clampTreeWidth(5000)).toBe(MAX_TREE_WIDTH)
+    expect(clampTreeWidth(412.6)).toBe(413)
+  })
+
+  it('falls back to the default for a missing or bad value', () => {
+    expect(clampTreeWidth(undefined)).toBe(DEFAULT_TREE_WIDTH)
+    expect(clampTreeWidth(Number.NaN)).toBe(DEFAULT_TREE_WIDTH)
   })
 })

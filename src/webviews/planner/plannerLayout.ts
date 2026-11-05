@@ -317,6 +317,64 @@ export function moveInOrder(
 export const projectOrderKey = (project: PlannerProject): string => `p:${project.slug}`
 export const deliverableOrderKey = (deliverable: PlannerDeliverable): string =>
   `d:${deliverable.id}`
+/**
+ * The user's saved expand/collapse choices, `VaultConfig.plannerCollapsed`:
+ * row key → `true` collapsed / `false` expanded.
+ */
+export type PlannerCollapsed = Readonly<Record<string, boolean>>
+
+/** What a project/deliverable row does when nothing is saved for it. */
+const collapsedByDefault = (key: string): boolean => key.startsWith('d:')
+
+/** Every collapsible row key in the model — projects and (nested) deliverables. */
+function collapsibleKeys(model: PlannerModel): string[] {
+  return [
+    ...model.projects.map(projectOrderKey),
+    ...[...model.byId.values()].map(deliverableOrderKey)
+  ]
+}
+
+/**
+ * The collapsed set `flattenRows` takes: a row's saved choice, else the default
+ * (projects open, deliverables collapsed — so a brand-new deliverable still
+ * opens folded, but one the user expanded stays expanded).
+ */
+export function collapsedKeys(model: PlannerModel, saved: PlannerCollapsed): Set<string> {
+  const out = new Set<string>()
+  for (const key of collapsibleKeys(model)) {
+    if (saved[key] ?? collapsedByDefault(key)) out.add(key)
+  }
+  return out
+}
+
+/**
+ * `saved` with `key` flipped from however it currently shows. Entries for rows
+ * that no longer exist are dropped, so the config doesn't collect dead keys,
+ * and an entry matching the default is dropped too.
+ */
+export function toggleCollapsed(
+  model: PlannerModel,
+  saved: PlannerCollapsed,
+  key: string
+): Record<string, boolean> {
+  const next: Record<string, boolean> = {}
+  for (const k of collapsibleKeys(model)) {
+    const value = k === key ? !(saved[k] ?? collapsedByDefault(k)) : saved[k]
+    if (value !== undefined && value !== collapsedByDefault(k)) next[k] = value
+  }
+  return next
+}
+
+export const DEFAULT_TREE_WIDTH = 260
+export const MIN_TREE_WIDTH = 160
+export const MAX_TREE_WIDTH = 900
+
+/** The title column's width, kept within sane bounds whatever the config says. */
+export function clampTreeWidth(px: number | undefined): number {
+  if (px === undefined || !Number.isFinite(px)) return DEFAULT_TREE_WIDTH
+  return Math.round(Math.min(MAX_TREE_WIDTH, Math.max(MIN_TREE_WIDTH, px)))
+}
+
 const taskOrderKey = (task: PlannerDeliverable['tasks'][number]): string =>
   `t:${task.path}::${task.text}`
 const milestoneOrderKey = (milestone: PlannerMilestone): string =>

@@ -244,6 +244,11 @@ the board and the planner agree without importing each other:
   `''`/`p:<slug>`/`d:<tag>` → line-free row keys) and applied in
   `flattenRows` — display-only, like `hiddenProjects`; it never rewrites a
   note, and a drop is refused between rows with different parents.
+- Expand/collapse (`VaultConfig.plannerCollapsed`, row key → collapsed;
+  no entry = the default, projects open and deliverables collapsed —
+  `collapsedKeys`/`toggleCollapsed` in `plannerLayout.ts`) and the title
+  column's width (`VaultConfig.plannerTreeWidth`, dragged by its right
+  border, `clampTreeWidth`) are saved the same display-only way.
 - Dragging a bar rewrites the task line through the ordinary verified-edit
   path (`plannerActions.ts` → `verifiedEdit` / `core/lineEdit`); it is not a
   special case. Layout maths live in `plannerLayout.ts` and are unit-tested

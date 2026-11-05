@@ -277,6 +277,15 @@ export interface VaultConfig {
    */
   plannerOrder: Record<string, string[]>
   /**
+   * The Planner tree's expand/collapse choices: row key (`p:<slug>` or
+   * `d:<tag>`) → `true` collapsed / `false` expanded. A row with no entry
+   * keeps the default — projects open, deliverables collapsed — so a new
+   * deliverable still opens folded. Display-only, like `plannerOrder`.
+   */
+  plannerCollapsed: Record<string, boolean>
+  /** Width in px of the Planner's title column, dragged by its right border. */
+  plannerTreeWidth: number
+  /**
    * Project slugs unticked in the Boards sidebar's "Filter by Project" list,
    * excluded from the Kanban board — their deliverables and joined tasks stop
    * appearing as cards. Independent of `hiddenProjects`: a project can be
@@ -341,6 +350,8 @@ export const DEFAULT_VAULT_CONFIG: VaultConfig = {
   linkUpdate: 'always',
   hiddenProjects: [],
   plannerOrder: {},
+  plannerCollapsed: {},
+  plannerTreeWidth: 260,
   boardHiddenProjects: [],
   boardHiddenRoots: [],
   boardSortByPriority: false,

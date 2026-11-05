@@ -618,6 +618,8 @@ In the chart:
 | Hold any bar drag at the chart's left or right edge | scrolls the chart that way (faster the closer you get), and the timeline grows to fit, so one drag can go as far as you need |
 | Double-click any row | opens the note at that line |
 | Drag a row in the tree up or down (while **Unlocked**) | reorders it among its siblings — projects among projects, a project's deliverables and milestones, a deliverable's work packages, tasks and milestones (children move with it). It can't change a row's parent. The order is saved in the vault's `.knote/config.json`, never in your notes; right-click → **Reset order** puts that level back to the default |
+| Click a row's ▸ / ▾ | expands or collapses it. **Remembered** — the planner reopens with the same rows open (saved in `.knote/config.json`). New deliverables start collapsed |
+| Drag the title column's right border | widens it so long project/deliverable names fit; the width is remembered. Double-click the border to reset it |
 | Right-click a deliverable → **Edit dates…** | a calendar for both ends of the span, with 1/3/5/10/20-day length presets and ±1d/±1w/Today nudges that slide the span without changing its length |
 | Right-click a deliverable → **Depends on ▸** | every other deliverable, ticked where it's already a predecessor — click to add or remove. Anything that would create a loop is greyed out and labelled *would loop* |
 | Right-click a project or deliverable → **Color ▸** | pick its bar color (blue, green, yellow, purple, orange, teal, pink, gray). A deliverable with no color of its own uses its parent deliverable's, then its project's; **Default** clears the choice. Overdue (red) and done (gray) still override it |
