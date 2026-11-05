@@ -65,6 +65,17 @@ You need push access to the GitHub repo to merge; no Marketplace account or
 token is needed, because KNote is shipped as a `.vsix` from GitHub Releases.
 In Claude Code, `/release-check` does step 1 and runs the CI gates locally for you.
 
+## 3.15.0
+
+- **The Planner remembers what you expanded.** Open or collapse a project or
+  deliverable and the Planner reopens the same way next time, instead of
+  folding every deliverable back up. The choice is saved in the vault's
+  `.knote/config.json`, never in your notes. New deliverables still start
+  collapsed.
+- **Widen the Planner's title column.** Drag the border between the titles
+  and the chart so long project and deliverable names fit. The width is
+  remembered; double-click the border to reset it.
+
 ## 3.14.0
 
 - **Projects have a start date, and you can drag them.** A project's
